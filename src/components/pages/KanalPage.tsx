@@ -1,0 +1,232 @@
+import { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Plus, Pencil, Trash2, ChevronLeft, Share2 } from "lucide-react";
+import type { ChannelPost, ChannelPostStatus, ChannelPlatform } from "../../data/marketingData";
+import { initialChannelPosts, channelPlatformLabels, channelPostStatusLabels } from "../../data/marketingData";
+import EmptyState from "../EmptyState";
+
+const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
+const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
+const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3";
+const tdClass = "py-3 px-3 text-sm text-slate-200 border-t border-slate-800";
+
+function PlatformBadge({ platform }: { platform: ChannelPlatform }) {
+  const colors: Record<ChannelPlatform, string> = {
+    telegram: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+    instagram: "bg-pink-500/15 text-pink-400 border border-pink-500/30",
+    facebook: "bg-blue-600/15 text-blue-300 border border-blue-600/30",
+    youtube: "bg-red-500/15 text-red-400 border border-red-500/30",
+  };
+  return <span className={`text-xs px-2 py-0.5 rounded-full border ${colors[platform]}`}>{channelPlatformLabels[platform]}</span>;
+}
+
+function PostStatusBadge({ status }: { status: ChannelPostStatus }) {
+  const map: Record<ChannelPostStatus, string> = {
+    draft: "bg-slate-700 text-slate-300",
+    scheduled: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+    published: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+  };
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{channelPostStatusLabels[status]}</span>;
+}
+
+export default function KanalPage() {
+  const [posts, setPosts] = useState<ChannelPost[]>(initialChannelPosts);
+  const [search, setSearch] = useState("");
+  const [pageMode, setPageMode] = useState<"list" | "create" | "edit">("list");
+  const [editItem, setEditItem] = useState<ChannelPost | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return posts.filter((p) => !q || p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q));
+  }, [posts, search]);
+
+  const stats = useMemo(() => {
+    const published = posts.filter((p) => p.status === "published").length;
+    const totalReach = posts.reduce((s, p) => s + p.reach, 0);
+    return {
+      totalPosts: posts.length,
+      published,
+      totalReach,
+    };
+  }, [posts]);
+
+  if (pageMode !== "list") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold text-white">{editItem ? "Postni tahrirlash" : "Yangi post"}</h1>
+          <div className="ml-auto flex gap-2">
+            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+          </div>
+        </div>
+
+        <PostForm initial={editItem} error={formError} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Kanal postlari</h1>
+          <p className="text-sm text-slate-500 mt-1">Ijtimoiy tarmoqlar postlarini boshqaring</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+            <p className="text-[10px] text-slate-500 uppercase">Jami postlar</p>
+            <p className="text-lg font-semibold text-white">{stats.totalPosts}</p>
+          </div>
+          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+            <p className="text-[10px] text-slate-500 uppercase">Chop etilgan</p>
+            <p className="text-lg font-semibold text-emerald-400">{stats.published}</p>
+          </div>
+          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+            <p className="text-[10px] text-slate-500 uppercase">Jami reach</p>
+            <p className="text-lg font-semibold text-white">{stats.totalReach.toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Qidirish..." className={inputClass + " pl-10"} />
+        </div>
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium">
+          <Plus className="w-4 h-4" />
+          Yangi post
+        </button>
+      </div>
+
+      {posts.length === 0 ? (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+          <EmptyState
+            icon={Share2}
+            title="Kanal postini yarating"
+            description="Hali kanal postini yaratilmagan. Ijtimoiy tarmoqlarda kontent ulashish uchun birinchi postni yarating."
+            buttonText="Yangi post"
+            onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
+            iconColor="text-purple-400"
+          />
+        </motion.div>
+      ) : (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+          <table className="w-full min-w-[850px]">
+            <thead className="bg-slate-900/80">
+              <tr>
+                <th className={thClass}>Sarlavha</th>
+                <th className={thClass}>Platform</th>
+                <th className={thClass}>Holat</th>
+                <th className={thClass}>Reja vaqti</th>
+                <th className={thClass}>Reach</th>
+                <th className={`${thClass} text-right`}>Amallar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-800/40">
+                  <td className={tdClass + " font-medium"}>{p.title}</td>
+                  <td className={tdClass}><PlatformBadge platform={p.platform as ChannelPlatform} /></td>
+                  <td className={tdClass}><PostStatusBadge status={p.status} /></td>
+                  <td className={tdClass + " text-xs text-slate-400"}>{p.scheduledAt}</td>
+                  <td className={tdClass}>{p.reach.toLocaleString()}</td>
+                  <td className={tdClass + " text-right whitespace-nowrap"}>
+                    <button onClick={() => { setEditItem(p); setPageMode("edit"); }} className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => setPendingDelete(p.id)} className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filtered.length === 0 && <div className="py-12 text-center text-slate-500 text-sm">Ma'lumot topilmadi</div>}
+        </motion.div>
+      )}
+
+      <AnimatePresence>
+        {pendingDelete && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70" onClick={() => setPendingDelete(null)}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+              <p className="text-white font-medium mb-2">O'chirishni tasdiqlang</p>
+              <p className="text-sm text-slate-400 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+                <button onClick={() => { setPosts((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium">O'chirish</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function PostForm({ initial, error }: { initial: ChannelPost | null; error: string | null }) {
+  const [platform, setPlatform] = useState<ChannelPlatform>(initial?.platform ?? "telegram");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [content, setContent] = useState(initial?.content ?? "");
+  const [mediaUrl, setMediaUrl] = useState(initial?.mediaUrl ?? "");
+  const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt ?? "");
+  const [status, setStatus] = useState<ChannelPostStatus>(initial?.status ?? "draft");
+  const [link, setLink] = useState(initial?.link ?? "");
+
+  return (
+    <form className="grid grid-cols-3 gap-6">
+      <div className="col-span-2 space-y-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
+          <h3 className="font-semibold text-white">Post ma'lumotlari</h3>
+          <div>
+            <label className={labelClass}>Platform</label>
+            <select className={inputClass} value={platform} onChange={(e) => setPlatform(e.target.value as ChannelPlatform)}>
+              <option value="telegram">Telegram</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="youtube">YouTube</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Sarlavha</label>
+            <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass}>Kontent</label>
+            <textarea className={inputClass + " min-h-[150px]"} value={content} onChange={(e) => setContent(e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass}>Media URL (opsional)</label>
+            <input className={inputClass} value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://..." />
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
+          <h3 className="font-semibold text-white">Havolalar</h3>
+          <div>
+            <label className={labelClass}>Post havolasi (opsional)</label>
+            <input className={inputClass} value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
+          <h3 className="font-semibold text-white">Sozlamalar</h3>
+          <div>
+            <label className={labelClass}>Holat</label>
+            <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as ChannelPostStatus)}>
+              <option value="draft">Qoralama</option>
+              <option value="scheduled">Rejalashtirilgan</option>
+              <option value="published">Chop etilgan</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Reja vaqti</label>
+            <input className={inputClass} type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+          </div>
+          {error && <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
+        </div>
+      </div>
+    </form>
+  );
+}

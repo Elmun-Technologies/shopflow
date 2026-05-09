@@ -1,0 +1,185 @@
+export const kpiData = [
+  {
+    title: "Total Revenue",
+    value: "$84,392",
+    change: "+12.5%",
+    changeType: "positive" as const,
+    icon: "DollarSign",
+  },
+  {
+    title: "Total Orders",
+    value: "2,847",
+    change: "+8.2%",
+    changeType: "positive" as const,
+    icon: "ShoppingBag",
+  },
+  {
+    title: "Total Customers",
+    value: "12,583",
+    change: "+5.4%",
+    changeType: "positive" as const,
+    icon: "Users",
+  },
+  {
+    title: "Conversion Rate",
+    value: "3.24%",
+    change: "-0.8%",
+    changeType: "negative" as const,
+    icon: "TrendingUp",
+  },
+];
+
+export const revenueData = [
+  { month: "Jan", revenue: 42000, orders: 320 },
+  { month: "Feb", revenue: 48000, orders: 380 },
+  { month: "Mar", revenue: 55000, orders: 410 },
+  { month: "Apr", revenue: 51000, orders: 390 },
+  { month: "May", revenue: 62000, orders: 470 },
+  { month: "Jun", revenue: 68000, orders: 510 },
+  { month: "Jul", revenue: 72000, orders: 540 },
+  { month: "Aug", revenue: 69000, orders: 520 },
+  { month: "Sep", revenue: 78000, orders: 580 },
+  { month: "Oct", revenue: 82000, orders: 610 },
+  { month: "Nov", revenue: 91000, orders: 680 },
+  { month: "Dec", revenue: 84392, orders: 630 },
+];
+
+export const categoryData = [
+  { name: "Electronics", value: 35, sales: 29500 },
+  { name: "Clothing", value: 25, sales: 21000 },
+  { name: "Home & Garden", value: 20, sales: 16800 },
+  { name: "Sports", value: 12, sales: 10080 },
+  { name: "Books", value: 8, sales: 6720 },
+];
+
+export const trafficData = [
+  { source: "Organic Search", visitors: 12500, percentage: 42 },
+  { source: "Direct", visitors: 6800, percentage: 23 },
+  { source: "Social Media", visitors: 4500, percentage: 15 },
+  { source: "Referral", visitors: 3200, percentage: 11 },
+  { source: "Email", visitors: 2700, percentage: 9 },
+];
+
+export const recentOrders = [
+  {
+    id: "#ORD-7523",
+    customer: "Sarah Johnson",
+    email: "sarah.j@email.com",
+    product: "Wireless Headphones Pro",
+    amount: 249.99,
+    status: "completed" as const,
+    date: "2024-12-15",
+  },
+  {
+    id: "#ORD-7522",
+    customer: "Michael Chen",
+    email: "m.chen@email.com",
+    product: "Smart Watch Series 5",
+    amount: 399.00,
+    status: "processing" as const,
+    date: "2024-12-15",
+  },
+  {
+    id: "#ORD-7521",
+    customer: "Emily Davis",
+    email: "emily.d@email.com",
+    product: "Running Shoes Elite",
+    amount: 129.50,
+    status: "completed" as const,
+    date: "2024-12-14",
+  },
+  {
+    id: "#ORD-7520",
+    customer: "James Wilson",
+    email: "j.wilson@email.com",
+    product: "Portable Speaker Mini",
+    amount: 79.99,
+    status: "pending" as const,
+    date: "2024-12-14",
+  },
+  {
+    id: "#ORD-7519",
+    customer: "Anna Martinez",
+    email: "anna.m@email.com",
+    product: "Laptop Stand Adjustable",
+    amount: 45.00,
+    status: "completed" as const,
+    date: "2024-12-13",
+  },
+  {
+    id: "#ORD-7518",
+    customer: "Robert Taylor",
+    email: "r.taylor@email.com",
+    product: "USB-C Hub 7-in-1",
+    amount: 59.99,
+    status: "cancelled" as const,
+    date: "2024-12-13",
+  },
+  {
+    id: "#ORD-7517",
+    customer: "Lisa Anderson",
+    email: "lisa.a@email.com",
+    product: "Mechanical Keyboard RGB",
+    amount: 149.00,
+    status: "processing" as const,
+    date: "2024-12-12",
+  },
+];
+
+export const topProducts = [
+  {
+    id: 1,
+    name: "Wireless Headphones Pro",
+    category: "Electronics",
+    price: 249.99,
+    sold: 842,
+    stock: 156,
+    rating: 4.8,
+  },
+  {
+    id: 2,
+    name: "Smart Watch Series 5",
+    category: "Electronics",
+    price: 399.00,
+    sold: 756,
+    stock: 89,
+    rating: 4.7,
+  },
+  {
+    id: 3,
+    name: "Running Shoes Elite",
+    category: "Sports",
+    price: 129.50,
+    sold: 634,
+    stock: 234,
+    rating: 4.6,
+  },
+  {
+    id: 4,
+    name: "Portable Speaker Mini",
+    category: "Electronics",
+    price: 79.99,
+    sold: 521,
+    stock: 312,
+    rating: 4.5,
+  },
+  {
+    id: 5,
+    name: "Laptop Stand Adjustable",
+    category: "Home & Garden",
+    price: 45.00,
+    sold: 498,
+    stock: 178,
+    rating: 4.4,
+  },
+];
+
+export const weeklySalesData = [
+  { day: "Mon", sales: 3200 },
+  { day: "Tue", sales: 4100 },
+  { day: "Wed", sales: 3800 },
+  { day: "Thu", sales: 5200 },
+  { day: "Fri", sales: 6100 },
+  { day: "Sat", sales: 7400 },
+  { day: "Sun", sales: 5800 },
+];
