@@ -1,16 +1,14 @@
-# 🛍️ ShopFlow — E-commerce Admin Dashboard
+# 🛍️ ShopFlow — Telegram E-commerce Platform
 
 <div align="center">
 
-![ShopFlow](https://img.shields.io/badge/ShopFlow-E--commerce%20Dashboard-6366f1?style=for-the-badge&logo=shopify&logoColor=white)
+![ShopFlow](https://img.shields.io/badge/ShopFlow-Telegram%20Commerce-10b981?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-7.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Fastify](https://img.shields.io/badge/Fastify-5.1-000?style=for-the-badge&logo=fastify)
+![grammY](https://img.shields.io/badge/grammY-1.32-26A5E4?style=for-the-badge&logo=telegram)
 
-**Zamonaviy, keng funksiyali e-commerce boshqaruv paneli**
-
-[Demo](#) · [Hujjatlar](#foydalanish) · [Xato bildirish](https://github.com/Elmun-Technologies/shopflow/issues)
+**Telegram bot + Mini App + admin dashboard. Bitta tizim ostida.**
 
 </div>
 
@@ -18,290 +16,334 @@
 
 ## 📋 Loyiha haqida
 
-**ShopFlow** — bu zamonaviy elektron tijorat bizneslarini boshqarish uchun mo'ljallangan to'liq funksiyali admin dashboard. React 19, TypeScript va Tailwind CSS 4 asosida qurilgan bo'lib, real vaqtda ma'lumotlarni kuzatish, buyurtmalarni boshqarish, mijozlar bilan ishlash va marketing kampaniyalarini nazorat qilish imkonini beradi.
+**ShopFlow** — Telegram orqali sotuvni to'liq boshqarish uchun **production-grade** platforma:
 
-### ✨ Asosiy xususiyatlar
-
-- 📊 **Interaktiv Analitika** — Recharts kutubxonasi asosida daromad, sotuvlar va trafik grafiklari
-- 🛒 **Buyurtmalar Boshqaruvi** — Buyurtmalarni kuzatish, filtr va izlash, batafsil modal ko'rinish
-- 👥 **Mijozlar CRM** — Mijozlar profili, xarid tarixi va segmentatsiya
-- 📦 **Mahsulotlar Katalogi** — Mahsulot qo'shish, tahrirlash, stock nazorati
-- 🚚 **Yetkazib Berish** — Kuryerlar va yetkazib berish holatlari paneli
-- 💳 **To'lovlar** — To'lov tranzaksiyalari va moliyaviy hisobotlar
-- 🎯 **Marketing** — Kampaniyalar, promokodlar, SMS va email rassilka
-- 🤝 **Leads (Mijoz murojaatlari)** — Potensial mijozlarni boshqarish
-- 🏪 **Platformalar** — Ko'p kanallik savdo integratsiyasi
-- 💬 **Chat** — Mijozlar bilan jonli muloqot
-- 🎨 **UI Builder** — Drag-and-drop interfeys yaratuvchi
-- ⚙️ **Sozlamalar** — Profil, xavfsizlik, bildirishnomalar va integratsiyalar
+- 🤖 **Telegram bot** — xaridor bot tokenini kiritsa avtomatik ulanadi (BotFather)
+- 📱 **Mini App** — bot ichida ochiladigan to'liq do'kon (catalog, savat, checkout)
+- 📊 **Admin dashboard** — real-time orderlar, analitika, mijozlar
+- 🎨 **Bot UI editor** — bannerlar va sectionlar admin paneldan boshqariladi
+- 🔌 **MoySklad sync** — mahsulotlar va buyurtmalar
+- 💳 **Click + Payme** — onlayn to'lov tizimlari
+- 🐳 **Docker deploy** — bitta `docker-compose up` bilan
 
 ---
 
-## 🛠️ Texnologiyalar
+## ⚡ Tezkor boshlash
 
-| Texnologiya | Versiya | Maqsad |
-|-------------|---------|--------|
-| **React** | 19.2 | UI framework |
-| **TypeScript** | 5.9 | Tip xavfsizligi |
-| **Vite** | 7.2 | Build tool va dev server |
-| **Tailwind CSS** | 4.1 | Utility-first styling |
-| **Recharts** | 3.8 | Ma'lumot vizualizatsiyasi |
-| **Framer Motion** | 12 | Animatsiyalar |
-| **Lucide React** | 1.11 | Ikonlar kutubxonasi |
-| **date-fns** | 4.1 | Sana formatlash |
-| **clsx** | 2.1 | CSS klasslarni birlashtirish |
+```bash
+git clone https://github.com/Elmun-Technologies/shopflow.git
+cd shopflow
+cp .env.example .env
+
+# Random secrets generatsiya:
+node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex'))" >> .env
+node -e "console.log('ENCRYPTION_KEY=' + require('crypto').randomBytes(32).toString('hex'))" >> .env
+
+# Domain (production):
+# echo "WEB_URL=https://app.shopflow.uz" >> .env
+# echo "PUBLIC_URL=https://api.shopflow.uz" >> .env
+
+docker-compose up -d --build
+```
+
+To'liq deploy qo'llanmasi: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
 
-## 📁 Loyiha Tuzilmasi
+## 🏗️ Arxitektura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ShopFlow Dashboard (React + Vite + Tailwind)                │
+│  - KPI, analytics, orders, customers (real-time)             │
+│  - Telegram bot ulash, UI editor                             │
+│  - MoySklad / Click / Payme sozlash                          │
+└─────────────────────────────────────────────────────────────┘
+                  │ REST + WebSocket
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Backend (Node.js 22 + Fastify + grammY + Drizzle)           │
+│  - JWT auth, AES-256-GCM token encryption                    │
+│  - 12 ta jadval (users, shops, bots, products, orders, ...)  │
+│  - Telegram webhook + polling fallback                       │
+│  - Mini App initData HMAC validatsiya                        │
+│  - WebSocket real-time event push                            │
+└─────────────────────────────────────────────────────────────┘
+       │                                          │
+       ▼                                          ▼
+  SQLite (dev) / PostgreSQL (prod)         Telegram + MoySklad + Click + Payme
+```
+
+---
+
+## ✅ Nima bor (to'liq ishlaydi)
+
+### Telegram Integration
+- [x] Bot ulash BotFather token orqali (UI'dan, real-time validatsiya)
+- [x] Webhook avtomatik o'rnatiladi (`PUBLIC_URL` bo'lsa)
+- [x] Polling rejimi development uchun
+- [x] `setChatMenuButton` Mini App URL bilan avtomatik
+- [x] `/start`, `/help`, `/catalog` komandalar
+- [x] Inline keyboard navigatsiya
+- [x] Bot tokenlari DB'da AES-256-GCM bilan shifrlangan
+
+### Mini App (xaridor uchun)
+- [x] `initData` HMAC-SHA-256 validatsiya
+- [x] Telegram theme + BackButton + HapticFeedback
+- [x] Catalog (kategoriya filteri, qidiruv)
+- [x] Mahsulot tafsiloti
+- [x] Savat (stock validatsiya)
+- [x] Checkout (telefon, manzil, to'lov turi)
+- [x] Buyurtma tasdig'i bot orqali
+- [x] Buyurtma tarixi
+- [x] Schema-driven home screen (banner, kategoriya grid, top products)
+
+### Admin Dashboard (real-time)
+- [x] **KPICards** — bugungi tushum, buyurtma, yangi mijoz, mahsulot
+- [x] **RevenueChart** — daromad chart (7/30/90/365 kun)
+- [x] **TopProducts** — eng ko'p sotilayotgan
+- [x] **RecentOrders** — so'nggi buyurtmalar widget
+- [x] **LiveOrdersPanel** (OrdersPage) — to'liq buyurtma boshqaruvi:
+  - Status o'zgartirish (drawer)
+  - Mahsulotlar, manzil, telefon
+  - Bot orqali xaridorga avtomatik xabar
+  - Yashil flash effect yangi buyurtmada
+- [x] **LiveCatalogPanel** (ProductsPage) — mahsulot CRUD:
+  - Qo'shish/tahrirlash modal
+  - Kategoriya tanlash, rasm URL, narx, qoldiq, faol
+- [x] **LiveCustomersPanel** (CustomersPage) — Telegram mijozlar:
+  - Qidiruv, sort (yangilari/eng ko'p xarajat/eng ko'p buyurtma)
+  - Telegram link, telefon link
+  - Buyurtma soni, jami xarajat
+- [x] **LiveAnalyticsPanel** (AnalyticsPage):
+  - 4 ta KPI card (delta % bilan)
+  - Daromad chart
+  - Manbalar pie chart (mini-app vs bot vs admin)
+  - Top products bar chart
+- [x] WebSocket real-time push hammasiga
+- [x] Toast popup + ovoz signal yangi buyurtmada
+
+### Bot UI Editor
+- [x] Settings → Telegram Bot → ✨ tugmasi
+- [x] Salomlashish xabari tahrir
+- [x] Bannerlar (qo'shish/o'chirish/tartib o'zgartirish):
+  - Sarlavha, subtitle, rasm URL
+  - Action: kategoriya/mahsulot/URL
+- [x] Sectionlar (3 turli: kategoriyalar, mahsulotlar, matn)
+- [x] Mahsulot filterida aniq mahsulot tanlash imkoniyati
+- [x] Mini App schema'ga qarab render qiladi
+
+### MoySklad
+- [x] Connection: Bearer token yoki Login/parol
+- [x] `/api/integrations/moysklad/test` — kalit tekshirish
+- [x] Mahsulot import (sahifalab, idempotent yangilash)
+- [x] Kategoriya import (productfolder)
+- [x] Buyurtma push (customerorder yaratish)
+- [x] UI ulash modali
+
+### To'lov tizimlari
+- [x] **Click** Merchant API:
+  - Merchant ID + Service ID + Secret Key
+  - Prepare + Complete handlers
+  - MD5 signature tekshiruvi
+  - Buyurtma to'lov holatini avtomatik yangilash
+- [x] **Payme** JSON-RPC:
+  - 5 ta method (CheckPerformTransaction, CreateTransaction, PerformTransaction, CancelTransaction, CheckTransaction)
+  - Basic auth tekshiruvi
+  - tiyin/so'm konversiya
+
+### DevOps
+- [x] Docker + docker-compose
+- [x] Nginx config (SPA fallback, /api proxy, WebSocket upgrade)
+- [x] `.env.example` namuna
+- [x] Drizzle migrations (auto on container start)
+- [x] AES-256-GCM token encryption at rest
+
+### Mavjud admin pagelar (UI tayyor)
+- [x] 9 ta marketing pages (Rassilka, Promo, Sovg'alar, SMS, Kanal, Banner, Sodiqlik, Giveaway, Manbalar) — to'liq CRUD save flow (in-memory)
+- [x] Tilda-style UIBuilder (mavjud sahifa)
+- [x] Dashboard sidebar, header, search
+- [x] 100+ component, framer-motion animatsiyalar
+
+---
+
+## ⚠️ Hali yo'q (kelajak iteratsiyalar)
+
+### Backend bilan ulanmagan sahifalar (mock data ishlatadi)
+Bu sahifalar UI tayyor, lekin haqiqiy backend ma'lumoti emas:
+- `LeadsPage` — lid CRM (kelajakda Telegram lead'lardan)
+- `ChatPage` — operator-mijoz suhbat (kelajakda bot orqali)
+- `PlatformsPage` — Instagram/Facebook integratsiyalari
+- `PaymentsPage` — to'lov tarixi (Click/Payme transactionlardan)
+- `DeliveryPage` — kuryer/yetkazib berish boshqaruvi
+- 9 ta marketing pages — mahalliy state, sahifa yangilansa yo'qoladi
+- `WeeklySales`, `SalesByCategory`, `TrafficSources` — eski mock dashboard widgetlar
+
+### Hali ishlamaydigan funksiyalar
+- [ ] Multi-shop (1 admin → bir nechta do'kon)
+- [ ] Multi-language (faqat O'zbek tili)
+- [ ] PostgreSQL ishga tushishi (kod tayyor, lekin SQLite default)
+- [ ] Redis (sessions, queue) — production uchun kerak
+- [ ] Image upload (rasmlar URL orqali, S3/CDN yo'q)
+- [ ] Telegram Payments (faqat Click/Payme)
+- [ ] Push notification mijoz uchun (faqat bot xabarlari)
+- [ ] Operator chat real-time (mavjud ChatPage mock)
+- [ ] Lid trekingi (mavjud LeadsPage mock)
+- [ ] Email yuborish (Rassilka mock holatda)
+- [ ] SMS yuborish (Eskiz/Playmobile API integratsiyasi)
+- [ ] Yandex.Metrica / Google Analytics
+- [ ] Sentry monitoring (kod tayyor, dsn yo'q)
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Test suite (Vitest skeleton tayyor, lekin testlar yozilmagan)
+
+### Production checklist
+- [x] Bot tokeni shifrlash
+- [ ] HTTPS sertifikat (mijoz tomon)
+- [ ] Domain DNS (mijoz tomon)
+- [ ] Webhook rate limiting (Fastify rate-limit qo'shish)
+- [ ] Database backup avtomatik
+- [ ] Logging persistent (Pino → file/Loki)
+- [ ] Uptime monitoring (`/health` ga ping)
+
+---
+
+## 📦 Tech Stack
+
+### Frontend (`src/`, `dist/`)
+- React 19 + TypeScript 5.9
+- Vite 7 (singlefile plugin — bitta `index.html`)
+- Tailwind CSS 4
+- Framer Motion (animatsiyalar)
+- Recharts (grafiklar)
+- Lucide icons
+
+### Backend (`server/`)
+- Node.js 22 + TypeScript
+- Fastify 5 (web framework)
+- grammY (Telegram bot framework)
+- Drizzle ORM + better-sqlite3
+- @fastify/jwt + bcryptjs
+- @fastify/websocket
+- Zod (validatsiya)
+
+### Infrastructure
+- Docker + docker-compose
+- nginx (SPA fallback, reverse proxy)
+- Caddy (HTTPS auto, tavsiya etiladi)
+
+---
+
+## 📁 Repo strukturasi
 
 ```
 shopflow/
-├── public/
-├── src/
+├── server/                       # Backend
+│   ├── src/
+│   │   ├── bot/                  # grammY runtime + handlers
+│   │   ├── db/                   # Drizzle schema + migrations
+│   │   ├── integrations/         # MoySklad, Click, Payme
+│   │   ├── lib/                  # crypto, events, uiSchema
+│   │   ├── routes/               # auth, bots, orders, products,
+│   │   │                         # miniapp, payments, integrations,
+│   │   │                         # analytics, customers, ws, webhook
+│   │   └── services/             # business logic
+│   ├── drizzle/                  # SQL migrations
+│   ├── Dockerfile
+│   └── package.json
+│
+├── src/                          # Frontend
+│   ├── miniapp/                  # Telegram WebApp pages
+│   │   ├── pages/                # Catalog, Cart, Checkout, Orders
+│   │   └── lib/                  # tg, api, format
 │   ├── components/
-│   │   ├── pages/                  # Marketing sub-sahifalari
-│   │   │   ├── BannerPage.tsx
-│   │   │   ├── GiveawayPage.tsx
-│   │   │   ├── IzohlarPage.tsx
-│   │   │   ├── KanalPage.tsx
-│   │   │   ├── ManbaPage.tsx
-│   │   │   ├── PromoPage.tsx
-│   │   │   ├── RassilkaPage.tsx
-│   │   │   ├── SegmentsPage.tsx
-│   │   │   ├── SmsPage.tsx
-│   │   │   ├── SodiqlikPage.tsx
-│   │   │   ├── SovgalarPage.tsx
-│   │   │   └── TranzaksiyalarPage.tsx
-│   │   ├── AnalyticsPage.tsx       # Analitika sahifasi
-│   │   ├── ChatPage.tsx            # Chat sahifasi
-│   │   ├── CustomerDetailModal.tsx # Mijoz batafsil modal
-│   │   ├── CustomersPage.tsx       # Mijozlar sahifasi
-│   │   ├── DeliveryPage.tsx        # Yetkazib berish sahifasi
-│   │   ├── EmptyState.tsx          # Bo'sh holat komponenti
-│   │   ├── Header.tsx              # Yuqori panel
-│   │   ├── KPICards.tsx            # KPI kartochkalari
-│   │   ├── LeadDetailModal.tsx     # Lead batafsil modal
-│   │   ├── LeadsPage.tsx           # Leads sahifasi
-│   │   ├── MarketingPage.tsx       # Marketing sahifasi
-│   │   ├── OrderDetailModal.tsx    # Buyurtma batafsil modal
-│   │   ├── OrdersPage.tsx          # Buyurtmalar sahifasi
-│   │   ├── PaymentsPage.tsx        # To'lovlar sahifasi
-│   │   ├── PlatformsPage.tsx       # Platformalar sahifasi
-│   │   ├── ProductDetailModal.tsx  # Mahsulot batafsil modal
-│   │   ├── ProductsPage.tsx        # Mahsulotlar sahifasi
-│   │   ├── RecentOrders.tsx        # So'nggi buyurtmalar widget
-│   │   ├── RevenueChart.tsx        # Daromad grafigi
-│   │   ├── SalesByCategory.tsx     # Kategoriya bo'yicha sotuvlar
-│   │   ├── SettingsPage.tsx        # Sozlamalar sahifasi
-│   │   ├── Sidebar.tsx             # Yon panel navigatsiyasi
-│   │   ├── TopProducts.tsx         # Eng ko'p sotilgan mahsulotlar
-│   │   ├── TrafficSources.tsx      # Trafik manbalari
-│   │   ├── UIBuilderPage.tsx       # UI Builder sahifasi
-│   │   └── WeeklySales.tsx         # Haftalik sotuvlar grafigi
-│   ├── data/
-│   │   ├── analyticsData.ts        # Analitika ma'lumotlari
-│   │   ├── chatData.ts             # Chat ma'lumotlari
-│   │   ├── customersData.ts        # Mijozlar ma'lumotlari
-│   │   ├── dashboardData.ts        # Dashboard ma'lumotlari
-│   │   ├── deliveryData.ts         # Yetkazib berish ma'lumotlari
-│   │   ├── leadsData.ts            # Leads ma'lumotlari
-│   │   ├── marketingData.ts        # Marketing ma'lumotlari
-│   │   ├── ordersData.ts           # Buyurtmalar ma'lumotlari
-│   │   ├── paymentsData.ts         # To'lovlar ma'lumotlari
-│   │   ├── platformsData.ts        # Platformalar ma'lumotlari
-│   │   ├── productsData.ts         # Mahsulotlar ma'lumotlari
-│   │   ├── settingsData.ts         # Sozlamalar ma'lumotlari
-│   │   └── uiBuilderData.ts        # UI Builder ma'lumotlari
-│   ├── utils/
-│   │   └── cn.ts                   # className utility
-│   ├── App.tsx                     # Asosiy ilova komponenti
-│   ├── index.css                   # Global stilllar
-│   └── main.tsx                    # Kirish nuqtasi
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+│   │   ├── LiveOrdersPanel.tsx   # Real-time orders
+│   │   ├── LiveCatalogPanel.tsx  # Real-time products
+│   │   ├── LiveCustomersPanel.tsx # Real-time customers
+│   │   ├── LiveAnalyticsPanel.tsx # Real-time analytics
+│   │   ├── BotUiEditor.tsx       # Bot UI schema editor
+│   │   ├── TelegramBotModal.tsx  # Bot connection
+│   │   ├── IntegrationModal.tsx  # MoySklad/Click/Payme
+│   │   └── ...                   # KPICards, RevenueChart, etc.
+│   ├── lib/
+│   │   ├── api.ts                # Backend client
+│   │   └── notifications.tsx     # Toast + WebSocket
+│   ├── App.tsx
+│   └── main.tsx                  # /mini/* → MiniApp, else Dashboard
+│
+├── docs/
+│   ├── TELEGRAM_BOT_PLAN.md      # To'liq arxitektura plani
+│   └── DEPLOY.md                 # Deploy qo'llanmasi
+│
+├── docker-compose.yml
+├── Dockerfile                    # Frontend
+├── nginx.conf
+├── .env.example
+└── README.md                     # ushbu fayl
 ```
 
 ---
 
-## 🚀 Ishga Tushirish
+## 🚀 Deploy oqimi (mijoz uchun)
 
-### Talablar
+1. **Domain sozlash:** `app.shopflow.uz` + `api.shopflow.uz` DNS
+2. **HTTPS:** Caddy yoki Cloudflare Tunnel
+3. **`.env` to'ldirish:** JWT_SECRET, ENCRYPTION_KEY (random 64 hex)
+4. **Build & up:** `docker-compose up -d --build`
+5. **Login:** `https://app.shopflow.uz` → register
+6. **Bot ulash:** Settings → Telegram Bot → BotFather token yopishtirish
+7. **MoySklad ulash (ixtiyoriy):** Settings → MoySklad → Bearer token
+8. **Click/Payme (ixtiyoriy):** Settings → har birini alohida sozlash
 
-- **Node.js** v18 yoki undan yuqori
-- **npm** v9 yoki undan yuqori
-
-### O'rnatish
-
-```bash
-# Reponi clone qiling
-git clone https://github.com/Elmun-Technologies/shopflow.git
-
-# Papkaga kiring
-cd shopflow
-
-# Bog'liqliklarni o'rnating
-npm install
-```
-
-### Development serverni ishga tushirish
-
-```bash
-npm run dev
-```
-
-Brauzerda oching: [http://localhost:5173](http://localhost:5173)
-
-### Production build
-
-```bash
-npm run build
-```
-
-Build fayllari `dist/` papkasiga joylashadi.
-
-### Build natijasini oldindan ko'rish
-
-```bash
-npm run preview
-```
+To'liq qadam-baqadam: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ---
 
-## 📱 Sahifalar va Funksiyalar
+## 🧪 Endpoint xulasasi
 
-### 🏠 Dashboard (Asosiy sahifa)
-- KPI kartochkalari: Jami daromad, buyurtmalar, mijozlar, konversiya
-- Daromad grafigi (Recharts)
-- Kategoriya bo'yicha sotuvlar doira diagrammasi
-- Haftalik sotuvlar bar grafigi
-- Trafik manbalari tahlili
-- Eng ko'p sotilgan mahsulotlar
-- So'nggi buyurtmalar jadvali
+### Public API (admin JWT bilan)
+- `POST /api/auth/{register,login}` — admin auth
+- `GET /api/auth/me` — joriy admin
+- `POST /api/bots` — bot ulash (BotFather token)
+- `GET /api/bots`, `DELETE /api/bots/:id`
+- `GET/PUT /api/bots/:id/ui-schema` — bot UI editor
+- `GET /api/orders`, `PATCH /api/orders/:id` — order boshqaruv
+- `GET /api/orders/:id`, `GET /api/orders/stats`
+- `GET /api/products`, `POST/PATCH/DELETE` — mahsulot CRUD
+- `GET /api/products/categories`, `POST/PATCH/DELETE`
+- `GET /api/customers`, `GET /api/customers/:id`
+- `GET /api/analytics/{dashboard,revenue,top-products,sources,recent-orders,low-stock}`
+- `POST /api/integrations/moysklad`, `POST /api/integrations/moysklad/sync`
+- `POST /api/payments/{click,payme}` (admin sozlash)
 
-### 📊 Analytics (Analitika)
-- Kengaytirilgan statistika va KPI ko'rsatkichlari
-- Daromad va foyda tahlili
-- Geografik tarqatish
-- Mijoz xatti-harakatlari tahlili
-- Konversiya funnel
+### Mini App API (initData JWT bilan)
+- `POST /api/miniapp/auth` — initData → JWT
+- `GET /api/miniapp/catalog`, `GET /api/miniapp/products/:id`
+- `GET /api/miniapp/ui-schema`
+- `GET/PUT /api/miniapp/cart`
+- `POST /api/miniapp/orders`, `GET /api/miniapp/orders`
 
-### 🛒 Orders (Buyurtmalar)
-- Barcha buyurtmalar ro'yxati
-- Status bo'yicha filtr (yangi, jarayonda, yetkazildi, bekor qilindi)
-- Qidiruv funksiyasi
-- Buyurtma batafsil modal (mahsulotlar, yetkazib berish, to'lov ma'lumotlari)
-- Eksport funksiyasi
+### Webhooks (provider tomondan keladi)
+- `POST /tg/webhook/:botId` — Telegram bot updates
+- `POST /api/payments/click/:shopId` — Click prepare/complete
+- `POST /api/payments/payme/:shopId` — Payme JSON-RPC
 
-### 👥 Customers (Mijozlar)
-- Mijozlar ro'yxati va profillari
-- Xarid tarixi va statistika
-- Mijoz segmentatsiyasi (VIP, muntazam, yangi)
-- Batafsil mijoz modal paneli
-
-### 📦 Products (Mahsulotlar)
-- Mahsulotlar katalogi
-- Kategoriya va brand bo'yicha filtr
-- Stock holati kuzatuvi
-- Mahsulot qo'shish/tahrirlash/o'chirish
-- Batafsil mahsulot modal
-
-### 🚚 Delivery (Yetkazib berish)
-- Yetkazib berish buyurtmalari kuzatuvi
-- Kuryer boshqaruvi
-- Real-time holat yangilanishlari
-- Yetkazib berish hududlari xaritasi
-
-### 💳 Payments (To'lovlar)
-- Tranzaksiyalar tarixi
-- To'lov usullari tahlili
-- Qaytarishlar va chargeback boshqaruvi
-- Moliyaviy hisobotlar
-
-### 🎯 Marketing
-- **Rassilka** — Email va SMS kampaniyalar
-- **Promo kodlar** — Chegirmalar va aksiyalar
-- **Segmentlar** — Mijoz guruhlari
-- **Banner** — Reklama bannerlari boshqaruvi
-- **Sovgalar** — Sovg'a dasturlari
-- **Sodiqlik** — Bonus va ballar tizimi
-- **Giveaway** — Tanlovlar va taqsimotlar
-- **Kanal** — Marketing kanallari
-- **Manba** — Trafik manbalari
-- **Izohlar** — Mijoz sharhlari boshqaruvi
-- **Tranzaksiyalar** — Marketing to'lovlari
-
-### 🤝 Leads
-- Potensial mijozlar ro'yxati
-- Murojaat holati kuzatuvi
-- Lead batafsil modal
-- CRM pipeline
-
-### 🏪 Platforms (Platformalar)
-- Ko'p platformali savdo integratsiyasi
-- Platforma statistikasi va hisobotlari
-- API ulanish sozlamalari
-
-### 💬 Chat
-- Jonli mijoz qo'llab-quvvatlash
-- Suhbat tarixi
-- Tezkor javoblar
-
-### 🎨 UI Builder
-- Drag-and-drop interfeys yaratuvchi
-- Komponentlar kutubxonasi
-- Sahifa dizayni muharriri
-
-### ⚙️ Settings (Sozlamalar)
-- **Profil** — Foydalanuvchi ma'lumotlari
-- **Xavfsizlik** — Parol va 2FA
-- **Bildirishnomalar** — Xabarnoma sozlamalari
-- **Integratsiyalar** — Uchinchi tomon xizmatlar
-- **To'lov usullari** — Kassa sozlamalari
-- **Yetkazib berish** — Yetkazib berish sozlamalari
+### WebSocket
+- `GET /api/ws?token=...` — admin real-time event'lari (order.created, order.updated, product.updated)
 
 ---
 
-## 🎨 Dizayn Tizimi
+## 🤝 Kelgusi rejalar
 
-- **Rang palitasi**: Indigo/Purple gradientlar asosida dark mode dizayn
-- **Tipografiya**: Inter, Roboto (Google Fonts)
-- **Animatsiyalar**: Framer Motion yordamida smooth o'tishlar
-- **Ikonlar**: Lucide React ikonlar to'plami
-- **Komponentlar**: Reusable, TypeScript-tipizatsiyalangan komponentlar
-
----
-
-## 🤝 Hissa Qo'shish
-
-1. Reponi fork qiling
-2. Feature branch yarating: `git checkout -b feature/yangi-funksiya`
-3. O'zgarishlaringizni commit qiling: `git commit -m 'feat: yangi funksiya qo'shildi'`
-4. Branch'ni push qiling: `git push origin feature/yangi-funksiya`
-5. Pull Request oching
+1. **PostgreSQL'ga ko'chirish** (drizzle config + driver)
+2. **Operator chat** real-time (WebSocket + bot orqali)
+3. **Multi-tenant SaaS** — bir ShopFlow instance, ko'p shop
+4. **AI assistant** — buyurtma kelganda chat AI mijozga avtomatik javob
+5. **Mobile admin app** (React Native)
+6. **Yandex.Maps** integratsiyasi yetkazib berish uchun
+7. **Telegram Stars** — Telegram'ning o'z to'lovi
 
 ---
 
-## 📄 Litsenziya
+## 📝 Litsenziya
 
-Bu loyiha [MIT License](LICENSE) ostida litsenziyalangan.
-
----
-
-## 👨‍💻 Ishlab Chiquvchi
-
-**Elmun Technologies**
-
-- GitHub: [@Elmun-Technologies](https://github.com/Elmun-Technologies)
-
----
-
-<div align="center">
-
-⭐ Agar loyiha foydali bo'lsa, **star** bosing!
-
-Made with ❤️ by **Elmun Technologies**
-
-</div>
+Privat loyiha. Elmun Technologies.
