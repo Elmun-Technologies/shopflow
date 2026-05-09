@@ -78,9 +78,13 @@ export interface AdminProduct {
   name: string;
   description: string | null;
   price: number;
+  compareAtPrice: number | null;
   stock: number;
   images: string[];
   active: boolean;
+  featured: boolean;
+  rating: number;
+  reviewCount: number;
   sku: string | null;
 }
 

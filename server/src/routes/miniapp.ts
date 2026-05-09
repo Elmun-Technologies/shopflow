@@ -63,9 +63,9 @@ export default async function miniappRoutes(app: FastifyInstance) {
       }
     });
 
-    // 2. Catalog — kategoriyalar + mahsulotlar
+    // 2. Catalog — kategoriyalar + mahsulotlar + favorites
     api.get("/catalog", async (req) => {
-      const { shopId } = req.user as unknown as { shopId: string };
+      const { shopId, tgUserId } = req.user as unknown as { shopId: string; tgUserId: string };
       const cats = await db.query.categories.findMany({
         where: eq(schema.categories.shopId, shopId),
         orderBy: [schema.categories.sortOrder],
@@ -73,7 +73,36 @@ export default async function miniappRoutes(app: FastifyInstance) {
       const prods = await db.query.products.findMany({
         where: and(eq(schema.products.shopId, shopId), eq(schema.products.active, true)),
       });
-      return { categories: cats, products: prods };
+      const favs = await db.query.favorites.findMany({ where: eq(schema.favorites.tgUserId, tgUserId) });
+      const favSet = new Set(favs.map((f) => f.productId));
+      return {
+        categories: cats,
+        products: prods.map((p) => ({ ...p, isFavorite: favSet.has(p.id) })),
+      };
+    });
+
+    api.get("/favorites", async (req) => {
+      const { tgUserId } = req.user as unknown as { tgUserId: string };
+      const favs = await db.query.favorites.findMany({ where: eq(schema.favorites.tgUserId, tgUserId) });
+      return favs.map((f) => f.productId);
+    });
+
+    api.post("/favorites/:productId", async (req, reply) => {
+      const { tgUserId, shopId } = req.user as unknown as { tgUserId: string; shopId: string };
+      const params = z.object({ productId: z.string() }).parse(req.params);
+      const product = await db.query.products.findFirst({
+        where: and(eq(schema.products.id, params.productId), eq(schema.products.shopId, shopId)),
+      });
+      if (!product) return reply.code(404).send({ error: "Mahsulot topilmadi" });
+      const existing = await db.query.favorites.findFirst({
+        where: and(eq(schema.favorites.tgUserId, tgUserId), eq(schema.favorites.productId, params.productId)),
+      });
+      if (existing) {
+        await db.delete(schema.favorites).where(eq(schema.favorites.id, existing.id));
+        return { isFavorite: false };
+      }
+      await db.insert(schema.favorites).values({ shopId, tgUserId, productId: params.productId });
+      return { isFavorite: true };
     });
 
     // UI schema (botning ko'rinishi)

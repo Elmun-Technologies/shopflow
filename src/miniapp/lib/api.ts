@@ -42,9 +42,14 @@ export interface Product {
   name: string;
   description: string | null;
   price: number;
+  compareAtPrice: number | null;
   stock: number;
   images: string[];
   active: boolean;
+  rating: number;
+  reviewCount: number;
+  featured: boolean;
+  isFavorite?: boolean;
 }
 
 export interface Category {
@@ -52,6 +57,8 @@ export interface Category {
   name: string;
   parentId: string | null;
   sortOrder: number;
+  imageUrl: string | null;
+  emoji: string | null;
 }
 
 export interface OrderSummary {
@@ -99,6 +106,10 @@ export const miniApi = {
   catalog: () => req<{ categories: Category[]; products: Product[] }>("/api/miniapp/catalog"),
   uiSchema: () => req<UISchemaShape>("/api/miniapp/ui-schema"),
   product: (id: string) => req<Product>(`/api/miniapp/products/${id}`),
+  favorites: {
+    list: () => req<string[]>("/api/miniapp/favorites"),
+    toggle: (productId: string) => req<{ isFavorite: boolean }>(`/api/miniapp/favorites/${productId}`, { method: "POST" }),
+  },
   cart: {
     get: () => req<{ items: { productId: string; quantity: number }[] }>("/api/miniapp/cart"),
     save: (items: { productId: string; quantity: number }[]) =>

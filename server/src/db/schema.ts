@@ -60,6 +60,8 @@ export const categories = sqliteTable("categories", {
   name: text("name").notNull(),
   externalId: text("external_id"),
   sortOrder: integer("sort_order").notNull().default(0),
+  imageUrl: text("image_url"),
+  emoji: text("emoji"),
 });
 
 export const products = sqliteTable("products", {
@@ -71,13 +73,42 @@ export const products = sqliteTable("products", {
   name: text("name").notNull(),
   description: text("description"),
   price: real("price").notNull(),
+  compareAtPrice: real("compare_at_price"),
   stock: integer("stock").notNull().default(0),
   images: text("images", { mode: "json" }).$type<string[]>().default([]),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+  rating: real("rating").notNull().default(5.0),
+  reviewCount: integer("review_count").notNull().default(0),
+  featured: integer("featured", { mode: "boolean" }).notNull().default(false),
   updatedAt: ts("updated_at").notNull(),
 }, (t) => ({
   shopIdx: index("products_shop_idx").on(t.shopId),
+  featuredIdx: index("products_featured_idx").on(t.featured),
 }));
+
+export const favorites = sqliteTable("favorites", {
+  id: id(),
+  shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),
+  tgUserId: text("tg_user_id").notNull().references(() => tgUsers.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  createdAt: ts("created_at").notNull(),
+}, (t) => ({
+  userProductUnique: uniqueIndex("favorites_user_product_unique").on(t.tgUserId, t.productId),
+  userIdx: index("favorites_user_idx").on(t.tgUserId),
+}));
+
+export const productReviews = sqliteTable("product_reviews", {
+  id: id(),
+  shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  tgUserId: text("tg_user_id").references(() => tgUsers.id, { onDelete: "set null" }),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: ts("created_at").notNull(),
+}, (t) => ({
+  productIdx: index("reviews_product_idx").on(t.productId),
+}));
+
 
 export const orders = sqliteTable("orders", {
   id: id(),

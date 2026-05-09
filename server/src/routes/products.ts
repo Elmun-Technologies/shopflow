@@ -8,11 +8,14 @@ const productCreateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   price: z.number().min(0),
+  compareAtPrice: z.number().min(0).nullable().optional(),
   stock: z.number().int().min(0).default(0),
   categoryId: z.string().nullable().optional(),
   sku: z.string().optional(),
   images: z.array(z.string().url()).default([]),
   active: z.boolean().default(true),
+  featured: z.boolean().default(false),
+  rating: z.number().min(0).max(5).optional(),
 });
 
 const productUpdateSchema = productCreateSchema.partial();

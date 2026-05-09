@@ -148,10 +148,12 @@ function ProductEditor({ product, categories, onClose, onSaved }: { product: Adm
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product?.price ?? 0);
+  const [compareAtPrice, setCompareAtPrice] = useState<number | "">((product as AdminProduct & { compareAtPrice?: number | null })?.compareAtPrice ?? "");
   const [stock, setStock] = useState(product?.stock ?? 0);
   const [categoryId, setCategoryId] = useState<string | null>(product?.categoryId ?? null);
   const [imageUrl, setImageUrl] = useState(product?.images[0] ?? "");
   const [active, setActive] = useState(product?.active ?? true);
+  const [featured, setFeatured] = useState((product as AdminProduct & { featured?: boolean })?.featured ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -161,9 +163,11 @@ function ProductEditor({ product, categories, onClose, onSaved }: { product: Adm
     try {
       const body = {
         name, description: description || undefined, price, stock,
+        compareAtPrice: compareAtPrice === "" ? null : Number(compareAtPrice),
         categoryId: categoryId || null,
         images: imageUrl ? [imageUrl] : [],
         active,
+        featured,
       };
       const result = product
         ? await api.products.update(product.id, body)
@@ -197,10 +201,13 @@ function ProductEditor({ product, categories, onClose, onSaved }: { product: Adm
             <Field label="Narx (so'm) *">
               <input type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} className={input} />
             </Field>
-            <Field label="Qoldiq">
-              <input type="number" value={stock} onChange={(e) => setStock(Number(e.target.value))} className={input} />
+            <Field label="Eski narx (chegirma uchun)">
+              <input type="number" value={compareAtPrice} onChange={(e) => setCompareAtPrice(e.target.value === "" ? "" : Number(e.target.value))} placeholder="Bo'sh = chegirmasiz" className={input} />
             </Field>
           </div>
+          <Field label="Qoldiq">
+            <input type="number" value={stock} onChange={(e) => setStock(Number(e.target.value))} className={input} />
+          </Field>
           <Field label="Kategoriya">
             <select value={categoryId ?? ""} onChange={(e) => setCategoryId(e.target.value || null)} className={input}>
               <option value="">— tanlang —</option>
@@ -215,6 +222,12 @@ function ProductEditor({ product, categories, onClose, onSaved }: { product: Adm
               {active && <span className="text-white text-xs">✓</span>}
             </div>
             <span className="text-sm text-slate-300">Faol (Telegram'da ko'rinadi)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer" onClick={() => setFeatured((v) => !v)}>
+            <div className={`w-5 h-5 rounded border ${featured ? "bg-amber-600 border-amber-500" : "border-slate-600"} flex items-center justify-center`}>
+              {featured && <span className="text-white text-xs">⭐</span>}
+            </div>
+            <span className="text-sm text-slate-300">Mashhur (Featured) - bosh sahifada ko'rinadi</span>
           </label>
 
           {error && <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
