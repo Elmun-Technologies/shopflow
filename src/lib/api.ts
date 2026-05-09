@@ -171,6 +171,34 @@ export const api = {
     },
   },
 
+  analytics: {
+    dashboard: () => request<{
+      revenue: { today: number; yesterday: number; week: number; month: number; deltaPct: number };
+      orders: { today: number; week: number; month: number; total: number; pending: number };
+      customers: { total: number; newToday: number; newWeek: number };
+      products: { total: number; lowStock: number; outOfStock: number };
+      generatedAt: number;
+    }>("/api/analytics/dashboard"),
+    revenue: (days = 30) => request<Array<{ date: string; revenue: number; orders: number }>>(`/api/analytics/revenue?days=${days}`),
+    topProducts: (limit = 10) => request<Array<{ productId: string | null; productName: string; totalSold: number; totalRevenue: number; orderCount: number }>>(`/api/analytics/top-products?limit=${limit}`),
+    sources: () => request<Array<{ source: string; count: number; revenue: number }>>("/api/analytics/sources"),
+    recentOrders: (limit = 10) => request<Array<{ id: string; orderNumber: string; status: string; total: number; createdAt: string | number; customerName: string; customerPhone: string | null }>>(`/api/analytics/recent-orders?limit=${limit}`),
+    lowStock: () => request<AdminProduct[]>("/api/analytics/low-stock"),
+  },
+
+  customers: {
+    list: () => request<Array<{
+      id: string; tgUserId: string; username: string | null; firstName: string | null; lastName: string | null;
+      phone: string | null; languageCode: string | null; createdAt: string | number;
+      orderCount: number; totalSpent: number; lastOrderAt: number | null;
+    }>>("/api/customers"),
+    get: (id: string) => request<{
+      id: string; tgUserId: string; username: string | null; firstName: string | null; lastName: string | null;
+      phone: string | null; createdAt: string | number; orderCount: number; totalSpent: number;
+      orders: AdminOrder[];
+    }>(`/api/customers/${id}`),
+  },
+
   integrations: {
     list: () => request<Array<{ id: string; type: string; status: string; lastSyncAt: number | null; createdAt: number }>>("/api/integrations"),
     moysklad: {

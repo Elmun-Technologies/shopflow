@@ -38,6 +38,7 @@ import {
 import { customers, customerStats, platformStats, regionStats, platformLabels, statusLabels, statusConfig } from "../data/customersData";
 import type { Customer, CustomerStatus } from "../data/customersData";
 import CustomerDetailModal from "./CustomerDetailModal";
+import LiveCustomersPanel from "./LiveCustomersPanel";
 import {
   BarChart,
   Bar,
@@ -173,6 +174,8 @@ export default function CustomersPage() {
 
   return (
     <div>
+      <div className="mb-6"><LiveCustomersPanel /></div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>

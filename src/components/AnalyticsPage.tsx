@@ -15,6 +15,7 @@ import {
   dailySales, timeRangeLabels,
 } from "../data/analyticsData";
 import type { AnalyticsTimeRange } from "../data/analyticsData";
+import LiveAnalyticsPanel from "./LiveAnalyticsPanel";
 
 const iconMap: Record<string, React.ElementType> = {
   DollarSign, ShoppingCart, Users, Target, RotateCcw, Receipt,
@@ -57,6 +58,10 @@ export default function AnalyticsPage() {
 
   return (
     <>
+      <div className="mb-6">
+        <LiveAnalyticsPanel />
+      </div>
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
