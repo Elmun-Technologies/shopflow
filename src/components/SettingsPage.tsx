@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import TelegramBotModal from "./TelegramBotModal";
 import {
   User, Store, Bell, Shield, Key, Puzzle, Save, Eye, EyeOff,
   Send, CreditCard, Wallet, BarChart3, ShoppingBag, Calculator,
@@ -43,6 +44,7 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
 
   const handleSave = () => {
     setSavedMsg("Saqlandi!");
@@ -201,11 +203,13 @@ export default function SettingsPage() {
               {int.connectedAt && (
                 <span className="text-[10px] text-slate-600">{int.connectedAt}</span>
               )}
-              <button className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
-                int.status === "connected" ? "text-slate-400 hover:text-white hover:bg-slate-700" :
-                int.status === "error" ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20" :
-                "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
-              }`}>
+              <button
+                onClick={() => { if (int.name === "Telegram Bot") setTelegramModalOpen(true); }}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+                  int.status === "connected" ? "text-slate-400 hover:text-white hover:bg-slate-700" :
+                  int.status === "error" ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20" :
+                  "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
+                }`}>
                 {int.status === "connected" ? "Sozlash" : int.status === "error" ? "Tuzatish" : "Ulash"}
               </button>
             </div>
@@ -477,6 +481,7 @@ export default function SettingsPage() {
           </AnimatePresence>
         </div>
       </div>
+      <TelegramBotModal open={telegramModalOpen} onClose={() => setTelegramModalOpen(false)} />
     </>
   );
 }
