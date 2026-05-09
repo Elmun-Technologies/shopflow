@@ -21,6 +21,15 @@ function EmailStatusBadge({ status }: { status: EmailCampaignStatus }) {
   return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{emailCampaignStatusLabels[status]}</span>;
 }
 
+type EmailFormValues = Omit<EmailCampaign, "id" | "sent" | "opened" | "clicks" | "createdAt">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function RassilkaPage() {
   const [emails, setEmails] = useState<EmailCampaign[]>(initialEmailCampaigns);
   const [search, setSearch] = useState("");
@@ -28,6 +37,27 @@ export default function RassilkaPage() {
   const [editItem, setEditItem] = useState<EmailCampaign | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSave(values: EmailFormValues) {
+    if (!values.name.trim()) { setFormError("Kampaniya nomi kerak"); return; }
+    if (!values.subject.trim()) { setFormError("Email mavzusu kerak"); return; }
+    if (editItem) {
+      setEmails((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      const created: EmailCampaign = {
+        id: newId("email"),
+        sent: 0,
+        opened: 0,
+        clicks: 0,
+        createdAt: new Date().toISOString().slice(0, 10),
+        ...values,
+      };
+      setEmails((prev) => [created, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -51,12 +81,12 @@ export default function RassilkaPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Email tahrirlash" : "Yangi email kampaniya"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="email-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <EmailForm initial={editItem} error={formError} />
+        <EmailForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -159,7 +189,7 @@ export default function RassilkaPage() {
   );
 }
 
-function EmailForm({ initial, error }: any) {
+function EmailForm({ initial, error, onSave }: { initial: EmailCampaign | null; error: string | null; onSave: (v: EmailFormValues) => void }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [subject, setSubject] = useState(initial?.subject ?? "");
   const [segment, setSegment] = useState(initial?.segment ?? "");
@@ -168,7 +198,7 @@ function EmailForm({ initial, error }: any) {
   const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt ?? "");
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="email-form" onSubmit={(e) => { e.preventDefault(); onSave({ name, subject, segment, body, status, scheduledAt }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Kampaniya sozlamalari</h3>

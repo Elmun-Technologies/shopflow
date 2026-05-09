@@ -29,6 +29,15 @@ function PostStatusBadge({ status }: { status: ChannelPostStatus }) {
   return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{channelPostStatusLabels[status]}</span>;
 }
 
+type PostFormValues = Omit<ChannelPost, "id" | "reach">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function KanalPage() {
   const [posts, setPosts] = useState<ChannelPost[]>(initialChannelPosts);
   const [search, setSearch] = useState("");
@@ -36,6 +45,19 @@ export default function KanalPage() {
   const [editItem, setEditItem] = useState<ChannelPost | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSave(values: PostFormValues) {
+    if (!values.title.trim()) { setFormError("Sarlavha kerak"); return; }
+    if (!values.content.trim()) { setFormError("Post matni kerak"); return; }
+    if (editItem) {
+      setPosts((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      setPosts((prev) => [{ id: newId("post"), reach: 0, ...values }, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -59,12 +81,12 @@ export default function KanalPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Postni tahrirlash" : "Yangi post"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="post-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <PostForm initial={editItem} error={formError} />
+        <PostForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -165,7 +187,7 @@ export default function KanalPage() {
   );
 }
 
-function PostForm({ initial, error }: { initial: ChannelPost | null; error: string | null }) {
+function PostForm({ initial, error, onSave }: { initial: ChannelPost | null; error: string | null; onSave: (v: PostFormValues) => void }) {
   const [platform, setPlatform] = useState<ChannelPlatform>(initial?.platform ?? "telegram");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [content, setContent] = useState(initial?.content ?? "");
@@ -175,7 +197,7 @@ function PostForm({ initial, error }: { initial: ChannelPost | null; error: stri
   const [link, setLink] = useState(initial?.link ?? "");
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="post-form" onSubmit={(e) => { e.preventDefault(); onSave({ platform, title, content, mediaUrl: mediaUrl || undefined, scheduledAt, status, link: link || undefined }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Post ma'lumotlari</h3>

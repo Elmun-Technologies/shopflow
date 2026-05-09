@@ -23,6 +23,15 @@ function ProgressBar({ used, limit }: { used: number; limit: number | null }) {
   );
 }
 
+type GiftFormValues = Omit<GiftPromotion, "id" | "usedCount" | "createdAt">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function SovgalarPage() {
   const [gifts, setGifts] = useState<GiftPromotion[]>(initialGiftPromotions);
   const [search, setSearch] = useState("");
@@ -30,6 +39,19 @@ export default function SovgalarPage() {
   const [editItem, setEditItem] = useState<GiftPromotion | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSave(values: GiftFormValues) {
+    if (!values.name.trim()) { setFormError("Aksiya nomi kerak"); return; }
+    if (!values.giftDescription.trim()) { setFormError("Sovg'a tavsifi kerak"); return; }
+    if (editItem) {
+      setGifts((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      setGifts((prev) => [{ id: newId("gift"), usedCount: 0, createdAt: new Date().toISOString().slice(0, 10), ...values }, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -53,12 +75,12 @@ export default function SovgalarPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Sovg'a tahrirlash" : "Yangi sovg'a aksiyasi"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="gift-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <GiftForm initial={editItem} error={formError} />
+        <GiftForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -161,7 +183,7 @@ export default function SovgalarPage() {
   );
 }
 
-function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: string | null }) {
+function GiftForm({ initial, error, onSave }: { initial: GiftPromotion | null; error: string | null; onSave: (v: GiftFormValues) => void }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [conditionType, setConditionType] = useState<GiftConditionType>(initial?.conditionType ?? "quantity");
@@ -175,7 +197,7 @@ function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: st
   const [active, setActive] = useState(initial?.active ?? true);
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="gift-form" onSubmit={(e) => { e.preventDefault(); onSave({ name, description, conditionType, conditionValue, triggerProducts: triggerProducts.split(",").map((s) => s.trim()).filter(Boolean), giftDescription, priority, usageLimit, startAt, endAt, active }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Aksiya ma'lumotlari</h3>

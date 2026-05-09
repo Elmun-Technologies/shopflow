@@ -32,6 +32,15 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+type PromoFormValues = Omit<PromoCode, "id" | "usedCount">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function PromoPage() {
   const [promos, setPromos] = useState<PromoCode[]>(initialPromoCodes);
   const [search, setSearch] = useState("");
@@ -39,6 +48,19 @@ export default function PromoPage() {
   const [editItem, setEditItem] = useState<PromoCode | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSave(values: PromoFormValues) {
+    if (!values.code.trim()) { setFormError("Promo kod kerak"); return; }
+    if (values.value <= 0) { setFormError("Chegirma miqdori 0 dan katta bo'lishi kerak"); return; }
+    if (editItem) {
+      setPromos((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      setPromos((prev) => [{ id: newId("promo"), usedCount: 0, ...values }, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -63,12 +85,12 @@ export default function PromoPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Promo kodni tahrirlash" : "Yangi promo kod"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="promo-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <PromoForm initial={editItem} error={formError} />
+        <PromoForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -172,7 +194,7 @@ export default function PromoPage() {
   );
 }
 
-function PromoForm({ initial, error }: { initial: PromoCode | null; error: string | null }) {
+function PromoForm({ initial, error, onSave }: { initial: PromoCode | null; error: string | null; onSave: (v: PromoFormValues) => void }) {
   const [code, setCode] = useState(initial?.code ?? "");
   const [discountType, setDiscountType] = useState<PromoDiscountType>(initial?.discountType ?? "percent");
   const [value, setValue] = useState(initial?.value ?? 0);
@@ -183,7 +205,7 @@ function PromoForm({ initial, error }: { initial: PromoCode | null; error: strin
   const [active, setActive] = useState(initial?.active ?? true);
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="promo-form" onSubmit={(e) => { e.preventDefault(); onSave({ code, discountType, value, minOrder, maxUses, validFrom, validTo, active }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Asosiy ma'lumotlar</h3>

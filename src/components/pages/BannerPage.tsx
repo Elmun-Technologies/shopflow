@@ -15,6 +15,15 @@ function CTRBadge({ impressions, clicks }: { impressions: number; clicks: number
   return <span className="text-xs text-slate-300">{ctr}%</span>;
 }
 
+type BannerFormValues = Omit<MarketingBanner, "id" | "impressions" | "clicks">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function BannerPage() {
   const [banners, setBanners] = useState<MarketingBanner[]>(initialBanners);
   const [search, setSearch] = useState("");
@@ -22,6 +31,18 @@ export default function BannerPage() {
   const [editItem, setEditItem] = useState<MarketingBanner | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSave(values: BannerFormValues) {
+    if (!values.title.trim()) { setFormError("Sarlavha kerak"); return; }
+    if (editItem) {
+      setBanners((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      setBanners((prev) => [{ id: newId("banner"), impressions: 0, clicks: 0, ...values }, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -47,12 +68,12 @@ export default function BannerPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Bannerni tahrirlash" : "Yangi banner"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="banner-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <BannerForm initial={editItem} error={formError} />
+        <BannerForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -155,7 +176,7 @@ export default function BannerPage() {
   );
 }
 
-function BannerForm({ initial, error }: { initial: MarketingBanner | null; error: string | null }) {
+function BannerForm({ initial, error, onSave }: { initial: MarketingBanner | null; error: string | null; onSave: (v: BannerFormValues) => void }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [placement, setPlacement] = useState<BannerPlacement>(initial?.placement ?? "home_hero");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
@@ -165,7 +186,7 @@ function BannerForm({ initial, error }: { initial: MarketingBanner | null; error
   const [active, setActive] = useState(initial?.active ?? true);
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="banner-form" onSubmit={(e) => { e.preventDefault(); onSave({ title, placement, imageUrl, targetUrl, startAt, endAt, active }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Banner ma'lumotlari</h3>

@@ -19,6 +19,15 @@ function GiveawayStatusBadge({ status }: { status: GiveawayStatus }) {
   return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{giveawayStatusLabels[status]}</span>;
 }
 
+type GiveawayFormValues = Omit<GiveawayContest, "id" | "participantCount" | "createdAt">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function GiveawayPage() {
   const [contests, setContests] = useState<GiveawayContest[]>(initialGiveaways);
   const [search, setSearch] = useState("");
@@ -26,6 +35,18 @@ export default function GiveawayPage() {
   const [editItem, setEditItem] = useState<GiveawayContest | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSave(values: GiveawayFormValues) {
+    if (!values.title.trim()) { setFormError("Sarlavha kerak"); return; }
+    if (editItem) {
+      setContests((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      setContests((prev) => [{ id: newId("give"), participantCount: 0, createdAt: new Date().toISOString().slice(0, 10), ...values }, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -49,12 +70,12 @@ export default function GiveawayPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Giveawaytni tahrirlash" : "Yangi giveaway"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="giveaway-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <GiveawayForm initial={editItem} error={formError} />
+        <GiveawayForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -159,12 +180,12 @@ export default function GiveawayPage() {
   );
 }
 
-function GiveawayForm({ initial, error }: { initial: GiveawayContest | null; error: string | null }) {
+function GiveawayForm({ initial, error, onSave }: { initial: GiveawayContest | null; error: string | null; onSave: (v: GiveawayFormValues) => void }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [prizeType, setPrizeType] = useState<GiveawayPrizeType>(initial?.prizeType ?? "discount");
   const [prizeCount, setPrizeCount] = useState(initial?.prizeCount ?? 1);
-  const [discountType, setDiscountType] = useState(initial?.discountType ?? "percent");
+  const [discountType, setDiscountType] = useState<"percent" | "fixed">(initial?.discountType ?? "percent");
   const [discountValue, setDiscountValue] = useState(initial?.discountValue ?? 0);
   const [productName, setProductName] = useState(initial?.productName ?? "");
   const [pointsAmount, setPointsAmount] = useState(initial?.pointsAmount ?? 0);
@@ -173,7 +194,7 @@ function GiveawayForm({ initial, error }: { initial: GiveawayContest | null; err
   const [status, setStatus] = useState<GiveawayStatus>(initial?.status ?? "draft");
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="giveaway-form" onSubmit={(e) => { e.preventDefault(); onSave({ title, description, prizeType, prizeCount, discountType: prizeType === "discount" ? discountType : undefined, discountValue: prizeType === "discount" ? discountValue : undefined, productName: prizeType === "product" ? productName : undefined, pointsAmount: prizeType === "points" ? pointsAmount : undefined, audience, endAt, status }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Giveaway ma'lumotlari</h3>

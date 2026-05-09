@@ -8,6 +8,15 @@ import EmptyState from "../EmptyState";
 const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
 const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
 
+type RuleFormValues = Omit<LoyaltyRule, "id">;
+
+function newId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Date.now()}`;
+}
+
 export default function SodiqlikPage() {
   const [rules, setRules] = useState<LoyaltyRule[]>(initialLoyaltyRules);
   const [settings, setSettings] = useState<LoyaltySettings>(initialLoyaltySettings);
@@ -15,6 +24,18 @@ export default function SodiqlikPage() {
   const [editItem, setEditItem] = useState<LoyaltyRule | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  function handleSaveRule(values: RuleFormValues) {
+    if (!values.name.trim()) { setFormError("Qoida nomi kerak"); return; }
+    if (editItem) {
+      setRules((prev) => prev.map((x) => (x.id === editItem.id ? { ...editItem, ...values } : x)));
+    } else {
+      setRules((prev) => [{ id: newId("rule"), ...values }, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  }
 
   const stats = useMemo(() => {
     const activeRules = rules.filter((r) => r.active).length;
@@ -34,7 +55,7 @@ export default function SodiqlikPage() {
           <h1 className="text-2xl font-bold text-white">Sodiqlik dasturi sozlamalari</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => setPageMode("list")} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => setPageMode("list")} className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
@@ -50,12 +71,12 @@ export default function SodiqlikPage() {
           <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Qoidani tahrirlash" : "Yangi qoida"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+            <button form="rule-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <RuleForm initial={editItem} error={formError} />
+        <RuleForm initial={editItem} error={formError} onSave={handleSaveRule} />
       </div>
     );
   }
@@ -150,7 +171,7 @@ export default function SodiqlikPage() {
   );
 }
 
-function RuleForm({ initial, error }: { initial: LoyaltyRule | null; error: string | null }) {
+function RuleForm({ initial, error, onSave }: { initial: LoyaltyRule | null; error: string | null; onSave: (v: RuleFormValues) => void }) {
   const [type, setType] = useState<LoyaltyRuleType>(initial?.type ?? "registration");
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -160,7 +181,7 @@ function RuleForm({ initial, error }: { initial: LoyaltyRule | null; error: stri
   const [active, setActive] = useState(initial?.active ?? true);
 
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="rule-form" onSubmit={(e) => { e.preventDefault(); onSave({ type, name, description, pointsValue, purchaseRate: type === "purchase" || type === "spend_goal" ? purchaseRate : undefined, minSpend: type === "spend_goal" ? minSpend : undefined, active }); }} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Qoida ma'lumotlari</h3>
