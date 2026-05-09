@@ -207,7 +207,7 @@ function SourceForm({ initial, error }: { initial: MarketingSource | null; error
       <div className="space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Holat</h3>
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-3 cursor-pointer" onClick={() => setActive((v) => !v)}>
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
             </div>

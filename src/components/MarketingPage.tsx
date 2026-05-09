@@ -30,7 +30,6 @@ import type {
   EmailCampaign,
   EmailCampaignStatus,
   PromoCode,
-  PromoDiscountType,
   MarketingSource,
   SmsCampaign,
   SmsCampaignStatus,
@@ -42,16 +41,13 @@ import type {
   ProductReview,
   ReviewStatus,
   GiftPromotion,
-  GiftConditionType,
   LoyaltyRule,
   LoyaltySettings,
   GiveawayContest,
   GiveawayStatus,
   GiveawayPrizeType,
-  GiveawayAudience,
   LoyaltyTransaction,
   TransactionType,
-  LoyaltyRuleType,
 } from "../data/marketingData";
 import {
   marketingSubOrder,
@@ -74,10 +70,7 @@ import {
   channelPostStatusLabels,
   bannerPlacementLabels,
   reviewStatusLabels,
-  loyaltyRuleTypeLabels,
-  loyaltyRuleTypeDescriptions,
   giveawayPrizeTypeLabels,
-  giveawayAudienceLabels,
   giveawayStatusLabels,
   transactionTypeLabels,
 } from "../data/marketingData";
@@ -248,18 +241,18 @@ export default function MarketingPage({ activeSub, onSubChange }: MarketingPageP
   const [smsList, setSmsList] = useState<SmsCampaign[]>(initialSmsCampaigns);
   const [posts, setPosts] = useState<ChannelPost[]>(initialChannelPosts);
   const [banners, setBanners] = useState<MarketingBanner[]>(initialBanners);
-  const [reviews, setReviews] = useState<ProductReview[]>(initialReviews);
-  const [loyaltyRules, setLoyaltyRules] = useState<LoyaltyRule[]>(initialLoyaltyRules);
+  const [reviews] = useState<ProductReview[]>(initialReviews);
+  const [loyaltyRules] = useState<LoyaltyRule[]>(initialLoyaltyRules);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings>(initialLoyaltySettings);
   const [giveaways, setGiveaways] = useState<GiveawayContest[]>(initialGiveaways);
-  const [transactions, setTransactions] = useState<LoyaltyTransaction[]>(initialTransactions);
+  const [transactions] = useState<LoyaltyTransaction[]>(initialTransactions);
 
   const [pageMode, setPageMode] = useState<PageMode>("list");
   const [editTarget, setEditTarget] = useState<EditTarget>({ kind: "none" });
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [, setStatusFilter] = useState<string>("all");
   const [pendingDelete, setPendingDelete] = useState<DeleteState>({ kind: "none" });
-  const [formError, setFormError] = useState<string | null>(null);
+  const [, setFormError] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const totalSent = emails.reduce((s, e) => s + e.sent, 0);
@@ -455,7 +448,7 @@ export default function MarketingPage({ activeSub, onSubChange }: MarketingPageP
         {activeSub === "sharhlar" && <ReviewListView reviews={reviews} onEdit={startEdit} onDelete={startDelete} search={q} />}
         {activeSub === "sodiqlik" && <LoyaltyView rules={loyaltyRules} settings={loyaltySettings} onEditRule={startEdit} onUpdateSettings={handleUpdateLoyaltySettings} />}
         {activeSub === "giveaway" && <GiveawayListView giveaways={giveaways} onEdit={startEdit} onDelete={startDelete} search={q} />}
-        {activeSub === "tranzaksiyalar" && <TransactionListView transactions={transactions} onManualAdd={handleManualAdd} />}
+        {activeSub === "tranzaksiyalar" && <TransactionListView transactions={transactions} />}
       </AnimatePresence>
 
       {/* Delete confirmation */}
@@ -556,18 +549,6 @@ export default function MarketingPage({ activeSub, onSubChange }: MarketingPageP
     setLoyaltySettings(settings);
   }
 
-  function handleManualAdd(customerName: string, points: number, description: string) {
-    const newTx: LoyaltyTransaction = {
-      id: newId("tx"),
-      customerName,
-      type: "manual_add",
-      points,
-      balance: 0,
-      description,
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    setTransactions((prev) => [newTx, ...prev]);
-  }
 }
 
 // List view components (simplified for space)
@@ -973,7 +954,7 @@ function GiveawayListView({ giveaways, onEdit, onDelete, search }: any) {
   );
 }
 
-function TransactionListView({ transactions, onManualAdd }: any) {
+function TransactionListView({ transactions }: any) {
   const stats = {
     earned: transactions.filter((t: any) => t.type === "earn").reduce((s: number, t: any) => s + t.points, 0),
     spent: transactions.filter((t: any) => t.type === "spend").reduce((s: number, t: any) => s + t.points, 0),

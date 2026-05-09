@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, Filter, Workflow } from "lucide-react";
+import { Search, Download, Workflow } from "lucide-react";
 import type { LoyaltyTransaction, TransactionType } from "../../data/marketingData";
 import { initialTransactions, transactionTypeLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
@@ -20,7 +20,7 @@ function TransactionTypeBadge({ type }: { type: TransactionType }) {
 }
 
 export default function TranzaksiyalarPage() {
-  const [transactions, setTransactions] = useState<LoyaltyTransaction[]>(initialTransactions);
+  const [transactions] = useState<LoyaltyTransaction[]>(initialTransactions);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<TransactionType | "all">("all");
 
