@@ -7,6 +7,7 @@ import { decrypt } from "../lib/crypto.js";
 import { sendMessage } from "../services/telegram.js";
 import { emit } from "../lib/events.js";
 import { botUiSchemaSchema, defaultUiSchema } from "../lib/uiSchema.js";
+import { markLeadConvertedFromOrder } from "../services/leads.js";
 
 const authSchema = z.object({ botId: z.string(), initData: z.string() });
 
@@ -169,6 +170,9 @@ export default async function miniappRoutes(app: FastifyInstance) {
         shopId,
         order: { id: order.id, orderNumber: order.orderNumber, total: order.total, createdAt: order.createdAt },
       });
+
+      // Lead'ni "converted" ga o'tkazish (agar mavjud bo'lsa)
+      void markLeadConvertedFromOrder({ shopId, tgUserId, orderId: order.id, orderTotal: order.total }).catch(() => { /* */ });
 
       // Bot orqali xaridorga tasdiq xabari
       try {

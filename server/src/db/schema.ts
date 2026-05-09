@@ -153,6 +153,35 @@ export const payments = sqliteTable("payments", {
   providerTxnIdx: index("payments_provider_txn_idx").on(t.provider, t.providerTxnId),
 }));
 
+export const leads = sqliteTable("leads", {
+  id: id(),
+  shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),
+  source: text("source", {
+    enum: ["telegram", "miniapp", "web_form", "instagram", "facebook", "whatsapp", "marketplace", "landing_page", "email", "google_ads", "yandex_direct", "phone", "other"],
+  }).notNull(),
+  status: text("status", {
+    enum: ["new", "contacted", "qualified", "converted", "lost"],
+  }).notNull().default("new"),
+  priority: text("priority", { enum: ["low", "medium", "high"] }).notNull().default("medium"),
+  name: text("name").notNull(),
+  phone: text("phone"),
+  email: text("email"),
+  company: text("company"),
+  value: real("value").notNull().default(0),
+  assignedTo: text("assigned_to").references(() => users.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  tgUserId: text("tg_user_id").references(() => tgUsers.id, { onDelete: "set null" }),
+  orderId: text("order_id").references(() => orders.id, { onDelete: "set null" }),
+  metadata: text("metadata", { mode: "json" }),
+  createdAt: ts("created_at").notNull(),
+  updatedAt: ts("updated_at").notNull(),
+}, (t) => ({
+  shopIdx: index("leads_shop_idx").on(t.shopId),
+  sourceIdx: index("leads_source_idx").on(t.source),
+  statusIdx: index("leads_status_idx").on(t.status),
+  tgUserUnique: uniqueIndex("leads_shop_tg_user_unique").on(t.shopId, t.tgUserId),
+}));
+
 export const shopSettings = sqliteTable("shop_settings", {
   id: id(),
   shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),

@@ -84,6 +84,28 @@ export interface AdminProduct {
   sku: string | null;
 }
 
+export type LeadSource = "telegram" | "miniapp" | "web_form" | "instagram" | "facebook" | "whatsapp" | "marketplace" | "landing_page" | "email" | "google_ads" | "yandex_direct" | "phone" | "other";
+export type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost";
+export type LeadPriority = "low" | "medium" | "high";
+
+export interface AdminLead {
+  id: string;
+  source: LeadSource;
+  status: LeadStatus;
+  priority: LeadPriority;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  company: string | null;
+  value: number;
+  notes: string | null;
+  tgUserId: string | null;
+  orderId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string | number;
+  updatedAt: string | number;
+}
+
 export interface AdminCategory {
   id: string;
   name: string;
@@ -192,6 +214,28 @@ export const api = {
   payments: {
     list: () => request<Array<{ id: string; orderId: string; orderNumber: string | null; provider: string; providerTxnId: string | null; amount: number; state: string; createdAt: number; updatedAt: number }>>("/api/payments"),
     stats: () => request<Array<{ provider: string; state: string; count: number; total: number }>>("/api/payments/stats"),
+  },
+
+  leads: {
+    list: (params?: { status?: string; source?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set("status", params.status);
+      if (params?.source) q.set("source", params.source);
+      if (params?.limit) q.set("limit", String(params.limit));
+      const qs = q.toString();
+      return request<AdminLead[]>(`/api/leads${qs ? `?${qs}` : ""}`);
+    },
+    stats: () => request<{
+      total: number; new: number; contacted: number; qualified: number; converted: number; lost: number;
+      conversionRate: number; wonValue: number; bySource: Record<string, number>;
+    }>("/api/leads/stats"),
+    bySource: () => request<Array<{ source: string; count: number; value: number }>>("/api/leads/by-source"),
+    get: (id: string) => request<AdminLead>(`/api/leads/${id}`),
+    create: (body: Partial<AdminLead> & { source: string; name: string }) =>
+      request<AdminLead>("/api/leads", { method: "POST", body: JSON.stringify(body) }),
+    update: (id: string, body: Partial<AdminLead>) =>
+      request<AdminLead>(`/api/leads/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    remove: (id: string) => request<{ ok: true }>(`/api/leads/${id}`, { method: "DELETE" }),
   },
 
   settings: {

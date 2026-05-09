@@ -6,6 +6,7 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
+import { createLeadFromTelegram } from "../services/leads.js";
 
 async function ensureTgUser(shopId: string, ctx: Context) {
   const tg = ctx.from;
@@ -48,6 +49,16 @@ export function buildBotHandler(bot: Bot, botId: string) {
     if (!ref) return;
     const tgUser = await ensureTgUser(ref.shopId, ctx);
     await logIn(botId, tgUser?.id ?? null, ctx);
+
+    if (tgUser) {
+      const fullName = [tgUser.firstName, tgUser.lastName].filter(Boolean).join(" ") || tgUser.username || "Mehmon";
+      await createLeadFromTelegram({
+        shopId: ref.shopId,
+        tgUserId: tgUser.id,
+        name: fullName,
+        username: tgUser.username,
+      }).catch(() => { /* lead yaratilmagan bo'lsa ham bot ishlasin */ });
+    }
 
     const shop = await db.query.shops.findFirst({ where: eq(schema.shops.id, ref.shopId) });
     const miniappUrl = ref.bot.miniappUrl;

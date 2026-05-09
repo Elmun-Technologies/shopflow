@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { leads, sourceStats, funnelData, conversionByDay, sourceLabels, statusLabels, statusConfig, priorityConfig } from "../data/leadsData";
 import type { Lead, LeadStatus, LeadSource } from "../data/leadsData";
+import LiveLeadsPanel from "./LiveLeadsPanel";
 import LeadDetailModal from "./LeadDetailModal";
 import {
   BarChart,
@@ -184,6 +185,8 @@ export default function LeadsPage() {
 
   return (
     <div>
+      <div className="mb-6"><LiveLeadsPanel /></div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>
