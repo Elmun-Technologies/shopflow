@@ -111,7 +111,7 @@ export function buildBotHandler(bot: Bot, botId: string) {
   bot.on("message:web_app_data", async (ctx) => {
     const data = ctx.message.web_app_data?.data;
     if (!data) return;
-    await ctx.reply(`Mini App'dan ma'lumot keldi (uzunligi: ${data.length}). Buyurtma jarayoni keyingi sessiyada qo'shiladi.`);
+    await ctx.reply(`Buyurtma Mini App orqali rasmiylashtirilmoqda…`);
   });
 
   bot.on("message", async (ctx) => {

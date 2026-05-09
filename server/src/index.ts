@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import authRoutes from "./routes/auth.js";
 import botRoutes from "./routes/bots.js";
 import webhookRoutes from "./routes/webhook.js";
+import miniappRoutes from "./routes/miniapp.js";
 import { bootAllBots } from "./bot/runtime.js";
 
 declare module "fastify" {
@@ -14,10 +15,12 @@ declare module "fastify" {
     authenticate: (req: any, reply: any) => Promise<void>;
   }
 }
+type AdminJwt = { userId: string; shopId: string };
+type MiniappJwt = { kind: "miniapp"; tgUserId: string; shopId: string; botId: string };
 declare module "@fastify/jwt" {
   interface FastifyJWT {
-    payload: { userId: string; shopId: string };
-    user: { userId: string; shopId: string };
+    payload: AdminJwt | MiniappJwt;
+    user: AdminJwt | MiniappJwt;
   }
 }
 
@@ -68,6 +71,7 @@ async function build() {
 
   await app.register(authRoutes, { prefix: "/api/auth" });
   await app.register(botRoutes, { prefix: "/api/bots" });
+  await app.register(miniappRoutes, { prefix: "/api/miniapp" });
   await app.register(webhookRoutes);
 
   return app;

@@ -4,6 +4,12 @@ import { encrypt, decrypt, randomHex } from "../lib/crypto.js";
 import * as tg from "./telegram.js";
 import { startBotInstance, stopBotInstance } from "../bot/runtime.js";
 
+function buildMiniappUrl(botId: string): string | null {
+  const base = (process.env.WEB_URL ?? process.env.PUBLIC_URL ?? "").replace(/\/$/, "");
+  if (!base) return null;
+  return `${base}/mini/${botId}`;
+}
+
 export async function connectBot(input: { shopId: string; token: string }) {
   const { shopId, token } = input;
 
@@ -38,6 +44,17 @@ export async function connectBot(input: { shopId: string; token: string }) {
     }).returning();
   }
 
+  const miniappUrl = buildMiniappUrl(bot.id);
+  if (miniappUrl) {
+    await db.update(schema.bots).set({ miniappUrl }).where(eq(schema.bots.id, bot.id));
+    bot.miniappUrl = miniappUrl;
+    try {
+      await tg.setChatMenuButton(token, miniappUrl, "🛍 Do'kon");
+    } catch (err) {
+      console.warn("setChatMenuButton xatosi:", err);
+    }
+  }
+
   const publicUrl = process.env.PUBLIC_URL?.replace(/\/$/, "");
   if (publicUrl) {
     try {
@@ -57,7 +74,13 @@ export async function connectBot(input: { shopId: string; token: string }) {
     startBotInstance(bot.id, token);
   }
 
-  return { id: bot.id, username: bot.username, status: bot.status, mode: publicUrl ? "webhook" : "polling" };
+  return {
+    id: bot.id,
+    username: bot.username,
+    status: bot.status,
+    mode: publicUrl ? "webhook" : "polling",
+    miniappUrl: bot.miniappUrl,
+  };
 }
 
 export async function disconnectBot(input: { shopId: string; botId: string }) {

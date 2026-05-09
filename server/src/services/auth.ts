@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
+import { seedDemoCatalog } from "./seed.js";
 
 export async function registerUser(input: { email: string; password: string; name: string; shopName: string }) {
   const existing = await db.query.users.findFirst({ where: eq(schema.users.email, input.email) });
@@ -18,6 +19,8 @@ export async function registerUser(input: { email: string; password: string; nam
     ownerId: user.id,
     name: input.shopName,
   }).returning();
+
+  await seedDemoCatalog(shop.id);
 
   return { user, shop };
 }

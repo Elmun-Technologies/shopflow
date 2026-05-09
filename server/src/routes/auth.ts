@@ -38,6 +38,7 @@ export default async function authRoutes(app: FastifyInstance) {
   });
 
   app.get("/me", { onRequest: [app.authenticate] }, async (req) => {
-    return { userId: req.user.userId, shopId: req.user.shopId };
+    const u = req.user as { userId?: string; shopId: string };
+    return { userId: u.userId, shopId: u.shopId };
   });
 }
