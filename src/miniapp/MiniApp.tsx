@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, AlertCircle } from "lucide-react";
 import { tg, getBotIdFromUrl } from "./lib/tg";
-import { miniApi, setToken, type Category, type Product, type OrderSummary } from "./lib/api";
+import { miniApi, setToken, type Category, type Product, type OrderSummary, type UISchemaShape } from "./lib/api";
 import CatalogPage from "./pages/CatalogPage";
 import ProductPage from "./pages/ProductPage";
 import CartPage from "./pages/CartPage";
@@ -30,6 +30,7 @@ export default function MiniApp() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [uiSchema, setUiSchema] = useState<UISchemaShape | null>(null);
 
   const current = stack[stack.length - 1];
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -48,9 +49,13 @@ export default function MiniApp() {
         const auth = await miniApi.auth(botId, tg.initData || "dev");
         setToken(auth.token);
         setShop(auth.shop);
-        const cat = await miniApi.catalog();
+        const [cat, schema] = await Promise.all([
+          miniApi.catalog(),
+          miniApi.uiSchema().catch(() => null),
+        ]);
         setCategories(cat.categories);
         setProducts(cat.products);
+        if (schema) setUiSchema(schema);
         try {
           const c = await miniApi.cart.get();
           setCart(c.items);
@@ -155,6 +160,7 @@ export default function MiniApp() {
                 categories={categories}
                 products={products}
                 cartCount={cartCount}
+                uiSchema={uiSchema}
                 onProduct={(id) => nav({ kind: "product", productId: id })}
                 onCart={() => nav({ kind: "cart" })}
                 onOrders={() => { void loadOrders(); nav({ kind: "orders" }); }}

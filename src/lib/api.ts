@@ -91,6 +91,34 @@ export interface AdminCategory {
   sortOrder: number;
 }
 
+export type BannerAction =
+  | { kind: "category"; categoryId: string }
+  | { kind: "product"; productId: string }
+  | { kind: "url"; url: string }
+  | { kind: "none" };
+
+export interface UIBanner {
+  type: "banner";
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  action: BannerAction;
+}
+
+export type UISection =
+  | { type: "categories"; id: string; title: string; layout: "grid" | "list" | "scroll"; visibleIds?: string[] }
+  | { type: "products"; id: string; title: string; filter: { categoryId?: string; productIds?: string[]; limit: number } }
+  | { type: "text"; id: string; title?: string; body: string };
+
+export interface UISchema {
+  version: 1;
+  theme: { primary: string; accent?: string };
+  welcomeMessage: string;
+  banners: UIBanner[];
+  sections: UISection[];
+}
+
 export const api = {
   register: (body: { email: string; password: string; name: string; shopName: string }) =>
     request<AuthResponse>("/api/auth/register", { method: "POST", body: JSON.stringify(body) }),
@@ -109,6 +137,8 @@ export const api = {
       }),
     status: (id: string) => request<{ id: string; username: string; botUserId: number; status: string; lastError: string | null }>(`/api/bots/${id}/status`),
     disconnect: (id: string) => request<{ ok: true }>(`/api/bots/${id}`, { method: "DELETE" }),
+    getUiSchema: (id: string) => request<UISchema>(`/api/bots/${id}/ui-schema`),
+    saveUiSchema: (id: string, schema: UISchema) => request<UISchema>(`/api/bots/${id}/ui-schema`, { method: "PUT", body: JSON.stringify(schema) }),
   },
 
   orders: {

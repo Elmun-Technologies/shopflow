@@ -6,6 +6,7 @@ import { authenticateMiniAppUser, genOrderNumber } from "../services/miniapp.js"
 import { decrypt } from "../lib/crypto.js";
 import { sendMessage } from "../services/telegram.js";
 import { emit } from "../lib/events.js";
+import { botUiSchemaSchema, defaultUiSchema } from "../lib/uiSchema.js";
 
 const authSchema = z.object({ botId: z.string(), initData: z.string() });
 
@@ -72,6 +73,14 @@ export default async function miniappRoutes(app: FastifyInstance) {
         where: and(eq(schema.products.shopId, shopId), eq(schema.products.active, true)),
       });
       return { categories: cats, products: prods };
+    });
+
+    // UI schema (botning ko'rinishi)
+    api.get("/ui-schema", async (req) => {
+      const { botId } = req.user as unknown as { botId: string };
+      const bot = await db.query.bots.findFirst({ where: eq(schema.bots.id, botId) });
+      const stored = bot?.uiSchema as unknown;
+      return stored ? botUiSchemaSchema.parse(stored) : defaultUiSchema;
     });
 
     api.get("/products/:id", async (req, reply) => {

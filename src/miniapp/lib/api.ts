@@ -62,6 +62,34 @@ export interface OrderSummary {
   createdAt: string;
 }
 
+export type BannerAction =
+  | { kind: "category"; categoryId: string }
+  | { kind: "product"; productId: string }
+  | { kind: "url"; url: string }
+  | { kind: "none" };
+
+export interface BannerBlock {
+  type: "banner";
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  action: BannerAction;
+}
+
+export type SectionBlock =
+  | { type: "categories"; id: string; title: string; layout: "grid" | "list" | "scroll"; visibleIds?: string[] }
+  | { type: "products"; id: string; title: string; filter: { categoryId?: string; productIds?: string[]; limit: number } }
+  | { type: "text"; id: string; title?: string; body: string };
+
+export interface UISchemaShape {
+  version: 1;
+  theme: { primary: string; accent?: string };
+  welcomeMessage: string;
+  banners: BannerBlock[];
+  sections: SectionBlock[];
+}
+
 export const miniApi = {
   auth: (botId: string, initData: string) =>
     req<{ token: string; user: { id: string; firstName: string | null; username: string | null }; shop: { id: string; name: string; currency: string } }>(
@@ -69,6 +97,7 @@ export const miniApi = {
       { method: "POST", body: JSON.stringify({ botId, initData }) },
     ),
   catalog: () => req<{ categories: Category[]; products: Product[] }>("/api/miniapp/catalog"),
+  uiSchema: () => req<UISchemaShape>("/api/miniapp/ui-schema"),
   product: (id: string) => req<Product>(`/api/miniapp/products/${id}`),
   cart: {
     get: () => req<{ items: { productId: string; quantity: number }[] }>("/api/miniapp/cart"),

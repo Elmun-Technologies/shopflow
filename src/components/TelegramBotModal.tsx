@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, CheckCircle2, AlertCircle, Loader2, ExternalLink, Trash2 } from "lucide-react";
+import { X, Send, CheckCircle2, AlertCircle, Loader2, ExternalLink, Trash2, Sparkles } from "lucide-react";
 import { api, ensureDemoAuth, ApiError } from "../lib/api";
+import BotUiEditor from "./BotUiEditor";
 
 interface BotRow {
   id: string;
@@ -18,6 +19,7 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editorBotId, setEditorBotId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -153,14 +155,23 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
                           {b.lastError && <p className="text-[11px] text-red-400">{b.lastError}</p>}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDisconnect(b.id)}
-                        disabled={loading}
-                        className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"
-                        title="Uzish"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setEditorBotId(b.id)}
+                          className="p-1.5 rounded text-purple-400 hover:bg-slate-800"
+                          title="Bot UI editor"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDisconnect(b.id)}
+                          disabled={loading}
+                          className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"
+                          title="Uzish"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -168,6 +179,9 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
             </div>
           </motion.div>
         </motion.div>
+      )}
+      {editorBotId && (
+        <BotUiEditor botId={editorBotId} open={!!editorBotId} onClose={() => setEditorBotId(null)} />
       )}
     </AnimatePresence>
   );
