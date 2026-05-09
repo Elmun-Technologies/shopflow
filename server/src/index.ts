@@ -3,11 +3,15 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import sensible from "@fastify/sensible";
+import websocket from "@fastify/websocket";
 import { ZodError } from "zod";
 import authRoutes from "./routes/auth.js";
 import botRoutes from "./routes/bots.js";
 import webhookRoutes from "./routes/webhook.js";
 import miniappRoutes from "./routes/miniapp.js";
+import orderRoutes from "./routes/orders.js";
+import productRoutes from "./routes/products.js";
+import wsRoutes from "./routes/ws.js";
 import { bootAllBots } from "./bot/runtime.js";
 
 declare module "fastify" {
@@ -36,6 +40,7 @@ async function build() {
 
   await app.register(sensible);
   await app.register(cors, { origin: true, credentials: true });
+  await app.register(websocket);
 
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret || jwtSecret === "change_me_to_random_64_byte_hex_string") {
@@ -71,7 +76,10 @@ async function build() {
 
   await app.register(authRoutes, { prefix: "/api/auth" });
   await app.register(botRoutes, { prefix: "/api/bots" });
+  await app.register(orderRoutes, { prefix: "/api/orders" });
+  await app.register(productRoutes, { prefix: "/api/products" });
   await app.register(miniappRoutes, { prefix: "/api/miniapp" });
+  await app.register(wsRoutes);
   await app.register(webhookRoutes);
 
   return app;

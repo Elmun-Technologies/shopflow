@@ -25,6 +25,7 @@ import {
 import { allOrders, orderStats } from "../data/ordersData";
 import type { Order } from "../data/ordersData";
 import OrderDetailModal from "./OrderDetailModal";
+import LiveOrdersPanel from "./LiveOrdersPanel";
 
 const statusConfig: Record<string, { color: string; bg: string; icon: React.ElementType }> = {
   completed: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
@@ -134,6 +135,11 @@ export default function OrdersPage() {
 
   return (
     <div>
+      {/* Real-time Telegram bot orderlari */}
+      <div className="mb-6">
+        <LiveOrdersPanel />
+      </div>
+
       {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

@@ -5,6 +5,7 @@ import { db, schema } from "../db/index.js";
 import { authenticateMiniAppUser, genOrderNumber } from "../services/miniapp.js";
 import { decrypt } from "../lib/crypto.js";
 import { sendMessage } from "../services/telegram.js";
+import { emit } from "../lib/events.js";
 
 const authSchema = z.object({ botId: z.string(), initData: z.string() });
 
@@ -152,6 +153,13 @@ export default async function miniappRoutes(app: FastifyInstance) {
 
       // Savatni tozalash
       await db.update(schema.carts).set({ items: [], updatedAt: new Date() }).where(and(eq(schema.carts.shopId, shopId), eq(schema.carts.tgUserId, tgUserId)));
+
+      // Real-time admin push
+      emit({
+        type: "order.created",
+        shopId,
+        order: { id: order.id, orderNumber: order.orderNumber, total: order.total, createdAt: order.createdAt },
+      });
 
       // Bot orqali xaridorga tasdiq xabari
       try {

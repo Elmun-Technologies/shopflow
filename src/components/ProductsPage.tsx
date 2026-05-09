@@ -31,6 +31,7 @@ import {
 import { products, categories, warehouses, ikpuCodes, saleRecords } from "../data/productsData";
 import type { Product } from "../data/productsData";
 import ProductDetailModal from "./ProductDetailModal";
+import LiveCatalogPanel from "./LiveCatalogPanel";
 
 type Tab = "products" | "categories" | "sales" | "ikpu" | "warehouse";
 type ProductSort = "name" | "price" | "stock" | "sold" | "rating";
@@ -154,6 +155,11 @@ export default function ProductsPage() {
 
   return (
     <div>
+      {/* Live katalog (Telegram bot) */}
+      <div className="mb-6">
+        <LiveCatalogPanel />
+      </div>
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

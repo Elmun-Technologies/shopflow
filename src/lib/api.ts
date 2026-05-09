@@ -53,6 +53,44 @@ export interface AuthResponse {
   shop: { id: string; name: string; currency: string };
 }
 
+export interface AdminOrder {
+  id: string;
+  orderNumber: string;
+  status: "pending" | "confirmed" | "preparing" | "shipping" | "delivered" | "cancelled";
+  paymentStatus: "unpaid" | "paid" | "refunded";
+  paymentMethod: string | null;
+  source: string;
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  customerPhone: string | null;
+  deliveryAddress: { city?: string; street?: string; house?: string; apartment?: string; notes?: string } | null;
+  notes: string | null;
+  tgUserId: string | null;
+  createdAt: string | number;
+  updatedAt: string | number;
+}
+
+export interface AdminProduct {
+  id: string;
+  shopId: string;
+  categoryId: string | null;
+  name: string;
+  description: string | null;
+  price: number;
+  stock: number;
+  images: string[];
+  active: boolean;
+  sku: string | null;
+}
+
+export interface AdminCategory {
+  id: string;
+  name: string;
+  parentId: string | null;
+  sortOrder: number;
+}
+
 export const api = {
   register: (body: { email: string; password: string; name: string; shopName: string }) =>
     request<AuthResponse>("/api/auth/register", { method: "POST", body: JSON.stringify(body) }),
@@ -72,7 +110,78 @@ export const api = {
     status: (id: string) => request<{ id: string; username: string; botUserId: number; status: string; lastError: string | null }>(`/api/bots/${id}/status`),
     disconnect: (id: string) => request<{ ok: true }>(`/api/bots/${id}`, { method: "DELETE" }),
   },
+
+  orders: {
+    list: (params?: { status?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set("status", params.status);
+      if (params?.limit) q.set("limit", String(params.limit));
+      const qs = q.toString();
+      return request<AdminOrder[]>(`/api/orders${qs ? `?${qs}` : ""}`);
+    },
+    get: (id: string) => request<AdminOrder & { items: Array<{ id: string; productName: string; quantity: number; price: number; total: number }>; customer: { firstName: string | null; username: string | null; phone: string | null } | null }>(`/api/orders/${id}`),
+    update: (id: string, body: { status?: AdminOrder["status"]; paymentStatus?: AdminOrder["paymentStatus"]; notes?: string }) =>
+      request<AdminOrder>(`/api/orders/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    stats: () => request<Array<{ status: string; count: number; total: number }>>("/api/orders/stats"),
+  },
+
+  products: {
+    list: () => request<AdminProduct[]>("/api/products"),
+    get: (id: string) => request<AdminProduct>(`/api/products/${id}`),
+    create: (body: Partial<AdminProduct>) => request<AdminProduct>("/api/products", { method: "POST", body: JSON.stringify(body) }),
+    update: (id: string, body: Partial<AdminProduct>) => request<AdminProduct>(`/api/products/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    remove: (id: string) => request<{ ok: true }>(`/api/products/${id}`, { method: "DELETE" }),
+    categories: {
+      list: () => request<AdminCategory[]>("/api/products/categories"),
+      create: (body: { name: string; parentId?: string | null; sortOrder?: number }) =>
+        request<AdminCategory>("/api/products/categories", { method: "POST", body: JSON.stringify(body) }),
+      update: (id: string, body: Partial<{ name: string; parentId: string | null; sortOrder: number }>) =>
+        request<AdminCategory>(`/api/products/categories/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+      remove: (id: string) => request<{ ok: true }>(`/api/products/categories/${id}`, { method: "DELETE" }),
+    },
+  },
 };
+
+/** WebSocket aloqasi — admin dashboard real-time event'larni qabul qiladi. */
+export type ShopEvent =
+  | { type: "hello"; shopId: string }
+  | { type: "ping"; t: number }
+  | { type: "order.created"; shopId: string; order: { id: string; orderNumber: string; total: number; createdAt: string | number } }
+  | { type: "order.updated"; shopId: string; orderId: string; status: string }
+  | { type: "product.updated"; shopId: string; productId: string }
+  | { type: "error"; error: string };
+
+export function connectShopEvents(onEvent: (e: ShopEvent) => void): () => void {
+  const tok = getToken();
+  if (!tok) return () => { /* */ };
+  const wsUrl = API_BASE.replace(/^http/, "ws") + `/api/ws?token=${encodeURIComponent(tok)}`;
+  let ws: WebSocket | null = null;
+  let closed = false;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function open() {
+    if (closed) return;
+    ws = new WebSocket(wsUrl);
+    ws.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data) as ShopEvent;
+        onEvent(data);
+      } catch { /* */ }
+    };
+    ws.onclose = () => {
+      if (closed) return;
+      reconnectTimer = setTimeout(open, 3000);
+    };
+    ws.onerror = () => { try { ws?.close(); } catch { /* */ } };
+  }
+  open();
+
+  return () => {
+    closed = true;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    try { ws?.close(); } catch { /* */ }
+  };
+}
 
 /** Demo/dev: agar JWT yo'q bo'lsa, default admin'ni avto-yaratadi yoki login qiladi. */
 export async function ensureDemoAuth() {
