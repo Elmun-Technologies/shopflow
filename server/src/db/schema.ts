@@ -137,6 +137,22 @@ export const integrations = sqliteTable("integrations", {
   shopTypeUnique: uniqueIndex("integrations_shop_type_unique").on(t.shopId, t.type),
 }));
 
+export const payments = sqliteTable("payments", {
+  id: id(),
+  shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),
+  orderId: text("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  provider: text("provider", { enum: ["click", "payme"] }).notNull(),
+  providerTxnId: text("provider_txn_id"),
+  amount: real("amount").notNull(),
+  state: text("state", { enum: ["pending", "prepared", "paid", "cancelled", "failed"] }).notNull().default("pending"),
+  raw: text("raw", { mode: "json" }),
+  createdAt: ts("created_at").notNull(),
+  updatedAt: ts("updated_at").notNull(),
+}, (t) => ({
+  orderIdx: index("payments_order_idx").on(t.orderId),
+  providerTxnIdx: index("payments_provider_txn_idx").on(t.provider, t.providerTxnId),
+}));
+
 export const botMessages = sqliteTable("bot_messages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   botId: text("bot_id").notNull().references(() => bots.id, { onDelete: "cascade" }),

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TelegramBotModal from "./TelegramBotModal";
+import IntegrationModal from "./IntegrationModal";
 import {
   User, Store, Bell, Shield, Key, Puzzle, Save, Eye, EyeOff,
   Send, CreditCard, Wallet, BarChart3, ShoppingBag, Calculator,
@@ -45,6 +46,7 @@ export default function SettingsPage() {
   const [savedMsg, setSavedMsg] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  const [integrationModal, setIntegrationModal] = useState<"moysklad" | "click" | "payme" | null>(null);
 
   const handleSave = () => {
     setSavedMsg("Saqlandi!");
@@ -204,7 +206,12 @@ export default function SettingsPage() {
                 <span className="text-[10px] text-slate-600">{int.connectedAt}</span>
               )}
               <button
-                onClick={() => { if (int.name === "Telegram Bot") setTelegramModalOpen(true); }}
+                onClick={() => {
+                  if (int.name === "Telegram Bot") setTelegramModalOpen(true);
+                  else if (int.name === "MoySklad" || int.name.toLowerCase().includes("sklad")) setIntegrationModal("moysklad");
+                  else if (int.name === "Click") setIntegrationModal("click");
+                  else if (int.name === "Payme") setIntegrationModal("payme");
+                }}
                 className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
                   int.status === "connected" ? "text-slate-400 hover:text-white hover:bg-slate-700" :
                   int.status === "error" ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20" :
@@ -482,6 +489,9 @@ export default function SettingsPage() {
         </div>
       </div>
       <TelegramBotModal open={telegramModalOpen} onClose={() => setTelegramModalOpen(false)} />
+      {integrationModal && (
+        <IntegrationModal provider={integrationModal} open={!!integrationModal} onClose={() => setIntegrationModal(null)} />
+      )}
     </>
   );
 }

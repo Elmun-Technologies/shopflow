@@ -1,0 +1,43 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: shopflow-server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: ${DATABASE_URL:-/data/shopflow.db}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      PUBLIC_URL: ${PUBLIC_URL}
+      WEB_URL: ${WEB_URL}
+    volumes:
+      - server_data:/data
+    expose:
+      - "4000"
+    networks:
+      - shopflow
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shopflow-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${WEB_PORT:-80}:80"
+    networks:
+      - shopflow
+
+volumes:
+  server_data:
+
+networks:
+  shopflow:
+    driver: bridge

@@ -12,6 +12,8 @@ import miniappRoutes from "./routes/miniapp.js";
 import orderRoutes from "./routes/orders.js";
 import productRoutes from "./routes/products.js";
 import wsRoutes from "./routes/ws.js";
+import integrationRoutes from "./routes/integrations.js";
+import paymentRoutes from "./routes/payments.js";
 import { bootAllBots } from "./bot/runtime.js";
 
 declare module "fastify" {
@@ -78,6 +80,8 @@ async function build() {
   await app.register(botRoutes, { prefix: "/api/bots" });
   await app.register(orderRoutes, { prefix: "/api/orders" });
   await app.register(productRoutes, { prefix: "/api/products" });
+  await app.register(integrationRoutes, { prefix: "/api/integrations" });
+  await app.register(paymentRoutes, { prefix: "/api/payments" });
   await app.register(miniappRoutes, { prefix: "/api/miniapp" });
   await app.register(wsRoutes);
   await app.register(webhookRoutes);

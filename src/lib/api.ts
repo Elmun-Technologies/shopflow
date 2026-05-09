@@ -170,6 +170,35 @@ export const api = {
       remove: (id: string) => request<{ ok: true }>(`/api/products/categories/${id}`, { method: "DELETE" }),
     },
   },
+
+  integrations: {
+    list: () => request<Array<{ id: string; type: string; status: string; lastSyncAt: number | null; createdAt: number }>>("/api/integrations"),
+    moysklad: {
+      connectToken: (token: string) =>
+        request<{ ok: boolean; account?: { name?: string } }>("/api/integrations/moysklad", {
+          method: "POST",
+          body: JSON.stringify({ type: "token", token }),
+        }),
+      connectBasic: (login: string, password: string) =>
+        request<{ ok: boolean; account?: { name?: string } }>("/api/integrations/moysklad", {
+          method: "POST",
+          body: JSON.stringify({ type: "basic", login, password }),
+        }),
+      disconnect: () => request<{ ok: true }>("/api/integrations/moysklad", { method: "DELETE" }),
+      sync: () => request<{ ok: boolean; imported: number; updated: number }>("/api/integrations/moysklad/sync", { method: "POST" }),
+      test: () => request<{ ok: boolean; account?: { name?: string; email?: string } }>("/api/integrations/moysklad/test"),
+    },
+    click: {
+      connect: (body: { merchantId: string; serviceId: string; secretKey: string }) =>
+        request<{ ok: true }>("/api/payments/click", { method: "POST", body: JSON.stringify(body) }),
+      disconnect: () => request<{ ok: true }>("/api/payments/click", { method: "DELETE" }),
+    },
+    payme: {
+      connect: (body: { merchantId: string; merchantKey: string }) =>
+        request<{ ok: true }>("/api/payments/payme", { method: "POST", body: JSON.stringify(body) }),
+      disconnect: () => request<{ ok: true }>("/api/payments/payme", { method: "DELETE" }),
+    },
+  },
 };
 
 /** WebSocket aloqasi — admin dashboard real-time event'larni qabul qiladi. */
