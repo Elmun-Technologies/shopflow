@@ -1,4 +1,5 @@
 import { Search, Bell, Mail, ChevronDown } from "lucide-react";
+import { logout } from "../lib/api";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -116,8 +117,8 @@ export default function Header() {
                     Account Settings
                   </button>
                   <div className="border-t border-slate-700 my-1" />
-                  <button className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-slate-700/50 transition-colors">
-                    Sign Out
+                  <button onClick={() => logout()} className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-slate-700/50 transition-colors">
+                    Chiqish
                   </button>
                 </div>
               </motion.div>

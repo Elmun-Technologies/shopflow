@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, CheckCircle2, AlertCircle, RefreshCw, Trash2, ExternalLink } from "lucide-react";
-import { api, ApiError, ensureDemoAuth } from "../lib/api";
+import { api, ApiError } from "../lib/api";
 import { useNotifications } from "../lib/notifications";
 
 type Provider = "moysklad" | "click" | "payme";
@@ -41,7 +41,7 @@ export default function IntegrationModal({ provider, open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    void ensureDemoAuth().then(refresh);
+    void refresh();
   }, [open, provider]);
 
   async function refresh() {

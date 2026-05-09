@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info, X, ShoppingCart } from "lucide-react";
-import { connectShopEvents, ensureDemoAuth, type ShopEvent } from "./api";
+import { connectShopEvents, getToken, type ShopEvent } from "./api";
 
 type ToastKind = "success" | "error" | "info" | "order";
 interface Toast { id: string; kind: ToastKind; title: string; description?: string; duration?: number }
@@ -38,11 +38,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     let cancelled = false;
     let disconnect: (() => void) | null = null;
     (async () => {
-      try {
-        await ensureDemoAuth();
-      } catch {
-        return;
-      }
+      if (!getToken()) return;
       if (cancelled) return;
       disconnect = connectShopEvents((event) => {
         eventListeners.current.forEach((cb) => cb(event));

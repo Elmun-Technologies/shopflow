@@ -153,6 +153,16 @@ export const payments = sqliteTable("payments", {
   providerTxnIdx: index("payments_provider_txn_idx").on(t.provider, t.providerTxnId),
 }));
 
+export const shopSettings = sqliteTable("shop_settings", {
+  id: id(),
+  shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  value: text("value", { mode: "json" }),
+  updatedAt: ts("updated_at").notNull(),
+}, (t) => ({
+  shopKeyUnique: uniqueIndex("shop_settings_shop_key_unique").on(t.shopId, t.key),
+}));
+
 export const botMessages = sqliteTable("bot_messages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   botId: text("bot_id").notNull().references(() => bots.id, { onDelete: "cascade" }),

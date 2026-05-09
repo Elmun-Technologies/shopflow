@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
 import { decrypt, encrypt } from "../lib/crypto.js";
 import { CLICK_ERRORS, verifyClickSign, type ClickPrepareRequest, type ClickCompleteRequest } from "../integrations/payments/click.js";
@@ -56,6 +56,43 @@ export default async function paymentRoutes(app: FastifyInstance) {
       await db.delete(schema.integrations)
         .where(and(eq(schema.integrations.shopId, sid), eq(schema.integrations.type, "payme")));
       return { ok: true };
+    });
+
+    admin.get("/", async (req) => {
+      const sid = shopIdOf(req);
+      const rows = await db.query.payments.findMany({
+        where: eq(schema.payments.shopId, sid),
+        orderBy: [schema.payments.createdAt],
+        limit: 200,
+      });
+      // Order ma'lumotlarini bog'lash
+      const orders = await db.query.orders.findMany({ where: eq(schema.orders.shopId, sid) });
+      const orderMap = new Map(orders.map((o) => [o.id, o]));
+      return rows.map((p) => ({
+        id: p.id,
+        orderId: p.orderId,
+        orderNumber: orderMap.get(p.orderId)?.orderNumber ?? null,
+        provider: p.provider,
+        providerTxnId: p.providerTxnId,
+        amount: p.amount,
+        state: p.state,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      })).reverse();
+    });
+
+    admin.get("/stats", async (req) => {
+      const sid = shopIdOf(req);
+      const rows = await db.select({
+        provider: schema.payments.provider,
+        state: schema.payments.state,
+        count: sql<number>`count(*)`.as("count"),
+        total: sql<number>`coalesce(sum(${schema.payments.amount}), 0)`.as("total"),
+      })
+        .from(schema.payments)
+        .where(eq(schema.payments.shopId, sid))
+        .groupBy(schema.payments.provider, schema.payments.state);
+      return rows;
     });
   });
 

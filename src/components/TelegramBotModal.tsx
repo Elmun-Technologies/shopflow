@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, CheckCircle2, AlertCircle, Loader2, ExternalLink, Trash2, Sparkles } from "lucide-react";
-import { api, ensureDemoAuth, ApiError } from "../lib/api";
+import { api, ApiError } from "../lib/api";
 import BotUiEditor from "./BotUiEditor";
 
 interface BotRow {
@@ -27,7 +27,7 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
     (async () => {
       setError(null);
       try {
-        await ensureDemoAuth();
+        
         const list = await api.bots.list();
         if (!cancelled) setBots(list);
       } catch (err) {
@@ -43,7 +43,7 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
     if (!token.trim()) { setError("Tokenni kiriting"); return; }
     setLoading(true);
     try {
-      await ensureDemoAuth();
+      
       const result = await api.bots.connect(token.trim());
       setSuccess(`✅ @${result.username} muvaffaqiyatli ulandi (${result.mode})`);
       setToken("");

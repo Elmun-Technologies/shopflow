@@ -12,6 +12,7 @@ import {
   paymentMethods, transactions, dailyPaymentStats, methodColors,
 } from "../data/paymentsData";
 import type { PaymentMethod, PaymentConfig } from "../data/paymentsData";
+import LivePaymentsPanel from "./LivePaymentsPanel";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -103,6 +104,8 @@ export default function PaymentsPage() {
 
   return (
     <div>
+      <div className="mb-6"><LivePaymentsPanel /></div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>

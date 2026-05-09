@@ -184,6 +184,21 @@ export const api = {
     sources: () => request<Array<{ source: string; count: number; revenue: number }>>("/api/analytics/sources"),
     recentOrders: (limit = 10) => request<Array<{ id: string; orderNumber: string; status: string; total: number; createdAt: string | number; customerName: string; customerPhone: string | null }>>(`/api/analytics/recent-orders?limit=${limit}`),
     lowStock: () => request<AdminProduct[]>("/api/analytics/low-stock"),
+    weeklySales: () => request<Array<{ day: string; revenue: number; orders: number }>>("/api/analytics/weekly-sales"),
+    salesByCategory: () => request<Array<{ categoryId: string | null; categoryName: string; revenue: number; orderCount: number; itemsSold: number }>>("/api/analytics/sales-by-category"),
+    traffic: () => request<Array<{ source: string; label: string; orders: number; revenue: number; customers: number }>>("/api/analytics/traffic"),
+  },
+
+  payments: {
+    list: () => request<Array<{ id: string; orderId: string; orderNumber: string | null; provider: string; providerTxnId: string | null; amount: number; state: string; createdAt: number; updatedAt: number }>>("/api/payments"),
+    stats: () => request<Array<{ provider: string; state: string; count: number; total: number }>>("/api/payments/stats"),
+  },
+
+  settings: {
+    getAll: () => request<Record<string, unknown>>("/api/settings"),
+    get: <T>(key: string) => request<{ key: string; value: T; updatedAt: number }>(`/api/settings/${encodeURIComponent(key)}`),
+    set: (key: string, value: unknown) => request<{ ok: true; key: string }>(`/api/settings/${encodeURIComponent(key)}`, { method: "PUT", body: JSON.stringify({ value }) }),
+    remove: (key: string) => request<{ ok: true }>(`/api/settings/${encodeURIComponent(key)}`, { method: "DELETE" }),
   },
 
   customers: {
@@ -270,20 +285,7 @@ export function connectShopEvents(onEvent: (e: ShopEvent) => void): () => void {
   };
 }
 
-/** Demo/dev: agar JWT yo'q bo'lsa, default admin'ni avto-yaratadi yoki login qiladi. */
-export async function ensureDemoAuth() {
-  if (getToken()) return;
-  const creds = { email: "admin@shopflow.local", password: "shopflow12345", name: "Admin", shopName: "Mening do'konim" };
-  try {
-    const res = await api.register(creds);
-    setToken(res.token);
-  } catch {
-    try {
-      const res = await api.login(creds);
-      setToken(res.token);
-    } catch (err) {
-      console.error("Auth muvaffaqiyatsiz:", err);
-      throw err;
-    }
-  }
+export function logout() {
+  setToken(null);
+  if (typeof window !== "undefined") window.location.reload();
 }

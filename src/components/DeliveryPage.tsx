@@ -11,6 +11,7 @@ import {
   dailyDeliveryStats, methodDeliveryColors,
 } from "../data/deliveryData";
 import type { Pharmacy, DeliveryMethod, DeliveryOrder, DeliveryRegion } from "../data/deliveryData";
+import LiveDeliveryPanel from "./LiveDeliveryPanel";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -198,6 +199,8 @@ export default function DeliveryPage() {
 
   return (
     <div>
+      <div className="mb-6"><LiveDeliveryPanel /></div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>

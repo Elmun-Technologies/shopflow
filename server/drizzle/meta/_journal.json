@@ -15,6 +15,13 @@
       "when": 1778331897420,
       "tag": "0001_cool_captain_midlands",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778333610626,
+      "tag": "0002_charming_spencer_smythe",
+      "breakpoints": true
     }
   ]
 }

@@ -186,4 +186,81 @@ export default async function analyticsRoutes(app: FastifyInstance) {
     });
     return products;
   });
+
+  /** Hafta bo'yicha sotuv (Mon-Sun) — oxirgi 7 kun */
+  app.get("/weekly-sales", async (req) => {
+    const sid = shopIdOf(req);
+    const fromTs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const orders = await db.query.orders.findMany({
+      where: and(eq(schema.orders.shopId, sid), gte(schema.orders.createdAt, new Date(fromTs)), sql`${schema.orders.status} != 'cancelled'`),
+    });
+    const dayLabels = ["Yak", "Du", "Se", "Cho", "Pa", "Ju", "Sha"];
+    const buckets = new Map<number, { revenue: number; orders: number }>();
+    for (let i = 0; i < 7; i++) buckets.set(i, { revenue: 0, orders: 0 });
+    for (const o of orders) {
+      const d = new Date(o.createdAt as Date | number).getDay();
+      const b = buckets.get(d);
+      if (b) { b.revenue += o.total; b.orders += 1; }
+    }
+    return dayLabels.map((label, i) => ({ day: label, ...buckets.get(i)! }));
+  });
+
+  /** Sotuv kategoriya bo'yicha */
+  app.get("/sales-by-category", async (req) => {
+    const sid = shopIdOf(req);
+    const rows = await db.select({
+      categoryId: schema.products.categoryId,
+      revenue: sql<number>`coalesce(sum(${schema.orderItems.total}), 0)`.as("revenue"),
+      orderCount: sql<number>`count(distinct ${schema.orderItems.orderId})`.as("order_count"),
+      itemsSold: sql<number>`coalesce(sum(${schema.orderItems.quantity}), 0)`.as("items_sold"),
+    })
+      .from(schema.orderItems)
+      .innerJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
+      .innerJoin(schema.products, eq(schema.orderItems.productId, schema.products.id))
+      .where(and(eq(schema.orders.shopId, sid), sql`${schema.orders.status} != 'cancelled'`))
+      .groupBy(schema.products.categoryId);
+
+    const cats = await db.query.categories.findMany({ where: eq(schema.categories.shopId, sid) });
+    const catMap = new Map(cats.map((c) => [c.id, c.name]));
+    return rows.map((r) => ({
+      categoryId: r.categoryId,
+      categoryName: r.categoryId ? catMap.get(r.categoryId) ?? "Kategoriyasiz" : "Kategoriyasiz",
+      revenue: r.revenue,
+      orderCount: r.orderCount,
+      itemsSold: r.itemsSold,
+    }));
+  });
+
+  /** Trafik manbai — bot/mini app/admin va shu paytdagi customers */
+  app.get("/traffic", async (req) => {
+    const sid = shopIdOf(req);
+    const orders = await db.query.orders.findMany({ where: eq(schema.orders.shopId, sid) });
+    const customers = await db.query.tgUsers.findMany({ where: eq(schema.tgUsers.shopId, sid) });
+    const sourceLabels: Record<string, string> = {
+      miniapp: "Mini App",
+      telegram: "Telegram menyu",
+      admin: "Admin qo'lda",
+    };
+    const grouped = new Map<string, { orders: number; revenue: number; customers: Set<string> }>();
+    for (const o of orders) {
+      if (o.status === "cancelled") continue;
+      const key = o.source;
+      let g = grouped.get(key);
+      if (!g) { g = { orders: 0, revenue: 0, customers: new Set() }; grouped.set(key, g); }
+      g.orders++;
+      g.revenue += o.total;
+      if (o.tgUserId) g.customers.add(o.tgUserId);
+    }
+    const results = Array.from(grouped.entries()).map(([source, g]) => ({
+      source,
+      label: sourceLabels[source] ?? source,
+      orders: g.orders,
+      revenue: g.revenue,
+      customers: g.customers.size,
+    }));
+    if (results.length === 0) {
+      return [{ source: "telegram", label: "Telegram", orders: 0, revenue: 0, customers: customers.length }];
+    }
+    return results;
+  });
 }
