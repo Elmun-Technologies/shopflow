@@ -157,9 +157,19 @@ export const api = {
   bots: {
     list: () => request<Array<{ id: string; username: string | null; status: string; lastError: string | null; miniappUrl: string | null; createdAt: number }>>("/api/bots"),
     connect: (token: string) =>
-      request<{ id: string; username: string; status: string; mode: string }>("/api/bots", {
+      request<{ id: string; username: string; status: string; mode: string; miniappUrl: string | null }>("/api/bots", {
         method: "POST",
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({
+          token,
+          originUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        }),
+      }),
+    refreshMiniapp: (id: string) =>
+      request<{ id: string; miniappUrl: string }>(`/api/bots/${id}/refresh-miniapp`, {
+        method: "POST",
+        body: JSON.stringify({
+          originUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        }),
       }),
     status: (id: string) => request<{ id: string; username: string; botUserId: number; status: string; lastError: string | null }>(`/api/bots/${id}/status`),
     disconnect: (id: string) => request<{ ok: true }>(`/api/bots/${id}`, { method: "DELETE" }),

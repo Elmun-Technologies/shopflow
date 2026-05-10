@@ -1,9 +1,35 @@
 # ShopFlow Deploy qo'llanmasi
 
+ShopFlow — **multi-tenant SaaS platforma**. Bir marta deploy qiling, har mijoz
+o'zining bot tokenini kiritsa avtomatik ishlaydi.
+
 Production'da ishga tushirish uchun:
 - ✅ HTTPS bilan domen (Telegram webhook va Mini App talab qiladi)
 - ✅ Docker + docker-compose (yoki har xil orkestratsiya)
 - ✅ Reverse proxy (Caddy / nginx / Cloudflare Tunnel)
+
+## 🎯 Multi-tenant arxitektura — qanday ishlaydi
+
+```
+1. SIZ (super-admin) ShopFlow'ni bir marta deploy qilasiz
+   → https://app.shopflow.uz (frontend)
+   → https://api.shopflow.uz (backend)
+
+2. Har mijoz dashboard'ga kiradi → ro'yxatdan o'tadi → o'z do'konini yaratadi
+
+3. Mijoz BotFather'dan o'z tokenini oladi → dashboard'da "Telegram Bot → Ulash"
+   bosadi → tokenni yopishtiradi
+
+4. Backend AVTOMATIK:
+   ✓ Tokenni Telegram'da tekshiradi
+   ✓ Mini App URL'ni qiladi: https://app.shopflow.uz/mini/{botId}
+   ✓ Telegram'da bot menyusiga "Do'kon" tugmasini o'rnatadi
+   ✓ Webhook'ni o'rnatadi: https://api.shopflow.uz/tg/webhook/{botId}
+
+5. Mijoz xaridorlari botni ochib /start bossa - to'liq do'kon tayyor
+```
+
+**Mijozdan boshqa hech narsa talab qilinmaydi** — token yetarli.
 
 ## 1. Domenni sozlash
 

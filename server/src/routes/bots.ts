@@ -1,11 +1,18 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { connectBot, disconnectBot, listBots, getBotStatus } from "../services/bots.js";
+import { connectBot, disconnectBot, listBots, getBotStatus, refreshBotMiniapp } from "../services/bots.js";
 import { db, schema } from "../db/index.js";
 import { botUiSchemaSchema, defaultUiSchema } from "../lib/uiSchema.js";
 
-const connectSchema = z.object({ token: z.string().min(20) });
+const connectSchema = z.object({
+  token: z.string().min(20),
+  originUrl: z.string().url().optional(),
+});
+
+const refreshSchema = z.object({
+  originUrl: z.string().url().optional(),
+});
 
 export default async function botRoutes(app: FastifyInstance) {
   app.addHook("onRequest", app.authenticate);
@@ -23,8 +30,18 @@ export default async function botRoutes(app: FastifyInstance) {
 
   app.post("/", async (req, reply) => {
     const body = connectSchema.parse(req.body);
-    const result = await connectBot({ shopId: shopId(req), token: body.token });
+    // Origin'ni body'dan yoki Origin header'dan olamiz (multi-tenant SaaS uchun)
+    const originUrl = body.originUrl || (req.headers.origin as string | undefined) || null;
+    const result = await connectBot({ shopId: shopId(req), token: body.token, originUrl });
     return reply.code(201).send(result);
+  });
+
+  app.post("/:id/refresh-miniapp", async (req, reply) => {
+    const params = z.object({ id: z.string() }).parse(req.params);
+    const body = refreshSchema.parse(req.body ?? {});
+    const originUrl = body.originUrl || (req.headers.origin as string | undefined) || null;
+    const result = await refreshBotMiniapp({ shopId: shopId(req), botId: params.id, originUrl });
+    return reply.send(result);
   });
 
   app.get("/:id/status", async (req) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, CheckCircle2, AlertCircle, Loader2, ExternalLink, Trash2, Sparkles } from "lucide-react";
+import { X, Send, CheckCircle2, AlertCircle, Loader2, ExternalLink, Trash2, Sparkles, RefreshCw, Copy, Globe } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import BotUiEditor from "./BotUiEditor";
 
@@ -43,10 +43,27 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
     if (!token.trim()) { setError("Tokenni kiriting"); return; }
     setLoading(true);
     try {
-      
       const result = await api.bots.connect(token.trim());
-      setSuccess(`✅ @${result.username} muvaffaqiyatli ulandi (${result.mode})`);
+      const urlMsg = result.miniappUrl
+        ? ` · Mini App: ${result.miniappUrl}`
+        : " · ⚠️ Mini App URL aniqlanmadi (HTTPS domen kerak)";
+      setSuccess(`✅ @${result.username} ulandi (${result.mode})${urlMsg}`);
       setToken("");
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Xato yuz berdi");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRefreshMiniapp(id: string) {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const result = await api.bots.refreshMiniapp(id);
+      setSuccess(`✅ Mini App qayta sozlandi: ${result.miniappUrl}`);
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Xato yuz berdi");
@@ -106,6 +123,14 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
                   <li>Bot nomini va @username ni kiriting</li>
                   <li>Olingan tokenni shu yerga yopishtiring</li>
                 </ol>
+                <div className="pt-2 mt-2 border-t border-slate-800">
+                  <p className="text-slate-300 font-medium">🛍 Mini App qanday ishlaydi:</p>
+                  <p className="mt-1">Bot ulanganda Mini App URL avtomatik o'rnatiladi. Mijozlar bot menyusidan <b>"Do'kon"</b> tugmasini bosib to'liq onlayn do'konga kiradilar.</p>
+                  <p className="mt-1.5 text-emerald-400">Sizning domeningiz: <code className="bg-slate-900 px-1.5 py-0.5 rounded">{typeof window !== "undefined" ? window.location.origin : "..."}</code></p>
+                  {typeof window !== "undefined" && !window.location.origin.startsWith("https://") && !window.location.origin.includes("localhost") && (
+                    <p className="mt-1 text-amber-400">⚠️ Telegram Mini App HTTPS talab qiladi. Production'da HTTPS domen kerak.</p>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -147,31 +172,61 @@ export default function TelegramBotModal({ open, onClose }: { open: boolean; onC
                 <div className="pt-4 border-t border-slate-800 space-y-2">
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Ulangan botlar</p>
                   {bots.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${b.status === "active" ? "bg-emerald-500" : b.status === "error" ? "bg-red-500" : "bg-slate-500"}`} />
-                        <div>
-                          <p className="text-sm text-white">@{b.username ?? "no_username"}</p>
-                          {b.lastError && <p className="text-[11px] text-red-400">{b.lastError}</p>}
+                    <div key={b.id} className="bg-slate-800/50 rounded-lg px-3 py-2.5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${b.status === "active" ? "bg-emerald-500" : b.status === "error" ? "bg-red-500" : "bg-slate-500"}`} />
+                          <div>
+                            <p className="text-sm text-white">@{b.username ?? "no_username"}</p>
+                            {b.lastError && <p className="text-[11px] text-red-400">{b.lastError}</p>}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleRefreshMiniapp(b.id)}
+                            disabled={loading}
+                            className="p-1.5 rounded text-blue-400 hover:bg-slate-800"
+                            title="Mini App URL'ni qayta sozlash"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setEditorBotId(b.id)}
+                            className="p-1.5 rounded text-purple-400 hover:bg-slate-800"
+                            title="Bot UI editor"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDisconnect(b.id)}
+                            disabled={loading}
+                            className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"
+                            title="Uzish"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => setEditorBotId(b.id)}
-                          className="p-1.5 rounded text-purple-400 hover:bg-slate-800"
-                          title="Bot UI editor"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDisconnect(b.id)}
-                          disabled={loading}
-                          className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"
-                          title="Uzish"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {b.miniappUrl ? (
+                        <div className="flex items-center gap-2 bg-slate-900/60 rounded-md px-2 py-1.5">
+                          <Globe className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <code className="text-[10px] text-emerald-300 truncate flex-1" title={b.miniappUrl}>{b.miniappUrl}</code>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(b.miniappUrl ?? ""); }}
+                            className="p-1 rounded text-slate-400 hover:text-white"
+                            title="Nusxalash"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
+                          <AlertCircle className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-amber-300">
+                            Mini App URL aniqlanmagan. <button onClick={() => handleRefreshMiniapp(b.id)} className="underline hover:text-amber-200">Qayta sozlash</button>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

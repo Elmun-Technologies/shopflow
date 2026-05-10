@@ -4,14 +4,24 @@ import { encrypt, decrypt, randomHex } from "../lib/crypto.js";
 import * as tg from "./telegram.js";
 import { startBotInstance, stopBotInstance } from "../bot/runtime.js";
 
-function buildMiniappUrl(botId: string): string | null {
-  const base = (process.env.WEB_URL ?? process.env.PUBLIC_URL ?? "").replace(/\/$/, "");
-  if (!base) return null;
+function buildMiniappUrl(botId: string, originOverride?: string | null): string | null {
+  // Priority: explicit origin (dashboard URL) > WEB_URL env > PUBLIC_URL env
+  const candidate = originOverride || process.env.WEB_URL || process.env.PUBLIC_URL || "";
+  if (!candidate) return null;
+  const base = candidate.replace(/\/$/, "");
+  // Telegram Mini App HTTPS talab qiladi — http URL qabul qilinmaydi
+  if (!base.startsWith("https://")) {
+    if (base.startsWith("http://localhost") || base.startsWith("http://127.")) {
+      // Localhost development uchun http qabul qilinadi (Telegram'da ishlamaydi, ammo edit qilish mumkin)
+      return `${base}/mini/${botId}`;
+    }
+    return null;
+  }
   return `${base}/mini/${botId}`;
 }
 
-export async function connectBot(input: { shopId: string; token: string }) {
-  const { shopId, token } = input;
+export async function connectBot(input: { shopId: string; token: string; originUrl?: string | null }) {
+  const { shopId, token, originUrl } = input;
 
   if (!tg.validateTokenFormat(token)) {
     throw new Error("Token formati noto'g'ri. BotFather'dan olgan tokenni to'liq nusxalang.");
@@ -44,7 +54,7 @@ export async function connectBot(input: { shopId: string; token: string }) {
     }).returning();
   }
 
-  const miniappUrl = buildMiniappUrl(bot.id);
+  const miniappUrl = buildMiniappUrl(bot.id, originUrl);
   if (miniappUrl) {
     await db.update(schema.bots).set({ miniappUrl }).where(eq(schema.bots.id, bot.id));
     bot.miniappUrl = miniappUrl;
@@ -110,6 +120,25 @@ export async function listBots(shopId: string) {
     miniappUrl: b.miniappUrl,
     createdAt: b.createdAt,
   }));
+}
+
+export async function refreshBotMiniapp(input: { shopId: string; botId: string; originUrl?: string | null }) {
+  const bot = await db.query.bots.findFirst({
+    where: and(eq(schema.bots.id, input.botId), eq(schema.bots.shopId, input.shopId)),
+  });
+  if (!bot) throw new Error("Bot topilmadi");
+  const token = decrypt(bot.tokenEncrypted);
+  const miniappUrl = buildMiniappUrl(bot.id, input.originUrl);
+  if (!miniappUrl) {
+    throw new Error("Mini App URL aniqlanmadi. HTTPS bilan domen kerak (yoki localhost).");
+  }
+  await db.update(schema.bots).set({ miniappUrl }).where(eq(schema.bots.id, bot.id));
+  try {
+    await tg.setChatMenuButton(token, miniappUrl, "🛍 Do'kon");
+  } catch (err) {
+    throw new Error(`Telegram menu button o'rnatilmadi: ${err instanceof Error ? err.message : "xato"}`);
+  }
+  return { id: bot.id, miniappUrl };
 }
 
 export async function getBotStatus(input: { shopId: string; botId: string }) {
