@@ -18,6 +18,7 @@ import analyticsRoutes from "./routes/analytics.js";
 import customerRoutes from "./routes/customers.js";
 import settingsRoutes from "./routes/settings.js";
 import leadRoutes from "./routes/leads.js";
+import chatRoutes from "./routes/chat.js";
 import moyskladWebhookRoutes from "./routes/moyskladWebhook.js";
 import { bootAllBots } from "./bot/runtime.js";
 import { startMoyskladCron } from "./integrations/moysklad/cron.js";
@@ -93,6 +94,7 @@ async function build() {
   await app.register(customerRoutes, { prefix: "/api/customers" });
   await app.register(settingsRoutes, { prefix: "/api/settings" });
   await app.register(leadRoutes, { prefix: "/api/leads" });
+  await app.register(chatRoutes, { prefix: "/api/chat" });
   await app.register(moyskladWebhookRoutes);
   await app.register(miniappRoutes, { prefix: "/api/miniapp" });
   await app.register(wsRoutes);

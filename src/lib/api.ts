@@ -282,6 +282,21 @@ export const api = {
     remove: (key: string) => request<{ ok: true }>(`/api/settings/${encodeURIComponent(key)}`, { method: "DELETE" }),
   },
 
+  chat: {
+    conversations: () => request<Array<{
+      tgUserId: string; externalTgUserId: string; firstName: string | null; lastName: string | null;
+      username: string | null; phone: string | null;
+      lastMessageAt: number | null; lastMessagePreview: string; lastMessageDirection: string | null;
+      messageCount: number;
+    }>>("/api/chat/conversations"),
+    messages: (tgUserId: string) => request<{
+      user: { id: string; firstName: string | null; lastName: string | null; username: string | null; phone: string | null };
+      messages: Array<{ id: number; direction: string; text: string | null; type: string | null; createdAt: number }>;
+    }>(`/api/chat/messages/${tgUserId}`),
+    send: (tgUserId: string, text: string) =>
+      request<{ id: number; ok: true }>("/api/chat/send", { method: "POST", body: JSON.stringify({ tgUserId, text }) }),
+  },
+
   customers: {
     list: () => request<Array<{
       id: string; tgUserId: string; username: string | null; firstName: string | null; lastName: string | null;

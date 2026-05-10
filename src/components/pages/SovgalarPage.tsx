@@ -4,6 +4,7 @@ import { Search, Plus, Pencil, Trash2, ChevronLeft, Gift } from "lucide-react";
 import type { GiftPromotion, GiftConditionType } from "../../data/marketingData";
 import { initialGiftPromotions } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
+import { useShopSetting } from "../../lib/useShopSetting";
 
 const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
 const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
@@ -33,7 +34,7 @@ function newId(prefix: string) {
 }
 
 export default function SovgalarPage() {
-  const [gifts, setGifts] = useState<GiftPromotion[]>(initialGiftPromotions);
+  const [gifts, setGifts] = useShopSetting<GiftPromotion[]>("marketing.gifts", initialGiftPromotions);
   const [search, setSearch] = useState("");
   const [pageMode, setPageMode] = useState<"list" | "create" | "edit">("list");
   const [editItem, setEditItem] = useState<GiftPromotion | null>(null);

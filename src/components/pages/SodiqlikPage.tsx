@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, ChevronLeft, Award } from "lucide-react";
 import type { LoyaltyRule, LoyaltyRuleType, LoyaltySettings } from "../../data/marketingData";
 import { initialLoyaltyRules, initialLoyaltySettings, loyaltyRuleTypeLabels, loyaltyRuleTypeDescriptions } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
+import { useShopSetting } from "../../lib/useShopSetting";
 
 const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
 const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
@@ -18,7 +19,7 @@ function newId(prefix: string) {
 }
 
 export default function SodiqlikPage() {
-  const [rules, setRules] = useState<LoyaltyRule[]>(initialLoyaltyRules);
+  const [rules, setRules] = useShopSetting<LoyaltyRule[]>("marketing.loyalty_rules", initialLoyaltyRules);
   const [settings, setSettings] = useState<LoyaltySettings>(initialLoyaltySettings);
   const [pageMode, setPageMode] = useState<"list" | "create" | "edit" | "settings">("list");
   const [editItem, setEditItem] = useState<LoyaltyRule | null>(null);

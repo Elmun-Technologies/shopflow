@@ -4,6 +4,7 @@ import { Search, Check, X, Star, MessageSquare } from "lucide-react";
 import type { ProductReview, ReviewStatus } from "../../data/marketingData";
 import { initialReviews, reviewStatusLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
+import { useShopSetting } from "../../lib/useShopSetting";
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -25,7 +26,7 @@ function ReviewStatusBadge({ status }: { status: ReviewStatus }) {
 }
 
 export default function IzohlarPage() {
-  const [reviews, setReviews] = useState<ProductReview[]>(initialReviews);
+  const [reviews, setReviews] = useShopSetting<ProductReview[]>("marketing.reviews", initialReviews);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<ReviewStatus | "all">("all");
   const [selectedReview, setSelectedReview] = useState<ProductReview | null>(null);

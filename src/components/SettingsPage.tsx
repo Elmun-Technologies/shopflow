@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import TelegramBotModal from "./TelegramBotModal";
 import IntegrationModal from "./IntegrationModal";
+import LiveSettingsPanel from "./LiveSettingsPanel";
 import {
   User, Store, Bell, Shield, Key, Puzzle, Save, Eye, EyeOff,
   Send, CreditCard, Wallet, BarChart3, ShoppingBag, Calculator,
@@ -404,6 +405,8 @@ export default function SettingsPage() {
 
   return (
     <>
+      <div className="mb-6"><LiveSettingsPanel /></div>
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

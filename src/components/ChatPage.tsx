@@ -34,6 +34,7 @@ import {
   funnelStageConfig,
 } from "../data/chatData";
 import type { ChatConversation, FunnelStage, ChatMessage } from "../data/chatData";
+import LiveChatPanel from "./LiveChatPanel";
 import {
   XAxis,
   YAxis,
@@ -141,6 +142,8 @@ export default function ChatPage() {
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
+      <div className="mb-4"><LiveChatPanel /></div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-4 flex-shrink-0">
         <div>

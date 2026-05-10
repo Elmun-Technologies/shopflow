@@ -30,6 +30,7 @@ import {
   LayoutTemplate,
 } from "lucide-react";
 import UIBuilderPage from "./UIBuilderPage";
+import LivePlatformsPanel from "./LivePlatformsPanel";
 import {
   platformProducts,
   platformOrders,
@@ -712,6 +713,8 @@ export default function PlatformsPage() {
 
   return (
     <div>
+      <div className="mb-6"><LivePlatformsPanel /></div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>

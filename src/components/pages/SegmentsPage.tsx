@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, Users, Filter, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { CustomerSegment, SegmentType, SegmentCondition } from "../../data/customersData";
 import { initialSegments, segmentTypeLabels, segmentConditionFields, customers } from "../../data/customersData";
+import { useShopSetting } from "../../lib/useShopSetting";
 
 const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
 const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
@@ -31,7 +32,7 @@ function ConditionsList({ conditions }: { conditions: SegmentCondition[] }) {
 }
 
 export default function SegmentsPage() {
-  const [segments, setSegments] = useState<CustomerSegment[]>(initialSegments);
+  const [segments, setSegments] = useShopSetting<CustomerSegment[]>("marketing.segments", initialSegments);
   const [search, setSearch] = useState("");
   const [pageMode, setPageMode] = useState<"list" | "create" | "edit" | "view">("list");
   const [editItem, setEditItem] = useState<CustomerSegment | null>(null);
