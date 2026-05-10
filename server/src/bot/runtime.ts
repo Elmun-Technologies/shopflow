@@ -3,24 +3,26 @@
  * Polling rejimi (development) — bu yerda jonli ishlaydi.
  * Webhook rejimi — instance webhook callback uchun yaratiladi (apply orqali).
  */
-import { Bot, type Context } from "grammy";
+import { Bot, type Context, type SessionFlavor } from "grammy";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
 import { decrypt } from "../lib/crypto.js";
-import { buildBotHandler } from "./handlers.js";
+import { buildBotHandler, registerConfirmHandler } from "./handlers.js";
 
-const instances = new Map<string, Bot>();
+interface CartLine { productId: string; quantity: number }
+interface SessionData { cart: CartLine[]; checkout?: any; search?: boolean }
+type Ctx = Context & SessionFlavor<SessionData>;
 
-function build(botId: string, token: string): Bot {
-  const bot = new Bot(token);
+const instances = new Map<string, Bot<Ctx>>();
+
+function build(botId: string, token: string): Bot<Ctx> {
+  const bot = new Bot<Ctx>(token);
   buildBotHandler(bot, botId);
-  bot.catch((err) => {
-    console.error(`[bot ${botId}] update error:`, err);
-  });
+  registerConfirmHandler(bot, botId);
   return bot;
 }
 
-export function startBotInstance(botId: string, token: string): Bot {
+export function startBotInstance(botId: string, token: string): Bot<Ctx> {
   stopBotInstance(botId);
   const bot = build(botId, token);
   instances.set(botId, bot);
@@ -40,7 +42,7 @@ export function stopBotInstance(botId: string): void {
   }
 }
 
-export async function getOrBuildWebhookBot(botId: string): Promise<Bot> {
+export async function getOrBuildWebhookBot(botId: string): Promise<Bot<Ctx>> {
   let inst = instances.get(botId);
   if (inst) return inst;
   const row = await db.query.bots.findFirst({ where: eq(schema.bots.id, botId) });
@@ -54,7 +56,7 @@ export async function getOrBuildWebhookBot(botId: string): Promise<Bot> {
 
 export async function dispatchUpdate(botId: string, update: unknown): Promise<void> {
   const bot = await getOrBuildWebhookBot(botId);
-  await bot.handleUpdate(update as Parameters<Bot["handleUpdate"]>[0]);
+  await bot.handleUpdate(update as Parameters<Bot<Ctx>["handleUpdate"]>[0]);
 }
 
 export async function bootAllBots(): Promise<void> {
