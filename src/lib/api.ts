@@ -189,6 +189,23 @@ export const api = {
     update: (id: string, body: { status?: AdminOrder["status"]; paymentStatus?: AdminOrder["paymentStatus"]; notes?: string }) =>
       request<AdminOrder>(`/api/orders/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     stats: () => request<Array<{ status: string; count: number; total: number }>>("/api/orders/stats"),
+    exportUrl: (params: { statuses?: string[]; type?: "by_orders" | "by_products" }) => {
+      const q = new URLSearchParams();
+      if (params.statuses?.length) q.set("statuses", params.statuses.join(","));
+      if (params.type) q.set("type", params.type);
+      return `/api/orders/export?${q.toString()}`;
+    },
+    exportCsv: async (params: { statuses?: string[]; type?: "by_orders" | "by_products" }) => {
+      const q = new URLSearchParams();
+      if (params.statuses?.length) q.set("statuses", params.statuses.join(","));
+      if (params.type) q.set("type", params.type);
+      const tok = getToken();
+      const res = await fetch(`${(import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? "http://localhost:4000"}/api/orders/export?${q.toString()}`, {
+        headers: tok ? { authorization: `Bearer ${tok}` } : {},
+      });
+      if (!res.ok) throw new ApiError(res.status, "Export muvaffaqiyatsiz");
+      return await res.blob();
+    },
   },
 
   products: {

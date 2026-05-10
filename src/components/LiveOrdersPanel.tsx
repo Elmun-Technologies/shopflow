@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, RefreshCw, Phone, MapPin, Package, Send, X } from "lucide-react";
+import { Loader2, RefreshCw, Phone, MapPin, Package, Send, X, ClipboardList, Bell } from "lucide-react";
 import { api, ApiError, type AdminOrder } from "../lib/api";
 import { useNotifications } from "../lib/notifications";
+import AssemblySheetDrawer from "./AssemblySheetDrawer";
+import AutoresponderDrawer from "./AutoresponderDrawer";
 
 const statusOptions: Array<{ value: AdminOrder["status"]; label: string; bg: string; text: string }> = [
   { value: "pending", label: "Kutilmoqda", bg: "bg-amber-500/15", text: "text-amber-400" },
@@ -20,6 +22,8 @@ export default function LiveOrdersPanel() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [assemblyOpen, setAssemblyOpen] = useState(false);
+  const [autoresponderOpen, setAutoresponderOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -109,9 +113,17 @@ export default function LiveOrdersPanel() {
             <p className="text-xs text-slate-500">Real-time backend bilan ulangan</p>
           </div>
         </div>
-        <button onClick={load} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400" title="Yangilash">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setAutoresponderOpen(true)} className="hidden sm:inline-flex bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 text-xs font-medium px-3 py-2 rounded-lg items-center gap-1.5" title="Avtoresponder">
+            <Bell className="w-4 h-4" /> Avtoresponder
+          </button>
+          <button onClick={() => setAssemblyOpen(true)} className="hidden sm:inline-flex bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 text-xs font-medium px-3 py-2 rounded-lg items-center gap-1.5" title="Yig'uv varaqasi">
+            <ClipboardList className="w-4 h-4" /> Yig'uv varaqasi
+          </button>
+          <button onClick={load} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400" title="Yangilash">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-6">
@@ -192,6 +204,9 @@ export default function LiveOrdersPanel() {
           />
         )}
       </AnimatePresence>
+
+      <AssemblySheetDrawer open={assemblyOpen} onClose={() => setAssemblyOpen(false)} />
+      <AutoresponderDrawer open={autoresponderOpen} onClose={() => setAutoresponderOpen(false)} />
     </div>
   );
 }

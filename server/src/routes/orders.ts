@@ -104,6 +104,74 @@ export default async function orderRoutes(app: FastifyInstance) {
 
     return updated;
   });
+
+  /** Export to CSV (Assembly sheet) */
+  app.get("/export", async (req, reply) => {
+    const sid = shopIdOf(req);
+    const query = z.object({
+      statuses: z.string().optional(), // comma-separated
+      type: z.enum(["by_orders", "by_products"]).default("by_orders"),
+      format: z.enum(["csv", "json"]).default("csv"),
+    }).parse(req.query);
+
+    const statuses = query.statuses ? query.statuses.split(",").filter(Boolean) : null;
+    const allOrders = await db.query.orders.findMany({
+      where: eq(schema.orders.shopId, sid),
+      orderBy: [desc(schema.orders.createdAt)],
+    });
+    const filtered = statuses ? allOrders.filter((o) => statuses.includes(o.status)) : allOrders;
+
+    if (query.type === "by_products") {
+      // Each row = order item
+      const orderIds = filtered.map((o) => o.id);
+      const items = orderIds.length > 0
+        ? await db.query.orderItems.findMany({
+            where: sql`${schema.orderItems.orderId} IN (${sql.raw(orderIds.map((id) => `'${id}'`).join(","))})`,
+          })
+        : [];
+      const orderMap = new Map(filtered.map((o) => [o.id, o]));
+      const rows = items.map((it) => {
+        const o = orderMap.get(it.orderId);
+        return {
+          order_number: o?.orderNumber ?? "",
+          date: o ? new Date(o.createdAt as Date | number).toISOString().slice(0, 10) : "",
+          status: o?.status ?? "",
+          customer_phone: o?.customerPhone ?? "",
+          product_name: it.productName,
+          quantity: it.quantity,
+          price: it.price,
+          total: it.total,
+        };
+      });
+      if (query.format === "json") return rows;
+      return reply.type("text/csv; charset=utf-8")
+        .header("content-disposition", `attachment; filename="orders_by_products_${Date.now()}.csv"`)
+        .send(toCsv(rows));
+    }
+
+    // by_orders — each row = order
+    const rows = filtered.map((o) => {
+      const addr = o.deliveryAddress as { city?: string; street?: string; house?: string; apartment?: string } | null;
+      return {
+        order_number: o.orderNumber,
+        date: new Date(o.createdAt as Date | number).toISOString().slice(0, 19).replace("T", " "),
+        status: o.status,
+        payment_status: o.paymentStatus,
+        payment_method: o.paymentMethod ?? "",
+        source: o.source,
+        customer_phone: o.customerPhone ?? "",
+        address: [addr?.city, addr?.street, addr?.house, addr?.apartment].filter(Boolean).join(", "),
+        subtotal: o.subtotal,
+        delivery_fee: o.deliveryFee,
+        total: o.total,
+        notes: o.notes ?? "",
+      };
+    });
+    if (query.format === "json") return rows;
+    return reply.type("text/csv; charset=utf-8")
+      .header("content-disposition", `attachment; filename="orders_${Date.now()}.csv"`)
+      .send(toCsv(rows));
+  });
 }
 
 async function notifyCustomer(tgUserId: string | null, shopId: string, orderNumber: string, status: typeof orderStatuses[number]) {
@@ -113,7 +181,34 @@ async function notifyCustomer(tgUserId: string | null, shopId: string, orderNumb
   const bot = await db.query.bots.findFirst({ where: eq(schema.bots.shopId, shopId) });
   if (!bot) return;
   const token = decrypt(bot.tokenEncrypted);
-  const label = statusLabels[status];
+
+  // Avtoresponder shablonini settings'dan o'qish
+  const setting = await db.query.shopSettings.findFirst({
+    where: and(eq(schema.shopSettings.shopId, shopId), eq(schema.shopSettings.key, "autoresponder")),
+  });
+  const templates = (setting?.value as Record<string, string> | null) ?? {};
+  const defaultLabel = statusLabels[status];
   const emoji = status === "delivered" ? "🎉" : status === "cancelled" ? "❌" : "📦";
-  await sendMessage(token, tgUser.tgUserId, `${emoji} Buyurtma <b>${orderNumber}</b> holati: <b>${label}</b>`);
+
+  let template = templates[status];
+  if (!template) {
+    template = `${emoji} Buyurtma <b>{order_id}</b> holati: <b>${defaultLabel}</b>`;
+  }
+  // Variable replacement
+  const text = template.replace(/\{order_id\}/g, orderNumber).replace(/\{status\}/g, defaultLabel);
+  await sendMessage(token, tgUser.tgUserId, text);
+}
+
+function toCsv(rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return "";
+  const headers = Object.keys(rows[0]);
+  const escape = (v: unknown) => {
+    const s = v === null || v === undefined ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.join(",")];
+  for (const row of rows) {
+    lines.push(headers.map((h) => escape(row[h])).join(","));
+  }
+  return "﻿" + lines.join("\n");
 }
