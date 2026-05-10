@@ -18,7 +18,10 @@ import analyticsRoutes from "./routes/analytics.js";
 import customerRoutes from "./routes/customers.js";
 import settingsRoutes from "./routes/settings.js";
 import leadRoutes from "./routes/leads.js";
+import moyskladWebhookRoutes from "./routes/moyskladWebhook.js";
 import { bootAllBots } from "./bot/runtime.js";
+import { startMoyskladCron } from "./integrations/moysklad/cron.js";
+import { startMoyskladListener } from "./integrations/moysklad/listener.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -90,6 +93,7 @@ async function build() {
   await app.register(customerRoutes, { prefix: "/api/customers" });
   await app.register(settingsRoutes, { prefix: "/api/settings" });
   await app.register(leadRoutes, { prefix: "/api/leads" });
+  await app.register(moyskladWebhookRoutes);
   await app.register(miniappRoutes, { prefix: "/api/miniapp" });
   await app.register(wsRoutes);
   await app.register(webhookRoutes);
@@ -106,6 +110,8 @@ async function main() {
   app.log.info(`ShopFlow server: http://${host}:${port}`);
 
   await bootAllBots();
+  startMoyskladCron();
+  startMoyskladListener();
 }
 
 main().catch((err) => {

@@ -286,8 +286,11 @@ export const api = {
           body: JSON.stringify({ type: "basic", login, password }),
         }),
       disconnect: () => request<{ ok: true }>("/api/integrations/moysklad", { method: "DELETE" }),
-      sync: () => request<{ ok: boolean; imported: number; updated: number }>("/api/integrations/moysklad/sync", { method: "POST" }),
+      sync: () => request<{ ok: boolean; imported: number; updated: number; stockUpdated: number; imagesAdded: number; errors: number }>("/api/integrations/moysklad/sync", { method: "POST" }),
+      syncStock: () => request<{ ok: boolean; updated: number }>("/api/integrations/moysklad/sync-stock", { method: "POST" }),
       test: () => request<{ ok: boolean; account?: { name?: string; email?: string } }>("/api/integrations/moysklad/test"),
+      logs: (limit = 50) => request<Array<{ id: number; entity: string; status: string; message: string | null; direction: string; createdAt: number }>>(`/api/integrations/moysklad/logs?limit=${limit}`),
+      status: () => request<{ connected: boolean; status?: string; lastSyncAt?: number | null; syncedProducts?: number; config?: { organizationId?: string; storeId?: string } }>("/api/integrations/moysklad/status"),
     },
     click: {
       connect: (body: { merchantId: string; serviceId: string; secretKey: string }) =>

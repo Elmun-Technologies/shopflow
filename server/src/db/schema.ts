@@ -223,6 +223,21 @@ export const shopSettings = sqliteTable("shop_settings", {
   shopKeyUnique: uniqueIndex("shop_settings_shop_key_unique").on(t.shopId, t.key),
 }));
 
+export const syncLogs = sqliteTable("sync_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "cascade" }),
+  integrationType: text("integration_type").notNull(),
+  direction: text("direction", { enum: ["in", "out"] }).notNull(),
+  entity: text("entity").notNull(),
+  status: text("status", { enum: ["success", "error", "skipped"] }).notNull(),
+  message: text("message"),
+  payload: text("payload", { mode: "json" }),
+  createdAt: ts("created_at").notNull(),
+}, (t) => ({
+  shopIdx: index("sync_logs_shop_idx").on(t.shopId),
+  typeIdx: index("sync_logs_type_idx").on(t.integrationType),
+}));
+
 export const botMessages = sqliteTable("bot_messages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   botId: text("bot_id").notNull().references(() => bots.id, { onDelete: "cascade" }),

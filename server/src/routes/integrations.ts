@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
-import { saveCredentials, syncProducts, disconnect, getClient } from "../integrations/moysklad/sync.js";
+import { saveCredentials, syncProducts, syncStock, disconnect, getClient, getSyncLogs } from "../integrations/moysklad/sync.js";
 
 const msConnectSchema = z.union([
   z.object({ type: z.literal("token"), token: z.string().min(10) }),
@@ -71,5 +71,38 @@ export default async function integrationRoutes(app: FastifyInstance) {
     } catch (err) {
       return reply.code(500).send({ ok: false, error: err instanceof Error ? err.message : "Xato" });
     }
+  });
+
+  app.post("/moysklad/sync-stock", async (req, reply) => {
+    const sid = shopIdOf(req);
+    try {
+      const updated = await syncStock(sid);
+      return reply.send({ ok: true, updated });
+    } catch (err) {
+      return reply.code(500).send({ ok: false, error: err instanceof Error ? err.message : "Xato" });
+    }
+  });
+
+  app.get("/moysklad/logs", async (req) => {
+    const sid = shopIdOf(req);
+    const query = z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
+    return await getSyncLogs(sid, query.limit);
+  });
+
+  app.get("/moysklad/status", async (req) => {
+    const sid = shopIdOf(req);
+    const integration = await db.query.integrations.findFirst({
+      where: and(eq(schema.integrations.shopId, sid), eq(schema.integrations.type, "moysklad")),
+    });
+    if (!integration) return { connected: false };
+    const productCount = (await db.query.products.findMany({ where: and(eq(schema.products.shopId, sid)) }))
+      .filter((p) => p.externalId).length;
+    return {
+      connected: true,
+      status: integration.status,
+      lastSyncAt: integration.lastSyncAt,
+      config: integration.config,
+      syncedProducts: productCount,
+    };
   });
 }

@@ -6,8 +6,14 @@
 const API_BASE = "https://api.moysklad.ru/api/remap/1.2";
 
 export interface MsAuth {
-  /** "Bearer ..." yoki "Basic base64(login:password)" */
   authorization: string;
+}
+
+export interface MsMeta {
+  href: string;
+  type: string;
+  mediaType: string;
+  uuidHref?: string;
 }
 
 export interface MsProduct {
@@ -17,16 +23,39 @@ export interface MsProduct {
   code?: string;
   article?: string;
   archived?: boolean;
-  salePrices?: Array<{ value: number; currency?: { meta?: { href?: string } } }>;
-  productFolder?: { meta: { href: string } };
-  images?: { meta?: { href?: string }; rows?: Array<{ miniature?: { href?: string }; tiny?: { href?: string } }> };
+  salePrices?: Array<{ value: number; currency?: { meta?: MsMeta } }>;
+  productFolder?: { meta: MsMeta };
+  images?: { meta?: MsMeta; rows?: Array<{ miniature?: { href?: string }; tiny?: { href?: string }; meta?: MsMeta }> };
+  meta?: MsMeta;
 }
 
 export interface MsCategory {
   id: string;
   name: string;
-  parent?: { meta: { href: string } };
+  parent?: { meta: MsMeta };
   pathName?: string;
+}
+
+export interface MsOrganization {
+  id: string;
+  name: string;
+  meta: MsMeta;
+}
+
+export interface MsStore {
+  id: string;
+  name: string;
+  meta: MsMeta;
+}
+
+export interface MsStockRow {
+  /** assortmentId (productId) */
+  assortmentId?: string;
+  meta?: MsMeta;
+  stock: number;
+  reserve?: number;
+  inTransit?: number;
+  quantity?: number;
 }
 
 export class MoyskladClient {
@@ -64,7 +93,7 @@ export class MoyskladClient {
     return text ? JSON.parse(text) as T : (null as T);
   }
 
-  /** Hisob ma'lumotlarini olish — kalitni tekshirish uchun */
+  /** Hisob ma'lumotlarini olish */
   async me(): Promise<{ name?: string; email?: string }> {
     return await this.req("/context/employee");
   }
@@ -72,7 +101,7 @@ export class MoyskladClient {
   /** Mahsulotlar (assortment) — sahifalab oladi */
   async listProducts(opts: { limit?: number; offset?: number } = {}): Promise<{ rows: MsProduct[]; meta: { size: number } }> {
     const limit = Math.min(opts.limit ?? 100, 1000);
-    return await this.req(`/entity/product?limit=${limit}&offset=${opts.offset ?? 0}`);
+    return await this.req(`/entity/product?limit=${limit}&offset=${opts.offset ?? 0}&expand=images,productFolder`);
   }
 
   /** Kategoriyalar (productfolder) */
@@ -80,8 +109,43 @@ export class MoyskladClient {
     return await this.req("/entity/productfolder?limit=1000");
   }
 
+  /** Tashkilotlar (organisations) */
+  async listOrganizations(): Promise<{ rows: MsOrganization[] }> {
+    return await this.req("/entity/organization");
+  }
+
+  /** Sklad (stores) */
+  async listStores(): Promise<{ rows: MsStore[] }> {
+    return await this.req("/entity/store");
+  }
+
+  /** Hozirgi qoldiqlar — barcha mahsulotlar bo'yicha */
+  async listStock(opts: { limit?: number; offset?: number } = {}): Promise<{ rows: Array<{ assortmentId?: string; meta?: MsMeta; stock: number; reserve: number; inTransit: number; quantity: number }> }> {
+    const limit = Math.min(opts.limit ?? 1000, 1000);
+    return await this.req(`/report/stock/all?limit=${limit}&offset=${opts.offset ?? 0}`);
+  }
+
+  /** Counterparty (mijoz) yaratish yoki topish */
+  async findOrCreateCounterparty(input: { name: string; phone?: string; email?: string }): Promise<{ id: string; meta: MsMeta }> {
+    // Avval phone bo'yicha izlash
+    if (input.phone) {
+      const found = await this.req<{ rows: Array<{ id: string; meta: MsMeta }> }>(`/entity/counterparty?filter=phone~${encodeURIComponent(input.phone)}&limit=1`);
+      if (found.rows.length > 0) return found.rows[0];
+    }
+    // Yaratish
+    return await this.req("/entity/counterparty", {
+      method: "POST",
+      body: JSON.stringify({
+        name: input.name,
+        companyType: "individual",
+        phone: input.phone,
+        email: input.email,
+      }),
+    });
+  }
+
   /** Buyurtma yaratish */
-  async createCustomerOrder(payload: object): Promise<{ id: string; name: string; meta: { href: string } }> {
+  async createCustomerOrder(payload: object): Promise<{ id: string; name: string; meta: MsMeta }> {
     return await this.req("/entity/customerorder", { method: "POST", body: JSON.stringify(payload) });
   }
 
@@ -89,11 +153,7 @@ export class MoyskladClient {
   async createWebhook(input: { url: string; entityType: string; action: "CREATE" | "UPDATE" | "DELETE" }): Promise<{ id: string }> {
     return await this.req("/entity/webhook", {
       method: "POST",
-      body: JSON.stringify({
-        url: input.url,
-        action: input.action,
-        entityType: input.entityType,
-      }),
+      body: JSON.stringify({ url: input.url, action: input.action, entityType: input.entityType }),
     });
   }
 
@@ -104,4 +164,15 @@ export class MoyskladClient {
   async listWebhooks(): Promise<{ rows: Array<{ id: string; url: string; action: string; entityType: string }> }> {
     return await this.req("/entity/webhook");
   }
+
+  /** Auth headerni olish (rasm yuklash uchun) */
+  getAuthHeader(): string {
+    return this.auth.authorization;
+  }
+}
+
+/** Helper — meta.href dan ID ajratib olish */
+export function idFromHref(href: string): string {
+  const m = href.match(/([a-f0-9-]{36})(?:\?|$)/i);
+  return m?.[1] ?? "";
 }

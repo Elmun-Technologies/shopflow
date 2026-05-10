@@ -136,18 +136,34 @@ function MoyskladForm({ onError, setLoading, loading, onSuccess }: { onError: (e
   const [token, setToken] = useState("");
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
-  const [account, setAccount] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ connected: boolean; lastSyncAt?: number | null; syncedProducts?: number } | null>(null);
+  const [logs, setLogs] = useState<Array<{ id: number; entity: string; status: string; message: string | null; direction: string; createdAt: number }>>([]);
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  async function refresh() {
+    try {
+      const [s, l] = await Promise.all([
+        api.integrations.moysklad.status(),
+        api.integrations.moysklad.logs(10).catch(() => []),
+      ]);
+      setStatus(s);
+      setLogs(l);
+    } catch { /* */ }
+  }
 
   async function connect() {
     onError(null);
     setLoading(true);
     try {
-      const res = mode === "token"
+      mode === "token"
         ? await api.integrations.moysklad.connectToken(token)
         : await api.integrations.moysklad.connectBasic(login, password);
-      setAccount(res.account?.name ?? "Akkaunt");
-      toast({ kind: "success", title: "MoySklad ulandi" });
+      toast({ kind: "success", title: "MoySklad ulandi", description: "Endi mahsulotlarni sinxronlashtirsangiz bo'ladi" });
       onSuccess();
+      await refresh();
     } catch (err) {
       onError(err instanceof ApiError ? err.message : "Xato");
     } finally {
@@ -160,7 +176,26 @@ function MoyskladForm({ onError, setLoading, loading, onSuccess }: { onError: (e
     onError(null);
     try {
       const r = await api.integrations.moysklad.sync();
-      toast({ kind: "success", title: "Sync tugadi", description: `${r.imported} yangi, ${r.updated} yangilandi` });
+      toast({
+        kind: "success",
+        title: "Sinxronizatsiya tugadi",
+        description: `+${r.imported} yangi, ${r.updated} yangilandi, stock ${r.stockUpdated} ta${r.errors > 0 ? `, ${r.errors} xato` : ""}`,
+      });
+      await refresh();
+    } catch (err) {
+      onError(err instanceof ApiError ? err.message : "Xato");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function syncStockNow() {
+    setLoading(true);
+    onError(null);
+    try {
+      const r = await api.integrations.moysklad.syncStock();
+      toast({ kind: "success", title: "Stock yangilandi", description: `${r.updated} mahsulot` });
+      await refresh();
     } catch (err) {
       onError(err instanceof ApiError ? err.message : "Xato");
     } finally {
@@ -170,36 +205,83 @@ function MoyskladForm({ onError, setLoading, loading, onSuccess }: { onError: (e
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <button onClick={() => setMode("token")} className={`flex-1 py-2 rounded-lg text-sm ${mode === "token" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"}`}>Bearer token</button>
-        <button onClick={() => setMode("basic")} className={`flex-1 py-2 rounded-lg text-sm ${mode === "basic" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"}`}>Login/parol</button>
-      </div>
+      {!status?.connected ? (
+        <>
+          <div className="flex gap-2">
+            <button onClick={() => setMode("token")} className={`flex-1 py-2 rounded-lg text-sm ${mode === "token" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"}`}>Bearer token</button>
+            <button onClick={() => setMode("basic")} className={`flex-1 py-2 rounded-lg text-sm ${mode === "basic" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"}`}>Login/parol</button>
+          </div>
 
-      {mode === "token" ? (
-        <Field label="Bearer token (MoySklad → Sozlamalar → API)">
-          <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="abc123..." className={input} spellCheck={false} />
-        </Field>
+          {mode === "token" ? (
+            <Field label="Bearer token">
+              <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="abc123..." className={input} spellCheck={false} />
+              <p className="text-[10px] text-slate-500 mt-1">MoySklad → Sozlamalar → API → Token yaratish</p>
+            </Field>
+          ) : (
+            <>
+              <Field label="Login (email)">
+                <input value={login} onChange={(e) => setLogin(e.target.value)} className={input} />
+              </Field>
+              <Field label="Parol">
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
+              </Field>
+            </>
+          )}
+
+          <button onClick={connect} disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 rounded-lg flex items-center justify-center gap-2">
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Ulash va tekshirish
+          </button>
+        </>
       ) : (
         <>
-          <Field label="Login (email yoki username)">
-            <input value={login} onChange={(e) => setLogin(e.target.value)} className={input} />
-          </Field>
-          <Field label="Parol">
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
-          </Field>
+          <div className="bg-slate-800/40 rounded-lg p-3 space-y-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Sinxronlangan mahsulotlar:</span>
+              <span className="text-white font-semibold">{status.syncedProducts ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Oxirgi sync:</span>
+              <span className="text-white">
+                {status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" }) : "Hech qachon"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Avto-sync:</span>
+              <span className="text-emerald-400">✓ Yoqilgan (har 15 daqiqada)</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={syncNow} disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-medium py-2.5 rounded-lg flex items-center justify-center gap-1.5">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              To'liq sync
+            </button>
+            <button onClick={syncStockNow} disabled={loading} className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium py-2.5 rounded-lg flex items-center justify-center gap-1.5">
+              📊 Faqat stock
+            </button>
+          </div>
+
+          {logs.length > 0 && (
+            <div className="bg-slate-800/40 rounded-lg p-3">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Sync tarixi</p>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {logs.map((l) => (
+                  <div key={l.id} className="flex items-start gap-2 text-xs py-1">
+                    <span className={`mt-0.5 ${l.status === "success" ? "text-emerald-400" : l.status === "error" ? "text-red-400" : "text-slate-500"}`}>
+                      {l.status === "success" ? "✓" : l.status === "error" ? "✕" : "·"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-300 truncate">{l.message}</p>
+                      <p className="text-[10px] text-slate-600">{l.entity} · {l.direction} · {new Date(l.createdAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
-
-      <div className="flex gap-2 pt-2">
-        <button onClick={connect} disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 rounded-lg flex items-center justify-center gap-2">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          Ulash va tekshirish
-        </button>
-        <button onClick={syncNow} disabled={loading} className="bg-slate-800 hover:bg-slate-700 text-white text-sm px-4 rounded-lg flex items-center gap-2" title="Mahsulotlarni sinxronlash">
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
-      {account && <p className="text-xs text-emerald-400 text-center">Akkaunt: {account}</p>}
     </div>
   );
 }

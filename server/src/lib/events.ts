@@ -21,3 +21,9 @@ export function subscribe(shopId: string, listener: (e: ShopEvent) => void): () 
   bus.on(shopId, listener);
   return () => bus.off(shopId, listener);
 }
+
+/** Global subscriber - barcha shoplarga yuboriladigan eventlarni eshitish */
+export function subscribeAll(listener: (e: ShopEvent) => void): () => void {
+  bus.on("*", listener);
+  return () => bus.off("*", listener);
+}
