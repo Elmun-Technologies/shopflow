@@ -263,4 +263,148 @@ export default async function analyticsRoutes(app: FastifyInstance) {
     }
     return results;
   });
+
+  /** Davr bo'yicha kengaytirilgan KPI — Robosell-style breakdown */
+  app.get("/period", async (req) => {
+    const sid = shopIdOf(req);
+    const query = z.object({
+      from: z.string().optional(),
+      to: z.string().optional(),
+    }).parse(req.query);
+
+    const fromTs = query.from ? new Date(query.from).getTime() : Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const toTs = query.to ? new Date(query.to).getTime() : Date.now();
+
+    const orders = await db.query.orders.findMany({ where: eq(schema.orders.shopId, sid) });
+    const inRange = orders.filter((o) => {
+      const t = new Date(o.createdAt as Date | number).getTime();
+      return t >= fromTs && t <= toTs;
+    });
+    const tgUsers = await db.query.tgUsers.findMany({ where: eq(schema.tgUsers.shopId, sid) });
+
+    const earnings = inRange.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.total, 0);
+    const deliveryAmount = inRange.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.deliveryFee, 0);
+    // Cost of sales — taxminiy 60% (haqiqiy cost field bo'lmagani uchun)
+    const costOfSales = Math.round(earnings * 0.6);
+    const profit = earnings - costOfSales - deliveryAmount;
+
+    const newOrders = inRange.filter((o) => o.status === "pending").length;
+    const doneOrders = inRange.filter((o) => o.status === "delivered").length;
+    const cancelledOrders = inRange.filter((o) => o.status === "cancelled").length;
+
+    const customerOrderCount = new Map<string, number>();
+    for (const o of orders) {
+      if (!o.tgUserId) continue;
+      customerOrderCount.set(o.tgUserId, (customerOrderCount.get(o.tgUserId) ?? 0) + 1);
+    }
+    const inRangeCustomerIds = new Set(inRange.map((o) => o.tgUserId).filter(Boolean) as string[]);
+    let newCustomers = 0;
+    let returnedCustomers = 0;
+    for (const id of inRangeCustomerIds) {
+      const total = customerOrderCount.get(id) ?? 0;
+      const inRangeCount = inRange.filter((o) => o.tgUserId === id).length;
+      if (total === inRangeCount) newCustomers++;
+      else returnedCustomers++;
+    }
+
+    const completedOrders = inRange.filter((o) => o.status !== "cancelled");
+    const averageOrder = completedOrders.length > 0
+      ? Math.round(earnings / completedOrders.length)
+      : 0;
+
+    return {
+      earnings: { total: earnings, costOfSales, deliveryAmount, profit },
+      orders: { total: inRange.length, new: newOrders, done: doneOrders, cancelled: cancelledOrders },
+      clients: { total: tgUsers.length, new: newCustomers, returned: returnedCustomers, averageOrder },
+      range: { from: fromTs, to: toTs },
+    };
+  });
+
+  /** Orders by hour — peak time chart */
+  app.get("/orders-by-hour", async (req) => {
+    const sid = shopIdOf(req);
+    const query = z.object({
+      from: z.string().optional(),
+      to: z.string().optional(),
+    }).parse(req.query);
+    const fromTs = query.from ? new Date(query.from).getTime() : Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const toTs = query.to ? new Date(query.to).getTime() : Date.now();
+
+    const orders = await db.query.orders.findMany({ where: eq(schema.orders.shopId, sid) });
+    const inRange = orders.filter((o) => {
+      const t = new Date(o.createdAt as Date | number).getTime();
+      return t >= fromTs && t <= toTs;
+    });
+
+    const buckets: Array<{ hour: number; new: number; cancelled: number; completed: number }> = [];
+    for (let i = 0; i < 24; i++) buckets.push({ hour: i, new: 0, cancelled: 0, completed: 0 });
+    for (const o of inRange) {
+      const h = new Date(o.createdAt as Date | number).getHours();
+      if (o.status === "cancelled") buckets[h].cancelled++;
+      else if (o.status === "delivered") buckets[h].completed++;
+      else buckets[h].new++;
+    }
+    return buckets;
+  });
+
+  /** Top 10 customers (eng ko'p xarajat qilgan) */
+  app.get("/top-customers", async (req) => {
+    const sid = shopIdOf(req);
+    const query = z.object({ limit: z.coerce.number().int().min(1).max(50).default(10) }).parse(req.query);
+
+    const orders = await db.query.orders.findMany({ where: eq(schema.orders.shopId, sid) });
+    const tgUsers = await db.query.tgUsers.findMany({ where: eq(schema.tgUsers.shopId, sid) });
+    const userMap = new Map(tgUsers.map((u) => [u.id, u]));
+
+    const stats = new Map<string, { spent: number; count: number; lastOrderAt: number }>();
+    for (const o of orders) {
+      if (!o.tgUserId || o.status === "cancelled") continue;
+      const cur = stats.get(o.tgUserId) ?? { spent: 0, count: 0, lastOrderAt: 0 };
+      cur.spent += o.total;
+      cur.count += 1;
+      const t = new Date(o.createdAt as Date | number).getTime();
+      if (t > cur.lastOrderAt) cur.lastOrderAt = t;
+      stats.set(o.tgUserId, cur);
+    }
+
+    const sorted = Array.from(stats.entries())
+      .map(([id, s]) => {
+        const u = userMap.get(id);
+        return {
+          id,
+          name: u ? [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "Mijoz" : "Mijoz",
+          username: u?.username ?? null,
+          phone: u?.phone ?? null,
+          totalSpent: s.spent,
+          orderCount: s.count,
+          lastOrderAt: s.lastOrderAt,
+        };
+      })
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, query.limit);
+
+    return sorted;
+  });
+
+  /** Order locations - map uchun */
+  app.get("/order-locations", async (req) => {
+    const sid = shopIdOf(req);
+    const orders = await db.query.orders.findMany({ where: eq(schema.orders.shopId, sid) });
+    const locations: Array<{ id: string; orderNumber: string; total: number; address: string; status: string; createdAt: Date | number }> = [];
+    for (const o of orders.slice(0, 200)) {
+      const addr = o.deliveryAddress as { city?: string; street?: string; house?: string } | null;
+      if (!addr) continue;
+      const formatted = [addr.city, addr.street, addr.house].filter(Boolean).join(", ");
+      if (!formatted) continue;
+      locations.push({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        total: o.total,
+        address: formatted,
+        status: o.status,
+        createdAt: o.createdAt,
+      });
+    }
+    return locations;
+  });
 }

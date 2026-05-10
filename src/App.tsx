@@ -2,13 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import KPICards from "./components/KPICards";
-import RevenueChart from "./components/RevenueChart";
-import SalesByCategory from "./components/SalesByCategory";
-import WeeklySales from "./components/WeeklySales";
-import RecentOrders from "./components/RecentOrders";
-import TopProducts from "./components/TopProducts";
-import TrafficSources from "./components/TrafficSources";
+import Dashboard from "./components/dashboard/Dashboard";
 import OrdersPage from "./components/OrdersPage";
 import ProductsPage from "./components/ProductsPage";
 import LeadsPage from "./components/LeadsPage";
@@ -88,30 +82,7 @@ function DashboardPage() {
         </button>
       </motion.div>
 
-      {/* KPI Cards */}
-      <KPICards />
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
-        <div className="lg:col-span-2">
-          <RevenueChart />
-        </div>
-        <div className="space-y-4">
-          <SalesByCategory />
-          <WeeklySales />
-        </div>
-      </div>
-
-      {/* Orders & Products Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
-        <div className="lg:col-span-2">
-          <RecentOrders />
-        </div>
-        <div className="space-y-4">
-          <TopProducts />
-          <TrafficSources />
-        </div>
-      </div>
+      <Dashboard />
 
       {/* Footer */}
       <motion.div

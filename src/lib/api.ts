@@ -223,6 +223,29 @@ export const api = {
     weeklySales: () => request<Array<{ day: string; revenue: number; orders: number }>>("/api/analytics/weekly-sales"),
     salesByCategory: () => request<Array<{ categoryId: string | null; categoryName: string; revenue: number; orderCount: number; itemsSold: number }>>("/api/analytics/sales-by-category"),
     traffic: () => request<Array<{ source: string; label: string; orders: number; revenue: number; customers: number }>>("/api/analytics/traffic"),
+    period: (params?: { from?: string; to?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.from) q.set("from", params.from);
+      if (params?.to) q.set("to", params.to);
+      const qs = q.toString();
+      return request<{
+        earnings: { total: number; costOfSales: number; deliveryAmount: number; profit: number };
+        orders: { total: number; new: number; done: number; cancelled: number };
+        clients: { total: number; new: number; returned: number; averageOrder: number };
+        range: { from: number; to: number };
+      }>(`/api/analytics/period${qs ? `?${qs}` : ""}`);
+    },
+    ordersByHour: (params?: { from?: string; to?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.from) q.set("from", params.from);
+      if (params?.to) q.set("to", params.to);
+      const qs = q.toString();
+      return request<Array<{ hour: number; new: number; cancelled: number; completed: number }>>(`/api/analytics/orders-by-hour${qs ? `?${qs}` : ""}`);
+    },
+    topCustomers: (limit = 10) =>
+      request<Array<{ id: string; name: string; username: string | null; phone: string | null; totalSpent: number; orderCount: number; lastOrderAt: number }>>(`/api/analytics/top-customers?limit=${limit}`),
+    orderLocations: () =>
+      request<Array<{ id: string; orderNumber: string; total: number; address: string; status: string; createdAt: number }>>("/api/analytics/order-locations"),
   },
 
   payments: {
