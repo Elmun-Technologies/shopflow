@@ -123,3 +123,44 @@ export function useReconcile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sync"] }),
   });
 }
+
+export interface PaymentProviderStatus {
+  provider: "CLICK" | "PAYME";
+  enabled: boolean;
+  configured: boolean;
+  publicConfig: Record<string, unknown>;
+  lastEventAt: string | null;
+  lastError: string | null;
+}
+
+export function usePaymentProviders() {
+  return useQuery({
+    queryKey: ["integrations", "payments"],
+    queryFn: () => api.get<PaymentProviderStatus[]>("/integrations/payments").then((r) => r.data),
+  });
+}
+
+export function useSavePaymentProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      provider,
+      ...body
+    }: {
+      provider: "CLICK" | "PAYME";
+      enabled: boolean;
+      publicConfig: Record<string, unknown>;
+      secret?: string;
+    }) => api.post(`/integrations/payments/${provider}`, body).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["integrations", "payments"] }),
+  });
+}
+
+export function useDisablePaymentProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: "CLICK" | "PAYME") =>
+      api.delete(`/integrations/payments/${provider}`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["integrations", "payments"] }),
+  });
+}

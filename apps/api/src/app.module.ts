@@ -22,6 +22,7 @@ import { StorefrontModule } from "./modules/storefront/storefront.module.js";
 import { MiniappModule } from "./modules/miniapp/miniapp.module.js";
 import { SyncModule } from "./modules/sync/sync.module.js";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module.js";
+import { PaymentsModule } from "./modules/payments/payments.module.js";
 import { QueueModule } from "./queue/queue.module.js";
 import { TenantContextMiddleware } from "./common/tenant/tenant-context.middleware.js";
 import { JwtAuthGuard } from "./common/auth/jwt-auth.guard.js";
@@ -57,6 +58,7 @@ import { MiddlewareConsumer, NestModule } from "@nestjs/common";
     MiniappModule,
     SyncModule,
     WebhooksModule,
+    PaymentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -17,6 +17,7 @@ const STATUS_TEXT: Record<string, string> = {
   SHIPPED: "jo'natildi",
   COMPLETED: "yetkazildi",
   CANCELLED: "bekor qilindi",
+  PAYMENT_PAID: "to'lov qabul qilindi ✅",
 };
 
 /**

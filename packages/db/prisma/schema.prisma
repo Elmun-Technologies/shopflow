@@ -138,6 +138,7 @@ model Tenant {
   orders         Order[]
   orderItems     OrderItem[]
   payments       Payment[]
+  paymentProviderConfigs PaymentProviderConfig[]
   telegramUsers  TelegramUser[]
   webhookEvents  WebhookEvent[]
   syncJobs       SyncJob[]
@@ -536,6 +537,32 @@ model Payment {
 
   @@index([tenantId, orderId])
   @@index([provider, externalId])
+}
+
+/**
+ * Per-tenant credentials for payment providers. Public identifiers (serviceId,
+ * merchantId, cashboxId) are stored in clear; secret values (Click secret key,
+ * Payme cashbox key) are AES-GCM encrypted.
+ */
+model PaymentProviderConfig {
+  id              String          @id @default(uuid())
+  tenantId        String
+  provider        PaymentProvider
+  enabled         Boolean         @default(false)
+  /// JSON object with non-secret config (e.g. { serviceId, merchantId, cashboxId }).
+  publicConfig    Json            @default("{}")
+  /// AES-GCM ciphertext of the provider's secret (Click secret_key / Payme key).
+  encryptedSecret String?
+  lastEventAt     DateTime?
+  lastError       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
 }
 
 // ---------- Telegram & Storefront ----------

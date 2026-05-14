@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
+import WebApp from "@twa-dev/sdk";
 import { api, type StorefrontOrder } from "../api.ts";
 import { formatMoney } from "../format.ts";
+
+interface PaymentLinks {
+  clickUrl?: string;
+  paymeUrl?: string;
+}
 
 const STATUS_TEXT: Record<StorefrontOrder["status"], { label: string; color: string }> = {
   PENDING: { label: "Qabul qilindi", color: "text-amber-600 bg-amber-50" },
@@ -26,11 +32,18 @@ export function OrderPage() {
     refetchInterval: 15_000,
     enabled: !!orderId,
   });
+  const payment = useQuery({
+    queryKey: ["miniapp", "payment-links", orderId],
+    queryFn: () =>
+      api.get<PaymentLinks>(`/integrations/payments/links/${orderId}`).then((r) => r.data),
+    enabled: !!orderId && order.data?.paymentStatus === "PENDING",
+  });
 
   if (order.isLoading) return <div className="p-6">Yuklanmoqda…</div>;
   if (!order.data) return <div className="p-6">Buyurtma topilmadi</div>;
   const o = order.data;
   const status = STATUS_TEXT[o.status];
+  const showPayment = o.paymentStatus === "PENDING" && (payment.data?.clickUrl || payment.data?.paymeUrl);
 
   return (
     <div className="p-4 pb-24">
@@ -69,6 +82,32 @@ export function OrderPage() {
           <span>{formatMoney(o.totalKopecks)}</span>
         </div>
       </section>
+
+      {showPayment && (
+        <section className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <h2 className="text-sm font-semibold text-emerald-900 mb-3">To'lov usulini tanlang</h2>
+          <div className="space-y-2">
+            {payment.data?.clickUrl && (
+              <button
+                type="button"
+                onClick={() => WebApp.openLink(payment.data!.clickUrl!)}
+                className="w-full rounded-lg bg-sky-600 hover:bg-sky-500 py-3 text-sm font-semibold text-white"
+              >
+                Click orqali to'lash
+              </button>
+            )}
+            {payment.data?.paymeUrl && (
+              <button
+                type="button"
+                onClick={() => WebApp.openLink(payment.data!.paymeUrl!)}
+                className="w-full rounded-lg bg-cyan-700 hover:bg-cyan-600 py-3 text-sm font-semibold text-white"
+              >
+                Payme orqali to'lash
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       <p className="mt-6 text-center text-xs text-neutral-500">
         Buyurtmangiz tayyor bo'lishi yoki holati o'zganishi haqida bot orqali xabar olasiz.

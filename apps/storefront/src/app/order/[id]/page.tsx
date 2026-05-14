@@ -60,6 +60,19 @@ async function fetchOrder(host: string, id: string): Promise<Order | null> {
   }
 }
 
+async function fetchPaymentLinks(host: string, id: string): Promise<{ clickUrl?: string; paymeUrl?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/api/integrations/payments/links/${id}`, {
+      headers: { host },
+      cache: "no-store",
+    });
+    if (!res.ok) return {};
+    return (await res.json()) as { clickUrl?: string; paymeUrl?: string };
+  } catch {
+    return {};
+  }
+}
+
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   return { title: `Buyurtma ${id.slice(0, 8)}` };
@@ -70,8 +83,9 @@ export default async function OrderPage({ params }: Props) {
   const h = await headers();
   const host = h.get("host") ?? "";
   const { id } = await params;
-  const order = await fetchOrder(host, id);
+  const [order, paymentLinks] = await Promise.all([fetchOrder(host, id), fetchPaymentLinks(host, id)]);
   if (!order) notFound();
+  const showPayment = order.paymentStatus === "PENDING" && (paymentLinks.clickUrl || paymentLinks.paymeUrl);
 
   const status = STATUS_TEXT[order.status];
 
@@ -132,6 +146,37 @@ export default async function OrderPage({ params }: Props) {
             <span>Jami</span>
             <span>{formatMoney(order.totalKopecks)}</span>
           </div>
+        </section>
+      )}
+
+      {showPayment && (
+        <section className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+          <h2 className="text-sm font-semibold text-emerald-900 mb-3">To'lov usulini tanlang</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {paymentLinks.clickUrl && (
+              <a
+                href={paymentLinks.clickUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-lg bg-sky-600 hover:bg-sky-500 py-3 text-center text-sm font-semibold text-white"
+              >
+                Click orqali to'lash
+              </a>
+            )}
+            {paymentLinks.paymeUrl && (
+              <a
+                href={paymentLinks.paymeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-lg bg-cyan-700 hover:bg-cyan-600 py-3 text-center text-sm font-semibold text-white"
+              >
+                Payme orqali to'lash
+              </a>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-emerald-800/80 text-center">
+            To'lovdan so'ng sahifani yangilang — buyurtma holati avtomatik o'zgaradi.
+          </p>
         </section>
       )}
 

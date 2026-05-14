@@ -37,6 +37,7 @@ export const TENANT_SCOPED_MODELS = new Set([
   "Order",
   "OrderItem",
   "Payment",
+  "PaymentProviderConfig",
   "TelegramBot",
   "TelegramUser",
   "StorefrontSite",

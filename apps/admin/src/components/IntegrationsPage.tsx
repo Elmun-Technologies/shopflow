@@ -21,6 +21,7 @@ import {
 import { api } from "../api/client";
 import { ErrorRetry } from "./common/ErrorRetry";
 import { LoadingSkeleton } from "./common/LoadingSkeleton";
+import { PaymentsCard } from "./PaymentsCard";
 
 export function IntegrationsPage() {
   return (
@@ -28,12 +29,13 @@ export function IntegrationsPage() {
       <header>
         <h1 className="text-2xl font-bold text-white">Integratsiyalar</h1>
         <p className="text-sm text-slate-400 mt-1">
-          Tashqi xizmatlarni ulang — MoySklad, Telegram bot va boshqalar.
+          Tashqi xizmatlarni ulang — MoySklad, Telegram bot, Click va Payme.
         </p>
       </header>
 
       <MoyskladCard />
       <TelegramCard />
+      <PaymentsCard />
     </div>
   );
 }

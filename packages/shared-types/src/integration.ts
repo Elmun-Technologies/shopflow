@@ -23,3 +23,30 @@ export interface MoyskladConnectionTest {
   permissions?: string[];
   error?: string;
 }
+
+export type PaymentProviderName = "CLICK" | "PAYME";
+
+export interface ClickConfig {
+  serviceId: string;
+  merchantId: string;
+  merchantUserId?: string;
+}
+
+export interface PaymeConfig {
+  cashboxId: string;
+  testMode?: boolean;
+}
+
+export interface PaymentProviderStatus {
+  provider: PaymentProviderName;
+  enabled: boolean;
+  configured: boolean;
+  publicConfig: ClickConfig | PaymeConfig | Record<string, unknown>;
+  lastEventAt?: string | null;
+  lastError?: string | null;
+}
+
+export interface PaymentLinks {
+  clickUrl?: string;
+  paymeUrl?: string;
+}
