@@ -40,6 +40,7 @@ import { AuthPage } from "./components/AuthPage";
 import { IntegrationsPage } from "./components/IntegrationsPage";
 import { SyncStatusPage } from "./components/SyncStatusPage";
 import { StorefrontAdminPage } from "./components/StorefrontAdminPage";
+import { OnboardingChecklist } from "./components/OnboardingChecklist";
 
 type Page =
   | "dashboard"
@@ -60,7 +61,7 @@ type Page =
   | "sync"
   | "storefront";
 
-function DashboardPage() {
+function DashboardPage({ onNavigate }: { onNavigate?: (p: string) => void } = {}) {
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
@@ -96,6 +97,12 @@ function DashboardPage() {
           Export Report
         </button>
       </motion.div>
+
+      {onNavigate && (
+        <div className="mb-6">
+          <OnboardingChecklist onNavigate={onNavigate} compact />
+        </div>
+      )}
 
       {/* KPI Cards */}
       <KPICards />
@@ -174,7 +181,7 @@ function AuthedApp() {
   const renderPage = () => {
     switch (currentPage) {
       case "dashboard":
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage as (p: string) => void} />;
       case "orders":
         return <OrdersPage />;
       case "products":

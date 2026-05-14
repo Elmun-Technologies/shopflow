@@ -24,6 +24,7 @@ import { PrismaService } from "../../prisma/prisma.service.js";
 import { QueueProducerService } from "../../queue/queue-producer.service.js";
 import { AppConfigService } from "../../config/app-config.service.js";
 import { Public, Roles, CurrentUser, type AuthUser } from "../../common/auth/auth.decorators.js";
+import { SmsOtpService } from "./sms-otp.service.js";
 
 /**
  * Public APIs for the customer-facing surfaces (Mini App, Next.js storefront,
@@ -495,8 +496,36 @@ class StorefrontAdminController {
   }
 }
 
+class OtpRequestDto {
+  @IsString() @MinLength(3) tenantSlug!: string;
+  @IsString() @MinLength(9) phone!: string;
+}
+
+class OtpVerifyDto {
+  @IsString() @MinLength(3) tenantSlug!: string;
+  @IsString() @MinLength(9) phone!: string;
+  @IsString() @MinLength(4) code!: string;
+}
+
+@Controller("storefront/auth")
+class StorefrontAuthController {
+  constructor(private readonly otp: SmsOtpService) {}
+
+  @Public()
+  @Post("request-otp")
+  request(@Body() dto: OtpRequestDto) {
+    return this.otp.requestOtp(dto.tenantSlug, dto.phone);
+  }
+
+  @Public()
+  @Post("verify-otp")
+  verify(@Body() dto: OtpVerifyDto) {
+    return this.otp.verifyOtp(dto.tenantSlug, dto.phone, dto.code);
+  }
+}
+
 @Module({
-  controllers: [StorefrontController, StorefrontAdminController],
-  providers: [StorefrontService, StorefrontAdminService, StorefrontOrdersService],
+  controllers: [StorefrontController, StorefrontAdminController, StorefrontAuthController],
+  providers: [StorefrontService, StorefrontAdminService, StorefrontOrdersService, SmsOtpService],
 })
 export class StorefrontModule {}

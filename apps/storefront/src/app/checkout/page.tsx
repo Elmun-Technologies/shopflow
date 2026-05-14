@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-store";
 import { formatMoney } from "@/lib/format";
+import { PhoneVerifier } from "@/components/PhoneVerifier";
 
 export default function CheckoutPage() {
   const cart = useCart();
@@ -15,6 +16,11 @@ export default function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [storefrontJwt, setStorefrontJwt] = useState<string | null>(null);
+  const [tenantSlug, setTenantSlug] = useState<string>("");
+  useEffect(() => {
+    setTenantSlug(window.location.hostname.split(".")[0] ?? "");
+  }, []);
 
   if (cart.lines.length === 0 && !submitting) {
     return (
@@ -37,7 +43,10 @@ export default function CheckoutPage() {
     try {
       const res = await fetch("/api/storefront/orders", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(storefrontJwt ? { authorization: `Bearer ${storefrontJwt}` } : {}),
+        },
         body: JSON.stringify({
           customerName: name,
           customerPhone: phone,
@@ -91,6 +100,10 @@ export default function CheckoutPage() {
               inputMode="tel"
             />
           </Field>
+
+          {phone.replace(/\D+/g, "").length >= 9 && tenantSlug && (
+            <PhoneVerifier tenantSlug={tenantSlug} phone={phone} onVerified={setStorefrontJwt} />
+          )}
 
           <Field label="Yetkazib berish manzili">
             <textarea
