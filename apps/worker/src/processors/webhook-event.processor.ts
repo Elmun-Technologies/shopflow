@@ -73,8 +73,93 @@ export class WebhookEventProcessor extends WorkerHost {
       case "customerorder":
         await this.upsertCustomerOrder(tenantId, msId);
         return;
+      case "demand":
+      case "retaildemand":
+        // A sale (shipment) was created in MoySklad — qoldiqlar o'zgardi.
+        // We re-pull stock for the products in this demand so the storefront
+        // and bot reflect availability within seconds.
+        await this.refreshStockForDemand(tenantId, msId, entityType);
+        return;
       default:
         this.logger.debug(`Unhandled entityType=${entityType}`);
+    }
+  }
+
+  /**
+   * When a demand (sale) is fulfilled, MoySklad reduces stock instantly but
+   * doesn't emit per-product stock webhooks. We fetch the demand's positions
+   * and re-pull stock for each referenced product/variant — typically 1-5
+   * extra MoySklad calls per sale, well within rate limits.
+   */
+  private async refreshStockForDemand(tenantId: string, demandId: string, entityType: string): Promise<void> {
+    try {
+      const demand = await this.ms.get<{ positions?: { meta: { href: string } } }>(
+        tenantId,
+        `/entity/${entityType}/${demandId}`,
+        { expand: "positions.assortment" },
+      );
+      const positionsHref = demand.positions?.meta?.href;
+      if (!positionsHref) return;
+      const path = positionsHref.replace(/.*\/api\/remap\/1\.2/, "");
+      const positions = await this.ms.get<{ rows: Array<{ assortment?: { meta?: { href?: string } } }> }>(
+        tenantId,
+        path,
+        { limit: 1000 },
+      );
+      const productIds = new Set<string>();
+      const variantIds = new Set<string>();
+      for (const row of positions.rows ?? []) {
+        const href = row.assortment?.meta?.href ?? "";
+        const isVariant = href.includes("/entity/variant/");
+        const msId = href.match(/[0-9a-f-]{36}$/i)?.[0];
+        if (!msId) continue;
+        if (isVariant) variantIds.add(msId);
+        else productIds.add(msId);
+      }
+      // For each affected product, re-pull total stock from MoySklad.
+      for (const msId of productIds) {
+        await this.refreshSingleProductStock(tenantId, msId);
+      }
+      for (const msId of variantIds) {
+        const v = await this.prisma.variant.findUnique({
+          where: { tenantId_moyskladId: { tenantId, moyskladId: msId } },
+        });
+        if (v) {
+          const product = await this.prisma.product.findUnique({ where: { id: v.productId } });
+          if (product?.moyskladId) {
+            await this.refreshSingleProductStock(tenantId, product.moyskladId);
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`refreshStockForDemand failed for ${demandId}: ${String(err)}`);
+    }
+  }
+
+  private async refreshSingleProductStock(tenantId: string, productMsId: string): Promise<void> {
+    try {
+      const res = await this.ms.get<{ rows: Array<{ stock?: number }> }>(
+        tenantId,
+        "/report/stock/all/current",
+        {
+          ["filter"]: `product=https://api.moysklad.ru/api/remap/1.2/entity/product/${productMsId}`,
+          limit: 100,
+        },
+      );
+      const total = (res.rows ?? []).reduce((sum, r) => sum + Number(r.stock ?? 0), 0);
+      const local = await this.prisma.product.findUnique({
+        where: { tenantId_moyskladId: { tenantId, moyskladId: productMsId } },
+      });
+      if (!local) return;
+      await this.prisma.product.update({
+        where: { id: local.id },
+        data: {
+          stockTotal: total,
+          status: total > 0 ? "ACTIVE" : "OUT_OF_STOCK",
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`refreshSingleProductStock failed for ${productMsId}: ${String(err)}`);
     }
   }
 
@@ -217,17 +302,48 @@ export class WebhookEventProcessor extends WorkerHost {
       return;
     }
     const state = (o.state as { name?: string } | undefined)?.name ?? null;
+    const newStatus = mapMoyskladOrderState(state) ?? existing.status;
+
     await this.prisma.order.update({
       where: { id: existing.id },
       data: {
         totalKopecks: Math.round(Number(o.sum ?? existing.totalKopecks)),
         moyskladMeta: { state, moment: o.moment } as never,
-        status: mapMoyskladOrderState(state) ?? existing.status,
+        status: newStatus,
         version: BigInt(new Date(String(o.updated)).getTime()),
         syncedAt: new Date(),
       },
     });
+
+    // Notify customer on status transitions via Telegram (best-effort).
+    if (existing.status !== newStatus) {
+      try {
+        const { Queue } = await import("bullmq");
+        const queue = new Queue("telegram-notifications", {
+          connection: parseRedisUrl(process.env.REDIS_URL ?? "redis://localhost:6379"),
+        });
+        await queue.add(
+          "order-status-changed",
+          { tenantId, orderId: existing.id, newStatus },
+          { jobId: `osn:${existing.id}:${newStatus}` },
+        );
+        await queue.close();
+      } catch (err) {
+        this.logger.warn(`Failed to enqueue order notification: ${String(err)}`);
+      }
+    }
   }
+}
+
+function parseRedisUrl(url: string) {
+  const u = new URL(url);
+  return {
+    host: u.hostname,
+    port: Number(u.port || 6379),
+    password: u.password || undefined,
+    username: u.username || undefined,
+    db: u.pathname ? Number(u.pathname.replace("/", "")) || 0 : 0,
+  };
 }
 
 function mapMoyskladOrderState(name: string | null): "PENDING" | "PROCESSING" | "SHIPPED" | "COMPLETED" | "CANCELLED" | null {

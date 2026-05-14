@@ -609,16 +609,26 @@ model WebhookEvent {
   source      WebhookSource
   entityType  String
   action      String
+  /// Unique per webhook delivery. For MoySklad we use `auditContext.uid` + entity meta.href
+  /// to dedupe redelivered events. NULL for non-MoySklad sources.
+  idempotencyKey String?
+  /// MoySklad meta.href of the referenced entity (without the host).
+  entityHref  String?
+  /// Auto-derived from the entity href / event content.
+  entityMoyskladId String?
   payload     Json
   processedAt DateTime?
+  attempts    Int           @default(0)
   error       String?
 
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId, source, createdAt])
   @@index([processedAt])
+  @@index([tenantId, error])
 }
 
 model SyncJob {

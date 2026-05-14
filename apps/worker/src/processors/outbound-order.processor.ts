@@ -68,6 +68,20 @@ export class OutboundOrderProcessor extends WorkerHost {
       description: this.buildDescription(order),
     };
 
+    // Idempotency safeguard: a previous attempt may have succeeded server-side
+    // but failed to record the moyskladId locally (network blip). Before
+    // POSTing, look up by `name` — MoySklad's customerorder names are unique
+    // per account.
+    const existing = await this.findExistingByName(tenantId, order.number);
+    if (existing) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { moyskladId: existing.id, syncedAt: new Date() },
+      });
+      this.logger.warn(`Order ${orderId} already existed in MoySklad as ${existing.id}; linked without re-creating`);
+      return;
+    }
+
     try {
       const created = await this.ms.post<{ id: string; name: string }>(tenantId, "/entity/customerorder", payload);
       await this.prisma.order.update({
@@ -79,6 +93,20 @@ export class OutboundOrderProcessor extends WorkerHost {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Failed to push order ${orderId}: ${message}`);
       throw err;
+    }
+  }
+
+  private async findExistingByName(tenantId: string, name: string): Promise<{ id: string } | null> {
+    try {
+      const res = await this.ms.get<{ rows: Array<{ id: string; name: string }> }>(
+        tenantId,
+        "/entity/customerorder",
+        { filter: `name=${name}`, limit: 1 },
+      );
+      return res.rows?.[0] ?? null;
+    } catch (err) {
+      this.logger.warn(`Idempotency lookup failed for ${name}: ${String(err)}`);
+      return null;
     }
   }
 

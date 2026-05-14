@@ -72,13 +72,28 @@ export class MoyskladIntegrationService {
     return { ok: true };
   }
 
-  async triggerResync(tenantId: string) {
+  async triggerResync(tenantId: string, entity?: "product" | "variant" | "productfolder" | "customerorder" | "counterparty" | "stock") {
     const acc = await this.prisma.moyskladAccount.findUnique({ where: { tenantId } });
     if (!acc) throw new NotFoundException("MoySklad not connected");
     const syncJob = await this.prisma.syncJob.create({
       data: { tenantId, type: "INCREMENTAL_SYNC", status: "QUEUED" },
     });
-    await this.queue.enqueueIncrementalSync({ tenantId });
+    await this.queue.enqueueIncrementalSync({ tenantId, entity });
+    return { syncJobId: syncJob.id, entity: entity ?? "all" };
+  }
+
+  /**
+   * Reconcile: compares local row counts vs MoySklad totals and triggers a
+   * full re-import if drift > 1%. Helps recover from missed webhooks or
+   * partial sync failures without manual intervention.
+   */
+  async reconcile(tenantId: string) {
+    const acc = await this.prisma.moyskladAccount.findUnique({ where: { tenantId } });
+    if (!acc) throw new NotFoundException("MoySklad not connected");
+    const syncJob = await this.prisma.syncJob.create({
+      data: { tenantId, type: "RECONCILE", status: "QUEUED" },
+    });
+    await this.queue.enqueueReconcile({ tenantId, syncJobId: syncJob.id });
     return { syncJobId: syncJob.id };
   }
 }

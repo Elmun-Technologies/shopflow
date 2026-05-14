@@ -12,7 +12,11 @@ export interface SyncJob {
   type: SyncJobType;
   status: SyncJobStatus;
   progress: number;
-  stats: Record<string, number>;
+  /**
+   * Counters from the running job. The reserved key `_phase` holds the
+   * current human-readable phase ("Mahsulotlar", "Qoldiqlar"…) used by the UI.
+   */
+  stats: Record<string, number | string>;
   error?: string | null;
   startedAt?: string | null;
   finishedAt?: string | null;
@@ -27,7 +31,10 @@ export interface WebhookEvent {
   source: WebhookSource;
   entityType: string;
   action: string;
-  payloadPreview: string;
+  idempotencyKey?: string | null;
+  entityMoyskladId?: string | null;
+  attempts?: number;
+  payloadPreview?: string;
   processedAt?: string | null;
   error?: string | null;
   createdAt: string;

@@ -25,7 +25,17 @@ export class QueueProducerService {
   }
 
   enqueueIncrementalSync(payload: IncrementalSyncJob) {
-    return this.moyskladSync.add("incremental-sync", payload, { jobId: `inc:${payload.tenantId}:${payload.entity ?? "all"}` });
+    return this.moyskladSync.add("incremental-sync", payload, { jobId: `inc:${payload.tenantId}:${payload.entity ?? "all"}:${Date.now()}` });
+  }
+
+  enqueueReconcile(payload: { tenantId: string; syncJobId: string }) {
+    return this.moyskladSync.add("reconcile", payload, { jobId: `rec:${payload.syncJobId}` });
+  }
+
+  enqueueWebhookEventRetry(payload: { tenantId: string; webhookEventId: string }) {
+    return this.webhooks.add("process-moysklad-event", payload, {
+      jobId: `retry:${payload.webhookEventId}:${Date.now()}`,
+    });
   }
 
   enqueueSubscribeWebhooks(payload: { tenantId: string }) {

@@ -12,6 +12,8 @@ import { IncrementalSyncProcessor } from "./processors/incremental-sync.processo
 import { WebhookEventProcessor } from "./processors/webhook-event.processor.js";
 import { SubscribeWebhooksProcessor } from "./processors/subscribe-webhooks.processor.js";
 import { OutboundOrderProcessor } from "./processors/outbound-order.processor.js";
+import { ReconcileProcessor } from "./processors/reconcile.processor.js";
+import { OrderStatusNotificationProcessor } from "./processors/order-status-notification.processor.js";
 import { FallbackSyncScheduler } from "./scheduling/fallback-sync.scheduler.js";
 
 const QUEUE_NAMES = [
@@ -48,6 +50,8 @@ const QUEUE_NAMES = [
     WebhookEventProcessor,
     SubscribeWebhooksProcessor,
     OutboundOrderProcessor,
+    ReconcileProcessor,
+    OrderStatusNotificationProcessor,
     FallbackSyncScheduler,
   ],
 })

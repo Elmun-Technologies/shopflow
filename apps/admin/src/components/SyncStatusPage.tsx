@@ -1,10 +1,36 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, CheckCircle2, Clock, AlertTriangle, RefreshCw, Inbox } from "lucide-react";
-import { useSyncJobs, useWebhookEvents } from "../api/hooks";
+import {
+  Activity,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Inbox,
+  RotateCcw,
+  Database,
+  Filter,
+} from "lucide-react";
+import {
+  useSyncJobs,
+  useWebhookEvents,
+  useRetryWebhookEvent,
+  useResyncEntity,
+  useReconcile,
+} from "../api/hooks";
 import { LoadingSkeleton } from "./common/LoadingSkeleton";
 import { EmptyState } from "./common/EmptyState";
 import { ErrorRetry } from "./common/ErrorRetry";
 import type { SyncJob, WebhookEvent, SyncJobStatus } from "@shopflow/shared-types";
+
+const RESYNC_ENTITIES: Array<{ key: "product" | "variant" | "productfolder" | "customerorder" | "counterparty" | "stock"; label: string }> = [
+  { key: "product", label: "Mahsulotlar" },
+  { key: "variant", label: "Variantlar" },
+  { key: "productfolder", label: "Kategoriyalar" },
+  { key: "counterparty", label: "Mijozlar" },
+  { key: "customerorder", label: "Buyurtmalar" },
+  { key: "stock", label: "Qoldiqlar" },
+];
 
 export function SyncStatusPage() {
   return (
@@ -16,9 +42,66 @@ export function SyncStatusPage() {
         </p>
       </header>
 
+      <ResyncControls />
       <JobsSection />
       <EventsSection />
     </div>
+  );
+}
+
+function ResyncControls() {
+  const resyncEntity = useResyncEntity();
+  const reconcile = useReconcile();
+  const [lastAction, setLastAction] = useState<string | null>(null);
+
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 text-white">
+          <Database className="h-5 w-5 text-slate-400" />
+          <h2 className="text-lg font-semibold">Qayta sinxronlash</h2>
+        </div>
+        <button
+          type="button"
+          onClick={async () => {
+            await reconcile.mutateAsync();
+            setLastAction("Reconcile boshlandi");
+          }}
+          disabled={reconcile.isPending}
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-700 bg-emerald-950/40 hover:bg-emerald-950/60 px-3 py-1.5 text-sm text-emerald-200 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${reconcile.isPending ? "animate-spin" : ""}`} />
+          Reconcile (to'liq tekshirish)
+        </button>
+      </div>
+      <p className="text-sm text-slate-400 mb-4">
+        Tanlangan entity'larni MoySklad'dan qaytadan tortib oling. Reconcile esa lokal va remote
+        soni o'rtasidagi farqni tekshiradi va kerak bo'lsa avtomatik re-import qiladi.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {RESYNC_ENTITIES.map((e) => (
+          <button
+            key={e.key}
+            type="button"
+            onClick={async () => {
+              await resyncEntity.mutateAsync(e.key);
+              setLastAction(`${e.label} qayta sinxronlash boshlandi`);
+            }}
+            disabled={resyncEntity.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 text-sm text-slate-200 disabled:opacity-50"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {e.label}
+          </button>
+        ))}
+      </div>
+      {lastAction && (
+        <p className="mt-3 text-xs text-emerald-300">
+          <CheckCircle2 className="inline h-3 w-3 mr-1" />
+          {lastAction}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -81,14 +164,19 @@ function JobRow({ job }: { job: SyncJob }) {
             )}
           </div>
           {job.status === "RUNNING" && (
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <motion.div
-                className="h-full bg-emerald-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${job.progress}%` }}
-                transition={{ duration: 0.4 }}
-              />
-            </div>
+            <>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                <motion.div
+                  className="h-full bg-emerald-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${job.progress}%` }}
+                  transition={{ duration: 0.4 }}
+                />
+              </div>
+              {typeof job.stats?._phase === "string" && (
+                <div className="mt-1 text-xs text-blue-300">{job.stats._phase}…</div>
+              )}
+            </>
           )}
           {Object.keys(job.stats ?? {}).length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -118,14 +206,30 @@ function JobRow({ job }: { job: SyncJob }) {
 }
 
 function EventsSection() {
-  const events = useWebhookEvents();
+  const [onlyFailed, setOnlyFailed] = useState(false);
+  const events = useWebhookEvents({ onlyFailed });
+  const retry = useRetryWebhookEvent();
 
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-      <div className="flex items-center gap-2 text-white mb-4">
-        <RefreshCw className="h-5 w-5 text-slate-400" />
-        <h2 className="text-lg font-semibold">Webhook hodisalari</h2>
-        <span className="text-xs text-slate-500 ml-2">(so'nggi 100)</span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-white">
+          <RefreshCw className="h-5 w-5 text-slate-400" />
+          <h2 className="text-lg font-semibold">Webhook hodisalari</h2>
+          <span className="text-xs text-slate-500 ml-2">(so'nggi {onlyFailed ? "xatoli" : "100"})</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOnlyFailed((v) => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition ${
+            onlyFailed
+              ? "border-red-800 bg-red-950/30 text-red-200"
+              : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          {onlyFailed ? "Faqat xatolar (yoqilgan)" : "Faqat xatolarni ko'rsatish"}
+        </button>
       </div>
 
       {events.isLoading ? (
@@ -148,6 +252,7 @@ function EventsSection() {
                 <th className="px-5 py-2 font-medium">Entity</th>
                 <th className="px-5 py-2 font-medium">Action</th>
                 <th className="px-5 py-2 font-medium">Status</th>
+                <th className="px-5 py-2 font-medium text-right">Amal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -161,7 +266,7 @@ function EventsSection() {
                   <td className="px-5 py-2 text-slate-300">{e.action}</td>
                   <td className="px-5 py-2">
                     {e.error ? (
-                      <span className="inline-flex items-center gap-1 text-red-300 text-xs">
+                      <span className="inline-flex items-center gap-1 text-red-300 text-xs" title={e.error}>
                         <AlertTriangle className="h-3 w-3" />
                         Xato
                       </span>
@@ -175,6 +280,20 @@ function EventsSection() {
                         <Clock className="h-3 w-3" />
                         Navbatda
                       </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-2 text-right">
+                    {e.error && (
+                      <button
+                        type="button"
+                        onClick={() => retry.mutate(e.id)}
+                        disabled={retry.isPending}
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800/60 hover:bg-slate-800 px-2 py-1 text-xs text-slate-200 disabled:opacity-50"
+                        title="Qayta urinish"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Qayta
+                      </button>
                     )}
                   </td>
                 </tr>

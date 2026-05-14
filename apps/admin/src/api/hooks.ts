@@ -86,10 +86,40 @@ export function useSyncJobs() {
   });
 }
 
-export function useWebhookEvents() {
+export function useWebhookEvents(opts: { onlyFailed?: boolean } = {}) {
   return useQuery({
-    queryKey: ["sync", "events"],
-    queryFn: () => api.get<WebhookEvent[]>("/sync/events").then((r) => r.data),
+    queryKey: ["sync", "events", opts],
+    queryFn: () =>
+      api
+        .get<WebhookEvent[]>("/sync/events", {
+          params: { onlyFailed: opts.onlyFailed ? "true" : undefined },
+        })
+        .then((r) => r.data),
     refetchInterval: 10000,
+  });
+}
+
+export function useRetryWebhookEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/sync/events/${id}/retry`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sync"] }),
+  });
+}
+
+export function useResyncEntity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (entity: "product" | "variant" | "productfolder" | "customerorder" | "counterparty" | "stock") =>
+      api.post(`/integrations/moysklad/resync/${entity}`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sync"] }),
+  });
+}
+
+export function useReconcile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post("/integrations/moysklad/reconcile").then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sync"] }),
   });
 }

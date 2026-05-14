@@ -35,26 +35,33 @@ export class InitialImportProcessor extends WorkerHost {
       data: { status: "RUNNING", startedAt: new Date(), progress: 0 },
     });
 
-    const stats: Record<string, number> = {};
+    const stats: Record<string, number | string> = { _phase: "starting" };
     try {
+      await this.setPhase(syncJobId, "Narx turlari", 5, stats);
       stats.priceTypes = await this.importPriceTypes(tenantId);
       await this.bump(syncJobId, 10, stats);
 
+      await this.setPhase(syncJobId, "Omborlar", 15, stats);
       stats.warehouses = await this.importStores(tenantId);
       await this.bump(syncJobId, 25, stats);
 
+      await this.setPhase(syncJobId, "Kategoriyalar", 30, stats);
       stats.categories = await this.importFolders(tenantId);
       await this.bump(syncJobId, 40, stats);
 
+      await this.setPhase(syncJobId, "Mahsulotlar", 45, stats);
       stats.products = await this.importProducts(tenantId);
       await this.bump(syncJobId, 70, stats);
 
+      await this.setPhase(syncJobId, "Variantlar", 72, stats);
       stats.variants = await this.importVariants(tenantId);
       await this.bump(syncJobId, 80, stats);
 
+      await this.setPhase(syncJobId, "Qoldiqlar", 85, stats);
       stats.stocks = await this.importStock(tenantId);
       await this.bump(syncJobId, 95, stats);
 
+      await this.setPhase(syncJobId, "Mijozlar", 96, stats);
       stats.customers = await this.importCustomers(tenantId);
 
       await this.prisma.syncJob.update({
@@ -81,7 +88,12 @@ export class InitialImportProcessor extends WorkerHost {
     }
   }
 
-  private async bump(id: string, progress: number, stats: Record<string, number>) {
+  private async bump(id: string, progress: number, stats: Record<string, number | string>) {
+    await this.prisma.syncJob.update({ where: { id }, data: { progress, stats: stats as never } });
+  }
+
+  private async setPhase(id: string, phase: string, progress: number, stats: Record<string, number | string>) {
+    stats._phase = phase;
     await this.prisma.syncJob.update({ where: { id }, data: { progress, stats: stats as never } });
   }
 
@@ -290,37 +302,93 @@ export class InitialImportProcessor extends WorkerHost {
   }
 
   private async importStock(tenantId: string): Promise<number> {
-    const res = await this.ms.get<{ rows: Array<Record<string, unknown>> }>(
-      tenantId,
-      "/report/stock/all/current",
-      { groupBy: "variant" },
-    );
-    let total = 0;
-    // Aggregate stock per product (denormalized total).
-    const productTotals = new Map<string, number>();
-    for (const row of res.rows ?? []) {
-      const assortHref = (row.meta as { href?: string } | undefined)?.href ?? "";
-      const isVariant = assortHref.includes("/entity/variant/");
-      const msId = assortHref.match(/[0-9a-f-]{36}$/i)?.[0];
-      if (!msId) continue;
-      const stockNum = Number(row.stock ?? 0);
+    // Pull stock per warehouse: this gives us per-(product/variant, warehouse) rows
+    // so the local Stock table mirrors MoySklad's per-store quantities (used for
+    // routing orders to specific warehouses later).
+    const warehouses = await this.prisma.warehouse.findMany({
+      where: { tenantId, moyskladId: { not: null } },
+      select: { id: true, moyskladId: true },
+    });
 
-      if (isVariant) {
-        const v = await this.prisma.variant.findUnique({ where: { tenantId_moyskladId: { tenantId, moyskladId: msId } } });
-        if (v) productTotals.set(v.productId, (productTotals.get(v.productId) ?? 0) + stockNum);
-      } else {
-        const p = await this.prisma.product.findUnique({ where: { tenantId_moyskladId: { tenantId, moyskladId: msId } } });
-        if (p) productTotals.set(p.id, (productTotals.get(p.id) ?? 0) + stockNum);
+    let rowsProcessed = 0;
+    const productAggregate = new Map<string, number>();
+    const productReserved = new Map<string, number>();
+
+    for (const warehouse of warehouses) {
+      if (!warehouse.moyskladId) continue;
+      const res = await this.ms.get<{ rows: Array<Record<string, unknown>> }>(
+        tenantId,
+        "/report/stock/all/current",
+        {
+          groupBy: "variant",
+          ["filter"]: `store=https://api.moysklad.ru/api/remap/1.2/entity/store/${warehouse.moyskladId}`,
+          limit: 1000,
+        },
+      );
+
+      for (const row of res.rows ?? []) {
+        const assortHref = (row.meta as { href?: string } | undefined)?.href ?? "";
+        const isVariant = assortHref.includes("/entity/variant/");
+        const msId = assortHref.match(/[0-9a-f-]{36}$/i)?.[0];
+        if (!msId) continue;
+        const quantity = Number(row.stock ?? row.quantity ?? 0);
+        const reserved = Number(row.reserve ?? 0);
+        const inTransit = Number(row.inTransit ?? 0);
+
+        let productId: string | null = null;
+        let variantId: string | null = null;
+        if (isVariant) {
+          const v = await this.prisma.variant.findUnique({
+            where: { tenantId_moyskladId: { tenantId, moyskladId: msId } },
+          });
+          if (!v) continue;
+          variantId = v.id;
+          productId = v.productId;
+        } else {
+          const p = await this.prisma.product.findUnique({
+            where: { tenantId_moyskladId: { tenantId, moyskladId: msId } },
+          });
+          if (!p) continue;
+          productId = p.id;
+        }
+
+        await this.prisma.stock.upsert({
+          where: {
+            productId_variantId_warehouseId: {
+              productId,
+              variantId: variantId ?? null,
+              warehouseId: warehouse.id,
+            } as never,
+          },
+          create: {
+            tenantId,
+            productId,
+            variantId,
+            warehouseId: warehouse.id,
+            quantity,
+            reserved,
+            inTransit,
+          },
+          update: { quantity, reserved, inTransit },
+        });
+
+        productAggregate.set(productId, (productAggregate.get(productId) ?? 0) + quantity);
+        productReserved.set(productId, (productReserved.get(productId) ?? 0) + reserved);
+        rowsProcessed++;
       }
-      total++;
     }
-    for (const [productId, qty] of productTotals.entries()) {
+
+    // Denormalize aggregate stock onto Product.stockTotal for fast list queries.
+    for (const [productId, qty] of productAggregate.entries()) {
       await this.prisma.product.update({
         where: { id: productId },
-        data: { stockTotal: qty, status: qty > 0 ? "ACTIVE" : "OUT_OF_STOCK" },
+        data: {
+          stockTotal: qty,
+          status: qty > 0 ? "ACTIVE" : "OUT_OF_STOCK",
+        },
       });
     }
-    return total;
+    return rowsProcessed;
   }
 
   private async importCustomers(tenantId: string): Promise<number> {
