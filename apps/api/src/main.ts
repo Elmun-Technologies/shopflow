@@ -1,9 +1,15 @@
+// Sentry MUST be initialized before any other import that may throw, so that
+// startup-phase errors are captured. It is a no-op if SENTRY_DSN is unset.
 import "reflect-metadata";
+import { initSentry } from "@shopflow/observability";
+initSentry({ service: "api" });
+
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import helmet from "helmet";
 import { AppModule } from "./app.module.js";
 import { AppConfigService } from "./config/app-config.service.js";
+import { metricsMiddleware } from "./common/observability/metrics.middleware.js";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -13,11 +19,12 @@ async function bootstrap() {
   const config = app.get(AppConfigService);
 
   app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(metricsMiddleware);
   app.enableCors({
     origin: config.corsOrigins,
     credentials: true,
   });
-  app.setGlobalPrefix("api", { exclude: ["health", "webhooks/(.*)", "tg/(.*)"] });
+  app.setGlobalPrefix("api", { exclude: ["health", "metrics", "webhooks/(.*)", "tg/(.*)"] });
 
   app.useGlobalPipes(
     new ValidationPipe({

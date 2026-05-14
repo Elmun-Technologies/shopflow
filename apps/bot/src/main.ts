@@ -1,7 +1,10 @@
-import { pino } from "pino";
+import { initSentry, captureException } from "@shopflow/observability";
+initSentry({ service: "bot" });
+
 import { z } from "zod";
 import { PrismaClient } from "@shopflow/db";
 import Redis from "ioredis";
+import { createLogger } from "@shopflow/observability";
 import { BotManager } from "./bot-manager.js";
 import { TelegramUpdateConsumer } from "./update-consumer.js";
 import { SecretCipher } from "./secret-cipher.js";
@@ -16,7 +19,7 @@ const Env = z.object({
 
 async function main() {
   const env = Env.parse(process.env);
-  const log = pino({ name: "shopflow-bot", level: process.env.LOG_LEVEL ?? "info" });
+  const log = createLogger({ name: "shopflow-bot" });
 
   const prisma = new PrismaClient();
   await prisma.$connect();

@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { ClsModule } from "nestjs-cls";
 
 import { AppConfigModule } from "./config/app-config.module.js";
@@ -27,6 +27,7 @@ import { QueueModule } from "./queue/queue.module.js";
 import { TenantContextMiddleware } from "./common/tenant/tenant-context.middleware.js";
 import { JwtAuthGuard } from "./common/auth/jwt-auth.guard.js";
 import { RolesGuard } from "./common/auth/roles.guard.js";
+import { SentryExceptionFilter } from "./common/observability/sentry.filter.js";
 import { MiddlewareConsumer, NestModule } from "@nestjs/common";
 
 @Module({
@@ -61,6 +62,7 @@ import { MiddlewareConsumer, NestModule } from "@nestjs/common";
     PaymentsModule,
   ],
   providers: [
+    { provide: APP_FILTER, useClass: SentryExceptionFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

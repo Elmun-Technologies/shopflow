@@ -22,6 +22,7 @@
     "@nestjs/schedule": "^5.0.1",
     "@nestjs/throttler": "^6.4.0",
     "@shopflow/db": "workspace:*",
+    "@shopflow/observability": "workspace:*",
     "@shopflow/shared-types": "workspace:*",
     "argon2": "^0.41.1",
     "axios": "^1.7.9",
