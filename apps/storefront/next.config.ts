@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Standalone output bundles a minimal runtime so the Docker image stays
+  // small (~150MB) and starts fast — no full node_modules copy.
+  output: "standalone",
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },

@@ -1,0 +1,30 @@
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/build
+**/coverage
+
+# VCS / IDE
+.git
+.github
+.vscode
+.idea
+
+# Env files (Dokploy injects via env tab)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+**/*.tsbuildinfo
+**/.DS_Store
+
+# Docs and tooling not needed for runtime images
+docs
+scripts
+*.md
+
+# Tests
+**/*.test.ts
+**/*.spec.ts

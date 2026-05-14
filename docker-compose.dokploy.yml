@@ -1,0 +1,114 @@
+# ShopFlow stack for Dokploy.
+#
+# Usage in Dokploy:
+#   1. Create new "Compose" application
+#   2. Source: this repository / branch
+#   3. Compose path: docker-compose.dokploy.yml
+#   4. Fill the env vars in Dokploy's Environment tab (see .env.example)
+#   5. In each service's "Domains" tab, attach a hostname and Dokploy
+#      will configure Traefik + Let's Encrypt automatically.
+#
+# Postgres and Redis are NOT in this compose — create them as separate
+# Dokploy Database services and paste their internal connection URLs into
+# DATABASE_URL / REDIS_URL.
+#
+# Build context is the monorepo root for every service because pnpm
+# workspaces need the full lockfile + every package.json.
+
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-30}
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      PUBLIC_ADMIN_URL: ${PUBLIC_ADMIN_URL}
+      PUBLIC_MINIAPP_URL: ${PUBLIC_MINIAPP_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
+      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
+      STOREFRONT_REVALIDATE_URL: ${STOREFRONT_REVALIDATE_URL:-}
+      STOREFRONT_REVALIDATE_SECRET: ${STOREFRONT_REVALIDATE_SECRET:-}
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      STOREFRONT_REVALIDATE_URL: ${STOREFRONT_REVALIDATE_URL:-}
+      STOREFRONT_REVALIDATE_SECRET: ${STOREFRONT_REVALIDATE_SECRET:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    deploy:
+      replicas: 2
+
+  bot:
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      PUBLIC_MINIAPP_URL: ${PUBLIC_MINIAPP_URL}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  storefront:
+    build:
+      context: .
+      dockerfile: apps/storefront/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL}
+      REVALIDATE_SECRET: ${STOREFRONT_REVALIDATE_SECRET:-}
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL}
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  miniapp:
+    build:
+      context: .
+      dockerfile: apps/miniapp/Dockerfile
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL}
+    restart: unless-stopped
+    expose:
+      - "80"
