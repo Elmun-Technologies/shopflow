@@ -380,13 +380,13 @@ importers:
       '@shopflow/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      prisma:
+        specifier: ^6.1.0
+        version: 6.19.3(typescript@5.9.3)
     devDependencies:
       '@types/node':
         specifier: 22.19.17
         version: 22.19.17
-      prisma:
-        specifier: ^6.1.0
-        version: 6.19.3(typescript@5.9.3)
       tsx:
         specifier: ^4.19.2
         version: 4.22.0

@@ -20,11 +20,11 @@
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
-    "@shopflow/shared-types": "workspace:*"
+    "@shopflow/shared-types": "workspace:*",
+    "prisma": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "22.19.17",
-    "prisma": "^6.1.0",
     "tsx": "^4.19.2",
     "typescript": "5.9.3"
   }
