@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1.7
 FROM node:20-alpine AS base
 ENV PNPM_HOME=/pnpm \
-    PATH=/pnpm:$PATH \
-    NODE_ENV=production
+    PATH=/pnpm:$PATH
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate \
     && apk add --no-cache openssl
 
@@ -30,6 +29,7 @@ RUN pnpm --filter @shopflow/worker --filter @shopflow/shared-types --filter @sho
 RUN pnpm --filter @shopflow/worker deploy --prod /out
 
 FROM base AS runner
+ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /repo/apps/worker/dist ./dist

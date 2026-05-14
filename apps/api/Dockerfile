@@ -6,8 +6,7 @@
 # ────────────────────────── 1) base ──────────────────────────
 FROM node:20-alpine AS base
 ENV PNPM_HOME=/pnpm \
-    PATH=/pnpm:$PATH \
-    NODE_ENV=production
+    PATH=/pnpm:$PATH
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate \
     && apk add --no-cache openssl
 
@@ -46,6 +45,7 @@ RUN pnpm --filter @shopflow/api deploy --prod /out
 
 # ────────────────────────── 4) runner ──────────────────────────
 FROM base AS runner
+ENV NODE_ENV=production
 WORKDIR /app
 
 # Copy the production-only deploy bundle.
