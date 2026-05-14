@@ -24,8 +24,7 @@ FROM deps AS build
 WORKDIR /repo
 COPY packages packages
 COPY apps/bot apps/bot
-RUN pnpm --filter @shopflow/db generate
-RUN pnpm --filter @shopflow/bot --filter @shopflow/shared-types --filter @shopflow/observability --filter @shopflow/db build
+RUN pnpm --filter "...@shopflow/bot" build
 RUN pnpm --filter @shopflow/bot deploy --prod /out
 
 FROM base AS runner

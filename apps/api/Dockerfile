@@ -34,11 +34,10 @@ WORKDIR /repo
 COPY packages packages
 COPY apps/api apps/api
 
-# Generate Prisma client first — apps/api imports it.
-RUN pnpm --filter @shopflow/db generate
-
-# Compile only the API and its workspace dependencies.
-RUN pnpm --filter @shopflow/api --filter @shopflow/shared-types --filter @shopflow/observability --filter @shopflow/db build
+# Build the API and all of its workspace dependencies in topological order.
+# `...@shopflow/api` selects @shopflow/api PLUS every package it depends on
+# (shared-types, observability, db). pnpm runs them in dependency order.
+RUN pnpm --filter "...@shopflow/api" build
 
 # Trim node_modules to production deps (dev deps not needed at runtime).
 RUN pnpm --filter @shopflow/api deploy --prod /out
