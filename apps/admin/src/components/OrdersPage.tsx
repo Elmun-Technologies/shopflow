@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -22,9 +22,11 @@ import {
   TrendingDown,
   CalendarDays,
 } from "lucide-react";
-import { allOrders, orderStats } from "../data/ordersData";
+import { allOrders as mockAllOrders, orderStats } from "../data/ordersData";
 import type { Order } from "../data/ordersData";
 import OrderDetailModal from "./OrderDetailModal";
+import { useOrders } from "../api/hooks";
+import { adaptOrder } from "../api/adapters";
 
 const statusConfig: Record<string, { color: string; bg: string; icon: React.ElementType }> = {
   completed: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
@@ -55,6 +57,15 @@ export default function OrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  const [allOrders, setAllOrders] = useState<Order[]>(mockAllOrders);
+  const apiOrders = useOrders({ perPage: 200 });
+  useEffect(() => {
+    const rows = apiOrders.data?.data;
+    if (rows && rows.length > 0) {
+      setAllOrders(rows.map((o) => adaptOrder(o as never)));
+    }
+  }, [apiOrders.data]);
 
   const filteredOrders = useMemo(() => {
     let result = [...allOrders];
@@ -91,7 +102,7 @@ export default function OrdersPage() {
     });
 
     return result;
-  }, [searchQuery, statusFilter, paymentFilter, sortKey, sortDir]);
+  }, [allOrders, searchQuery, statusFilter, paymentFilter, sortKey, sortDir]);
 
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const paginatedOrders = filteredOrders.slice(

@@ -28,6 +28,9 @@ import {
   ArrowLeftRight,
   Paintbrush,
   GitBranch,
+  Plug,
+  Activity,
+  Globe,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
@@ -47,11 +50,14 @@ type Page =
   | "uibuilder"
   | "marketing"
   | "analytics"
-  | "settings";
+  | "settings"
+  | "integrations"
+  | "sync"
+  | "storefront";
 
 interface SidebarProps {
-  currentPage: Page;
-  onPageChange: (page: Page) => void;
+  currentPage: Page | string;
+  onPageChange: (page: string) => void;
   marketingSub: MarketingSub;
   onMarketingNavigate: (sub: MarketingSub) => void;
 }
@@ -67,13 +73,16 @@ const navItems: { icon: React.ElementType; label: string; page: Page }[] = [
   { icon: Layers, label: "Platforms", page: "platforms" },
   { icon: CreditCard, label: "Payments", page: "payments" },
   { icon: Truck, label: "Delivery", page: "delivery" },
+  { icon: Globe, label: "Onlayn do'kon", page: "storefront" },
   { icon: Paintbrush, label: "Vitrina", page: "uibuilder" },
   { icon: BarChart3, label: "Analytics", page: "analytics" },
+  { icon: Plug, label: "Integratsiyalar", page: "integrations" },
+  { icon: Activity, label: "Sync holati", page: "sync" },
   { icon: Settings, label: "Settings", page: "settings" },
 ];
 
-const primaryNav = navItems.slice(0, 10);
-const tailNav = navItems.slice(10);
+const primaryNav = navItems.slice(0, 11); // ... Delivery, Onlayn do'kon
+const tailNav = navItems.slice(11); // Vitrina, Analytics, Integratsiyalar, Sync, Settings
 
 const marketingSubIcons: Record<MarketingSub, React.ElementType> = {
   rassilka: Mail,

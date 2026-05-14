@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -35,9 +35,11 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { customers, customerStats, platformStats, regionStats, platformLabels, statusLabels, statusConfig } from "../data/customersData";
+import { customers as mockCustomers, customerStats, platformStats, regionStats, platformLabels, statusLabels, statusConfig } from "../data/customersData";
 import type { Customer, CustomerStatus } from "../data/customersData";
 import CustomerDetailModal from "./CustomerDetailModal";
+import { useCustomers } from "../api/hooks";
+import { adaptCustomer } from "../api/adapters";
 import {
   BarChart,
   Bar,
@@ -82,10 +84,18 @@ export default function CustomersPage() {
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [customerList, setCustomerList] = useState<Customer[]>(customers);
+  const [customerList, setCustomerList] = useState<Customer[]>(mockCustomers);
   const [analyticsView, setAnalyticsView] = useState(false);
 
-  const regions = [...new Set(customers.map((c) => c.region))];
+  const apiCustomers = useCustomers({ perPage: 200 });
+  useEffect(() => {
+    const rows = apiCustomers.data?.data;
+    if (rows && rows.length > 0) {
+      setCustomerList(rows.map((c) => adaptCustomer(c as never)));
+    }
+  }, [apiCustomers.data]);
+
+  const regions = [...new Set(customerList.map((c) => c.region))];
 
   const filteredCustomers = useMemo(() => {
     let result = [...customerList];

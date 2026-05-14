@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -28,9 +28,11 @@ import {
   Layers,
   DollarSign,
 } from "lucide-react";
-import { products, categories, warehouses, ikpuCodes, saleRecords } from "../data/productsData";
+import { products as mockProducts, categories, warehouses, ikpuCodes, saleRecords } from "../data/productsData";
 import type { Product } from "../data/productsData";
 import ProductDetailModal from "./ProductDetailModal";
+import { useProducts } from "../api/hooks";
+import { adaptProduct } from "../api/adapters";
 
 type Tab = "products" | "categories" | "sales" | "ikpu" | "warehouse";
 type ProductSort = "name" | "price" | "stock" | "sold" | "rating";
@@ -63,8 +65,18 @@ export default function ProductsPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [productList, setProductList] = useState<Product[]>(products);
+  const [productList, setProductList] = useState<Product[]>(mockProducts);
   const [showFilters, setShowFilters] = useState(false);
+
+  // API'dan mahsulotlarni olib kelish. Auth yo'q yoki sync hali yakunlanmagan
+  // bo'lsa, mock ma'lumot orqali UI'ni ko'rsatish davom etadi.
+  const apiProducts = useProducts({ perPage: 200 });
+  useEffect(() => {
+    const rows = apiProducts.data?.data;
+    if (rows && rows.length > 0) {
+      setProductList(rows.map((p) => adaptProduct(p as never)));
+    }
+  }, [apiProducts.data]);
 
   // Stats
   const totalProducts = productList.length;

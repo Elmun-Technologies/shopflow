@@ -35,6 +35,12 @@ import UIBuilderPage from "./components/UIBuilderPage";
 import { Calendar, Download } from "lucide-react";
 import type { MarketingSub } from "./data/marketingData";
 
+import { useAuth } from "./api/auth-context";
+import { AuthPage } from "./components/AuthPage";
+import { IntegrationsPage } from "./components/IntegrationsPage";
+import { SyncStatusPage } from "./components/SyncStatusPage";
+import { StorefrontAdminPage } from "./components/StorefrontAdminPage";
+
 type Page =
   | "dashboard"
   | "orders"
@@ -49,7 +55,10 @@ type Page =
   | "uibuilder"
   | "marketing"
   | "analytics"
-  | "settings";
+  | "settings"
+  | "integrations"
+  | "sync"
+  | "storefront";
 
 function DashboardPage() {
   const [currentDate, setCurrentDate] = useState("");
@@ -130,6 +139,12 @@ function DashboardPage() {
 
 
 function App() {
+  const { user } = useAuth();
+  if (!user) return <AuthPage />;
+  return <AuthedApp />;
+}
+
+function AuthedApp() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [marketingSub, setMarketingSub] = useState<MarketingSub>("rassilka");
   const [sidebarWidth, setSidebarWidth] = useState(256);
@@ -211,6 +226,12 @@ function App() {
         return <AnalyticsPage />;
       case "settings":
         return <SettingsPage />;
+      case "integrations":
+        return <IntegrationsPage />;
+      case "sync":
+        return <SyncStatusPage />;
+      case "storefront":
+        return <StorefrontAdminPage />;
       default:
         return <DashboardPage />;
     }
@@ -220,7 +241,7 @@ function App() {
     <div className="min-h-screen bg-slate-950">
       <Sidebar
         currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        onPageChange={setCurrentPage as (p: string) => void}
         marketingSub={marketingSub}
         onMarketingNavigate={goToMarketing}
       />
