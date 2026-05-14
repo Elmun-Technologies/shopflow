@@ -1,32 +1,29 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "shopflow",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+  "version": "0.1.0",
+  "description": "ShopFlow — multi-tenant SaaS e-commerce platform with MoySklad integration",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.10.0"
   },
-  "dependencies": {
-    "clsx": "2.1.1",
-    "date-fns": "^4.1.0",
-    "framer-motion": "^12.38.0",
-    "lucide-react": "^1.11.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "recharts": "^3.8.1",
-    "tailwind-merge": "3.4.0"
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @shopflow/db generate",
+    "db:migrate": "pnpm --filter @shopflow/db migrate",
+    "db:seed": "pnpm --filter @shopflow/db seed",
+    "api:dev": "pnpm --filter @shopflow/api dev",
+    "admin:dev": "pnpm --filter @shopflow/admin dev",
+    "bot:dev": "pnpm --filter @shopflow/bot dev",
+    "worker:dev": "pnpm --filter @shopflow/worker dev"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.1.17",
-    "@types/node": "22.19.17",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.1",
-    "tailwindcss": "4.1.17",
+    "turbo": "^2.3.3",
     "typescript": "5.9.3",
-    "vite": "7.2.4",
-    "vite-plugin-singlefile": "2.3.0"
+    "prettier": "^3.4.2"
   }
 }

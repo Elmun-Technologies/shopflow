@@ -1,0 +1,651 @@
+// ShopFlow multi-tenant SaaS database schema.
+// All domain tables carry `tenantId` and are protected at the application layer
+// by a Prisma client extension (see src/tenant-context.ts).
+// Optional Postgres Row-Level Security policies are defined in
+// prisma/migrations/*_rls.sql as defense-in-depth.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum TenantPlan {
+  TRIAL
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  OPERATOR
+  READONLY
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+enum WarehouseStatus {
+  ACTIVE
+  MAINTENANCE
+  FULL
+}
+
+enum OrderChannel {
+  ADMIN
+  TELEGRAM
+  WEBSITE
+  MINIAPP
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  CLICK
+  PAYME
+  CASH
+  MANUAL
+}
+
+enum MoyskladStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  ERROR
+}
+
+enum SyncJobType {
+  INITIAL_IMPORT
+  INCREMENTAL_SYNC
+  ENTITY_REFRESH
+  SUBSCRIBE_WEBHOOKS
+  RECONCILE
+}
+
+enum SyncJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum WebhookSource {
+  MOYSKLAD
+  TELEGRAM
+  CLICK
+  PAYME
+}
+
+// ---------- Tenancy & Auth ----------
+
+model Tenant {
+  id           String       @id @default(uuid())
+  slug         String       @unique
+  name         String
+  plan         TenantPlan   @default(TRIAL)
+  status       TenantStatus @default(ACTIVE)
+  customDomain String?      @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  settings        TenantSettings?
+  users           User[]
+  moyskladAccount MoyskladAccount?
+  telegramBot     TelegramBot?
+  storefrontSite  StorefrontSite?
+
+  categories     Category[]
+  units          UnitOfMeasure[]
+  warehouses     Warehouse[]
+  priceTypes     PriceType[]
+  products       Product[]
+  variants       Variant[]
+  stocks         Stock[]
+  productPrices  ProductPrice[]
+  customers      Customer[]
+  orders         Order[]
+  orderItems     OrderItem[]
+  payments       Payment[]
+  telegramUsers  TelegramUser[]
+  webhookEvents  WebhookEvent[]
+  syncJobs       SyncJob[]
+  refreshTokens  RefreshToken[]
+}
+
+model TenantSettings {
+  id                    String  @id @default(uuid())
+  tenantId              String  @unique
+  currency              String  @default("UZS")
+  timezone              String  @default("Asia/Tashkent")
+  language              String  @default("uz")
+  defaultWarehouseId    String?
+  defaultPriceTypeId    String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  email        String
+  name         String
+  passwordHash String
+  role         UserRole @default(OWNER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([expiresAt])
+}
+
+// ---------- MoySklad integration ----------
+
+model MoyskladAccount {
+  id                      String         @id @default(uuid())
+  tenantId                String         @unique
+  /// AES-GCM ciphertext of MoySklad personal access token.
+  encryptedToken          String
+  accountUuid             String?
+  status                  MoyskladStatus @default(DISCONNECTED)
+  /// JSON map of per-entity `updatedFrom` cursors used by fallback sync.
+  cursors                 Json           @default("{}")
+  webhookSubscriptionIds  String[]       @default([])
+  lastWebhookAt           DateTime?
+  lastSyncAt              DateTime?
+  lastError               String?
+  connectedAt             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Catalog ----------
+
+model Category {
+  id        String  @id @default(uuid())
+  tenantId  String
+  moyskladId String?
+  parentId  String?
+  name      String
+  slug      String
+  pathName  String?
+  description String?
+  color     String?
+  icon      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@unique([tenantId, moyskladId])
+  @@unique([tenantId, slug])
+  @@index([tenantId, parentId])
+}
+
+model UnitOfMeasure {
+  id         String  @id @default(uuid())
+  tenantId   String
+  moyskladId String?
+  name       String
+  code       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([tenantId, moyskladId])
+  @@unique([tenantId, code])
+}
+
+model Warehouse {
+  id         String          @id @default(uuid())
+  tenantId   String
+  moyskladId String?
+  name       String
+  location   String?
+  manager    String?
+  capacity   Int?
+  used       Int?
+  status     WarehouseStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stocks  Stock[]
+  orders  Order[]
+
+  @@unique([tenantId, moyskladId])
+  @@index([tenantId])
+}
+
+model PriceType {
+  id         String @id @default(uuid())
+  tenantId   String
+  moyskladId String?
+  name       String
+  currency   String @default("UZS")
+  isDefault  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  prices ProductPrice[]
+
+  @@unique([tenantId, moyskladId])
+  @@unique([tenantId, name])
+}
+
+model Product {
+  id         String        @id @default(uuid())
+  tenantId   String
+  moyskladId String?
+  name       String
+  slug       String
+  sku        String
+  categoryId String?
+  unitId     String?
+  /// Default sale price in kopecks (UZS *100).
+  priceKopecks     Int     @default(0)
+  costPriceKopecks Int     @default(0)
+  salePriceKopecks Int?
+  /// Aggregate stock across warehouses (denormalized for fast list).
+  stockTotal Float @default(0)
+  minStock   Float @default(0)
+  maxStock   Float @default(0)
+  unit       String @default("dona")
+  barcode    String?
+  ikpu       String?
+  ikpuName   String?
+  vatPercent Int    @default(0)
+  status     ProductStatus @default(ACTIVE)
+  archived   Boolean       @default(false)
+  rating     Float  @default(0)
+  sold       Int    @default(0)
+  returns    Int    @default(0)
+  image      String?
+  images     String[] @default([])
+  description String?
+  supplier   String?
+  weight     Float?
+  dimensions String?
+
+  /// Optimistic concurrency token mirroring MoySklad `updated`.
+  version    BigInt   @default(0)
+  syncedAt   DateTime?
+  /// Raw MoySklad payload last seen, for debugging.
+  moyskladMeta Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category  Category?      @relation(fields: [categoryId], references: [id])
+  unitOfMeasure UnitOfMeasure? @relation(fields: [unitId], references: [id])
+  variants  Variant[]
+  stocks    Stock[]
+  prices    ProductPrice[]
+  orderItems OrderItem[]
+
+  @@unique([tenantId, moyskladId])
+  @@unique([tenantId, slug])
+  @@unique([tenantId, sku])
+  @@index([tenantId, status])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, archived])
+}
+
+model Variant {
+  id              String  @id @default(uuid())
+  tenantId        String
+  productId       String
+  moyskladId      String?
+  sku             String
+  barcode         String?
+  characteristics Json    @default("{}")
+  priceOverrideKopecks Int?
+  version         BigInt  @default(0)
+  syncedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product  Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stocks   Stock[]
+  orderItems OrderItem[]
+
+  @@unique([tenantId, moyskladId])
+  @@unique([tenantId, sku])
+  @@index([tenantId, productId])
+}
+
+model Stock {
+  id          String @id @default(uuid())
+  tenantId    String
+  productId   String
+  variantId   String?
+  warehouseId String
+  quantity    Float  @default(0)
+  reserved    Float  @default(0)
+  inTransit   Float  @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   Variant?  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, variantId, warehouseId])
+  @@index([tenantId, warehouseId])
+}
+
+model ProductPrice {
+  id          String @id @default(uuid())
+  tenantId    String
+  productId   String
+  variantId   String?
+  priceTypeId String
+  /// Value in kopecks.
+  valueKopecks Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceType PriceType @relation(fields: [priceTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, variantId, priceTypeId])
+  @@index([tenantId, priceTypeId])
+}
+
+// ---------- Customers & Orders ----------
+
+model Customer {
+  id         String @id @default(uuid())
+  tenantId   String
+  moyskladId String?
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  tags       String[] @default([])
+  notes      String?
+  totalOrders Int    @default(0)
+  totalSpentKopecks BigInt @default(0)
+
+  version    BigInt   @default(0)
+  syncedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+  telegramUsers TelegramUser[]
+
+  @@unique([tenantId, moyskladId])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
+}
+
+model Order {
+  id          String        @id @default(uuid())
+  tenantId    String
+  moyskladId  String?
+  number      String
+  channel     OrderChannel  @default(ADMIN)
+  status      OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  customerId    String?
+  customerName  String
+  customerPhone String?
+  customerEmail String?
+
+  warehouseId String?
+
+  itemsCount   Int    @default(0)
+  totalKopecks Int    @default(0)
+  currency     String @default("UZS")
+
+  shippingMethod  String?
+  shippingAddress String?
+  shippingCost    Int    @default(0)
+  notes           String?
+
+  version  BigInt   @default(0)
+  syncedAt DateTime?
+  moyskladMeta Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer  Customer?   @relation(fields: [customerId], references: [id])
+  warehouse Warehouse?  @relation(fields: [warehouseId], references: [id])
+  items     OrderItem[]
+  payments  Payment[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, moyskladId])
+  @@index([tenantId, status])
+  @@index([tenantId, channel])
+  @@index([tenantId, createdAt])
+}
+
+model OrderItem {
+  id           String @id @default(uuid())
+  tenantId     String
+  orderId      String
+  productId    String
+  variantId    String?
+  productName  String
+  sku          String
+  quantity     Float
+  priceKopecks Int
+  vatPercent   Int    @default(0)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id])
+  variant Variant? @relation(fields: [variantId], references: [id])
+
+  @@index([tenantId, orderId])
+}
+
+model Payment {
+  id            String          @id @default(uuid())
+  tenantId      String
+  orderId       String
+  provider      PaymentProvider
+  status        PaymentStatus   @default(PENDING)
+  amountKopecks Int
+  currency      String          @default("UZS")
+  externalId    String?
+  paidAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, orderId])
+  @@index([provider, externalId])
+}
+
+// ---------- Telegram & Storefront ----------
+
+model TelegramBot {
+  id              String  @id @default(uuid())
+  tenantId        String  @unique
+  /// AES-GCM ciphertext of bot token.
+  encryptedToken  String
+  username        String?
+  /// Random secret sent to Telegram for webhook validation.
+  webhookSecret   String
+  enabled         Boolean @default(true)
+  webhookSet      Boolean @default(false)
+  webhookUrl      String?
+  lastUpdateAt    DateTime?
+  lastError       String?
+  connectedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model TelegramUser {
+  id           String  @id @default(uuid())
+  tenantId     String
+  chatId       BigInt
+  username     String?
+  firstName    String?
+  lastName     String?
+  languageCode String  @default("uz")
+  customerId   String?
+  /// JSON session blob used by the bot (cart, current flow, etc.). Mirror also lives in Redis.
+  sessionData  Json    @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@unique([tenantId, chatId])
+  @@index([tenantId, customerId])
+}
+
+model StorefrontSite {
+  id                 String   @id @default(uuid())
+  tenantId           String   @unique
+  subdomain          String   @unique
+  customDomain       String?  @unique
+  theme              Json     @default("{}")
+  featuredProductIds String[] @default([])
+  published          Boolean  @default(false)
+  catalogOnly        Boolean  @default(false)
+  title              String
+  description        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Sync audit ----------
+
+model WebhookEvent {
+  id          String        @id @default(uuid())
+  tenantId    String
+  source      WebhookSource
+  entityType  String
+  action      String
+  payload     Json
+  processedAt DateTime?
+  error       String?
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, source, createdAt])
+  @@index([processedAt])
+}
+
+model SyncJob {
+  id         String        @id @default(uuid())
+  tenantId   String
+  type       SyncJobType
+  status     SyncJobStatus @default(QUEUED)
+  /// 0..100
+  progress   Int           @default(0)
+  stats      Json          @default("{}")
+  error      String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, type, status])
+  @@index([tenantId, createdAt])
+}
+
+// ---------- Global reference data ----------
+
+model IkpuCode {
+  code       String  @id
+  name       String
+  category   String
+  vatPercent Int
+}
