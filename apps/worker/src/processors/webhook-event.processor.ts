@@ -45,6 +45,12 @@ export class WebhookEventProcessor extends WorkerHost {
         where: { id: webhookEventId },
         data: { processedAt: new Date() },
       });
+
+      // After any product/variant/stock change, invalidate the storefront ISR
+      // cache so the public site reflects new prices/stock within seconds.
+      if (shouldRevalidateStorefront(event.entityType)) {
+        await this.invalidateStorefront(tenantId, event.entityType, msId);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Webhook event ${webhookEventId} failed: ${message}`);
@@ -333,6 +339,50 @@ export class WebhookEventProcessor extends WorkerHost {
       }
     }
   }
+
+  /**
+   * Fires an on-demand revalidation request to the Next.js storefront so
+   * cached pages reflect the latest data. Best-effort — failures don't break
+   * the webhook event processing.
+   */
+  private async invalidateStorefront(tenantId: string, entityType: string, msId: string | null): Promise<void> {
+    const storefrontUrl = process.env.STOREFRONT_REVALIDATE_URL;
+    const secret = process.env.STOREFRONT_REVALIDATE_SECRET;
+    if (!storefrontUrl || !secret) return;
+
+    const tags = new Set<string>();
+    tags.add("storefront-products");
+    if (entityType === "productfolder") tags.add("storefront-categories");
+
+    if (msId && (entityType === "product" || entityType === "variant")) {
+      // Look up the product slug so we can invalidate the specific product page.
+      const product = entityType === "product"
+        ? await this.prisma.product.findUnique({ where: { tenantId_moyskladId: { tenantId, moyskladId: msId } } })
+        : (await this.prisma.variant.findUnique({
+            where: { tenantId_moyskladId: { tenantId, moyskladId: msId } },
+          }))
+          ? await this.prisma.product.findFirst({
+              where: { variants: { some: { tenantId, moyskladId: msId } } } as never,
+            })
+          : null;
+      if (product?.slug) tags.add(`product:${product.slug}`);
+    }
+
+    try {
+      const { default: axios } = await import("axios");
+      await axios.post(
+        storefrontUrl,
+        { tags: Array.from(tags) },
+        { headers: { "x-revalidate-secret": secret }, timeout: 5_000 },
+      );
+    } catch (err) {
+      this.logger.warn(`Storefront revalidate failed: ${String(err)}`);
+    }
+  }
+}
+
+function shouldRevalidateStorefront(entityType: string): boolean {
+  return ["product", "variant", "productfolder"].includes(entityType);
 }
 
 function parseRedisUrl(url: string) {
