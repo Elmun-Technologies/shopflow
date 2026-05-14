@@ -163,9 +163,107 @@ export function registerHandlers(bot: Bot<ShopFlowContext>): void {
     await ctx.reply(`So'nggi buyurtmalaringiz:\n${lines.join("\n")}`);
   });
 
-  bot.catch((err) => {
-    err.ctx.log.error({ err: err.error }, "grammY error");
+  // ─────────────────── Inline qidiruv ───────────────────
+  bot.on("inline_query", async (ctx) => {
+    const query = (ctx.inlineQuery?.query ?? "").trim();
+    const tenantId = ctx.tenantId;
+
+    const where = {
+      tenantId,
+      archived: false,
+      status: { in: ["ACTIVE"] as Array<"ACTIVE" | "INACTIVE" | "OUT_OF_STOCK" | "DISCONTINUED"> },
+      stockTotal: { gt: 0 },
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" as const } },
+              { sku: { contains: query, mode: "insensitive" as const } },
+              { barcode: { contains: query } },
+            ],
+          }
+        : {}),
+    };
+
+    const products = await ctx.prisma.product.findMany({
+      where,
+      orderBy: query ? undefined : { sold: "desc" },
+      take: 25,
+      select: { id: true, name: true, priceKopecks: true, salePriceKopecks: true, image: true, sku: true, slug: true },
+    });
+
+    const tenant = await ctx.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+
+    const results = products.map((p, idx) => {
+      const price = formatMoney(p.salePriceKopecks ?? p.priceKopecks);
+      return {
+        type: "article" as const,
+        id: `${p.id}:${idx}`,
+        title: p.name,
+        description: `${p.sku} · ${price}`,
+        thumbnail_url: p.image ?? undefined,
+        input_message_content: {
+          message_text: `🛍 <b>${escapeHtml(p.name)}</b>\nNarx: ${price}`,
+          parse_mode: "HTML" as const,
+        },
+        reply_markup: tenant?.slug
+          ? {
+              inline_keyboard: [[
+                {
+                  text: "Mahsulotni ko'rish",
+                  web_app: { url: `${ctx.miniAppBase}/${tenant.slug}/p/${p.slug}` },
+                },
+              ]],
+            }
+          : undefined,
+      };
+    });
+
+    await ctx.answerInlineQuery(results, { cache_time: 30, is_personal: false });
   });
+
+  // ─────────────────── Xato hisoboti ───────────────────
+  bot.catch(async (err) => {
+    const c = err.ctx;
+    c.log.error({ err: err.error }, "grammY error");
+
+    // Saqlab qo'yamiz — admin sahifada xato log'i sifatida ko'rinadi.
+    try {
+      await c.prisma.webhookEvent.create({
+        data: {
+          tenantId: c.tenantId,
+          source: "TELEGRAM",
+          entityType: "bot",
+          action: "ERROR",
+          payload: {
+            updateId: c.update?.update_id,
+            chatId: c.chat?.id,
+            errorMessage: err.error instanceof Error ? err.error.message : String(err.error),
+            stack: err.error instanceof Error ? err.error.stack?.slice(0, 1000) : undefined,
+          } as never,
+          error: err.error instanceof Error ? err.error.message.slice(0, 500) : String(err.error).slice(0, 500),
+          processedAt: new Date(),
+        },
+      });
+    } catch {
+      /* swallow — logging path must not throw */
+    }
+
+    // Best-effort user-facing apology.
+    try {
+      if (c.chat?.id) {
+        await c.api.sendMessage(c.chat.id, "Kechirasiz, kutilmagan xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
+      }
+    } catch {
+      /* user might have blocked the bot */
+    }
+  });
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] ?? c));
 }
 
 async function upsertTelegramUser(ctx: ShopFlowContext): Promise<void> {

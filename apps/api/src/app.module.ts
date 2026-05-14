@@ -19,6 +19,7 @@ import { IntegrationsModule } from "./modules/integrations/integrations.module.j
 import { MoyskladModule } from "./modules/moysklad/moysklad.module.js";
 import { TelegramModule } from "./modules/telegram/telegram.module.js";
 import { StorefrontModule } from "./modules/storefront/storefront.module.js";
+import { MiniappModule } from "./modules/miniapp/miniapp.module.js";
 import { SyncModule } from "./modules/sync/sync.module.js";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module.js";
 import { QueueModule } from "./queue/queue.module.js";
@@ -53,6 +54,7 @@ import { MiddlewareConsumer, NestModule } from "@nestjs/common";
     MoyskladModule,
     TelegramModule,
     StorefrontModule,
+    MiniappModule,
     SyncModule,
     WebhooksModule,
   ],

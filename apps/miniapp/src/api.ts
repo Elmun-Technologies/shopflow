@@ -1,18 +1,8 @@
 import axios from "axios";
-import WebApp from "@twa-dev/sdk";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "/api",
   withCredentials: false,
-});
-
-api.interceptors.request.use((config) => {
-  // Forward Telegram WebApp initData so the API can verify and resolve the customer.
-  const initData = WebApp.initData;
-  if (initData) {
-    config.headers.set?.("X-Telegram-Init-Data", initData);
-  }
-  return config;
 });
 
 export interface StorefrontProduct {
@@ -34,4 +24,23 @@ export interface StorefrontCategory {
   slug: string;
   icon: string | null;
   color: string | null;
+}
+
+export interface StorefrontOrderItem {
+  id: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  priceKopecks: number;
+}
+
+export interface StorefrontOrder {
+  id: string;
+  number: string;
+  status: "PENDING" | "PROCESSING" | "SHIPPED" | "COMPLETED" | "CANCELLED";
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  totalKopecks: number;
+  itemsCount: number;
+  items?: StorefrontOrderItem[];
+  createdAt: string;
 }

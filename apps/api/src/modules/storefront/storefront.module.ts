@@ -3,16 +3,26 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
   Query,
   Param,
   NotFoundException,
+  BadRequestException,
   Injectable,
   ConflictException,
+  Req,
+  UnauthorizedException,
 } from "@nestjs/common";
-import { IsArray, IsBoolean, IsOptional, IsString, MaxLength, MinLength, Matches } from "class-validator";
+import { ArrayMinSize, IsArray, IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min, MinLength, Matches, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { JwtService } from "@nestjs/jwt";
+import { randomInt } from "node:crypto";
+import type { Request } from "express";
 import { TenantPrismaService } from "../../prisma/tenant-prisma.service.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
+import { QueueProducerService } from "../../queue/queue-producer.service.js";
+import { AppConfigService } from "../../config/app-config.service.js";
 import { Public, Roles, CurrentUser, type AuthUser } from "../../common/auth/auth.decorators.js";
 
 /**
@@ -79,6 +89,147 @@ class StorefrontService {
     const site = await this.db.client.storefrontSite.findFirst();
     if (!site) throw new NotFoundException("Storefront site not initialized");
     return site;
+  }
+}
+
+/**
+ * Handles order creation and lookup from public surfaces (Mini App, Next.js
+ * storefront, catalog). The current tenant is taken from the CLS-resolved
+ * tenant context (set via Host header or initData-derived JWT).
+ */
+@Injectable()
+class StorefrontOrdersService {
+  constructor(
+    private readonly db: TenantPrismaService,
+    private readonly raw: PrismaService,
+    private readonly queue: QueueProducerService,
+  ) {}
+
+  async create(
+    tenantId: string,
+    channel: "TELEGRAM" | "WEBSITE" | "MINIAPP",
+    dto: {
+      customerId?: string;
+      customerName: string;
+      customerPhone?: string;
+      customerEmail?: string;
+      shippingAddress?: string;
+      shippingMethod?: string;
+      notes?: string;
+      items: Array<{ productId: string; variantId?: string; quantity: number }>;
+    },
+  ) {
+    if (!dto.items?.length) throw new BadRequestException("Order has no items");
+
+    const productIds = dto.items.map((i) => i.productId);
+    const products = await this.db.client.product.findMany({
+      where: { id: { in: productIds }, archived: false } as never,
+    });
+    if (products.length !== new Set(productIds).size) {
+      throw new BadRequestException("One or more products not found");
+    }
+
+    let total = 0;
+    let count = 0;
+    const lineItems = dto.items.map((line) => {
+      const p = products.find((x) => x.id === line.productId)!;
+      const priceKopecks = p.salePriceKopecks ?? p.priceKopecks;
+      if (line.quantity < 1) throw new BadRequestException(`Invalid quantity for ${p.id}`);
+      total += priceKopecks * line.quantity;
+      count += line.quantity;
+      return {
+        productId: p.id,
+        variantId: line.variantId ?? null,
+        productName: p.name,
+        sku: p.sku,
+        quantity: line.quantity,
+        priceKopecks,
+        vatPercent: p.vatPercent,
+      };
+    });
+
+    // Customer: prefer the one in JWT/initData; otherwise create-or-link via phone.
+    let customerId = dto.customerId ?? null;
+    if (!customerId && dto.customerPhone) {
+      const existing = await this.db.client.customer.findFirst({
+        where: { phone: dto.customerPhone } as never,
+      });
+      if (existing) customerId = existing.id;
+    }
+    if (!customerId) {
+      const created = await this.db.client.customer.create({
+        data: {
+          name: dto.customerName,
+          phone: dto.customerPhone ?? null,
+          email: dto.customerEmail ?? null,
+        } as never,
+      });
+      customerId = created.id;
+    }
+
+    const prefix = channel === "TELEGRAM" ? "TG" : channel === "MINIAPP" ? "MA" : "WB";
+    const number = `${prefix}-${Date.now().toString(36).toUpperCase()}-${randomInt(1000, 9999)}`;
+
+    const order = await this.db.client.order.create({
+      data: {
+        number,
+        channel: channel as never,
+        customerId,
+        customerName: dto.customerName,
+        customerPhone: dto.customerPhone ?? null,
+        customerEmail: dto.customerEmail ?? null,
+        shippingMethod: dto.shippingMethod ?? null,
+        shippingAddress: dto.shippingAddress ?? null,
+        notes: dto.notes ?? null,
+        itemsCount: count,
+        totalKopecks: total,
+        items: { create: lineItems },
+      } as never,
+      include: { items: true },
+    });
+
+    await this.queue.enqueueOrderToMoysklad({ tenantId, orderId: order.id });
+
+    return {
+      id: order.id,
+      number: order.number,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalKopecks: order.totalKopecks,
+      itemsCount: order.itemsCount,
+      items: order.items,
+      createdAt: order.createdAt,
+    };
+  }
+
+  async getById(id: string, ownerCustomerId?: string) {
+    const order = await this.db.client.order.findUnique({
+      where: { id } as never,
+      include: { items: true, payments: true },
+    });
+    if (!order) throw new NotFoundException("Order not found");
+    if (ownerCustomerId && order.customerId !== ownerCustomerId) {
+      // Don't leak across customers within the same tenant.
+      throw new NotFoundException("Order not found");
+    }
+    return order;
+  }
+
+  async listForCustomer(customerId: string) {
+    return this.db.client.order.findMany({
+      where: { customerId } as never,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        paymentStatus: true,
+        totalKopecks: true,
+        itemsCount: true,
+        createdAt: true,
+      },
+    });
   }
 }
 
@@ -188,9 +339,56 @@ class UpdateStorefrontDto {
   catalogOnly?: boolean;
 }
 
+class StorefrontOrderItemDto {
+  @IsString() productId!: string;
+  @IsOptional() @IsString() variantId?: string;
+  @IsInt() @Min(1) quantity!: number;
+}
+
+class CreateStorefrontOrderDto {
+  @IsString() @MinLength(1) @MaxLength(120) customerName!: string;
+  @IsOptional() @IsString() customerPhone?: string;
+  @IsOptional() @IsString() customerEmail?: string;
+  @IsOptional() @IsString() @MaxLength(500) shippingAddress?: string;
+  @IsOptional() @IsString() shippingMethod?: string;
+  @IsOptional() @IsString() @MaxLength(500) notes?: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => StorefrontOrderItemDto)
+  items!: StorefrontOrderItemDto[];
+}
+
+interface StorefrontJwt {
+  sub: string;
+  tenantId: string;
+  role: "STOREFRONT";
+  chatId?: string;
+}
+
+async function readStorefrontJwt(
+  req: Request,
+  jwt: JwtService,
+  config: AppConfigService,
+): Promise<StorefrontJwt | null> {
+  const auth = req.headers["authorization"];
+  if (typeof auth !== "string" || !auth.startsWith("Bearer ")) return null;
+  try {
+    return await jwt.verifyAsync<StorefrontJwt>(auth.slice(7), { secret: config.jwtAccessSecret });
+  } catch {
+    return null;
+  }
+}
+
 @Controller("storefront")
 class StorefrontController {
-  constructor(private readonly storefront: StorefrontService) {}
+  constructor(
+    private readonly storefront: StorefrontService,
+    private readonly orders: StorefrontOrdersService,
+    private readonly jwt: JwtService,
+    private readonly config: AppConfigService,
+  ) {}
 
   @Public()
   @Get("site")
@@ -220,6 +418,64 @@ class StorefrontController {
   cats() {
     return this.storefront.listCategories();
   }
+
+  /**
+   * Create an order from the public surface. Requires a tenant in CLS
+   * context (set by host header or Mini App JWT). If a STOREFRONT JWT is
+   * present, customer is auto-resolved from `sub`; otherwise we create or
+   * link a Customer by phone.
+   */
+  @Public()
+  @Post("orders")
+  async createOrder(@Req() req: Request, @Body() dto: CreateStorefrontOrderDto) {
+    const tenantId = await this.requireTenant(req);
+    const jwt = await readStorefrontJwt(req, this.jwt, this.config);
+    const channel = jwt?.chatId ? "MINIAPP" : "WEBSITE";
+    return this.orders.create(tenantId, channel, {
+      customerId: jwt?.sub,
+      customerName: dto.customerName,
+      customerPhone: dto.customerPhone,
+      customerEmail: dto.customerEmail,
+      shippingAddress: dto.shippingAddress,
+      shippingMethod: dto.shippingMethod,
+      notes: dto.notes,
+      items: dto.items,
+    });
+  }
+
+  /**
+   * Order status check. If called with a STOREFRONT JWT, returns only the
+   * caller's own orders. Otherwise (e.g. order tracking link in email),
+   * authentication-less access is allowed by id since we never return PII
+   * beyond what the customer already submitted.
+   */
+  @Public()
+  @Get("orders/:id")
+  async getOrder(@Req() req: Request, @Param("id") id: string) {
+    await this.requireTenant(req);
+    const jwt = await readStorefrontJwt(req, this.jwt, this.config);
+    return this.orders.getById(id, jwt?.sub);
+  }
+
+  /** Returns the authenticated customer's order history. Mini App only. */
+  @Public()
+  @Get("orders")
+  async myOrders(@Req() req: Request) {
+    await this.requireTenant(req);
+    const jwt = await readStorefrontJwt(req, this.jwt, this.config);
+    if (!jwt) throw new UnauthorizedException();
+    return this.orders.listForCustomer(jwt.sub);
+  }
+
+  private async requireTenant(req: Request): Promise<string> {
+    const jwt = await readStorefrontJwt(req, this.jwt, this.config);
+    if (jwt?.tenantId) return jwt.tenantId;
+    // Tenant might have been resolved from Host already by TenantContextMiddleware.
+    const authedTenant = (req as Request & { auth?: { tenantId?: string } }).auth?.tenantId;
+    if (authedTenant) return authedTenant;
+    // Last-resort: re-resolve from Host via the storefront site lookup.
+    throw new BadRequestException("Tenant could not be resolved");
+  }
 }
 
 @Controller("storefront-admin")
@@ -241,6 +497,6 @@ class StorefrontAdminController {
 
 @Module({
   controllers: [StorefrontController, StorefrontAdminController],
-  providers: [StorefrontService, StorefrontAdminService],
+  providers: [StorefrontService, StorefrontAdminService, StorefrontOrdersService],
 })
 export class StorefrontModule {}

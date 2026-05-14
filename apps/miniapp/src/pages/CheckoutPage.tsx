@@ -2,14 +2,16 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.ts";
 import { useCart } from "../cart.ts";
+import { useAuth } from "../auth.ts";
 import { formatMoney } from "../format.ts";
 
 export function CheckoutPage() {
   const { slug } = useParams();
   const nav = useNavigate();
   const cart = useCart();
+  const auth = useAuth();
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(auth?.customerName ?? "");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
