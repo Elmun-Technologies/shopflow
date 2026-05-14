@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import axios from "axios";
 import { randomInt } from "node:crypto";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { JwtService } from "@nestjs/jwt";
 import { AppConfigService } from "../../config/app-config.service.js";

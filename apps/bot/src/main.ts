@@ -3,7 +3,7 @@ initSentry({ service: "bot" });
 
 import { z } from "zod";
 import { PrismaClient } from "@shopflow/db";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { createLogger } from "@shopflow/observability";
 import { BotManager } from "./bot-manager.js";
 import { TelegramUpdateConsumer } from "./update-consumer.js";

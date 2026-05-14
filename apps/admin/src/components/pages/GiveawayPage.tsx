@@ -220,7 +220,7 @@ function GiveawayForm({ initial, error }: { initial: GiveawayContest | null; err
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Chegirma turi</label>
-                <select className={inputClass} value={discountType} onChange={(e) => setDiscountType(e.target.value)}>
+                <select className={inputClass} value={discountType} onChange={(e) => setDiscountType(e.target.value as "percent" | "fixed")}>
                   <option value="percent">Foiz (%)</option>
                   <option value="fixed">Soʻm</option>
                 </select>

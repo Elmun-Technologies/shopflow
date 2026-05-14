@@ -53,7 +53,7 @@ api.interceptors.response.use(
     const newToken = await refreshing.finally(() => (refreshing = null));
     if (!newToken) throw error;
 
-    original.headers ??= {};
+    original.headers ??= {} as never;
     (original.headers as Record<string, string>).Authorization = `Bearer ${newToken}`;
     return api.request(original);
   },

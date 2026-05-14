@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { AppConfigService } from "../../config/app-config.service.js";
 
 /**

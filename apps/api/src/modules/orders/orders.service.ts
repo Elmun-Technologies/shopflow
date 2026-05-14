@@ -66,7 +66,7 @@ export class OrdersService {
    * Create a new order from any channel. Computes line totals from current product
    * prices (server-side, never trusting the client), then enqueues outbound sync to MoySklad.
    */
-  async create(channel: OrderChannel, tenantId: string, dto: CreateOrderRequest) {
+  async create(channel: OrderChannel, tenantId: string, dto: Omit<CreateOrderRequest, "channel">) {
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException("Order must contain at least one item");
     }
@@ -85,6 +85,7 @@ export class OrdersService {
       total += priceKopecks * line.quantity;
       itemsCount += line.quantity;
       return {
+        tenantId,
         productId: p.id,
         variantId: line.variantId ?? null,
         productName: p.name,
@@ -112,7 +113,7 @@ export class OrdersService {
         itemsCount,
         totalKopecks: total,
         items: { create: lineItems },
-      },
+      } as never,
       include: { items: true },
     });
 

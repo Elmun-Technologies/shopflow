@@ -10,7 +10,7 @@ import { AuthService } from "./auth.service.js";
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => ({
         secret: config.jwtAccessSecret,
-        signOptions: { expiresIn: config.jwtAccessTtl },
+        signOptions: { expiresIn: config.jwtAccessTtl as never },
       }),
     }),
   ],

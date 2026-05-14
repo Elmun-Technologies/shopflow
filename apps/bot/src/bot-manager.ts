@@ -1,6 +1,6 @@
 import { Bot, session, type Context, type SessionFlavor } from "grammy";
 import { RedisAdapter } from "@grammyjs/storage-redis";
-import type Redis from "ioredis";
+import type { Redis } from "ioredis";
 import type { PrismaClient } from "@shopflow/db";
 import type { Logger } from "pino";
 import { SecretCipher } from "./secret-cipher.js";

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import axios from "axios";
 import { randomBytes } from "node:crypto";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { SecretCipherService } from "../../common/crypto/secret-cipher.service.js";
 import { AppConfigService } from "../../config/app-config.service.js";

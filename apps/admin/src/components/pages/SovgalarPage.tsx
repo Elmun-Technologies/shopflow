@@ -169,7 +169,7 @@ function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: st
   const [triggerProducts, setTriggerProducts] = useState(initial?.triggerProducts.join(", ") ?? "");
   const [giftDescription, setGiftDescription] = useState(initial?.giftDescription ?? "");
   const [priority, setPriority] = useState(initial?.priority ?? 1);
-  const [usageLimit, setUsageLimit] = useState(initial?.usageLimit ?? 0);
+  const [usageLimit, setUsageLimit] = useState<number | null>(initial?.usageLimit ?? 0);
   const [startAt, setStartAt] = useState(initial?.startAt ?? "");
   const [endAt, setEndAt] = useState(initial?.endAt ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
@@ -232,7 +232,7 @@ function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: st
           </div>
           <div>
             <label className={labelClass}>Foydalanish cheklovi</label>
-            <input type="number" className={inputClass} value={usageLimit} onChange={(e) => setUsageLimit(e.target.value === "" ? null : Number(e.target.value))} placeholder="Bo'sh = cheklovsiz" />
+            <input type="number" className={inputClass} value={usageLimit ?? ""} onChange={(e) => setUsageLimit(e.target.value === "" ? null : Number(e.target.value))} placeholder="Bo'sh = cheklovsiz" />
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>

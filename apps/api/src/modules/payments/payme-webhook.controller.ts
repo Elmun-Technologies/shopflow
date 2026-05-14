@@ -101,7 +101,7 @@ export class PaymeWebhookController {
           orderId,
           provider: "PAYME",
           status: "PENDING",
-          amountKopecks: req.params!.amount,
+          amountKopecks: req.params!.amount ?? 0,
           externalId: paymeId,
         },
       });

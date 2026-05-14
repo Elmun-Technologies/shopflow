@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { PrismaProvider } from "../prisma.provider.js";
 import { WorkerSecretCipher } from "./secret-cipher.js";
 import { WorkerConfigService } from "../config/worker-config.service.js";

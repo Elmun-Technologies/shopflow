@@ -18,3 +18,7 @@ apps/*/.turbo
 packages/*/dist
 packages/*/.turbo
 packages/db/generated
+
+# TypeScript incremental build
+*.tsbuildinfo
+apps/storefront/.next

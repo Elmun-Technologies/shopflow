@@ -1,5 +1,5 @@
 import { Body, Controller, Headers, HttpCode, Logger, Param, Post, UnauthorizedException, NotFoundException } from "@nestjs/common";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { Public } from "../../common/auth/auth.decorators.js";
 import { AppConfigService } from "../../config/app-config.service.js";

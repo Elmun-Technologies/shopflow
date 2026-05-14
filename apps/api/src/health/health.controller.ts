@@ -1,5 +1,5 @@
 import { Controller, Get, Header } from "@nestjs/common";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { renderMetrics } from "@shopflow/observability";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AppConfigService } from "../config/app-config.service.js";

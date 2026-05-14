@@ -297,9 +297,10 @@ async function createOrderViaApi(ctx: ShopFlowContext): Promise<{ id: string; nu
   }));
 
   // Look up or create a Customer locally; the outbound order job will push to MoySklad.
-  let customer = ctx.session.flow.phone
+  const phone = flow.phone;
+  let customer = phone
     ? await ctx.prisma.customer.findFirst({
-        where: { tenantId: ctx.tenantId, phone: ctx.session.flow.phone },
+        where: { tenantId: ctx.tenantId, phone },
       })
     : null;
   if (!customer) {

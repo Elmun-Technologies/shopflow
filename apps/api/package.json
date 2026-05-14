@@ -32,7 +32,7 @@
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.2",
-    "nestjs-cls": "^4.5.0",
+    "nestjs-cls": "^5.0.0",
     "nestjs-pino": "^4.3.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

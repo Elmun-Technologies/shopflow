@@ -1,4 +1,4 @@
-import type Redis from "ioredis";
+import type { Redis } from "ioredis";
 import type { Logger } from "pino";
 import type { BotManager } from "./bot-manager.js";
 

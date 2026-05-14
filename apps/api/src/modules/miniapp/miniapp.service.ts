@@ -5,7 +5,7 @@ import { PrismaService } from "../../prisma/prisma.service.js";
 import { SecretCipherService } from "../../common/crypto/secret-cipher.service.js";
 import { AppConfigService } from "../../config/app-config.service.js";
 
-interface TelegramInitDataUser {
+export interface TelegramInitDataUser {
   id: number;
   first_name?: string;
   last_name?: string;
@@ -13,7 +13,7 @@ interface TelegramInitDataUser {
   language_code?: string;
 }
 
-interface VerifyResult {
+export interface VerifyResult {
   ok: true;
   accessToken: string;
   tenant: { id: string; slug: string; name: string };

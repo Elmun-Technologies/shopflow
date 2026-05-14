@@ -117,7 +117,7 @@ export class AuthService {
   private async issueTokens(tenantId: string, userId: string, role: string): Promise<IssuedTokens> {
     const accessToken = await this.jwt.signAsync(
       { sub: userId, tenantId, role },
-      { secret: this.config.jwtAccessSecret, expiresIn: this.config.jwtAccessTtl },
+      { secret: this.config.jwtAccessSecret, expiresIn: this.config.jwtAccessTtl as never },
     );
     const refreshToken = randomBytes(48).toString("base64url");
     const expiresAt = new Date(Date.now() + this.config.jwtRefreshTtlDays * 86_400_000);
