@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: "/shopflow/",
+  // GitHub Pages uchun "/shopflow/", Dokploy/Docker build uchun VITE_BASE_PATH=/
+  base: process.env.VITE_BASE_PATH ?? "/shopflow/",
   plugins: [react(), tailwindcss(), viteSingleFile()],
   resolve: {
     alias: {
