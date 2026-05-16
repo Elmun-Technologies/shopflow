@@ -1,12 +1,9 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Check, X, ChevronLeft, Star, MessageSquare } from "lucide-react";
+import { Search, Check, X, Star, MessageSquare } from "lucide-react";
 import type { ProductReview, ReviewStatus } from "../../data/marketingData";
 import { initialReviews, reviewStatusLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
-
-const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3";
-const tdClass = "py-3 px-3 text-sm text-slate-200 border-t border-slate-800";
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -111,8 +108,8 @@ export default function IzohlarPage() {
             icon={MessageSquare}
             title="Hali izohlar yo'q"
             description="Xaridorlar hali mahsulot uchun izoh qoldirishmagan. Ular izoh qoldirganida bu yerda ko'rinadi."
-            buttonText="Savdo sahifasiga o'tish"
-            onButtonClick={() => {}}
+            buttonText="Filterni tozalash"
+            onButtonClick={() => { setSearch(""); setFilterStatus("all"); }}
             iconColor="text-yellow-400"
           />
         ) : filtered.length === 0 ? (

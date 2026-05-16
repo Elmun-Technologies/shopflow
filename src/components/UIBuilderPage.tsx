@@ -16,7 +16,7 @@ import { platformProducts } from "../data/platformsData";
 
 const iconMap: Record<string, React.ElementType> = {
   Image, Sparkles, Percent, TrendingUp, Crown, Calendar, Grid3X3, Zap, Sun, Heart,
-  LayoutGrid, List, LayoutIcon, Play, Megaphone, Search: Search as any, Type,
+  LayoutGrid, List, LayoutIcon, Play, Megaphone, Search, Type,
 };
 
 const productCategories = ["Telefonlar", "Noutbuklar", "Kiyim", "Oziq-ovqat", "Maishiy", "Sport", "Kitoblar", "O'yinchoqlar", "Aksessuarlar"];
@@ -77,7 +77,7 @@ export default function UIBuilderPage() {
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, enabled: !b.enabled } : b)));
   }, []);
 
-  const updateBlockSetting = useCallback((id: string, key: string, value: any) => {
+  const updateBlockSetting = useCallback((id: string, key: string, value: unknown) => {
     setBlocks((prev) =>
       prev.map((b) => (b.id === id ? { ...b, settings: { ...b.settings, [key]: value } } : b))
     );
@@ -533,8 +533,8 @@ export default function UIBuilderPage() {
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Mahsulot kartasi</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {["compact", "standard", "large"].map((style) => (
-                      <button key={style} onClick={() => setBrand({ ...brand, productCardStyle: style as any })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.productCardStyle === style ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                    {(["compact", "standard", "large"] as const).map((style) => (
+                      <button key={style} onClick={() => setBrand({ ...brand, productCardStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.productCardStyle === style ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
                         {style}
                       </button>
                     ))}
@@ -543,8 +543,8 @@ export default function UIBuilderPage() {
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Kategoriya uslubi</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {["list", "grid", "circle"].map((style) => (
-                      <button key={style} onClick={() => setBrand({ ...brand, categoryStyle: style as any })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.categoryStyle === style ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                    {(["list", "grid", "circle"] as const).map((style) => (
+                      <button key={style} onClick={() => setBrand({ ...brand, categoryStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.categoryStyle === style ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
                         {style}
                       </button>
                     ))}

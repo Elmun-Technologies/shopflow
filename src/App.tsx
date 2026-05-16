@@ -66,6 +66,22 @@ function DashboardPage() {
     );
   }, []);
 
+  const handleExport = () => {
+    const lines = [
+      "ShopFlow Dashboard Report",
+      `Generated: ${new Date().toISOString()}`,
+      "",
+      "Note: This is a demo export with mock data.",
+    ].join("\n");
+    const blob = new Blob([lines], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `shopflow-report-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       {/* Page Title */}
@@ -82,7 +98,7 @@ function DashboardPage() {
             <p className="text-sm text-slate-500">{currentDate}</p>
           </div>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">
+        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">
           <Download className="w-4 h-4" />
           Export Report
         </button>
@@ -140,18 +156,17 @@ function App() {
   };
 
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const sidebar = document.querySelector("aside");
-      if (sidebar) {
-        const width = sidebar.getBoundingClientRect().width;
-        setSidebarWidth(width);
+    const sidebar = document.querySelector("aside");
+    if (!sidebar) return;
+
+    setSidebarWidth(sidebar.getBoundingClientRect().width);
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setSidebarWidth(entry.contentRect.width);
       }
     });
-
-    const sidebar = document.querySelector("aside");
-    if (sidebar) {
-      observer.observe(sidebar, { attributes: true });
-    }
+    observer.observe(sidebar);
 
     return () => observer.disconnect();
   }, []);

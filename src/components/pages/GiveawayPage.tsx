@@ -42,19 +42,40 @@ export default function GiveawayPage() {
     };
   }, [contests]);
 
+  const handleSave = (data: Omit<GiveawayContest, "id" | "participantCount" | "createdAt">) => {
+    if (!data.title.trim()) {
+      setFormError("Sarlavha bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (editItem) {
+      setContests((prev) => prev.map((c) => (c.id === editItem.id ? { ...editItem, ...data } : c)));
+    } else {
+      const newContest: GiveawayContest = {
+        id: `giveaway-${Date.now()}`,
+        participantCount: 0,
+        createdAt: new Date().toISOString(),
+        ...data,
+      };
+      setContests((prev) => [newContest, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Giveawaytni tahrirlash" : "Yangi giveaway"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="giveaway-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <GiveawayForm initial={editItem} error={formError} />
+        <GiveawayForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -159,12 +180,18 @@ export default function GiveawayPage() {
   );
 }
 
-function GiveawayForm({ initial, error }: { initial: GiveawayContest | null; error: string | null }) {
+interface GiveawayFormProps {
+  initial: GiveawayContest | null;
+  error: string | null;
+  onSave: (data: Omit<GiveawayContest, "id" | "participantCount" | "createdAt">) => void;
+}
+
+function GiveawayForm({ initial, error, onSave }: GiveawayFormProps) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [prizeType, setPrizeType] = useState<GiveawayPrizeType>(initial?.prizeType ?? "discount");
   const [prizeCount, setPrizeCount] = useState(initial?.prizeCount ?? 1);
-  const [discountType, setDiscountType] = useState(initial?.discountType ?? "percent");
+  const [discountType, setDiscountType] = useState<"percent" | "fixed">(initial?.discountType ?? "percent");
   const [discountValue, setDiscountValue] = useState(initial?.discountValue ?? 0);
   const [productName, setProductName] = useState(initial?.productName ?? "");
   const [pointsAmount, setPointsAmount] = useState(initial?.pointsAmount ?? 0);
@@ -172,8 +199,25 @@ function GiveawayForm({ initial, error }: { initial: GiveawayContest | null; err
   const [endAt, setEndAt] = useState(initial?.endAt ?? "");
   const [status, setStatus] = useState<GiveawayStatus>(initial?.status ?? "draft");
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      title,
+      description,
+      prizeType,
+      prizeCount,
+      discountType: prizeType === "discount" ? discountType : undefined,
+      discountValue: prizeType === "discount" ? discountValue : undefined,
+      productName: prizeType === "product" ? productName : undefined,
+      pointsAmount: prizeType === "points" ? pointsAmount : undefined,
+      audience,
+      endAt,
+      status,
+    });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="giveaway-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Giveaway ma'lumotlari</h3>
@@ -220,7 +264,7 @@ function GiveawayForm({ initial, error }: { initial: GiveawayContest | null; err
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Chegirma turi</label>
-                <select className={inputClass} value={discountType} onChange={(e) => setDiscountType(e.target.value)}>
+                <select className={inputClass} value={discountType} onChange={(e) => setDiscountType(e.target.value as "percent" | "fixed")}>
                   <option value="percent">Foiz (%)</option>
                   <option value="fixed">Soʻm</option>
                 </select>

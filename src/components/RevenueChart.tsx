@@ -10,10 +10,11 @@ import {
 } from "recharts";
 import { motion } from "framer-motion";
 import { revenueData } from "../data/dashboardData";
+import type { ChartTooltipProps } from "../utils/chart";
 
 const timeRanges = ["7 Days", "30 Days", "3 Months", "1 Year"];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 shadow-xl">

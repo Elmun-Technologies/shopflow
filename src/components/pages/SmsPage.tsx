@@ -44,19 +44,41 @@ export default function SmsPage() {
     };
   }, [campaigns]);
 
+  const handleSave = (data: Omit<SmsCampaign, "id" | "sent" | "delivered" | "createdAt">) => {
+    if (!data.name.trim()) {
+      setFormError("Kampaniya nomi bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (editItem) {
+      setCampaigns((prev) => prev.map((c) => (c.id === editItem.id ? { ...editItem, ...data } : c)));
+    } else {
+      const newCampaign: SmsCampaign = {
+        id: `sms-${Date.now()}`,
+        sent: 0,
+        delivered: 0,
+        createdAt: new Date().toISOString(),
+        ...data,
+      };
+      setCampaigns((prev) => [newCampaign, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "SMS kampaniyani tahrirlash" : "Yangi SMS kampaniya"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="sms-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <SmsForm initial={editItem} error={formError} />
+        <SmsForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -159,7 +181,13 @@ export default function SmsPage() {
   );
 }
 
-function SmsForm({ initial, error }: { initial: SmsCampaign | null; error: string | null }) {
+interface SmsFormProps {
+  initial: SmsCampaign | null;
+  error: string | null;
+  onSave: (data: Omit<SmsCampaign, "id" | "sent" | "delivered" | "createdAt">) => void;
+}
+
+function SmsForm({ initial, error, onSave }: SmsFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [message, setMessage] = useState(initial?.message ?? "");
   const [segment, setSegment] = useState(initial?.segment ?? "");
@@ -167,8 +195,13 @@ function SmsForm({ initial, error }: { initial: SmsCampaign | null; error: strin
   const [status, setStatus] = useState<SmsCampaignStatus>(initial?.status ?? "draft");
   const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt ?? "");
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name, message, segment, recipients, status, scheduledAt });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="sms-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Kampaniya ma'lumotlari</h3>

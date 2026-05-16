@@ -126,7 +126,7 @@ export default function ChatPage() {
     "objection_handling", "closing", "won", "lost", "follow_up",
   ];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: import("../utils/chart").ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">

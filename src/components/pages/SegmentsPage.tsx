@@ -53,19 +53,41 @@ export default function SegmentsPage() {
     return <SegmentDetailView segment={viewItem} onBack={() => { setPageMode("list"); setViewItem(null); }} />;
   }
 
+  const handleSave = (data: Pick<CustomerSegment, "name" | "description" | "type" | "active">) => {
+    if (!data.name.trim()) return;
+    const now = new Date().toISOString();
+    if (editItem) {
+      setSegments((prev) => prev.map((s) => (s.id === editItem.id ? { ...editItem, ...data, updatedAt: now } : s)));
+    } else {
+      const newSegment: CustomerSegment = {
+        id: `segment-${Date.now()}`,
+        conditions: [],
+        memberCount: 0,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: "admin",
+        tags: [],
+        ...data,
+      };
+      setSegments((prev) => [newSegment, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Segmentni tahrirlash" : "Yangi segment yaratish"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="segment-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <SegmentForm initial={editItem} />
+        <SegmentForm initial={editItem} onSave={handleSave} />
       </div>
     );
   }
@@ -162,14 +184,24 @@ export default function SegmentsPage() {
   );
 }
 
-function SegmentForm({ initial }: { initial: CustomerSegment | null }) {
+interface SegmentFormProps {
+  initial: CustomerSegment | null;
+  onSave: (data: Pick<CustomerSegment, "name" | "description" | "type" | "active">) => void;
+}
+
+function SegmentForm({ initial, onSave }: SegmentFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [type, setType] = useState<SegmentType>(initial?.type ?? "automatic");
   const [active, setActive] = useState(initial?.active ?? true);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name, description, type, active });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="segment-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Segment ma'lumotlari</h3>
@@ -213,12 +245,13 @@ function SegmentForm({ initial }: { initial: CustomerSegment | null }) {
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Holat</h3>
           <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
             </div>
             <span className="text-sm text-slate-300">Faol</span>
           </label>
-          <button className="w-full mt-6 px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+          <button type="submit" className="w-full mt-6 px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
         </div>
       </div>
     </form>
@@ -226,7 +259,10 @@ function SegmentForm({ initial }: { initial: CustomerSegment | null }) {
 }
 
 function SegmentDetailView({ segment, onBack }: { segment: CustomerSegment; onBack: () => void }) {
-  const segmentMembers = customers.filter(() => Math.random() > 0.5).slice(0, segment.memberCount);
+  const segmentMembers = useMemo(
+    () => customers.slice(0, segment.memberCount),
+    [segment.memberCount]
+  );
 
   return (
     <div className="space-y-6">

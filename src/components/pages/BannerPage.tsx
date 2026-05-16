@@ -40,19 +40,40 @@ export default function BannerPage() {
     };
   }, [banners]);
 
+  const handleSave = (data: Omit<MarketingBanner, "id" | "impressions" | "clicks">) => {
+    if (!data.title.trim()) {
+      setFormError("Sarlavha bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (editItem) {
+      setBanners((prev) => prev.map((b) => (b.id === editItem.id ? { ...editItem, ...data } : b)));
+    } else {
+      const newBanner: MarketingBanner = {
+        id: `banner-${Date.now()}`,
+        impressions: 0,
+        clicks: 0,
+        ...data,
+      };
+      setBanners((prev) => [newBanner, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Bannerni tahrirlash" : "Yangi banner"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="banner-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <BannerForm initial={editItem} error={formError} />
+        <BannerForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -155,7 +176,13 @@ export default function BannerPage() {
   );
 }
 
-function BannerForm({ initial, error }: { initial: MarketingBanner | null; error: string | null }) {
+interface BannerFormProps {
+  initial: MarketingBanner | null;
+  error: string | null;
+  onSave: (data: Omit<MarketingBanner, "id" | "impressions" | "clicks">) => void;
+}
+
+function BannerForm({ initial, error, onSave }: BannerFormProps) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [placement, setPlacement] = useState<BannerPlacement>(initial?.placement ?? "home_hero");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
@@ -164,8 +191,13 @@ function BannerForm({ initial, error }: { initial: MarketingBanner | null; error
   const [endAt, setEndAt] = useState(initial?.endAt ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ title, placement, imageUrl, targetUrl, startAt, endAt, active });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="banner-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Banner ma'lumotlari</h3>
@@ -209,6 +241,7 @@ function BannerForm({ initial, error }: { initial: MarketingBanner | null; error
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Holat</h3>
           <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
             </div>

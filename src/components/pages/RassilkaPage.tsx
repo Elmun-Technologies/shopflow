@@ -44,19 +44,42 @@ export default function RassilkaPage() {
     };
   }, [emails]);
 
+  const handleSave = (data: Omit<EmailCampaign, "id" | "sent" | "opened" | "clicks" | "createdAt">) => {
+    if (!data.name.trim()) {
+      setFormError("Kampaniya nomi bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (editItem) {
+      setEmails((prev) => prev.map((e) => (e.id === editItem.id ? { ...editItem, ...data } : e)));
+    } else {
+      const newEmail: EmailCampaign = {
+        id: `email-${Date.now()}`,
+        sent: 0,
+        opened: 0,
+        clicks: 0,
+        createdAt: new Date().toISOString(),
+        ...data,
+      };
+      setEmails((prev) => [newEmail, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Email tahrirlash" : "Yangi email kampaniya"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="email-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <EmailForm initial={editItem} error={formError} />
+        <EmailForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -159,7 +182,13 @@ export default function RassilkaPage() {
   );
 }
 
-function EmailForm({ initial, error }: any) {
+interface EmailFormProps {
+  initial: EmailCampaign | null;
+  error: string | null;
+  onSave: (data: Omit<EmailCampaign, "id" | "sent" | "opened" | "clicks" | "createdAt">) => void;
+}
+
+function EmailForm({ initial, error, onSave }: EmailFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [subject, setSubject] = useState(initial?.subject ?? "");
   const [segment, setSegment] = useState(initial?.segment ?? "");
@@ -167,8 +196,13 @@ function EmailForm({ initial, error }: any) {
   const [status, setStatus] = useState<EmailCampaignStatus>(initial?.status ?? "draft");
   const [scheduledAt, setScheduledAt] = useState(initial?.scheduledAt ?? "");
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name, subject, segment, body, status, scheduledAt });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="email-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Kampaniya sozlamalari</h3>

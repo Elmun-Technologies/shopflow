@@ -22,7 +22,6 @@ import {
   Target,
   BarChart3,
   Layers,
-  Funnel,
   Percent,
   DollarSign,
   Users,
@@ -37,6 +36,7 @@ import {
 import { leads, sourceStats, funnelData, conversionByDay, sourceLabels, statusLabels, statusConfig, priorityConfig } from "../data/leadsData";
 import type { Lead, LeadStatus, LeadSource } from "../data/leadsData";
 import LeadDetailModal from "./LeadDetailModal";
+import type { ChartTooltipProps } from "../utils/chart";
 import {
   BarChart,
   Bar,
@@ -170,7 +170,7 @@ export default function LeadsPage() {
 
   const kanbanStatuses: LeadStatus[] = ["new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
@@ -249,7 +249,7 @@ export default function LeadsPage() {
               {/* Funnel */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                  <Funnel className="w-4 h-4 text-emerald-400" />
+                  <Filter className="w-4 h-4 text-emerald-400" />
                   Sotuv funnely
                 </h3>
                 <div className="space-y-2">
@@ -295,14 +295,17 @@ export default function LeadsPage() {
                         dataKey="count"
                         stroke="none"
                       >
-                        {sourceStats.slice(0, 6).map((_, index) => (
-                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                        {sourceStats.slice(0, 6).map((s, index) => (
+                          <Cell key={s.source} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip
-                        content={({ active, payload }: any) => {
+                        content={(props) => {
+                          const { active, payload } = props as ChartTooltipProps;
                           if (active && payload && payload.length) {
-                            const s = sourceStats[payload[0].payload.index ?? 0];
+                            const idx = (payload[0].payload as { index?: number } | undefined)?.index ?? 0;
+                            const s = sourceStats[idx];
+                            if (!s) return null;
                             return (
                               <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
                                 <p className="text-sm font-medium text-white">{sourceLabels[s.source as LeadSource]}</p>
