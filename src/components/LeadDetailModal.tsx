@@ -44,11 +44,11 @@ const interactionIcons: Record<string, React.ElementType> = {
 };
 
 export default function LeadDetailModal({ lead, onClose, onStatusChange }: Props) {
-  if (!lead) return null;
-
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [newNote, setNewNote] = useState("");
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+
+  if (!lead) return null;
 
   const status = statusConfig[lead.status];
   const priority = priorityConfig[lead.priority];

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Mail } from "lucide-react";
 import type { EmailCampaign, EmailCampaignStatus } from "../../data/marketingData";
@@ -189,6 +189,7 @@ interface EmailFormProps {
 }
 
 function EmailForm({ initial, error, onSave }: EmailFormProps) {
+  const id = useId();
   const [name, setName] = useState(initial?.name ?? "");
   const [subject, setSubject] = useState(initial?.subject ?? "");
   const [segment, setSegment] = useState(initial?.segment ?? "");
@@ -207,21 +208,22 @@ function EmailForm({ initial, error, onSave }: EmailFormProps) {
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Kampaniya sozlamalari</h3>
           <div>
-            <label className={labelClass}>Kampaniya nomi</label>
-            <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
+            <label htmlFor={`${id}-name`} className={labelClass}>Kampaniya nomi</label>
+            <input id={`${id}-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label className={labelClass}>Email mavzusu</label>
-            <input className={inputClass} value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <label htmlFor={`${id}-subject`} className={labelClass}>Email mavzusu</label>
+            <input id={`${id}-subject`} className={inputClass} value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
           <div>
-            <label className={labelClass}>Segment</label>
-            <input className={inputClass} value={segment} onChange={(e) => setSegment(e.target.value)} />
+            <label htmlFor={`${id}-segment`} className={labelClass}>Segment</label>
+            <input id={`${id}-segment`} className={inputClass} value={segment} onChange={(e) => setSegment(e.target.value)} />
           </div>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Email matni</h3>
-          <textarea className={inputClass + " min-h-[150px]"} value={body} onChange={(e) => setBody(e.target.value)} />
+          <label htmlFor={`${id}-body`} className="sr-only">Email matni</label>
+          <textarea id={`${id}-body`} className={inputClass + " min-h-[150px]"} value={body} onChange={(e) => setBody(e.target.value)} />
           <p className="text-xs text-slate-500">{body.length} belgi</p>
         </div>
       </div>
@@ -229,16 +231,16 @@ function EmailForm({ initial, error, onSave }: EmailFormProps) {
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Sozlamalar</h3>
           <div>
-            <label className={labelClass}>Holat</label>
-            <select className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as EmailCampaignStatus)}>
+            <label htmlFor={`${id}-status`} className={labelClass}>Holat</label>
+            <select id={`${id}-status`} className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as EmailCampaignStatus)}>
               {Object.entries(emailCampaignStatusLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
-            <label className={labelClass}>Reja vaqti</label>
-            <input className={inputClass} type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+            <label htmlFor={`${id}-schedule`} className={labelClass}>Reja vaqti</label>
+            <input id={`${id}-schedule`} className={inputClass} type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </div>
-          {error && <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
         </div>
       </div>
     </form>

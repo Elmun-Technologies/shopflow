@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Image } from "lucide-react";
 import type { MarketingBanner, BannerPlacement } from "../../data/marketingData";
@@ -183,6 +183,7 @@ interface BannerFormProps {
 }
 
 function BannerForm({ initial, error, onSave }: BannerFormProps) {
+  const id = useId();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [placement, setPlacement] = useState<BannerPlacement>(initial?.placement ?? "home_hero");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
@@ -202,12 +203,12 @@ function BannerForm({ initial, error, onSave }: BannerFormProps) {
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Banner ma'lumotlari</h3>
           <div>
-            <label className={labelClass}>Sarlavha</label>
-            <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} />
+            <label htmlFor={`${id}-title`} className={labelClass}>Sarlavha</label>
+            <input id={`${id}-title`} className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
-            <label className={labelClass}>Joylashuvi</label>
-            <select className={inputClass} value={placement} onChange={(e) => setPlacement(e.target.value as BannerPlacement)}>
+            <label htmlFor={`${id}-placement`} className={labelClass}>Joylashuvi</label>
+            <select id={`${id}-placement`} className={inputClass} value={placement} onChange={(e) => setPlacement(e.target.value as BannerPlacement)}>
               <option value="home_hero">Bosh sahifa (hero)</option>
               <option value="category_top">Kategoriya ustida</option>
               <option value="cart_sidebar">Savat yon panel</option>
@@ -215,24 +216,24 @@ function BannerForm({ initial, error, onSave }: BannerFormProps) {
             </select>
           </div>
           <div>
-            <label className={labelClass}>Rasm URL</label>
-            <input className={inputClass} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            <label htmlFor={`${id}-image`} className={labelClass}>Rasm URL</label>
+            <input id={`${id}-image`} className={inputClass} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
           </div>
           <div>
-            <label className={labelClass}>Maqsad URL</label>
-            <input className={inputClass} value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} placeholder="https://..." />
+            <label htmlFor={`${id}-target`} className={labelClass}>Maqsad URL</label>
+            <input id={`${id}-target`} className={inputClass} value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} placeholder="https://..." />
           </div>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Muddati</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Boshlang'ich sana</label>
-              <input type="date" className={inputClass} value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+              <label htmlFor={`${id}-start`} className={labelClass}>Boshlang'ich sana</label>
+              <input id={`${id}-start`} type="date" className={inputClass} value={startAt} onChange={(e) => setStartAt(e.target.value)} />
             </div>
             <div>
-              <label className={labelClass}>Tugallanish sanasi</label>
-              <input type="date" className={inputClass} value={endAt} onChange={(e) => setEndAt(e.target.value)} />
+              <label htmlFor={`${id}-end`} className={labelClass}>Tugallanish sanasi</label>
+              <input id={`${id}-end`} type="date" className={inputClass} value={endAt} onChange={(e) => setEndAt(e.target.value)} />
             </div>
           </div>
         </div>

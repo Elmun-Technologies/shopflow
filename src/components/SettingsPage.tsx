@@ -34,15 +34,15 @@ function InputField({ label, value, onChange, type = "text" }: {
   label: string; value: string; onChange: (v: string) => void; type?: string;
 }) {
   return (
-    <div>
-      <label className="text-xs text-slate-500 mb-1.5 block">{label}</label>
+    <label className="block">
+      <span className="text-xs text-slate-500 mb-1.5 block">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
       />
-    </div>
+    </label>
   );
 }
 

@@ -8,14 +8,38 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// https://vite.dev/config/
+// VITE_SINGLE_FILE=true → bitta HTML faylga inline (GitHub Pages, simple deploy)
+// Default: code splitting bilan standart Vite build (Docker/nginx, Contabo VPS)
+const useSingleFile = process.env.VITE_SINGLE_FILE === "true";
+
 export default defineConfig({
-  // GitHub Pages uchun "/shopflow/", Dokploy/Docker build uchun VITE_BASE_PATH=/
-  base: process.env.VITE_BASE_PATH ?? "/shopflow/",
-  plugins: [react(), tailwindcss(), viteSingleFile()],
+  base: process.env.VITE_BASE_PATH ?? "/",
+  plugins: [react(), tailwindcss(), ...(useSingleFile ? [viteSingleFile()] : [])],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
     },
+  },
+  build: {
+    target: "es2020",
+    cssCodeSplit: true,
+    sourcemap: false,
+    minify: "esbuild",
+    rollupOptions: useSingleFile
+      ? undefined
+      : {
+          output: {
+            manualChunks: {
+              "react-vendor": ["react", "react-dom"],
+              "recharts-vendor": ["recharts"],
+              "framer-vendor": ["framer-motion"],
+              "icons-vendor": ["lucide-react"],
+              "utils-vendor": ["clsx", "tailwind-merge", "date-fns"],
+            },
+            chunkFileNames: "assets/[name]-[hash].js",
+            entryFileNames: "assets/[name]-[hash].js",
+            assetFileNames: "assets/[name]-[hash].[ext]",
+          },
+        },
   },
 });
