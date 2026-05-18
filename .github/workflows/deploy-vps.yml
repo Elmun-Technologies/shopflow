@@ -1,0 +1,61 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - claude/conduct-full-audit-6lZcQ
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.19"
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  deploy:
+    name: Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/conduct-full-audit-6lZcQ'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/shopflow
+            git fetch --all --prune
+            git reset --hard origin/${GITHUB_REF_NAME:-main}
+            docker compose pull || true
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
+            sleep 5
+            curl -fsS http://localhost/health
+          envs: GITHUB_REF_NAME
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Deployed ${{ github.ref_name }}@${{ github.sha }} to VPS"
