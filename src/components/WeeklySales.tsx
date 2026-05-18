@@ -9,8 +9,9 @@ import {
 } from "recharts";
 import { motion } from "framer-motion";
 import { weeklySalesData } from "../data/dashboardData";
+import type { ChartTooltipProps } from "../utils/chart";
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">

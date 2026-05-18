@@ -41,6 +41,7 @@ import {
   platformRevenueDaily,
 } from "../data/platformsData";
 import type { PlatformProduct, PlatformSetting } from "../data/platformsData";
+import type { ChartTooltipProps } from "../utils/chart";
 import {
   BarChart,
   Bar,
@@ -60,7 +61,7 @@ type QrScreen = "scan" | "catalog" | "product" | "order";
 
 const categories = ["Barcha", "Telefonlar", "Noutbuklar", "Kiyim", "Oziq-ovqat", "Maishiy", "Sport", "Kitoblar", "O'yinchoqlar", "Aksessuarlar"];
 
-const orderStatusConfig: Record<string, { color: string; bg: string; label: string; icon: any }> = {
+const orderStatusConfig: Record<string, { color: string; bg: string; label: string; icon: React.ElementType }> = {
   new: { color: "text-blue-400", bg: "bg-blue-500/10", label: "Yangi", icon: Clock },
   processing: { color: "text-amber-400", bg: "bg-amber-500/10", label: "Jarayonda", icon: Zap },
   shipped: { color: "text-violet-400", bg: "bg-violet-500/10", label: "Yuborildi", icon: Truck },
@@ -104,13 +105,13 @@ export default function PlatformsPage() {
   const tgTotal = tgCart.reduce((s, i) => s + i.product.price * i.qty, 0);
   const webTotal = webCart.reduce((s, i) => s + i.product.price * i.qty, 0);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
           <p className="text-xs text-white font-medium">{label}</p>
-          {payload.map((p: any, i: number) => (
-            <p key={i} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+          {payload.map((p) => (
+            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
           ))}
         </div>
       );

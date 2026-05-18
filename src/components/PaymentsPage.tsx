@@ -16,8 +16,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
+import type { ChartTooltipProps } from "../utils/chart";
 
-const statusConfig: Record<string, { color: string; bg: string; label: string; icon: any }> = {
+type PaymentMethodStatus = "active" | "inactive" | "pending" | "error";
+
+const statusConfig: Record<PaymentMethodStatus, { color: string; bg: string; label: string; icon: React.ElementType }> = {
   active: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Faol", icon: CheckCircle2 },
   inactive: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20", label: "Nofaol", icon: XCircle },
   pending: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Kutilmoqda", icon: Clock },
@@ -67,8 +70,8 @@ export default function PaymentsPage() {
   const toggleMethod = (id: string) => {
     setMethods((prev) => prev.map((m) => {
       if (m.id !== id) return m;
-      const newStatus = m.status === "active" ? "inactive" : "active";
-      return { ...m, status: newStatus as any, lastUpdated: new Date().toISOString() };
+      const newStatus: PaymentMethodStatus = m.status === "active" ? "inactive" : "active";
+      return { ...m, status: newStatus, lastUpdated: new Date().toISOString() };
     }));
   };
 
@@ -87,13 +90,14 @@ export default function PaymentsPage() {
 
   const pieData = methods.map((m) => ({ name: m.nameUz, value: m.stats.totalTransactions, color: methodColors[m.nameUz] || "#64748b" }));
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
+      const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-white font-medium">{payload[0].payload.date}</p>
-          {payload.map((p: any, i: number) => (
-            <p key={i} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value} ta</p>
+          <p className="text-xs text-white font-medium">{date}</p>
+          {payload.map((p) => (
+            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value} ta</p>
           ))}
         </div>
       );
@@ -161,9 +165,10 @@ export default function PaymentsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value" stroke="none">
-                  {pieData.map((entry, index) => (<Cell key={index} fill={entry.color} />))}
+                  {pieData.map((entry) => (<Cell key={entry.name} fill={entry.color} />))}
                 </Pie>
-                <Tooltip content={({ active, payload }: any) => {
+                <Tooltip content={(props) => {
+                  const { active, payload } = props as ChartTooltipProps;
                   if (active && payload && payload.length) {
                     return (
                       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">

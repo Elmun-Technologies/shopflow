@@ -10,20 +10,21 @@ import {
 } from "recharts";
 import { motion } from "framer-motion";
 import { trafficData } from "../data/dashboardData";
+import type { ChartTooltipProps } from "../utils/chart";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
+    const item = payload[0];
+    const percentage = (item.payload as { percentage?: number } | undefined)?.percentage ?? 0;
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
         <p className="text-sm font-medium text-white">{label}</p>
         <p className="text-sm font-semibold text-emerald-400">
-          {payload[0].value.toLocaleString()} visitors
+          {item.value.toLocaleString()} visitors
         </p>
-        <p className="text-xs text-slate-500">
-          {payload[0].payload.percentage}% of total
-        </p>
+        <p className="text-xs text-slate-500">{percentage}% of total</p>
       </div>
     );
   }
@@ -74,8 +75,8 @@ export default function TrafficSources() {
             />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="visitors" radius={[0, 4, 4, 0]} maxBarSize={24}>
-              {trafficData.map((_, index) => (
-                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+              {trafficData.map((source, index) => (
+                <Cell key={source.source} fill={COLORS[index % COLORS.length]} />
               ))}
             </Bar>
           </BarChart>

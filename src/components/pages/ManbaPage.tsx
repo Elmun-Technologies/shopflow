@@ -40,19 +40,35 @@ export default function ManbaPage() {
     };
   }, [sources]);
 
+  const handleSave = (data: Omit<MarketingSource, "id">) => {
+    if (!data.name.trim()) {
+      setFormError("Manba nomi bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (editItem) {
+      setSources((prev) => prev.map((s) => (s.id === editItem.id ? { ...editItem, ...data } : s)));
+    } else {
+      const newSource: MarketingSource = { id: `source-${Date.now()}`, ...data };
+      setSources((prev) => [newSource, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Manba tahrirlash" : "Yangi manba"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="source-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <SourceForm initial={editItem} error={formError} />
+        <SourceForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -157,7 +173,13 @@ export default function ManbaPage() {
   );
 }
 
-function SourceForm({ initial, error }: { initial: MarketingSource | null; error: string | null }) {
+interface SourceFormProps {
+  initial: MarketingSource | null;
+  error: string | null;
+  onSave: (data: Omit<MarketingSource, "id">) => void;
+}
+
+function SourceForm({ initial, error, onSave }: SourceFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [channel, setChannel] = useState(initial?.channel ?? "");
   const [utmSource, setUtmSource] = useState(initial?.utmSource ?? "");
@@ -166,8 +188,13 @@ function SourceForm({ initial, error }: { initial: MarketingSource | null; error
   const [conversions, setConversions] = useState(initial?.conversions ?? 0);
   const [active, setActive] = useState(initial?.active ?? true);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name, channel, utmSource, utmMedium, spendMonthly, conversions, active });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="source-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Manba ma'lumotlari</h3>
@@ -208,6 +235,7 @@ function SourceForm({ initial, error }: { initial: MarketingSource | null; error
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Holat</h3>
           <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
             </div>

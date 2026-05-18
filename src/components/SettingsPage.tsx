@@ -30,6 +30,22 @@ const deviceIcon: Record<string, React.ElementType> = {
   Chrome: Monitor, Safari: Smartphone, Firefox: Globe, Edge: Monitor,
 };
 
+function InputField({ label, value, onChange, type = "text" }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-slate-500 mb-1.5 block">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+      />
+    </label>
+  );
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [profile, setProfile] = useState<ProfileSettings>({ ...initialProfile });
@@ -62,20 +78,6 @@ export default function SettingsPage() {
   };
 
   const maskKey = (key: string) => key.slice(0, 10) + "•".repeat(16) + key.slice(-4);
-
-  const InputField = ({ label, value, onChange, type = "text" }: {
-    label: string; value: string; onChange: (v: string) => void; type?: string;
-  }) => (
-    <div>
-      <label className="text-xs text-slate-500 mb-1.5 block">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
-      />
-    </div>
-  );
 
   const renderProfile = () => (
     <div className="space-y-6">

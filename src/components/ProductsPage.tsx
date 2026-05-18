@@ -99,8 +99,8 @@ export default function ProductsPage() {
     }
 
     result.sort((a, b) => {
-      let aVal: string | number = a[sortKey];
-      let bVal: string | number = b[sortKey];
+      const aVal: string | number = a[sortKey];
+      const bVal: string | number = b[sortKey];
       if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
       return 0;

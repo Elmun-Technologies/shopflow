@@ -15,10 +15,12 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
+import type { ChartTooltipProps } from "../utils/chart";
 
 type Tab = "methods" | "pharmacies" | "regions" | "orders";
+type DeliveryStatus = "active" | "inactive" | "pending" | "closed";
 
-const statusConfig: Record<string, { color: string; bg: string; label: string; icon: any }> = {
+const statusConfig: Record<DeliveryStatus, { color: string; bg: string; label: string; icon: React.ElementType }> = {
   active: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Faol", icon: CheckCircle2 },
   inactive: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20", label: "Nofaol", icon: XCircle },
   pending: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Kutilmoqda", icon: Clock },
@@ -59,7 +61,7 @@ export default function DeliveryPage() {
   const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleMethod = (id: string) => {
-    setMethodList((prev) => prev.map((m) => m.id === id ? { ...m, status: m.status === "active" ? "inactive" : "active" as any } : m));
+    setMethodList((prev) => prev.map((m) => m.id === id ? { ...m, status: (m.status === "active" ? "inactive" : "active") as DeliveryMethod["status"] } : m));
   };
 
   const addPharmacy = (pharmacy: Omit<Pharmacy, "id" | "createdAt">) => {
@@ -98,13 +100,14 @@ export default function DeliveryPage() {
     .filter((m) => m.stats.totalOrders > 0)
     .map((m) => ({ name: m.nameUz, value: m.stats.totalOrders, color: methodDeliveryColors[m.nameUz] || "#64748b" }));
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
+      const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-white font-medium">{payload[0].payload.date}</p>
-          {payload.map((p: any, i: number) => (
-            <p key={i} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+          <p className="text-xs text-white font-medium">{date}</p>
+          {payload.map((p) => (
+            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
           ))}
         </div>
       );
@@ -112,12 +115,31 @@ export default function DeliveryPage() {
     return null;
   };
 
-  const PharmacyForm = ({ initial, onSubmit, onClose, title }: { initial?: Pharmacy; onSubmit: (data: any) => void; onClose: () => void; title: string }) => {
-    const [form, setForm] = useState(initial || {
-      name: "", address: "", city: "Toshkent", region: "Toshkent shahri",
-      phone: "", workingHours: "09:00 - 21:00", lat: 41.2995, lng: 69.2401,
-      status: "active", productsCount: 0, manager: "", hasPickup: true, hasDelivery: false, deliveryRadius: 0,
-    });
+  const PharmacyForm = ({ initial, onSubmit, onClose, title }: { initial?: Pharmacy; onSubmit: (data: Omit<Pharmacy, "id" | "createdAt">) => void; onClose: () => void; title: string }) => {
+    const [form, setForm] = useState<Omit<Pharmacy, "id" | "createdAt">>(
+      initial
+        ? {
+            name: initial.name,
+            address: initial.address,
+            city: initial.city,
+            region: initial.region,
+            phone: initial.phone,
+            workingHours: initial.workingHours,
+            lat: initial.lat,
+            lng: initial.lng,
+            status: initial.status,
+            productsCount: initial.productsCount,
+            manager: initial.manager,
+            hasPickup: initial.hasPickup,
+            hasDelivery: initial.hasDelivery,
+            deliveryRadius: initial.deliveryRadius,
+          }
+        : {
+            name: "", address: "", city: "Toshkent", region: "Toshkent shahri",
+            phone: "", workingHours: "09:00 - 21:00", lat: 41.2995, lng: 69.2401,
+            status: "active", productsCount: 0, manager: "", hasPickup: true, hasDelivery: false, deliveryRadius: 0,
+          }
+    );
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
         <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -254,9 +276,10 @@ export default function DeliveryPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value" stroke="none">
-                  {pieData.map((entry, index) => (<Cell key={index} fill={entry.color} />))}
+                  {pieData.map((entry) => (<Cell key={entry.name} fill={entry.color} />))}
                 </Pie>
-                <Tooltip content={({ active, payload }: any) => {
+                <Tooltip content={(props) => {
+                  const { active, payload } = props as ChartTooltipProps;
                   if (active && payload && payload.length) {
                     return (
                       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">

@@ -1,0 +1,54 @@
+# ShopFlow production deploy — Caddy avtomatik HTTPS + nginx static serve
+#
+# Foydalanish:
+#   1. .env faylida DOMAIN va EMAIL'ni o'rnating (.env.example'dan nusxa)
+#   2. Domain A-record VPS IP manziliga ko'rsatishi kerak
+#   3. `docker compose up -d` — Caddy avtomatik Let's Encrypt sertifikatini oladi
+
+services:
+  shopflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shopflow:latest
+    container_name: shopflow-app
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - shopflow-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: shopflow-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      EMAIL: ${EMAIL:-admin@example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      shopflow:
+        condition: service_healthy
+    networks:
+      - shopflow-net
+
+networks:
+  shopflow-net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

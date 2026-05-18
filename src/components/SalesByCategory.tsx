@@ -1,19 +1,20 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { motion } from "framer-motion";
 import { categoryData } from "../data/dashboardData";
+import type { ChartTooltipProps } from "../utils/chart";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
+    const item = payload[0];
+    const sales = (item.payload as { sales?: number } | undefined)?.sales ?? 0;
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-sm font-medium text-white">{payload[0].name}</p>
-        <p className="text-xs text-slate-400">
-          {payload[0].value}% of sales
-        </p>
+        <p className="text-sm font-medium text-white">{item.name}</p>
+        <p className="text-xs text-slate-400">{item.value}% of sales</p>
         <p className="text-sm font-semibold text-emerald-400 mt-0.5">
-          ${payload[0].payload.sales.toLocaleString()}
+          ${sales.toLocaleString()}
         </p>
       </div>
     );
@@ -49,8 +50,8 @@ export default function SalesByCategory() {
               dataKey="value"
               stroke="none"
             >
-              {categoryData.map((_, index) => (
-                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+              {categoryData.map((cat, index) => (
+                <Cell key={cat.name} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />

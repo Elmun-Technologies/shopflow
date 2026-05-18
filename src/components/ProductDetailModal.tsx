@@ -34,11 +34,11 @@ const statusConfig: Record<string, { color: string; bg: string; label: string }>
 };
 
 export default function ProductDetailModal({ product, onClose, onUpdate }: Props) {
-  if (!product) return null;
-
   const [activeTab, setActiveTab] = useState<Tab>("info");
-  const [editedProduct, setEditedProduct] = useState<Product>({ ...product });
+  const [editedProduct, setEditedProduct] = useState<Product>(product ?? ({} as Product));
   const [stockAdjustment, setStockAdjustment] = useState(0);
+
+  if (!product) return null;
 
   const productSales = saleRecords.filter((s) => s.productId === product.id);
   const totalSold = productSales.reduce((sum, s) => sum + s.quantity, 0);

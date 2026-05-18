@@ -15,6 +15,7 @@ import {
   dailySales, timeRangeLabels,
 } from "../data/analyticsData";
 import type { AnalyticsTimeRange } from "../data/analyticsData";
+import type { ChartTooltipProps } from "../utils/chart";
 
 const iconMap: Record<string, React.ElementType> = {
   DollarSign, ShoppingCart, Users, Target, RotateCcw, Receipt,
@@ -36,13 +37,13 @@ const cardVariants = {
   }),
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-2xl">
       <p className="text-xs text-slate-400 mb-1.5">{label}</p>
-      {payload.map((p: any, i: number) => (
-        <div key={i} className="flex items-center gap-2">
+      {payload.map((p, i) => (
+        <div key={p.dataKey ?? p.name ?? i} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-xs text-slate-300">{p.name}:</span>
           <span className="text-xs text-white font-semibold">{formatNumber(p.value)}</span>
@@ -339,8 +340,8 @@ export default function AnalyticsPage() {
                 paddingAngle={3}
                 strokeWidth={0}
               >
-                {trafficSources.map((s, i) => (
-                  <Cell key={i} fill={s.color} />
+                {trafficSources.map((s) => (
+                  <Cell key={s.name} fill={s.color} />
                 ))}
               </Pie>
               <Tooltip
@@ -406,8 +407,8 @@ export default function AnalyticsPage() {
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="revenue" name="Daromad" radius={[0, 6, 6, 0]} maxBarSize={24}>
-                {categorySales.map((c, i) => (
-                  <Cell key={i} fill={c.color} />
+                {categorySales.map((c) => (
+                  <Cell key={c.category} fill={c.color} />
                 ))}
               </Bar>
             </BarChart>

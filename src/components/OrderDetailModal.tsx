@@ -199,8 +199,8 @@ export default function OrderDetailModal({ order, onClose }: Props) {
               <div className="relative">
                 <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-700" />
                 <div className="space-y-4">
-                  {timeline.map((step, i) => (
-                    <div key={i} className="flex items-start gap-3 relative">
+                  {timeline.map((step) => (
+                    <div key={step.title} className="flex items-start gap-3 relative">
                       <div
                         className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 mt-0.5 z-10 ${
                           step.completed

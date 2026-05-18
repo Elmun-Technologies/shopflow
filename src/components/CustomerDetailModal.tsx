@@ -51,22 +51,18 @@ const activityIcons: Record<string, React.ElementType> = {
   unban: ShieldCheck,
 };
 
-function Eye(props: any) {
+function Eye(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
   );
 }
 
 export default function CustomerDetailModal({ customer, onClose, onBan, onUnban }: Props) {
-  if (!customer) return null;
-
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showBanConfirm, setShowBanConfirm] = useState(false);
 
-  const status = statusConfig[customer.status];
-
-  // Analytics
   const categoryBreakdown = useMemo(() => {
+    if (!customer) return [];
     const cats: Record<string, { count: number; spent: number }> = {};
     customer.orders.forEach((o) => {
       if (!cats[o.category]) cats[o.category] = { count: 0, spent: 0 };
@@ -74,20 +70,24 @@ export default function CustomerDetailModal({ customer, onClose, onBan, onUnban 
       cats[o.category].spent += o.total;
     });
     return Object.entries(cats).sort((a, b) => b[1].spent - a[1].spent);
-  }, [customer.orders]);
-
-  const favoriteProduct = customer.orders.length > 0
-    ? customer.orders.reduce((prev, curr) => prev.quantity > curr.quantity ? prev : curr)
-    : null;
+  }, [customer]);
 
   const monthlySpending = useMemo(() => {
+    if (!customer) return [];
     const months: Record<string, number> = {};
     customer.orders.forEach((o) => {
       const month = o.date.slice(0, 7);
       months[month] = (months[month] || 0) + o.total;
     });
     return Object.entries(months).sort().slice(-6);
-  }, [customer.orders]);
+  }, [customer]);
+
+  if (!customer) return null;
+
+  const status = statusConfig[customer.status];
+  const favoriteProduct = customer.orders.length > 0
+    ? customer.orders.reduce((prev, curr) => (prev.quantity > curr.quantity ? prev : curr))
+    : null;
 
   const tabs = [
     { key: "overview" as Tab, label: "Umumiy", icon: User },

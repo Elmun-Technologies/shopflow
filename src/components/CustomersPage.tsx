@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { customers, customerStats, platformStats, regionStats, platformLabels, statusLabels, statusConfig } from "../data/customersData";
 import type { Customer, CustomerStatus } from "../data/customersData";
+import type { ChartTooltipProps } from "../utils/chart";
 import CustomerDetailModal from "./CustomerDetailModal";
 import {
   BarChart,
@@ -159,7 +160,7 @@ export default function CustomersPage() {
     setDetailCustomer(null);
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
@@ -241,14 +242,17 @@ export default function CustomersPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={platformStats} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="count" stroke="none">
-                        {platformStats.map((_, index) => (
-                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                        {platformStats.map((stat, index) => (
+                          <Cell key={stat.platform} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip
-                        content={({ active, payload }: any) => {
+                        content={(props) => {
+                          const { active, payload } = props as ChartTooltipProps;
                           if (active && payload && payload.length) {
-                            const p = platformStats[payload[0].payload.index ?? 0];
+                            const idx = (payload[0].payload as { index?: number } | undefined)?.index ?? 0;
+                            const p = platformStats[idx];
+                            if (!p) return null;
                             return (
                               <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
                                 <p className="text-sm font-medium text-white">{platformLabels[p.platform]}</p>

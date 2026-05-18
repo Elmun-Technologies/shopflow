@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, Filter, Workflow } from "lucide-react";
+import { Search, Download, Workflow } from "lucide-react";
 import type { LoyaltyTransaction, TransactionType } from "../../data/marketingData";
 import { initialTransactions, transactionTypeLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
@@ -20,7 +20,7 @@ function TransactionTypeBadge({ type }: { type: TransactionType }) {
 }
 
 export default function TranzaksiyalarPage() {
-  const [transactions, setTransactions] = useState<LoyaltyTransaction[]>(initialTransactions);
+  const [transactions] = useState<LoyaltyTransaction[]>(initialTransactions);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<TransactionType | "all">("all");
 
@@ -39,6 +39,20 @@ export default function TranzaksiyalarPage() {
     const totalTransactions = transactions.length;
     return { earned, spent, totalTransactions };
   }, [transactions]);
+
+  const handleDownload = () => {
+    const header = "Foydalanuvchi,Turi,Balllar,Balans,Tavsifi,Buyurtma ID,Sana\n";
+    const rows = filtered
+      .map((t) => `"${t.customerName}",${t.type},${t.points},${t.balance},"${t.description.replace(/"/g, '""')}",${t.orderId ?? ""},${t.createdAt}`)
+      .join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tranzaksiyalar-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -87,7 +101,7 @@ export default function TranzaksiyalarPage() {
             <option value="manual_add">Qo'lda qo'shilgan</option>
             <option value="manual_remove">Qo'lda ayirilgan</option>
           </select>
-          <button className="px-4 py-2 rounded-lg text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center gap-2 font-medium">
+          <button onClick={handleDownload} className="px-4 py-2 rounded-lg text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center gap-2 font-medium">
             <Download className="w-4 h-4" />
             Yuklab olish
           </button>
@@ -100,8 +114,8 @@ export default function TranzaksiyalarPage() {
             icon={Workflow}
             title="Hali tranzaksiya yo'q"
             description="Sodiqlik dasturi ball operatsiyalari bu yerda ko'rinadi. Qoidalar yarating va xaridorlarga ball bering."
-            buttonText="Sodiqlik dasturiga o'tish"
-            onButtonClick={() => {}}
+            buttonText="Yangilash"
+            onButtonClick={() => setSearch("")}
             iconColor="text-indigo-400"
           />
         </motion.div>

@@ -46,19 +46,40 @@ export default function SovgalarPage() {
     };
   }, [gifts]);
 
+  const handleSave = (data: Omit<GiftPromotion, "id" | "usedCount" | "createdAt">) => {
+    if (!data.name.trim()) {
+      setFormError("Aksiya nomi bo'sh bo'lishi mumkin emas");
+      return;
+    }
+    if (editItem) {
+      setGifts((prev) => prev.map((g) => (g.id === editItem.id ? { ...editItem, ...data } : g)));
+    } else {
+      const newGift: GiftPromotion = {
+        id: `gift-${Date.now()}`,
+        usedCount: 0,
+        createdAt: new Date().toISOString(),
+        ...data,
+      };
+      setGifts((prev) => [newGift, ...prev]);
+    }
+    setPageMode("list");
+    setEditItem(null);
+    setFormError(null);
+  };
+
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800"><ChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
           <h1 className="text-2xl font-bold text-white">{editItem ? "Sovg'a tahrirlash" : "Yangi sovg'a aksiyasi"}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button form="gift-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
           </div>
         </div>
 
-        <GiftForm initial={editItem} error={formError} />
+        <GiftForm initial={editItem} error={formError} onSave={handleSave} />
       </div>
     );
   }
@@ -161,7 +182,13 @@ export default function SovgalarPage() {
   );
 }
 
-function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: string | null }) {
+interface GiftFormProps {
+  initial: GiftPromotion | null;
+  error: string | null;
+  onSave: (data: Omit<GiftPromotion, "id" | "usedCount" | "createdAt">) => void;
+}
+
+function GiftForm({ initial, error, onSave }: GiftFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [conditionType, setConditionType] = useState<GiftConditionType>(initial?.conditionType ?? "quantity");
@@ -169,13 +196,30 @@ function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: st
   const [triggerProducts, setTriggerProducts] = useState(initial?.triggerProducts.join(", ") ?? "");
   const [giftDescription, setGiftDescription] = useState(initial?.giftDescription ?? "");
   const [priority, setPriority] = useState(initial?.priority ?? 1);
-  const [usageLimit, setUsageLimit] = useState(initial?.usageLimit ?? 0);
+  const [usageLimit, setUsageLimit] = useState<number | null>(initial?.usageLimit ?? null);
   const [startAt, setStartAt] = useState(initial?.startAt ?? "");
   const [endAt, setEndAt] = useState(initial?.endAt ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      name,
+      description,
+      conditionType,
+      conditionValue,
+      triggerProducts: triggerProducts.split(",").map((s) => s.trim()).filter(Boolean),
+      giftDescription,
+      priority,
+      usageLimit,
+      startAt,
+      endAt,
+      active,
+    });
+  };
+
   return (
-    <form className="grid grid-cols-3 gap-6">
+    <form id="gift-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
           <h3 className="font-semibold text-white">Aksiya ma'lumotlari</h3>
@@ -232,9 +276,10 @@ function GiftForm({ initial, error }: { initial: GiftPromotion | null; error: st
           </div>
           <div>
             <label className={labelClass}>Foydalanish cheklovi</label>
-            <input type="number" className={inputClass} value={usageLimit} onChange={(e) => setUsageLimit(e.target.value === "" ? null : Number(e.target.value))} placeholder="Bo'sh = cheklovsiz" />
+            <input type="number" className={inputClass} value={usageLimit ?? ""} onChange={(e) => setUsageLimit(e.target.value === "" ? null : Number(e.target.value))} placeholder="Bo'sh = cheklovsiz" />
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
             </div>
