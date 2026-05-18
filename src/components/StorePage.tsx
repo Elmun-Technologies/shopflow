@@ -750,16 +750,19 @@ export default function StorePage({ slug }: { slug: string }) {
             case "popular_categories": {
               const count = (s.count as number) || 6;
               const cats = categories.slice(0, count);
-              if (cats.length === 0) return null;
+              // Kategoriya yo'q bo'lsa skeleton ko'rsat
+              const catItems = cats.length > 0
+                ? cats
+                : Array.from({ length: count }, (_, i) => ({ id: `ph-${i}`, name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }));
               return (
                 <div key={block.id}>
                   <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
                   <div className="grid grid-cols-3 gap-2">
-                    {cats.map((cat) => (
+                    {catItems.map((cat) => (
                       <button
                         key={cat.id}
-                        onClick={() => { setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id); }}
-                        className={`rounded-2xl p-3 text-center transition-colors ${selectedCategoryId === cat.id ? "ring-2" : "bg-slate-900"}`}
+                        onClick={() => cats.length > 0 && setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
+                        className={`rounded-2xl p-3 text-center transition-colors ${selectedCategoryId === cat.id ? "ring-2" : "bg-slate-900"} ${cats.length === 0 ? "opacity-40 cursor-default" : ""}`}
                         style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor + "20" } : {}}
                       >
                         <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-1.5" style={{ backgroundColor: primaryColor + "25" }}>
@@ -785,17 +788,34 @@ export default function StorePage({ slug }: { slug: string }) {
                 ? products.filter((p) => p.category?.name === catName)
                 : products;
               blockProds = blockProds.slice(0, count);
-              if (blockProds.length === 0) return null;
+              // Mahsulot yo'q bo'lsa skeleton placeholder ko'rsat
+              const showSkeleton = blockProds.length === 0;
+              const skeletonCount = Math.min(count, 4);
               return (
                 <div key={block.id}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-white">{block.title}</h3>
-                    <button className="text-xs flex items-center gap-0.5" style={{ color: primaryColor }}>
-                      Barchasi <ChevronRight className="w-3 h-3" />
-                    </button>
+                    {!showSkeleton && (
+                      <button className="text-xs flex items-center gap-0.5" style={{ color: primaryColor }}>
+                        Barchasi <ChevronRight className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {blockProds.map(renderProductCard)}
+                    {showSkeleton
+                      ? Array.from({ length: skeletonCount }, (_, i) => (
+                          <div key={i} className="bg-slate-900 rounded-2xl overflow-hidden opacity-50">
+                            <div className="aspect-square bg-slate-800 flex items-center justify-center">
+                              <Package className="w-10 h-10 text-slate-700" />
+                            </div>
+                            <div className="p-2.5 space-y-1.5">
+                              <div className="h-2.5 bg-slate-800 rounded-full w-3/4" />
+                              <div className="h-2.5 bg-slate-800 rounded-full w-1/2" />
+                            </div>
+                          </div>
+                        ))
+                      : blockProds.map(renderProductCard)
+                    }
                   </div>
                 </div>
               );
