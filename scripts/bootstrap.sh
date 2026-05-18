@@ -63,20 +63,46 @@ fi
 
 echo ""
 echo "===== 6. .env yaratish ====="
-cat > .env <<EOF
+# Mavjud .env saqlanadi (parollar yo'qolmasin uchun)
+if [ -f .env ]; then
+  echo "   .env allaqachon mavjud, qayta yaratilmaydi."
+else
+  POSTGRES_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
+  JWT_SECRET=$(openssl rand -hex 32)
+  SEED_PASSWORD=$(openssl rand -base64 12 | tr -d '/+=' | head -c 16)
+  cat > .env <<EOF
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
+
+POSTGRES_DB=shopflow
+POSTGRES_USER=shopflow
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
+JWT_SECRET=$JWT_SECRET
+CORS_ORIGIN=https://$DOMAIN
+
+SEED_TENANT_SLUG=demo
+SEED_TENANT_NAME=ShopFlow Demo
+SEED_EMAIL=admin@$DOMAIN
+SEED_PASSWORD=$SEED_PASSWORD
+SEED_USER_NAME=Admin
 EOF
-echo "   .env yaratildi:"
-cat .env
+  chmod 600 .env
+  echo "   .env yaratildi (parollar avtomatik generatsiya qilindi)"
+  echo "   Birinchi admin: admin@$DOMAIN  /  parol: $SEED_PASSWORD"
+fi
 
 echo ""
 echo "===== 7. Docker Compose ishga tushirish ====="
 docker compose up -d --build
 
 echo ""
-echo "===== 8. Holatni tekshirish ====="
+echo "===== 8. Birinchi tenant'ni seed qilish ====="
 sleep 5
+docker compose exec -T backend npm run seed || echo "   (seed allaqachon o'tgan bo'lishi mumkin)"
+
+echo ""
+echo "===== 9. Holatni tekshirish ====="
 docker compose ps
 echo ""
 echo "Health check:"
@@ -90,6 +116,8 @@ if curl -fsS http://localhost/health; then
     PUBLIC_IP=$(curl -s ifconfig.me || echo "<server-ip>")
     echo "   Tashrif buyuring: http://$PUBLIC_IP"
   fi
+  echo ""
+  echo "   Admin kirish ma'lumotlari .env faylida (SEED_EMAIL va SEED_PASSWORD)."
 else
   echo "❌ Health check muvaffaqiyatsiz. 'docker compose logs' bilan tekshiring."
 fi

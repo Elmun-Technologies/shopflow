@@ -1,0 +1,302 @@
+// ShopFlow multi-tenant schema
+// Har bir tenant — alohida tashkilot. Barcha business rows tenant_id ga bog'langan.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== TENANT & AUTH ==============
+
+model Tenant {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  currency    String   @default("UZS")
+  timezone    String   @default("Asia/Tashkent")
+  locale      String   @default("uz")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  leads       Lead[]
+  orders      Order[]
+  products    Product[]
+  customers   Customer[]
+  channels    Channel[]
+  interactions Interaction[]
+  categories  Category[]
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MANAGER
+  AGENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  passwordHash String
+  name         String
+  role         UserRole @default(AGENT)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedLeads  Lead[]  @relation("LeadAssignee")
+  assignedOrders Order[] @relation("OrderAssignee")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+// ============== CHANNELS ==============
+// Channel — tenantning marketing/lead manbai (Telegram bot, Instagram page, web form, ...)
+
+enum ChannelType {
+  WEBSITE
+  LANDING_PAGE
+  INSTAGRAM
+  TELEGRAM
+  FACEBOOK
+  WHATSAPP
+  EMAIL
+  PHONE
+  REFERRAL
+  GOOGLE_ADS
+  YANDEX_DIRECT
+  MARKETPLACE
+  OFFLINE
+}
+
+model Channel {
+  id          String      @id @default(cuid())
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type        ChannelType
+  name        String
+  config      Json        @default("{}")
+  webhookKey  String      @unique @default(cuid()) // tenantga xos webhook URL kaliti
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  leads       Lead[]
+  orders      Order[]
+
+  @@index([tenantId, type])
+}
+
+// ============== CRM: LEAD ==============
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum LeadPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model Lead {
+  id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String       // human-readable, "LID-2024001"
+  name        String
+  phone       String?
+  email       String?
+  company     String?
+  position    String?
+  location    String?
+  status      LeadStatus   @default(NEW)
+  priority    LeadPriority @default(MEDIUM)
+  value       Decimal      @default(0) @db.Decimal(14, 2)
+  currency    String       @default("UZS")
+  notes       String?
+  tags        String[]     @default([])
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+
+  channelId   String?
+  channel     Channel?     @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  assigneeId  String?
+  assignee    User?        @relation("LeadAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  lastContactAt  DateTime?
+  nextFollowUpAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  interactions Interaction[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@index([tenantId, channelId])
+  @@index([tenantId, createdAt])
+}
+
+enum InteractionType {
+  CALL
+  EMAIL
+  SMS
+  WHATSAPP
+  TELEGRAM
+  MEETING
+  NOTE
+  STATUS_CHANGE
+}
+
+enum InteractionDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model Interaction {
+  id        String               @id @default(cuid())
+  tenantId  String
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId    String
+  lead      Lead                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      InteractionType
+  direction InteractionDirection
+  content   String
+  duration  Int?                 // sekundlarda (qo'ng'iroq/uchrashuv uchun)
+  createdBy String               // user name yoki "system"
+  createdAt DateTime             @default(now())
+
+  @@index([tenantId, leadId, createdAt])
+}
+
+// ============== CATALOG ==============
+
+model Category {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  parentId  String?
+  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+  createdAt DateTime  @default(now())
+
+  products  Product[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sku         String
+  name        String
+  description String?
+  price       Decimal   @default(0) @db.Decimal(14, 2)
+  currency    String    @default("UZS")
+  stock       Int       @default(0)
+  active      Boolean   @default(true)
+
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  orderItems  OrderItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, active])
+}
+
+// ============== CUSTOMERS ==============
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  location  String?
+  notes     String?
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+}
+
+// ============== ORDERS ==============
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String      // "ORD-7523"
+  status      OrderStatus @default(PENDING)
+  total       Decimal     @default(0) @db.Decimal(14, 2)
+  currency    String      @default("UZS")
+  notes       String?
+
+  customerId  String?
+  customer    Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  channelId   String?
+  channel     Channel?    @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  assigneeId  String?
+  assignee    User?       @relation("OrderAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items       OrderItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@index([tenantId, channelId])
+  @@index([tenantId, createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  qty       Int
+  price     Decimal @db.Decimal(14, 2)
+
+  @@index([orderId])
+}

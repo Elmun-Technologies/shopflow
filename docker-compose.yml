@@ -1,11 +1,52 @@
-# ShopFlow production deploy — Caddy avtomatik HTTPS + nginx static serve
+# ShopFlow production deploy
+# Stack: Postgres + Backend (Fastify) + Frontend (nginx) + Caddy (HTTPS reverse-proxy)
 #
 # Foydalanish:
-#   1. .env faylida DOMAIN va EMAIL'ni o'rnating (.env.example'dan nusxa)
+#   1. .env faylida DOMAIN, EMAIL, JWT_SECRET, POSTGRES_PASSWORD ni o'rnating
 #   2. Domain A-record VPS IP manziliga ko'rsatishi kerak
-#   3. `docker compose up -d` — Caddy avtomatik Let's Encrypt sertifikatini oladi
+#   3. `docker compose up -d --build`
+#   4. Birinchi marta: `docker compose exec backend npm run seed`
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shopflow}
+      POSTGRES_USER: ${POSTGRES_USER:-shopflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env da o'rnating}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shopflow}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - shopflow-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: shopflow-backend:latest
+    container_name: shopflow-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shopflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopflow}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env da o'rnating (kamida 32 belgi)}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      PORT: "4000"
+    expose:
+      - "4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopflow-net
+
   shopflow:
     build:
       context: .
@@ -42,6 +83,8 @@ services:
     depends_on:
       shopflow:
         condition: service_healthy
+      backend:
+        condition: service_started
     networks:
       - shopflow-net
 
@@ -52,3 +95,4 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
+  postgres_data:

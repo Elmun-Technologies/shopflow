@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Download, Loader2 } from "lucide-react";
+import { Calendar, Loader2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import KPICards from "./components/KPICards";
@@ -11,9 +11,10 @@ import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
 import TrafficSources from "./components/TrafficSources";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import LoginPage from "./components/LoginPage";
 import type { MarketingSub } from "./data/marketingData";
 
-// Heavy pages — lazy loaded for faster initial render
 const OrdersPage = lazy(() => import("./components/OrdersPage"));
 const ProductsPage = lazy(() => import("./components/ProductsPage"));
 const LeadsPage = lazy(() => import("./components/LeadsPage"));
@@ -69,30 +70,14 @@ function DashboardPage() {
   useEffect(() => {
     const now = new Date();
     setCurrentDate(
-      now.toLocaleDateString("en-US", {
+      now.toLocaleDateString("uz-UZ", {
         weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
-      })
+      }),
     );
   }, []);
-
-  const handleExport = () => {
-    const lines = [
-      "ShopFlow Dashboard Report",
-      `Generated: ${new Date().toISOString()}`,
-      "",
-      "Note: This is a demo export with mock data.",
-    ].join("\n");
-    const blob = new Blob([lines], { type: "text/plain;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `shopflow-report-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <>
@@ -109,13 +94,6 @@ function DashboardPage() {
             <p className="text-sm text-slate-500">{currentDate}</p>
           </div>
         </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all"
-        >
-          <Download className="w-4 h-4" />
-          Export Report
-        </button>
       </motion.div>
 
       <KPICards />
@@ -139,25 +117,15 @@ function DashboardPage() {
           <TrafficSources />
         </div>
       </div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 1.0 }}
-        className="mt-8 pt-6 border-t border-slate-800"
-      >
-        <p className="text-xs text-slate-600 text-center">
-          ShopFlow Dashboard. All data is for demonstration purposes.
-        </p>
-      </motion.div>
     </>
   );
 }
 
-function App() {
+function AppShell() {
+  const { user, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [marketingSub, setMarketingSub] = useState<MarketingSub>("rassilka");
-  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [sidebarWidth, setSidebarWidth] = useState(240);
 
   const goToMarketing = (sub: MarketingSub) => {
     setMarketingSub(sub);
@@ -165,20 +133,30 @@ function App() {
   };
 
   useEffect(() => {
+    if (!user) return;
     const sidebar = document.querySelector("aside");
     if (!sidebar) return;
-
     setSidebarWidth(sidebar.getBoundingClientRect().width);
-
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setSidebarWidth(entry.contentRect.width);
       }
     });
     observer.observe(sidebar);
-
     return () => observer.disconnect();
-  }, []);
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -241,35 +219,41 @@ function App() {
   };
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-slate-950">
-        <Sidebar
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          marketingSub={marketingSub}
-          onMarketingNavigate={goToMarketing}
-        />
-
-        <div className="transition-all duration-300" style={{ marginLeft: sidebarWidth }}>
-          <Header />
-
-          <main className="p-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentPage}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ErrorBoundary>
-                  <Suspense fallback={<PageLoader />}>{renderPage()}</Suspense>
-                </ErrorBoundary>
-              </motion.div>
-            </AnimatePresence>
-          </main>
-        </div>
+    <div className="min-h-screen bg-slate-950">
+      <Sidebar
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        marketingSub={marketingSub}
+        onMarketingNavigate={goToMarketing}
+      />
+      <div className="transition-all duration-300" style={{ marginLeft: sidebarWidth }}>
+        <Header />
+        <main className="p-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentPage}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>{renderPage()}</Suspense>
+              </ErrorBoundary>
+            </motion.div>
+          </AnimatePresence>
+        </main>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
