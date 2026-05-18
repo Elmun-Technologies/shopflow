@@ -138,8 +138,11 @@ function ChannelCard({
   const meta = channelTypeMeta[channel.type];
   const Icon = meta.icon;
   const [copied, setCopied] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
-  const webhookUrl = `${window.location.origin}/api/webhooks/lead/${channel.webhookKey}`;
+  // Kanal turi bo'yicha to'g'ri webhook endpoint
+  const webhookPath = channel.type === "TELEGRAM" ? "telegram" : "lead";
+  const webhookUrl = `${window.location.origin}/api/webhooks/${webhookPath}/${channel.webhookKey}`;
 
   const copy = async () => {
     await navigator.clipboard.writeText(webhookUrl);
@@ -186,6 +189,12 @@ function ChannelCard({
         <span className="text-slate-500">Yaratilgan: {formatDate(channel.createdAt)}</span>
         <div className="flex items-center gap-1">
           <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="px-2 py-1 rounded text-emerald-400 hover:bg-slate-800 text-[11px] font-medium"
+          >
+            {showHelp ? "Yopish" : "Qanday ulanadi?"}
+          </button>
+          <button
             onClick={onToggle}
             className="p-1.5 rounded text-slate-500 hover:text-white hover:bg-slate-800"
             title={channel.active ? "O'chirish" : "Yoqish"}
@@ -201,6 +210,132 @@ function ChannelCard({
           </button>
         </div>
       </div>
+
+      {showHelp && (
+        <ChannelSetupHelp channelType={channel.type} webhookUrl={webhookUrl} />
+      )}
+    </div>
+  );
+}
+
+function ChannelSetupHelp({
+  channelType,
+  webhookUrl,
+}: {
+  channelType: ChannelType;
+  webhookUrl: string;
+}) {
+  const renderSteps = () => {
+    switch (channelType) {
+      case "TELEGRAM":
+        return (
+          <>
+            <Step n={1}>
+              Telegram'da{" "}
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 underline"
+              >
+                @BotFather
+              </a>
+              'ga yozing → <code>/newbot</code> → nomini va username'ini bering. Sizga <strong>bot token</strong>
+              beradi (masalan: <code>123456:ABCdef...</code>)
+            </Step>
+            <Step n={2}>
+              Brauzer adres satriga quyidagi URL'ni kiriting (TOKEN ni o'zgartirib):
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all whitespace-pre-wrap">
+                {`https://api.telegram.org/bot<TOKEN>/setWebhook?url=${webhookUrl}`}
+              </pre>
+            </Step>
+            <Step n={3}>
+              Javob <code>{`{"ok":true,"result":true}`}</code> bo'lsa, tayyor. Endi botingizga yozilgan har bir
+              xabar avtomatik <strong>Lidlar</strong> sahifasiga keladi.
+            </Step>
+          </>
+        );
+      case "WEBSITE":
+      case "LANDING_PAGE":
+        return (
+          <>
+            <Step n={1}>Veb-saytingizdagi forma'ni quyidagicha sozlang:</Step>
+            <Step n={2}>
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+{`<script>
+fetch("${webhookUrl}", {
+  method: "POST",
+  headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({
+    name: "Ism",
+    phone: "+998901234567",
+    email: "user@example.com"
+  })
+});
+</script>`}
+              </pre>
+            </Step>
+          </>
+        );
+      case "INSTAGRAM":
+      case "FACEBOOK":
+      case "WHATSAPP":
+        return (
+          <>
+            <Step n={1}>
+              <a
+                href="https://developers.facebook.com/apps"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 underline"
+              >
+                Meta for Developers
+              </a>{" "}
+              → App yarating (Business type)
+            </Step>
+            <Step n={2}>
+              App'ga Webhook qo'shing. Callback URL sifatida quyidagini kiriting:
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all">
+                {webhookUrl}
+              </pre>
+            </Step>
+            <Step n={3}>
+              ⚠️ Meta HTTPS talab qiladi. Domain va SSL sertifikat kerak (hozir HTTP'da ishlamaydi).
+            </Step>
+          </>
+        );
+      default:
+        return (
+          <>
+            <Step n={1}>Tashqi platforma webhook'iga quyidagi URL'ni kiriting:</Step>
+            <Step n={2}>
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all">
+                {webhookUrl}
+              </pre>
+            </Step>
+            <Step n={3}>
+              Body formati: <code>{`{"name":"...","phone":"...","email":"...","notes":"..."}`}</code>
+            </Step>
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-800 space-y-2">
+      <p className="text-xs font-semibold text-white mb-2">Sozlash bosqichlari</p>
+      {renderSteps()}
+    </div>
+  );
+}
+
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 text-xs text-slate-300">
+      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-bold">
+        {n}
+      </span>
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 }
