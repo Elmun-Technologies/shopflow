@@ -57,9 +57,12 @@ dig +short shopflow.example.com
 
 ## 3. Loyihani serverga ko'chirish
 
+Repo PRIVATE bo'lgani uchun GitHub Personal Access Token (PAT) kerak. **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens** orqali shu repo uchun `Contents: Read-only` ruxsatli token yarating.
+
 ```bash
+export GH_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxxxxxx
 cd /opt
-git clone https://github.com/Elmun-Technologies/shopflow.git
+git clone https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git
 cd shopflow
 ```
 

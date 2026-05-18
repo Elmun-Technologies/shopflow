@@ -31,10 +31,25 @@ ssh root@<vps-ip>
 # Parolni kiriting
 ```
 
-Server ichida bitta buyruq:
+> ⚠️ **Eslatma:** Repo PRIVATE. Shu sababli to'g'ridan-to'g'ri
+> `curl raw.githubusercontent.com/...` URL'i 404 qaytaradi. Avval
+> GitHub Personal Access Token (PAT) yarating:
+>
+> **GitHub** → **Settings** → **Developer settings** → **Personal access
+> tokens** → **Fine-grained tokens** → **Generate new token**.
+> Repository access'da faqat `Elmun-Technologies/shopflow` ni tanlang,
+> ruxsatlardan **Contents: Read-only** kifoya.
+>
+> Tokenni nusxalang (`github_pat_...` bilan boshlanadi).
+
+Server ichida quyidagi buyruqlarni ishga tushiring (TOKEN o'rniga PAT'ni qo'ying):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Elmun-Technologies/shopflow/claude/conduct-full-audit-6lZcQ/scripts/bootstrap.sh | bash -s -- claude/conduct-full-audit-6lZcQ
+export GH_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxxxxxx
+mkdir -p /opt && cd /opt
+git clone https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git
+cd shopflow
+bash scripts/bootstrap.sh main
 ```
 
 Skript so'raydi:
