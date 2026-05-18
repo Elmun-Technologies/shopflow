@@ -38,6 +38,7 @@ const SegmentsPage = lazy(() => import("./components/pages/SegmentsPage"));
 const AnalyticsPage = lazy(() => import("./components/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./components/SettingsPage"));
 const UIBuilderPage = lazy(() => import("./components/UIBuilderPage"));
+const StorePage = lazy(() => import("./components/StorePage"));
 
 type Page =
   | "dashboard"
@@ -249,6 +250,24 @@ function AppShell() {
 }
 
 function App() {
+  // Public store route: /store/:slug — no auth required
+  const path = window.location.pathname;
+  const storeMatch = path.match(/^\/store\/([^/]+)/);
+  if (storeMatch) {
+    const slug = storeMatch[1];
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+          </div>
+        }>
+          <StorePage slug={slug} />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <AuthProvider>

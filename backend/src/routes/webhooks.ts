@@ -64,24 +64,64 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({ id: lead.id, code: lead.code });
   });
 
-  // Telegram bot webhook — eng oddiy: matn xabarini lid sifatida saqlash
+  // Telegram bot webhook
+  // /start → Mini App tugmasi bilan javob qaytaradi
+  // Boshqa xabarlar → lid sifatida saqlanadi
   app.post("/telegram/:webhookKey", async (req, reply) => {
     const { webhookKey } = z.object({ webhookKey: z.string() }).parse(req.params);
-    const channel = await app.prisma.channel.findUnique({ where: { webhookKey } });
+    const channel = await app.prisma.channel.findUnique({
+      where: { webhookKey },
+      include: { tenant: { select: { id: true, name: true, slug: true } } },
+    });
     if (!channel || channel.type !== "TELEGRAM" || !channel.active) {
       return reply.code(404).send({ error: "Channel topilmadi" });
     }
 
-    const body = req.body as { message?: { from?: { first_name?: string; username?: string }; text?: string } };
-    const msg = body?.message;
+    type TgFrom = { id?: number; first_name?: string; last_name?: string; username?: string };
+    type TgMsg = { chat?: { id?: number }; from?: TgFrom; text?: string };
+    const body = req.body as { message?: TgMsg; callback_query?: { from?: TgFrom; message?: TgMsg } };
+    const msg = body?.message ?? body?.callback_query?.message;
     if (!msg?.from || !msg?.text) {
       return { ok: true, skipped: true };
     }
 
-    const name = [msg.from.first_name, msg.from.username && `@${msg.from.username}`]
-      .filter(Boolean)
-      .join(" ") || "Telegram foydalanuvchi";
+    const config = (channel.config ?? {}) as Record<string, unknown>;
+    const token = config.botToken as string | undefined;
+    const chatId = msg.chat?.id ?? msg.from?.id;
+    const firstName = msg.from?.first_name || "Do'stim";
+    const name = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi";
 
+    // /start — Mini App tugmasi bilan javob
+    if (msg.text === "/start" && token && chatId) {
+      const domain = process.env.DOMAIN || "shop-flow.uz";
+      const storeUrl = `https://${domain}/store/${channel.tenant.slug}`;
+      const storeName = channel.tenant.name;
+
+      try {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `Assalomu alaykum, ${firstName}! 👋\n\n🛍 *${storeName}* do'koniga xush kelibsiz!\n\nQuyidagi tugmani bosib xarid qiling:`,
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [[
+                {
+                  text: `🛒 ${storeName} do'koniga kirish`,
+                  web_app: { url: storeUrl },
+                },
+              ]],
+            },
+          }),
+        });
+      } catch {
+        // sendMessage xatosi — loglash uchun yetarli
+      }
+      return { ok: true, action: "start_sent" };
+    }
+
+    // Boshqa xabarlar — lid sifatida saqlash
     const code = await nextLeadCode(app.prisma, channel.tenantId);
     const lead = await app.prisma.lead.create({
       data: {
@@ -102,6 +142,19 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         },
       },
     });
+
+    // Oddiy tasdiqlash xabari
+    if (token && chatId) {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: "✅ Xabaringiz qabul qilindi. Tez orada siz bilan bog'lanamiz!",
+        }),
+      }).catch(() => null);
+    }
+
     return { ok: true, leadId: lead.id, code: lead.code };
   });
 };
