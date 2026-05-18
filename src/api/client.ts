@@ -40,13 +40,15 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
   }
 
   const token = getToken();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const hasBody = opts.body !== undefined;
+  const headers: Record<string, string> = {};
+  if (hasBody) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(url.toString(), {
     method: opts.method ?? "GET",
     headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body: hasBody ? JSON.stringify(opts.body) : undefined,
     signal: opts.signal,
   });
 
