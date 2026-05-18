@@ -108,6 +108,7 @@ export default function PlatformsPage() {
               channel={ch}
               onToggle={() => handleToggle(ch)}
               onDelete={() => handleDelete(ch)}
+              onChanged={refetch}
             />
           ))}
         </div>
@@ -130,24 +131,67 @@ function ChannelCard({
   channel,
   onToggle,
   onDelete,
+  onChanged,
 }: {
   channel: Channel;
   onToggle: () => void;
   onDelete: () => void;
+  onChanged: () => void;
 }) {
   const meta = channelTypeMeta[channel.type];
   const Icon = meta.icon;
   const [copied, setCopied] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectMsg, setConnectMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  // Kanal turi bo'yicha to'g'ri webhook endpoint
   const webhookPath = channel.type === "TELEGRAM" ? "telegram" : "lead";
   const webhookUrl = `${window.location.origin}/api/webhooks/${webhookPath}/${channel.webhookKey}`;
+  const config = (channel.config ?? {}) as Record<string, unknown>;
+  const hasToken = channel.type === "TELEGRAM" && Boolean(config.botToken_set || config.botToken);
+  const botUsername = config.botUsername as string | undefined;
 
   const copy = async () => {
     await navigator.clipboard.writeText(webhookUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleConnectTelegram = async () => {
+    if (!hasToken) {
+      setShowTokenModal(true);
+      return;
+    }
+    setConnecting(true);
+    setConnectMsg(null);
+    try {
+      const res = await fetch(
+        `${window.location.origin}/api/channels/${channel.id}/telegram/setup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("shopflow.token")}`,
+          },
+          body: JSON.stringify({ publicHost: window.location.origin }),
+        },
+      );
+      const json = (await res.json()) as { ok?: boolean; error?: string; bot?: { username?: string } };
+      if (!res.ok || !json.ok) {
+        setConnectMsg({ ok: false, text: json.error || "Xato" });
+      } else {
+        setConnectMsg({
+          ok: true,
+          text: `Ulanishi muvaffaqiyatli! Bot: @${json.bot?.username ?? "?"}`,
+        });
+        onChanged();
+      }
+    } catch (err) {
+      setConnectMsg({ ok: false, text: err instanceof Error ? err.message : "Xato" });
+    } finally {
+      setConnecting(false);
+    }
   };
 
   return (
@@ -159,7 +203,22 @@ function ChannelCard({
           </div>
           <div>
             <p className="text-sm font-semibold text-white">{channel.name}</p>
-            <p className="text-xs text-slate-500">{meta.label}</p>
+            <p className="text-xs text-slate-500">
+              {meta.label}
+              {botUsername && (
+                <>
+                  {" · "}
+                  <a
+                    href={`https://t.me/${botUsername}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-400 hover:underline"
+                  >
+                    @{botUsername}
+                  </a>
+                </>
+              )}
+            </p>
           </div>
         </div>
         <span
@@ -170,6 +229,25 @@ function ChannelCard({
           {channel.active ? "Aktiv" : "O'chirilgan"}
         </span>
       </div>
+
+      {channel.type === "TELEGRAM" && (
+        <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 mb-3">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-slate-500 uppercase mb-0.5">Bot token</p>
+              <p className="text-[11px] text-slate-300 font-mono truncate">
+                {hasToken ? (config.botToken as string) : <span className="text-slate-600">kiritilmagan</span>}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowTokenModal(true)}
+              className="ml-2 px-2 py-1 rounded text-emerald-400 hover:bg-slate-700 text-[11px] font-medium"
+            >
+              {hasToken ? "O'zgartirish" : "Qo'shish"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 mb-3">
         <p className="text-[10px] text-slate-500 uppercase mb-1">Webhook URL</p>
@@ -184,6 +262,29 @@ function ChannelCard({
           </button>
         </div>
       </div>
+
+      {channel.type === "TELEGRAM" && hasToken && (
+        <button
+          onClick={handleConnectTelegram}
+          disabled={connecting}
+          className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-lg text-sm font-medium text-sky-400 disabled:opacity-50"
+        >
+          {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          Telegram'ga avto-ulash (setWebhook)
+        </button>
+      )}
+
+      {connectMsg && (
+        <div
+          className={`mb-3 px-3 py-2 rounded-lg text-xs ${
+            connectMsg.ok
+              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+              : "bg-red-500/10 border border-red-500/20 text-red-400"
+          }`}
+        >
+          {connectMsg.text}
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-xs">
         <span className="text-slate-500">Yaratilgan: {formatDate(channel.createdAt)}</span>
@@ -211,8 +312,17 @@ function ChannelCard({
         </div>
       </div>
 
-      {showHelp && (
-        <ChannelSetupHelp channelType={channel.type} webhookUrl={webhookUrl} />
+      {showHelp && <ChannelSetupHelp channelType={channel.type} webhookUrl={webhookUrl} />}
+
+      {showTokenModal && (
+        <BotTokenModal
+          channel={channel}
+          onClose={() => setShowTokenModal(false)}
+          onSaved={() => {
+            setShowTokenModal(false);
+            onChanged();
+          }}
+        />
       )}
     </div>
   );
@@ -341,8 +451,9 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
 }
 
 function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [type, setType] = useState<ChannelType>("WEBSITE");
+  const [type, setType] = useState<ChannelType>("TELEGRAM");
   const [name, setName] = useState("");
+  const [botToken, setBotToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -351,7 +462,11 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
     setSaving(true);
     setError(null);
     try {
-      await channelsApi.create({ type, name });
+      const config: Record<string, unknown> = {};
+      if (type === "TELEGRAM" && botToken.trim()) {
+        config.botToken = botToken.trim();
+      }
+      await channelsApi.create({ type, name, config });
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xato");
@@ -394,10 +509,36 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Mening Telegram botim"
+            placeholder={type === "TELEGRAM" ? "Mening Telegram botim" : "Kanal nomi"}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
+
+        {type === "TELEGRAM" && (
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              Bot token{" "}
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 hover:underline"
+              >
+                (@BotFather'dan oling)
+              </a>
+            </label>
+            <input
+              type="text"
+              value={botToken}
+              onChange={(e) => setBotToken(e.target.value)}
+              placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Token xavfsiz saqlanadi va GET so'rovlarida yashiringan ko'rsatiladi.
+            </p>
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
@@ -412,6 +553,96 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Yaratish
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function BotTokenModal({
+  channel,
+  onClose,
+  onSaved,
+}: {
+  channel: Channel;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await channelsApi.update(channel.id, { config: { botToken: token.trim() } });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Xato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
+      >
+        <h2 className="text-lg font-bold text-white">Bot token</h2>
+
+        <div className="text-xs text-slate-400 space-y-2 bg-slate-800/50 border border-slate-800 rounded-lg p-3">
+          <p>1. Telegram'da{" "}
+            <a
+              href="https://t.me/BotFather"
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-400 underline"
+            >
+              @BotFather
+            </a>
+            'ga yozing
+          </p>
+          <p>2. <code className="bg-slate-900 px-1 rounded">/newbot</code> komandasini yuboring</p>
+          <p>3. Bot nomi va username'ni bering</p>
+          <p>4. BotFather sizga token beradi (masalan: <code className="bg-slate-900 px-1 rounded">7891234567:AAE...</code>)</p>
+          <p>5. Tokenni nusxalab, quyiga joylashtiring</p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Bot token</label>
+          <input
+            type="text"
+            required
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
+            autoFocus
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <div className="flex items-center gap-2 justify-end">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-400 hover:text-white">
+            Bekor qilish
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !token.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Saqlash
           </button>
         </div>
       </form>
