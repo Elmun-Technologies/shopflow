@@ -1,6 +1,8 @@
 # ShopFlow backend — multi-stage build
 FROM node:20-alpine AS build
 WORKDIR /app
+# OpenSSL Prisma uchun zarur (Alpine'da default yo'q)
+RUN apk add --no-cache openssl libssl3
 COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund
 COPY tsconfig.json ./
@@ -12,7 +14,7 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache curl tini
+RUN apk add --no-cache curl tini openssl libssl3
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=build /app/dist ./dist
