@@ -182,13 +182,14 @@ export default function StorePage({ slug }: { slug: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
 
+  // Telegram WebApp — darhol ready() chaqirish (yuklanish ekranini yashirish uchun)
   const twa = window.Telegram?.WebApp;
-  const primaryColor = data?.brand?.primaryColor || "#10b981";
-
   useEffect(() => {
-    if (twa) {
-      twa.ready();
-      twa.expand();
+    try {
+      twa?.ready();
+      twa?.expand();
+    } catch {
+      // Telegram WebApp mavjud bo'lmagan muhitda xatolikni e'tiborsiz qoldiramiz
     }
 
     // Pre-fill name from Telegram
@@ -197,7 +198,10 @@ export default function StorePage({ slug }: { slug: string }) {
       const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
       setForm((prev) => ({ ...prev, name: prev.name || fullName }));
     }
-  }, [twa]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const primaryColor = data?.brand?.primaryColor || "#10b981";
 
   useEffect(() => {
     fetchStorefront(slug)
