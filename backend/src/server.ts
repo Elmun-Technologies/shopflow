@@ -3,6 +3,9 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
+import multipart from "@fastify/multipart";
+import staticFiles from "@fastify/static";
+import { mkdir } from "node:fs/promises";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authPlugin } from "./plugins/auth.js";
 import { authRoutes } from "./routes/auth.js";
@@ -17,6 +20,7 @@ import { webhookRoutes } from "./routes/webhooks.js";
 import { vitrinaRoutes } from "./routes/vitrina.js";
 import { storefrontRoutes } from "./routes/storefront.js";
 import { categoryRoutes } from "./routes/categories.js";
+import { uploadRoutes } from "./routes/upload.js";
 
 const app = Fastify({
   logger: {
@@ -32,6 +36,16 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error("JWT_SECRET kerak (kamida 32 belgi).");
 }
+
+const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "/app/uploads";
+await mkdir(UPLOADS_DIR, { recursive: true });
+
+await app.register(multipart);
+await app.register(staticFiles, {
+  root: UPLOADS_DIR,
+  prefix: "/api/uploads/",
+  decorateReply: false,
+});
 
 await app.register(helmet, { contentSecurityPolicy: false });
 await app.register(cors, {
@@ -57,6 +71,7 @@ await app.register(dashboardRoutes, { prefix: "/api/dashboard" });
 await app.register(webhookRoutes, { prefix: "/api/webhooks" });
 await app.register(vitrinaRoutes, { prefix: "/api/vitrina" });
 await app.register(storefrontRoutes, { prefix: "/api/storefront" });
+await app.register(uploadRoutes, { prefix: "/api/upload" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

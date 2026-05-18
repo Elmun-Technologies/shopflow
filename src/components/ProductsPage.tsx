@@ -299,10 +299,35 @@ function ProductFormModal({
   const [stock, setStock] = useState(String(product?.stock ?? "0"));
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
+  const [uploading, setUploading] = useState(false);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const token = localStorage.getItem("shopflow.token");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Yuklash xatosi" }));
+        throw new Error((err as { error?: string }).error || "Yuklash xatosi");
+      }
+      const { url } = await res.json() as { url: string };
+      setImageUrl(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Rasm yuklanmadi");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -442,25 +467,49 @@ function ProductFormModal({
             </Field>
           </div>
 
-          <Field label="Rasm URL (https://...)">
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              className="input"
-            />
+          <Field label="Rasm">
+            <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${uploading ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-slate-500 bg-slate-800/50"}`}>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-emerald-400">Yuklanmoqda...</span>
+                </div>
+              ) : imageUrl ? (
+                <div className="relative w-full h-full">
+                  <img src={imageUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                    <span className="text-xs text-white">Rasmni o'zgartirish</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-xs text-slate-400">Rasm yuklash uchun bosing</span>
+                  <span className="text-[10px] text-slate-600">JPEG, PNG, WebP · max 8MB</span>
+                </div>
+              )}
+            </label>
             {imageUrl && (
-              <div className="mt-2 w-32 h-32 rounded-lg overflow-hidden bg-slate-800 border border-slate-700">
-                <img
-                  src={imageUrl}
-                  alt="preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                className="mt-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Rasmni olib tashlash
+              </button>
             )}
           </Field>
 
