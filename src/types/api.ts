@@ -134,11 +134,41 @@ export interface Product {
   name: string;
   description: string | null;
   price: string | number;
+  oldPrice: string | number | null;
   currency: string;
   stock: number;
   active: boolean;
+  featured: boolean;
+  imageUrl: string | null;
+  images: string[];
   categoryId: string | null;
-  category?: { id: string; name: string } | null;
+  category?: { id: string; name: string; slug?: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+  createdAt: string;
+}
+
+export interface VitrinaBlock {
+  id: string;
+  type: string;
+  title: string;
+  enabled: boolean;
+  settings: Record<string, unknown>;
+}
+
+export interface VitrinaLayout {
+  id: string;
+  tenantId: string;
+  blocks: VitrinaBlock[];
+  brand: Record<string, unknown>;
+  published: boolean;
   createdAt: string;
   updatedAt: string;
 }

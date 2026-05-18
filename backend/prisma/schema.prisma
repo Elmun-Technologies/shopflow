@@ -31,6 +31,7 @@ model Tenant {
   channels    Channel[]
   interactions Interaction[]
   categories  Category[]
+  storefront  Storefront?
 }
 
 enum UserRole {
@@ -213,9 +214,13 @@ model Product {
   name        String
   description String?
   price       Decimal   @default(0) @db.Decimal(14, 2)
+  oldPrice    Decimal?  @db.Decimal(14, 2)  // chegirma uchun (eski narx)
   currency    String    @default("UZS")
   stock       Int       @default(0)
   active      Boolean   @default(true)
+  featured    Boolean   @default(false)     // Vitrina'da ko'rsatish uchun bayroq
+  imageUrl    String?                        // asosiy rasm URL
+  images      String[]  @default([])         // qo'shimcha rasmlar
 
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -227,6 +232,32 @@ model Product {
 
   @@unique([tenantId, sku])
   @@index([tenantId, active])
+  @@index([tenantId, featured])
+}
+
+// ============== STOREFRONT (Vitrina) ==============
+// Har bir tenantning bitta Vitrina layout'i bor.
+// Vitrina — bu Telegram Mini App, web katalog va veb-sayt uchun
+// umumiy konfiguratsiya: bloklar tartibi, brand sozlamalari.
+
+model Storefront {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Bloklar tartibi va sozlamalari (drag-drop builder natijasi)
+  // Misol: [{ id, type, title, enabled, settings: {...} }]
+  blocks      Json     @default("[]")
+
+  // Brand sozlamalari: logo, ranglar, shrift
+  // { name, logoUrl, primaryColor, secondaryColor, contactPhone, ... }
+  brand       Json     @default("{}")
+
+  // Public bo'lib turishi (sayt yopilishi mumkin)
+  published   Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // ============== CUSTOMERS ==============

@@ -7,11 +7,14 @@ import type {
   Product,
   Customer,
   Channel,
+  Category,
   Interaction,
   DashboardKPIs,
   PaginatedResponse,
   LeadStatus,
   OrderStatus,
+  VitrinaLayout,
+  VitrinaBlock,
 } from "../types/api";
 
 // ===== Auth =====
@@ -126,6 +129,26 @@ export const channelsApi = {
   update: (id: string, data: Partial<Channel>) =>
     api<Channel>(`/channels/${id}`, { method: "PATCH", body: data }),
   delete: (id: string) => api<{ ok: true }>(`/channels/${id}`, { method: "DELETE" }),
+};
+
+// ===== Categories =====
+
+export const categoriesApi = {
+  list: () => api<Category[]>("/categories"),
+  create: (data: Partial<Category>) => api<Category>("/categories", { method: "POST", body: data }),
+  update: (id: string, data: Partial<Category>) =>
+    api<Category>(`/categories/${id}`, { method: "PATCH", body: data }),
+  delete: (id: string) => api<{ ok: true }>(`/categories/${id}`, { method: "DELETE" }),
+};
+
+// ===== Vitrina =====
+
+export const vitrinaApi = {
+  getLayout: () => api<VitrinaLayout>("/vitrina/layout"),
+  saveLayout: (data: { blocks: VitrinaBlock[]; brand?: Record<string, unknown>; published?: boolean }) =>
+    api<VitrinaLayout>("/vitrina/layout", { method: "PUT", body: data }),
+  saveBrand: (brand: Record<string, unknown>) =>
+    api<VitrinaLayout>("/vitrina/brand", { method: "PUT", body: brand }),
 };
 
 // ===== Dashboard =====

@@ -14,6 +14,9 @@ import { customerRoutes } from "./routes/customers.js";
 import { channelRoutes } from "./routes/channels.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { webhookRoutes } from "./routes/webhooks.js";
+import { vitrinaRoutes } from "./routes/vitrina.js";
+import { storefrontRoutes } from "./routes/storefront.js";
+import { categoryRoutes } from "./routes/categories.js";
 
 const app = Fastify({
   logger: {
@@ -49,8 +52,11 @@ await app.register(orderRoutes, { prefix: "/api/orders" });
 await app.register(productRoutes, { prefix: "/api/products" });
 await app.register(customerRoutes, { prefix: "/api/customers" });
 await app.register(channelRoutes, { prefix: "/api/channels" });
+await app.register(categoryRoutes, { prefix: "/api/categories" });
 await app.register(dashboardRoutes, { prefix: "/api/dashboard" });
 await app.register(webhookRoutes, { prefix: "/api/webhooks" });
+await app.register(vitrinaRoutes, { prefix: "/api/vitrina" });
+await app.register(storefrontRoutes, { prefix: "/api/storefront" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

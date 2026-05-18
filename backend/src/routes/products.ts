@@ -6,10 +6,14 @@ const productSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   price: z.number().nonnegative(),
+  oldPrice: z.number().nonnegative().optional().nullable(),
   currency: z.string().default("UZS"),
   stock: z.number().int().nonnegative().default(0),
   active: z.boolean().default(true),
-  categoryId: z.string().optional(),
+  featured: z.boolean().default(false),
+  imageUrl: z.string().url().optional().nullable().or(z.literal("")),
+  images: z.array(z.string().url()).optional(),
+  categoryId: z.string().optional().nullable(),
 });
 
 const listQuery = z.object({
@@ -50,7 +54,13 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const data = productSchema.parse(req.body);
     return app.prisma.product.create({
-      data: { ...data, tenantId: req.session.tenantId },
+      data: {
+        ...data,
+        imageUrl: data.imageUrl || null,
+        oldPrice: data.oldPrice ?? null,
+        categoryId: data.categoryId || null,
+        tenantId: req.session.tenantId,
+      },
     });
   });
 
@@ -61,7 +71,14 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
-    return app.prisma.product.update({ where: { id }, data });
+    return app.prisma.product.update({
+      where: { id },
+      data: {
+        ...data,
+        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
+        ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
+      },
+    });
   });
 
   app.delete("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN")] }, async (req, reply) => {
