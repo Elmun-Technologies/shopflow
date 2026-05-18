@@ -4,7 +4,6 @@ import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
-import staticFiles from "@fastify/static";
 import { mkdir } from "node:fs/promises";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authPlugin } from "./plugins/auth.js";
@@ -41,11 +40,6 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "/app/uploads";
 await mkdir(UPLOADS_DIR, { recursive: true });
 
 await app.register(multipart);
-await app.register(staticFiles, {
-  root: UPLOADS_DIR,
-  prefix: "/api/uploads/",
-  decorateReply: false,
-});
 
 await app.register(helmet, { contentSecurityPolicy: false });
 await app.register(cors, {

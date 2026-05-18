@@ -36,6 +36,6 @@ export const uploadRoutes: FastifyPluginAsync = async (app) => {
 
     await pipeline(data.file, createWriteStream(filepath));
 
-    return { url: `/api/uploads/${filename}` };
+    return { url: `/uploads/${filename}` };
   });
 };

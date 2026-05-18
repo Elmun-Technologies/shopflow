@@ -57,6 +57,8 @@ services:
     image: shopflow:latest
     container_name: shopflow-app
     restart: unless-stopped
+    volumes:
+      - uploads_data:/app/uploads:ro
     expose:
       - "80"
     healthcheck:
