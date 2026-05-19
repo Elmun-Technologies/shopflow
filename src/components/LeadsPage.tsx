@@ -54,6 +54,18 @@ type ViewMode = "list" | "kanban";
 type SortKey = "name" | "value" | "createdAt" | "status";
 type SortDir = "asc" | "desc";
 
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-sm font-medium text-white">{label}</p>
+        <p className="text-sm text-emerald-400">{payload[0].value} ta</p>
+      </div>
+    );
+  }
+  return null;
+}
+
 const sourceIcons: Record<string, React.ElementType> = {
   website: Globe,
   instagram: Smartphone,
@@ -169,18 +181,6 @@ export default function LeadsPage() {
   const conversionRate = totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : "0";
 
   const kanbanStatuses: LeadStatus[] = ["new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"];
-
-  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-sm font-medium text-white">{label}</p>
-          <p className="text-sm text-emerald-400">{payload[0].value} ta</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div>

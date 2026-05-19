@@ -55,6 +55,18 @@ import {
 type SortKey = "firstName" | "totalOrders" | "totalSpent" | "bonusPoints" | "registeredAt";
 type SortDir = "asc" | "desc";
 
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-sm font-medium text-white">{label}</p>
+        <p className="text-sm text-emerald-400">{payload[0].value} ta</p>
+      </div>
+    );
+  }
+  return null;
+}
+
 const platformIcons: Record<string, React.ElementType> = {
   telegram_bot: Send,
   website: Globe,
@@ -158,18 +170,6 @@ export default function CustomersPage() {
   const handleUnban = (id: string) => {
     setCustomerList((prev) => prev.map((c) => (c.id === id ? { ...c, status: "active" as CustomerStatus } : c)));
     setDetailCustomer(null);
-  };
-
-  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-sm font-medium text-white">{label}</p>
-          <p className="text-sm text-emerald-400">{payload[0].value} ta</p>
-        </div>
-      );
-    }
-    return null;
   };
 
   return (

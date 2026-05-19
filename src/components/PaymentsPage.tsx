@@ -38,6 +38,21 @@ const iconMap: Record<string, React.ElementType> = {
   Banknote, MousePointerClick, CreditCard, CalendarClock, Wallet,
 };
 
+function CustomTooltip({ active, payload }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-xs text-white font-medium">{date}</p>
+        {payload.map((p) => (
+          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value} ta</p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function PaymentsPage() {
   const [methods, setMethods] = useState<PaymentMethod[]>(paymentMethods);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
@@ -89,21 +104,6 @@ export default function PaymentsPage() {
   const todayRevenue = methods.reduce((s, m) => s + m.stats.todayAmount, 0);
 
   const pieData = methods.map((m) => ({ name: m.nameUz, value: m.stats.totalTransactions, color: methodColors[m.nameUz] || "#64748b" }));
-
-  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-white font-medium">{date}</p>
-          {payload.map((p) => (
-            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value} ta</p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div>

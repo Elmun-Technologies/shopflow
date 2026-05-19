@@ -69,6 +69,20 @@ const orderStatusConfig: Record<string, { color: string; bg: string; label: stri
   cancelled: { color: "text-red-400", bg: "bg-red-500/10", label: "Bekor", icon: Ban },
 };
 
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-xs text-white font-medium">{label}</p>
+        {payload.map((p) => (
+          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function PlatformsPage() {
   const [activeTab, setActiveTab] = useState<PlatformTab>("overview");
   const [tgScreen, setTgScreen] = useState<TelegramScreen>("welcome");
@@ -104,20 +118,6 @@ export default function PlatformsPage() {
 
   const tgTotal = tgCart.reduce((s, i) => s + i.product.price * i.qty, 0);
   const webTotal = webCart.reduce((s, i) => s + i.product.price * i.qty, 0);
-
-  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-white font-medium">{label}</p>
-          {payload.map((p) => (
-            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   const renderSetting = (setting: PlatformSetting) => {
     return (

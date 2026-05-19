@@ -36,6 +36,131 @@ const orderStatusConfig: Record<string, { color: string; label: string }> = {
   returned: { color: "text-slate-400", label: "Qaytarildi" },
 };
 
+function CustomTooltip({ active, payload }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-xs text-white font-medium">{date}</p>
+        {payload.map((p) => (
+          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
+interface PharmacyFormProps {
+  initial?: Pharmacy;
+  onSubmit: (data: Omit<Pharmacy, "id" | "createdAt">) => void;
+  onClose: () => void;
+  title: string;
+}
+
+function PharmacyForm({ initial, onSubmit, onClose, title }: PharmacyFormProps) {
+  const [form, setForm] = useState<Omit<Pharmacy, "id" | "createdAt">>(
+    initial
+      ? {
+          name: initial.name,
+          address: initial.address,
+          city: initial.city,
+          region: initial.region,
+          phone: initial.phone,
+          workingHours: initial.workingHours,
+          lat: initial.lat,
+          lng: initial.lng,
+          status: initial.status,
+          productsCount: initial.productsCount,
+          manager: initial.manager,
+          hasPickup: initial.hasPickup,
+          hasDelivery: initial.hasDelivery,
+          deliveryRadius: initial.deliveryRadius,
+        }
+      : {
+          name: "", address: "", city: "Toshkent", region: "Toshkent shahri",
+          phone: "", workingHours: "09:00 - 21:00", lat: 41.2995, lng: 69.2401,
+          status: "active", productsCount: 0, manager: "", hasPickup: true, hasDelivery: false, deliveryRadius: 0,
+        }
+  );
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-800">
+          <h2 className="text-lg font-bold text-white">{title}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1.5 block">Nomi</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="Apteka nomi" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-500 mb-1.5 block">Viloyat</label>
+              <select value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                <option>Toshkent shahri</option>
+                <option>Samarqand viloyati</option>
+                <option>Farg'ona viloyati</option>
+                <option>Andijon viloyati</option>
+                <option>Buxoro viloyati</option>
+                <option>Namangan viloyati</option>
+                <option>Qashqadaryo viloyati</option>
+                <option>Xorazm viloyati</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1.5 block">Shahar</label>
+              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1.5 block">Manzil</label>
+            <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="To'liq manzil" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-500 mb-1.5 block">Telefon</label>
+              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="+998 90 123 45 67" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1.5 block">Ish vaqti</label>
+              <input value={form.workingHours} onChange={(e) => setForm({ ...form, workingHours: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="09:00 - 21:00" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1.5 block">Menejer</label>
+            <input value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="Ism familiya" />
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" checked={form.hasPickup} onChange={(e) => setForm({ ...form, hasPickup: e.target.checked })} className="w-4 h-4 rounded border-slate-600" />
+              Olib ketish
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" checked={form.hasDelivery} onChange={(e) => setForm({ ...form, hasDelivery: e.target.checked })} className="w-4 h-4 rounded border-slate-600" />
+              Yetkazib berish
+            </label>
+          </div>
+          {form.hasDelivery && (
+            <div>
+              <label className="text-xs text-slate-500 mb-1.5 block">Yetkazib berish radiusi (km)</label>
+              <input type="number" value={form.deliveryRadius} onChange={(e) => setForm({ ...form, deliveryRadius: parseInt(e.target.value) || 0 })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 p-6 pt-0">
+          <button onClick={onClose} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">Bekor</button>
+          <button onClick={() => onSubmit(form)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-all">
+            <Save className="w-4 h-4" />
+            Saqlash
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function DeliveryPage() {
   const [activeTab, setActiveTab] = useState<Tab>("methods");
   const [pharmacyList, setPharmacyList] = useState<Pharmacy[]>(pharmacies);
@@ -99,124 +224,6 @@ export default function DeliveryPage() {
   const pieData = methodList
     .filter((m) => m.stats.totalOrders > 0)
     .map((m) => ({ name: m.nameUz, value: m.stats.totalOrders, color: methodDeliveryColors[m.nameUz] || "#64748b" }));
-
-  const CustomTooltip = ({ active, payload }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-white font-medium">{date}</p>
-          {payload.map((p) => (
-            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const PharmacyForm = ({ initial, onSubmit, onClose, title }: { initial?: Pharmacy; onSubmit: (data: Omit<Pharmacy, "id" | "createdAt">) => void; onClose: () => void; title: string }) => {
-    const [form, setForm] = useState<Omit<Pharmacy, "id" | "createdAt">>(
-      initial
-        ? {
-            name: initial.name,
-            address: initial.address,
-            city: initial.city,
-            region: initial.region,
-            phone: initial.phone,
-            workingHours: initial.workingHours,
-            lat: initial.lat,
-            lng: initial.lng,
-            status: initial.status,
-            productsCount: initial.productsCount,
-            manager: initial.manager,
-            hasPickup: initial.hasPickup,
-            hasDelivery: initial.hasDelivery,
-            deliveryRadius: initial.deliveryRadius,
-          }
-        : {
-            name: "", address: "", city: "Toshkent", region: "Toshkent shahri",
-            phone: "", workingHours: "09:00 - 21:00", lat: 41.2995, lng: 69.2401,
-            status: "active", productsCount: 0, manager: "", hasPickup: true, hasDelivery: false, deliveryRadius: 0,
-          }
-    );
-    return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between p-6 border-b border-slate-800">
-            <h2 className="text-lg font-bold text-white">{title}</h2>
-            <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"><X className="w-5 h-5" /></button>
-          </div>
-          <div className="p-6 space-y-3">
-            <div>
-              <label className="text-xs text-slate-500 mb-1.5 block">Nomi</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="Apteka nomi" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-500 mb-1.5 block">Viloyat</label>
-                <select value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                  <option>Toshkent shahri</option>
-                  <option>Samarqand viloyati</option>
-                  <option>Farg'ona viloyati</option>
-                  <option>Andijon viloyati</option>
-                  <option>Buxoro viloyati</option>
-                  <option>Namangan viloyati</option>
-                  <option>Qashqadaryo viloyati</option>
-                  <option>Xorazm viloyati</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1.5 block">Shahar</label>
-                <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1.5 block">Manzil</label>
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="To'liq manzil" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-500 mb-1.5 block">Telefon</label>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="+998 90 123 45 67" />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1.5 block">Ish vaqti</label>
-                <input value={form.workingHours} onChange={(e) => setForm({ ...form, workingHours: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="09:00 - 21:00" />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1.5 block">Menejer</label>
-              <input value={form.manager} onChange={(e) => setForm({ ...form, manager: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="Ism familiya" />
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input type="checkbox" checked={form.hasPickup} onChange={(e) => setForm({ ...form, hasPickup: e.target.checked })} className="w-4 h-4 rounded border-slate-600" />
-                Olib ketish
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300">
-                <input type="checkbox" checked={form.hasDelivery} onChange={(e) => setForm({ ...form, hasDelivery: e.target.checked })} className="w-4 h-4 rounded border-slate-600" />
-                Yetkazib berish
-              </label>
-            </div>
-            {form.hasDelivery && (
-              <div>
-                <label className="text-xs text-slate-500 mb-1.5 block">Yetkazib berish radiusi (km)</label>
-                <input type="number" value={form.deliveryRadius} onChange={(e) => setForm({ ...form, deliveryRadius: parseInt(e.target.value) || 0 })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-end gap-2 p-6 pt-0">
-            <button onClick={onClose} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">Bekor</button>
-            <button onClick={() => onSubmit(form)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-all">
-              <Save className="w-4 h-4" />
-              Saqlash
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  };
 
   return (
     <div>
