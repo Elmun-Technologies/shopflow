@@ -1,13 +1,32 @@
 #!/usr/bin/env bash
 # ShopFlow VPS bootstrap — bir martalik server sozlash
-# Foydalanish: curl -fsSL https://raw.githubusercontent.com/Elmun-Technologies/shopflow/main/scripts/bootstrap.sh | bash -s -- <branch> <domain> <email>
-# Yoki interactiv: bash bootstrap.sh
+#
+# Repo PRIVATE, shuning uchun ikki bosqichli ishga tushirish kerak:
+#
+#   1) GitHub Personal Access Token (PAT) yarating — Settings → Developer
+#      settings → Personal access tokens → Fine-grained → faqat shu repo
+#      uchun "Contents: Read" ruxsati bilan.
+#
+#   2) Serverda:
+#        export GH_TOKEN=ghp_xxxxxxxxxxxxxxxx
+#        git clone https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git /opt/shopflow
+#        cd /opt/shopflow
+#        bash scripts/bootstrap.sh [branch] [domain] [email]
+#
+# Parametrlar berilmasa interaktiv so'raydi. GH_TOKEN env var bo'lsa,
+# klonlash/yangilash uchun ishlatiladi (private repo uchun zarur).
 
 set -euo pipefail
 
 BRANCH="${1:-${BRANCH:-main}}"
 DOMAIN="${2:-${DOMAIN:-}}"
 EMAIL="${3:-${EMAIL:-}}"
+GH_TOKEN="${GH_TOKEN:-}"
+
+REPO_URL="https://github.com/Elmun-Technologies/shopflow.git"
+if [ -n "$GH_TOKEN" ]; then
+  REPO_URL="https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git"
+fi
 
 echo "🚀 ShopFlow VPS bootstrap"
 echo "   Branch: $BRANCH"
@@ -48,17 +67,35 @@ ufw status
 
 echo ""
 echo "===== 5. ShopFlow'ni klonlash ====="
-mkdir -p /opt
-cd /opt
-if [ -d shopflow/.git ]; then
-  echo "   Repo allaqachon mavjud, yangilanmoqda..."
-  cd shopflow
+# Agar skript klonlangan repo ichidan ishga tushirilgan bo'lsa, qaytadan klonlamaymiz.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -d "$REPO_ROOT/.git" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
+  echo "   Skript repo ichidan ishga tushirildi: $REPO_ROOT"
+  cd "$REPO_ROOT"
   git fetch --all
   git checkout "$BRANCH"
   git reset --hard "origin/$BRANCH"
 else
-  git clone -b "$BRANCH" https://github.com/Elmun-Technologies/shopflow.git
-  cd shopflow
+  mkdir -p /opt
+  cd /opt
+  if [ -d shopflow/.git ]; then
+    echo "   Repo allaqachon mavjud, yangilanmoqda..."
+    cd shopflow
+    git fetch --all
+    git checkout "$BRANCH"
+    git reset --hard "origin/$BRANCH"
+  else
+    if [ -z "$GH_TOKEN" ]; then
+      echo "❌ Repo PRIVATE — klonlash uchun GH_TOKEN env var kerak."
+      echo "   Foydalanish:"
+      echo "     export GH_TOKEN=ghp_xxxxxxxxxxxxxxxx"
+      echo "     bash scripts/bootstrap.sh [branch] [domain] [email]"
+      exit 1
+    fi
+    git clone -b "$BRANCH" "$REPO_URL" shopflow
+    cd shopflow
+  fi
 fi
 
 echo ""
