@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe,
@@ -29,7 +29,7 @@ import {
   CheckCheck,
   LayoutTemplate,
 } from "lucide-react";
-import UIBuilderPage from "./UIBuilderPage";
+const UIBuilderPage = lazy(() => import("./UIBuilderPage"));
 import {
   platformProducts,
   platformOrders,
@@ -1038,7 +1038,9 @@ export default function PlatformsPage() {
         {/* BUILDER */}
         {activeTab === "builder" && (
           <motion.div key="builder" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-[calc(100vh-280px)]">
-            <UIBuilderPage />
+            <Suspense fallback={<div className="flex items-center justify-center h-full text-slate-500">Yuklanmoqda...</div>}>
+              <UIBuilderPage />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>

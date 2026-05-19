@@ -8,11 +8,19 @@ const notifications = [
   { id: 3, text: "Customer review submitted", time: "1 hour ago", type: "review" },
 ];
 
+const messages = [
+  { id: 1, name: "Aziz Karimov", text: "Buyurtma qachon yetkaziladi?", time: "5 daq oldin" },
+  { id: 2, name: "Malika Tursunova", text: "Rahmat, hammasi yaxshi!", time: "30 daq oldin" },
+  { id: 3, name: "Bekzod Yo'ldoshev", text: "Mahsulot mavjudmi?", time: "2 soat oldin" },
+];
+
 export default function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const notificationsRef = useRef<HTMLDivElement | null>(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -21,6 +29,9 @@ export default function Header() {
       if (notificationsRef.current && !notificationsRef.current.contains(target)) {
         setNotificationsOpen(false);
       }
+      if (messagesRef.current && !messagesRef.current.contains(target)) {
+        setMessagesOpen(false);
+      }
       if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
       }
@@ -28,6 +39,7 @@ export default function Header() {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setNotificationsOpen(false);
+        setMessagesOpen(false);
         setProfileOpen(false);
       }
     };
@@ -60,19 +72,63 @@ export default function Header() {
       {/* Right Actions */}
       <div className="flex items-center gap-3">
         {/* Messages */}
-        <button
-          aria-label="Xabarlar"
-          className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-        >
-          <Mail className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full" />
-        </button>
+        <div className="relative" ref={messagesRef}>
+          <button
+            onClick={() => {
+              setMessagesOpen(!messagesOpen);
+              setNotificationsOpen(false);
+              setProfileOpen(false);
+            }}
+            aria-label="Xabarlar"
+            aria-expanded={messagesOpen}
+            className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+          >
+            <Mail className="w-5 h-5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full" />
+          </button>
+
+          <AnimatePresence>
+            {messagesOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                role="menu"
+                className="absolute right-0 top-full mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden"
+              >
+                <div className="px-4 py-3 border-b border-slate-700">
+                  <h3 className="text-sm font-semibold text-white">Xabarlar</h3>
+                </div>
+                <div className="py-1">
+                  {messages.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className="w-full px-4 py-3 text-left hover:bg-slate-700/50 transition-colors"
+                    >
+                      <p className="text-sm text-white font-medium">{m.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">{m.text}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{m.time}</p>
+                    </button>
+                  ))}
+                </div>
+                <div className="px-4 py-2 border-t border-slate-700">
+                  <button type="button" className="text-xs text-emerald-400 hover:text-emerald-300 font-medium">
+                    Barcha xabarlar
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Notifications */}
         <div className="relative" ref={notificationsRef}>
           <button
             onClick={() => {
               setNotificationsOpen(!notificationsOpen);
+              setMessagesOpen(false);
               setProfileOpen(false);
             }}
             aria-label="Bildirishnomalar"
@@ -124,6 +180,7 @@ export default function Header() {
             onClick={() => {
               setProfileOpen(!profileOpen);
               setNotificationsOpen(false);
+              setMessagesOpen(false);
             }}
             aria-label="Profil menyusi"
             aria-expanded={profileOpen}

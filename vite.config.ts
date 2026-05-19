@@ -34,7 +34,7 @@ export default defineConfig({
               "recharts-vendor": ["recharts"],
               "framer-vendor": ["framer-motion"],
               "icons-vendor": ["lucide-react"],
-              "utils-vendor": ["clsx", "tailwind-merge", "date-fns"],
+              "utils-vendor": ["clsx", "tailwind-merge"],
             },
             chunkFileNames: "assets/[name]-[hash].js",
             entryFileNames: "assets/[name]-[hash].js",
