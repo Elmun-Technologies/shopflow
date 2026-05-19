@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/conduct-full-audit-6lZcQ
+      - claude/debug-shop-flow-integrations-yu3Tn
   workflow_dispatch:
 
 concurrency:
@@ -33,7 +34,7 @@ jobs:
     name: Deploy
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/conduct-full-audit-6lZcQ'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/conduct-full-audit-6lZcQ' || github.ref == 'refs/heads/claude/debug-shop-flow-integrations-yu3Tn'
     steps:
       - name: Check VPS secrets configured
         id: check
