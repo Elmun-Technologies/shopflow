@@ -1,7 +1,6 @@
 // Block settings are dynamic per block type. We use `any` here intentionally
 // because each block type has different settings (count, title, color, etc.),
 // and a strict union would require duplicating each block's settings shape.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface UIBlock {
   id: string;
   type: BlockType;

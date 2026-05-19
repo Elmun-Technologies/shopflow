@@ -82,7 +82,13 @@ export default function CustomerDetailModal({ customer, onClose, onBan, onUnban 
     return Object.entries(months).sort().slice(-6);
   }, [customer]);
 
+  const [renderNow] = useState(() => Date.now());
+
   if (!customer) return null;
+
+  const customerLifetimeDays = customer.firstOrderDate
+    ? Math.ceil((renderNow - new Date(customer.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
 
   const status = statusConfig[customer.status];
   const favoriteProduct = customer.orders.length > 0
@@ -470,7 +476,7 @@ export default function CustomerDetailModal({ customer, onClose, onBan, onUnban 
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-3 text-center">
                       <p className="text-[10px] text-slate-500">Mijoz umri</p>
-                      <p className="text-sm font-bold text-white mt-1">{customer.firstOrderDate ? Math.ceil((Date.now() - new Date(customer.firstOrderDate).getTime()) / (1000 * 60 * 60 * 24)) + " kun" : "—"}</p>
+                      <p className="text-sm font-bold text-white mt-1">{customerLifetimeDays !== null ? customerLifetimeDays + " kun" : "—"}</p>
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-3 text-center">
                       <p className="text-[10px] text-slate-500">Qayta sotib olish</p>

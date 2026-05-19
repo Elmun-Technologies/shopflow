@@ -64,19 +64,14 @@ function PageLoader() {
 }
 
 function DashboardPage() {
-  const [currentDate, setCurrentDate] = useState("");
-
-  useEffect(() => {
-    const now = new Date();
-    setCurrentDate(
-      now.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    );
-  }, []);
+  const [currentDate] = useState(() =>
+    new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  );
 
   const handleExport = () => {
     const lines = [
@@ -167,8 +162,6 @@ function App() {
   useEffect(() => {
     const sidebar = document.querySelector("aside");
     if (!sidebar) return;
-
-    setSidebarWidth(sidebar.getBoundingClientRect().width);
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe,
@@ -12,6 +12,7 @@ import {
   CreditCard,
   Settings,
   ChevronLeft,
+  ChevronRight,
   Plus,
   Minus,
   Star,
@@ -28,8 +29,13 @@ import {
   Ban,
   CheckCheck,
   LayoutTemplate,
+  User,
+  Tag,
+  Users,
+  MessageCircle,
+  Gift,
 } from "lucide-react";
-import UIBuilderPage from "./UIBuilderPage";
+const UIBuilderPage = lazy(() => import("./UIBuilderPage"));
 import {
   platformProducts,
   platformOrders,
@@ -55,7 +61,25 @@ import {
 } from "recharts";
 
 type PlatformTab = "overview" | "telegram" | "website" | "qr" | "builder";
-type TelegramScreen = "welcome" | "auth" | "home" | "catalog" | "product" | "cart" | "location" | "payment" | "success";
+type TelegramScreen =
+  | "welcome"
+  | "auth"
+  | "home"
+  | "catalog"
+  | "product"
+  | "cart"
+  | "location"
+  | "payment"
+  | "success"
+  | "offers"
+  | "profile"
+  | "profile_info"
+  | "profile_orders"
+  | "profile_reviews"
+  | "profile_promo"
+  | "profile_referrals"
+  | "profile_language"
+  | "profile_addresses";
 type WebsiteScreen = "home" | "product" | "cart" | "checkout";
 type QrScreen = "scan" | "catalog" | "product" | "order";
 
@@ -68,6 +92,20 @@ const orderStatusConfig: Record<string, { color: string; bg: string; label: stri
   delivered: { color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Yetkazildi", icon: CheckCheck },
   cancelled: { color: "text-red-400", bg: "bg-red-500/10", label: "Bekor", icon: Ban },
 };
+
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-xs text-white font-medium">{label}</p>
+        {payload.map((p) => (
+          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
 
 export default function PlatformsPage() {
   const [activeTab, setActiveTab] = useState<PlatformTab>("overview");
@@ -104,20 +142,6 @@ export default function PlatformsPage() {
 
   const tgTotal = tgCart.reduce((s, i) => s + i.product.price * i.qty, 0);
   const webTotal = webCart.reduce((s, i) => s + i.product.price * i.qty, 0);
-
-  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-white font-medium">{label}</p>
-          {payload.map((p) => (
-            <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   const renderSetting = (setting: PlatformSetting) => {
     return (
@@ -176,6 +200,9 @@ export default function PlatformsPage() {
               else if (tgScreen === "cart") setTgScreen(tgCart.length > 0 ? "catalog" : "home");
               else if (tgScreen === "location") setTgScreen("cart");
               else if (tgScreen === "payment") setTgScreen("location");
+              else if (tgScreen === "offers") setTgScreen("home");
+              else if (tgScreen === "profile") setTgScreen("home");
+              else if (tgScreen.startsWith("profile_")) setTgScreen("profile");
             }} className="p-1 text-slate-400">
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -183,13 +210,22 @@ export default function PlatformsPage() {
           <span className={`text-sm font-semibold ${textPrimary} flex-1 text-center ${tgScreen === "welcome" || tgScreen === "success" ? "" : "-ml-6"}`}>
             {tgScreen === "welcome" && "ShopFlow"}
             {tgScreen === "auth" && "Telefon"}
-            {tgScreen === "home" && "Asosiy"}
+            {tgScreen === "home" && "Bosh sahifa"}
             {tgScreen === "catalog" && "Katalog"}
             {tgScreen === "product" && selectedProduct?.name.slice(0, 20) + "..."}
             {tgScreen === "cart" && `Savat (${tgCart.length})`}
             {tgScreen === "location" && "Manzil"}
             {tgScreen === "payment" && "To'lov"}
             {tgScreen === "success" && "Buyurtma"}
+            {tgScreen === "offers" && "Takliflar"}
+            {tgScreen === "profile" && "Profil"}
+            {tgScreen === "profile_info" && "Ma'lumotlarim"}
+            {tgScreen === "profile_orders" && "Buyurtmalarim"}
+            {tgScreen === "profile_reviews" && "Sharhlarim"}
+            {tgScreen === "profile_promo" && "Promokodlarim"}
+            {tgScreen === "profile_referrals" && "Referallarim"}
+            {tgScreen === "profile_language" && "Ilova tili"}
+            {tgScreen === "profile_addresses" && "Manzillarim"}
           </span>
           {(tgScreen === "catalog" || tgScreen === "home") && (
             <button onClick={() => setTgScreen("cart")} className="relative p-1 text-slate-400">
@@ -402,25 +438,266 @@ export default function PlatformsPage() {
               </div>
               <h2 className={`text-lg font-bold ${textPrimary} mb-2`}>Buyurtma qabul qilindi!</h2>
               <p className={`text-xs ${textSecondary} text-center mb-6`}>Buyurtma raqami: #TGB-009. Tez orada operatorimiz siz bilan bog'lanadi.</p>
-              <button onClick={() => setTgScreen("home")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Asosiy sahifa</button>
+              <button onClick={() => setTgScreen("home")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Bosh sahifa</button>
+            </div>
+          )}
+
+          {/* OFFERS */}
+          {tgScreen === "offers" && (
+            <div className="p-3 space-y-2">
+              {[
+                { title: "20% chegirma", subtitle: "Barcha telefonlarga", color: "from-emerald-500 to-emerald-700" },
+                { title: "Bepul yetkazib berish", subtitle: "100,000 so'mdan yuqori buyurtmalarga", color: "from-blue-500 to-blue-700" },
+                { title: "1+1 aksiya", subtitle: "Kitoblar bo'limi", color: "from-amber-500 to-amber-700" },
+                { title: "Yangi mijozlarga 50,000 so'm", subtitle: "Birinchi buyurtmaga", color: "from-violet-500 to-violet-700" },
+              ].map((offer) => (
+                <button key={offer.title} className={`w-full bg-gradient-to-r ${offer.color} rounded-xl p-3 text-left`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Gift className="w-4 h-4 text-white" />
+                    <p className="text-sm font-bold text-white">{offer.title}</p>
+                  </div>
+                  <p className="text-[10px] text-white/80">{offer.subtitle}</p>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* PROFILE */}
+          {tgScreen === "profile" && (
+            <div className="p-3">
+              <div className={`${cardBg} rounded-xl p-3 mb-3 flex items-center gap-3`}>
+                <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                  <span className="text-sm font-bold text-white">AK</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${textPrimary}`}>Aziz Karimov</p>
+                  <p className={`text-[10px] ${textSecondary}`}>+998 90 123 45 67</p>
+                </div>
+              </div>
+              <div className={`${cardBg} rounded-xl overflow-hidden`}>
+                {[
+                  { key: "profile_info", icon: User, label: "Ma'lumotlarim" },
+                  { key: "profile_orders", icon: ShoppingBag, label: "Buyurtmalarim" },
+                  { key: "profile_reviews", icon: Star, label: "Sharhlarim" },
+                  { key: "profile_promo", icon: Tag, label: "Promokodlarim" },
+                  { key: "profile_referrals", icon: Users, label: "Referallarim" },
+                  { key: "profile_language", icon: Globe, label: "Ilova tili" },
+                  { key: "profile_addresses", icon: MapPin, label: "Mening manzillarim" },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setTgScreen(item.key as TelegramScreen)}
+                      className="w-full px-3 py-2.5 flex items-center gap-2.5 border-b border-slate-800/50 last:border-0 text-left hover:bg-slate-800/30"
+                    >
+                      <Icon className="w-4 h-4 text-emerald-400" />
+                      <span className={`text-xs ${textPrimary} flex-1`}>{item.label}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                    </button>
+                  );
+                })}
+              </div>
+              <button className={`w-full ${cardBg} rounded-xl p-3 mt-3 flex items-center gap-2.5 hover:bg-slate-800/50`}>
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <span className={`text-xs ${textPrimary} flex-1 text-left`}>Operatorga murojaat</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+              </button>
+            </div>
+          )}
+
+          {/* PROFILE: INFO */}
+          {tgScreen === "profile_info" && (
+            <div className="p-3 space-y-2">
+              {[
+                { label: "Ism", value: "Aziz" },
+                { label: "Familiya", value: "Karimov" },
+                { label: "Otasining ismi", value: "Bahodirovich" },
+                { label: "Telefon", value: "+998 90 123 45 67" },
+                { label: "Tug'ilgan sana", value: "15.03.1995" },
+                { label: "Jinsi", value: "Erkak" },
+              ].map((f) => (
+                <div key={f.label} className={`${cardBg} rounded-xl p-2.5`}>
+                  <p className={`text-[10px] ${textSecondary} mb-0.5`}>{f.label}</p>
+                  <input defaultValue={f.value} className={`w-full bg-transparent text-xs ${textPrimary} outline-none`} />
+                </div>
+              ))}
+              <button className={`w-full ${btnBg} text-white py-2.5 rounded-xl text-sm font-medium mt-2`}>Saqlash</button>
+            </div>
+          )}
+
+          {/* PROFILE: ORDERS */}
+          {tgScreen === "profile_orders" && (
+            <div className="p-3">
+              <div className="flex gap-1.5 mb-3">
+                <button className="flex-1 py-1.5 bg-emerald-500 text-white text-[10px] rounded-lg">Faol buyurtmalar</button>
+                <button className={`flex-1 py-1.5 ${cardBg} ${textSecondary} text-[10px] rounded-lg`}>Barchasi</button>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { id: "TGB-007", status: "Yetkazilmoqda", color: "text-blue-400", total: "245,000" },
+                  { id: "TGB-006", status: "Tayyorlanmoqda", color: "text-amber-400", total: "180,000" },
+                  { id: "TGB-005", status: "Qabul qilindi", color: "text-emerald-400", total: "92,000" },
+                ].map((o) => (
+                  <div key={o.id} className={`${cardBg} rounded-xl p-2.5`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className={`text-xs font-medium ${textPrimary}`}>#{o.id}</p>
+                      <span className={`text-[10px] ${o.color}`}>{o.status}</span>
+                    </div>
+                    <p className={`text-[10px] ${textSecondary}`}>{o.total} so'm</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PROFILE: REVIEWS */}
+          {tgScreen === "profile_reviews" && (
+            <div className="p-3">
+              <div className="flex gap-1.5 mb-3">
+                <button className="flex-1 py-1.5 bg-emerald-500 text-white text-[10px] rounded-lg">Baholash kutilmoqda</button>
+                <button className={`flex-1 py-1.5 ${cardBg} ${textSecondary} text-[10px] rounded-lg`}>Barcha fikrlarim</button>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: "iPhone 15 Pro", date: "2 kun oldin" },
+                  { name: "AirPods Pro", date: "1 hafta oldin" },
+                ].map((p) => (
+                  <div key={p.name} className={`${cardBg} rounded-xl p-2.5`}>
+                    <p className={`text-xs ${textPrimary}`}>{p.name}</p>
+                    <p className={`text-[10px] ${textSecondary} mt-0.5`}>{p.date}</p>
+                    <div className="flex gap-0.5 mt-1.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className="w-3 h-3 text-slate-600" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PROFILE: PROMO */}
+          {tgScreen === "profile_promo" && (
+            <div className="p-3">
+              <div className={`${cardBg} rounded-xl p-3 mb-3`}>
+                <p className={`text-[10px] ${textSecondary} mb-1.5`}>Promokod kiritish</p>
+                <div className="flex gap-1.5">
+                  <input className={`flex-1 bg-slate-800 rounded-lg px-2 py-1.5 text-xs ${textPrimary} outline-none`} placeholder="PROMO-CODE" />
+                  <button className={`${btnBg} text-white px-3 rounded-lg text-xs`}>Qo'llash</button>
+                </div>
+              </div>
+              <p className={`text-[10px] ${textSecondary} mb-2 px-1`}>Faol promokodlar</p>
+              <div className="space-y-2">
+                {[
+                  { code: "WELCOME20", discount: "20% chegirma", expires: "31.12.2025" },
+                  { code: "FREESHIP", discount: "Bepul yetkazib berish", expires: "10.01.2026" },
+                ].map((p) => (
+                  <div key={p.code} className={`${cardBg} rounded-xl p-2.5 flex items-center gap-2`}>
+                    <Tag className="w-4 h-4 text-emerald-400" />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-medium ${textPrimary}`}>{p.code}</p>
+                      <p className={`text-[10px] ${textSecondary}`}>{p.discount}</p>
+                    </div>
+                    <p className="text-[9px] text-slate-500">{p.expires}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PROFILE: REFERRALS */}
+          {tgScreen === "profile_referrals" && (
+            <div className="p-3">
+              <div className={`${cardBg} rounded-xl p-3 mb-3 text-center`}>
+                <Users className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                <p className={`text-xs ${textSecondary} mb-1`}>Sizning havolangiz</p>
+                <p className={`text-sm font-bold ${textPrimary} mb-2`}>t.me/shopflowbot?start=AK123</p>
+                <button className={`w-full ${btnBg} text-white py-2 rounded-lg text-xs`}>Havolani ulashish</button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className={`${cardBg} rounded-xl p-2.5 text-center`}>
+                  <p className="text-lg font-bold text-emerald-400">12</p>
+                  <p className={`text-[10px] ${textSecondary}`}>Taklif qilingan</p>
+                </div>
+                <div className={`${cardBg} rounded-xl p-2.5 text-center`}>
+                  <p className="text-lg font-bold text-emerald-400">120k</p>
+                  <p className={`text-[10px] ${textSecondary}`}>Bonus so'm</p>
+                </div>
+              </div>
+              <p className={`text-[10px] ${textSecondary} px-1 leading-relaxed`}>Har bir do'stingiz birinchi buyurtma berganda, sizga 10,000 so'm bonus tushadi.</p>
+            </div>
+          )}
+
+          {/* PROFILE: LANGUAGE */}
+          {tgScreen === "profile_language" && (
+            <div className="p-3 space-y-2">
+              {[
+                { code: "uz", label: "O'zbekcha", selected: true },
+                { code: "ru", label: "Русский", selected: false },
+              ].map((l) => (
+                <button key={l.code} className={`w-full ${cardBg} rounded-xl p-3 flex items-center justify-between`}>
+                  <span className={`text-sm ${textPrimary}`}>{l.label}</span>
+                  {l.selected && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* PROFILE: ADDRESSES */}
+          {tgScreen === "profile_addresses" && (
+            <div className="p-3">
+              <button className={`w-full ${btnBg} text-white py-2.5 rounded-xl text-xs font-medium mb-3 flex items-center justify-center gap-1.5`}>
+                <Plus className="w-4 h-4" />
+                Manzil qo'shish
+              </button>
+              <p className={`text-[10px] ${textSecondary} mb-2 px-1`}>Saqlangan manzillar</p>
+              <div className="space-y-2">
+                {[
+                  { label: "Uy", address: "Toshkent, Yakkasaroy, Sh. Rustaveli 45", primary: true },
+                  { label: "Ish", address: "Toshkent, Mirzo Ulug'bek, Universitet 7", primary: false },
+                ].map((a) => (
+                  <div key={a.label} className={`${cardBg} rounded-xl p-2.5 flex items-start gap-2`}>
+                    <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className={`text-xs font-medium ${textPrimary}`}>{a.label}</p>
+                        {a.primary && <span className="text-[8px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">Asosiy</span>}
+                      </div>
+                      <p className={`text-[10px] ${textSecondary} mt-0.5`}>{a.address}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Bottom Nav */}
         {tgScreen !== "welcome" && tgScreen !== "auth" && tgScreen !== "success" && (
-          <div className="h-12 border-t border-slate-800/50 flex items-center justify-around">
-            <button onClick={() => setTgScreen("home")} className={`flex flex-col items-center gap-0.5 ${tgScreen === "home" ? "text-emerald-400" : "text-slate-500"}`}>
+          <div className="h-14 border-t border-slate-800/50 flex items-center justify-around px-1">
+            <button onClick={() => setTgScreen("home")} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "home" ? "text-emerald-400" : "text-slate-500"}`}>
               <Home className="w-4 h-4" />
-              <span className="text-[8px]">Asosiy</span>
+              <span className="text-[8px]">Bosh sahifa</span>
             </button>
-            <button onClick={() => { setSelectedCategory("Barcha"); setTgScreen("catalog"); }} className={`flex flex-col items-center gap-0.5 ${tgScreen === "catalog" || tgScreen === "product" ? "text-emerald-400" : "text-slate-500"}`}>
+            <button onClick={() => { setSelectedCategory("Barcha"); setTgScreen("catalog"); }} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "catalog" || tgScreen === "product" ? "text-emerald-400" : "text-slate-500"}`}>
               <Grid3X3 className="w-4 h-4" />
               <span className="text-[8px]">Katalog</span>
             </button>
-            <button onClick={() => setTgScreen("cart")} className={`flex flex-col items-center gap-0.5 ${tgScreen === "cart" || tgScreen === "location" || tgScreen === "payment" ? "text-emerald-400" : "text-slate-500"}`}>
+            <button onClick={() => setTgScreen("cart")} className={`relative flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "cart" || tgScreen === "location" || tgScreen === "payment" ? "text-emerald-400" : "text-slate-500"}`}>
               <ShoppingCart className="w-4 h-4" />
               <span className="text-[8px]">Savat</span>
+              {tgCart.length > 0 && (
+                <span className="absolute top-0 right-3 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center">{tgCart.reduce((s, i) => s + i.qty, 0)}</span>
+              )}
+            </button>
+            <button onClick={() => setTgScreen("offers")} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "offers" ? "text-emerald-400" : "text-slate-500"}`}>
+              <Gift className="w-4 h-4" />
+              <span className="text-[8px]">Takliflar</span>
+            </button>
+            <button onClick={() => setTgScreen("profile")} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "profile" || tgScreen.startsWith("profile_") ? "text-emerald-400" : "text-slate-500"}`}>
+              <User className="w-4 h-4" />
+              <span className="text-[8px]">Profil</span>
             </button>
           </div>
         )}
@@ -1038,7 +1315,9 @@ export default function PlatformsPage() {
         {/* BUILDER */}
         {activeTab === "builder" && (
           <motion.div key="builder" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-[calc(100vh-280px)]">
-            <UIBuilderPage />
+            <Suspense fallback={<div className="flex items-center justify-center h-full text-slate-500">Yuklanmoqda...</div>}>
+              <UIBuilderPage />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>

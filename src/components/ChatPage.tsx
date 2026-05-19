@@ -43,6 +43,20 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import type { ChartTooltipProps } from "../utils/chart";
+
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-sm font-medium text-white">{label}</p>
+        <p className="text-xs text-emerald-400">Kiruvchi: {payload[0].value}</p>
+        <p className="text-xs text-blue-400">Yakunlangan: {payload[1]?.value}</p>
+      </div>
+    );
+  }
+  return null;
+}
 
 export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,19 +139,6 @@ export default function ChatPage() {
     "new", "greeting", "needs_clarification", "offer_sent",
     "objection_handling", "closing", "won", "lost", "follow_up",
   ];
-
-  const CustomTooltip = ({ active, payload, label }: import("../utils/chart").ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-sm font-medium text-white">{label}</p>
-          <p className="text-xs text-emerald-400">Kiruvchi: {payload[0].value}</p>
-          <p className="text-xs text-blue-400">Yakunlangan: {payload[1]?.value}</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
