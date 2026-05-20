@@ -24,7 +24,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       }),
       app.prisma.product.findMany({
         where: { tenantId: tenant.id, active: true },
-        include: { category: { select: { id: true, name: true, slug: true } } },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          saleCampaign: {
+            select: { id: true, label: true, badgeColor: true, active: true, startsAt: true, endsAt: true },
+          },
+        },
         orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
       }),
       app.prisma.category.findMany({

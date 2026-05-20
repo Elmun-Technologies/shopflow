@@ -22,6 +22,7 @@ import { categoryRoutes } from "./routes/categories.js";
 import { uploadRoutes } from "./routes/upload.js";
 import { moyskladRoutes } from "./routes/moysklad.js";
 import { popupRoutes } from "./routes/popups.js";
+import { saleCampaignRoutes } from "./routes/sale-campaigns.js";
 
 const app = Fastify({
   logger: {
@@ -70,6 +71,7 @@ await app.register(storefrontRoutes, { prefix: "/api/storefront" });
 await app.register(uploadRoutes, { prefix: "/api/upload" });
 await app.register(moyskladRoutes, { prefix: "/api/moysklad" });
 await app.register(popupRoutes, { prefix: "/api/popups" });
+await app.register(saleCampaignRoutes, { prefix: "/api/sale-campaigns" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

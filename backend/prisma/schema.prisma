@@ -36,6 +36,7 @@ model Tenant {
   syncJobs        SyncJob[]
   webhookEvents   WebhookEvent[]
   popups          Popup[]
+  saleCampaigns   SaleCampaign[]
 }
 
 enum UserRole {
@@ -234,6 +235,10 @@ model Product {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  // Sale campaign aksiyasi (ixtiyoriy)
+  saleCampaignId String?
+  saleCampaign   SaleCampaign? @relation(fields: [saleCampaignId], references: [id], onDelete: SetNull)
+
   // MoySklad sync uchun
   moyskladId      String?
   moyskladUpdated DateTime?
@@ -248,6 +253,7 @@ model Product {
   @@unique([tenantId, moyskladId])
   @@index([tenantId, active])
   @@index([tenantId, featured])
+  @@index([tenantId, saleCampaignId])
 }
 
 enum ProductSource {
@@ -456,9 +462,43 @@ model WebhookEvent {
   @@index([tenantId, processed])
 }
 
-// ============== Popup / Marketing campaigns ==============
-// Mini App ochilganda mijozga ko'rsatiladigan banner/modal.
-// Admin paneldan boshqariladi: jadval, target, frequency.
+// ============== Sale campaign / Aksiya ==============
+// Bir necha mahsulotni "Распродажа" / "Hit" / "Yangi" kabi yorliq bilan
+// guruhlash uchun. Admin paneldan yaratiladi, Mini App'da har kartochkada
+// rangli badge ko'rinadi.
+
+enum SaleBadgeColor {
+  RED // Распродажа
+  ORANGE // Hot
+  EMERALD // Yangi
+  PURPLE // VIP
+  BLUE // Premium
+}
+
+model SaleCampaign {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name       String
+  label      String // Kartochkada ko'rinadigan matn, masalan "Распродажа"
+  badgeColor SaleBadgeColor @default(RED)
+
+  // Vaqt cheklovi (ixtiyoriy)
+  active   Boolean   @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  // Prioritet — agar mahsulot bir nechta campaignga tegishli bo'lsa, eng katta priority ko'rinadi
+  priority Int @default(0)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
 
 enum PopupKind {
   MODAL // To'liq ekranli, dismiss talab qiladi
