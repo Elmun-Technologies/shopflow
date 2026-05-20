@@ -13,6 +13,9 @@ import TrafficSources from "./components/TrafficSources";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
+import { AppToastProvider } from "./components/ui/Toast";
+import { ConfirmProvider } from "./components/ui/ConfirmDialog";
+import { PageSkeleton } from "./components/ui/Skeleton";
 import type { MarketingSub } from "./data/marketingData";
 
 const OrdersPage = lazy(() => import("./components/OrdersPage"));
@@ -58,9 +61,9 @@ type Page =
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
-      <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+    <div role="status" aria-live="polite">
       <span className="sr-only">Yuklanmoqda...</span>
+      <PageSkeleton />
     </div>
   );
 }
@@ -271,7 +274,11 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <AppShell />
+        <AppToastProvider>
+          <ConfirmProvider>
+            <AppShell />
+          </ConfirmProvider>
+        </AppToastProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

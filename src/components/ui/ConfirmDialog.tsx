@@ -1,0 +1,128 @@
+// Platforma uchun confirm dialogi — window.confirm() o'rniga.
+// Foydalanish:
+//   const confirm = useConfirm();
+//   const ok = await confirm({ title: "O'chirilsinmi?", description: "..." });
+//   if (ok) await deleteIt();
+
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { AlertTriangle, X } from "lucide-react";
+
+interface ConfirmOptions {
+  title: string;
+  description?: string;
+  confirmText?: string;
+  cancelText?: string;
+  kind?: "danger" | "default";
+}
+
+type ConfirmFn = (opts: ConfirmOptions) => Promise<boolean>;
+
+const Ctx = createContext<ConfirmFn | null>(null);
+
+interface ResolverEntry {
+  opts: ConfirmOptions;
+  resolve: (result: boolean) => void;
+}
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [active, setActive] = useState<ResolverEntry | null>(null);
+  const activeRef = useRef<ResolverEntry | null>(null);
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  const confirm: ConfirmFn = useCallback((opts) => {
+    return new Promise<boolean>((resolve) => {
+      setActive({ opts, resolve });
+    });
+  }, []);
+
+  const closeWith = useCallback((result: boolean) => {
+    const a = activeRef.current;
+    if (a) a.resolve(result);
+    setActive(null);
+  }, []);
+
+  // Escape klavishi — bekor qiladi
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeWith(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, closeWith]);
+
+  const isDanger = active?.opts.kind === "danger";
+
+  return (
+    <Ctx.Provider value={confirm}>
+      {children}
+      {active && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[300] p-4"
+          onClick={() => closeWith(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-labelledby="confirm-title"
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  isDanger ? "bg-rose-500/15 text-rose-400" : "bg-blue-500/15 text-blue-400"
+                }`}
+              >
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 id="confirm-title" className="text-base font-semibold text-white">
+                  {active.opts.title}
+                </h3>
+                {active.opts.description && (
+                  <p className="text-sm text-slate-400 mt-1">{active.opts.description}</p>
+                )}
+              </div>
+              <button
+                onClick={() => closeWith(false)}
+                aria-label="Yopish"
+                className="p-1 -mr-1 text-slate-500 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => closeWith(false)}
+                className="flex-1 px-4 py-2.5 text-sm text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg font-medium transition-colors"
+              >
+                {active.opts.cancelText ?? "Bekor"}
+              </button>
+              <button
+                onClick={() => closeWith(true)}
+                autoFocus
+                className={`flex-1 px-4 py-2.5 text-sm rounded-lg font-semibold transition-colors text-white ${
+                  isDanger ? "bg-rose-500 hover:bg-rose-600" : "bg-emerald-500 hover:bg-emerald-600"
+                }`}
+              >
+                {active.opts.confirmText ?? "Tasdiqlash"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Ctx.Provider>
+  );
+}
+
+export function useConfirm(): ConfirmFn {
+  const fn = useContext(Ctx);
+  if (!fn) {
+    // Provider yo'q muhitda native confirm fallback
+    return async (opts) => window.confirm(opts.title + (opts.description ? `\n\n${opts.description}` : ""));
+  }
+  return fn;
+}

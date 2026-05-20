@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
 import { marketingSubOrder, marketingSubLabels } from "../data/marketingData";
 import { useAuth } from "../contexts/AuthContext";
+import { useConfirm } from "./ui/ConfirmDialog";
 
 type Page =
   | "dashboard"
@@ -127,6 +128,17 @@ function loadState(): SidebarState {
 export default function Sidebar({ currentPage, onPageChange, marketingSub, onMarketingNavigate }: SidebarProps) {
   const [state, setState] = useState<SidebarState>(loadState);
   const { user, tenant, logout } = useAuth();
+  const confirmDialog = useConfirm();
+
+  const handleLogout = async () => {
+    const ok = await confirmDialog({
+      title: "Chiqishni xohlaysizmi?",
+      description: "Hisobingizdan chiqasiz va qaytadan login qilishingiz kerak.",
+      confirmText: "Chiqish",
+      cancelText: "Bekor",
+    });
+    if (ok) logout();
+  };
   const collapsed = state.collapsed;
   const isMarketingActive = currentPage === "marketing";
 
@@ -232,7 +244,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
             )}
           </AnimatePresence>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-all flex-shrink-0"
             title="Chiqish"
             aria-label="Chiqish"

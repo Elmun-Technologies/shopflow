@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Boxes, CheckCircle2, AlertTriangle, RefreshCw, Loader2, ExternalLink, X } from "lucide-react";
 import { moyskladApi, type MoyskladStatus, type SyncJob } from "../api/endpoints";
+import { useAppToast } from "./ui/Toast";
+import { useConfirm } from "./ui/ConfirmDialog";
 
 const STATUS_BADGE: Record<MoyskladStatus["status"], { label: string; cls: string }> = {
   CONNECTED: { label: "Ulangan", cls: "bg-emerald-400/15 text-emerald-300" },
@@ -28,6 +30,8 @@ export function MoyskladIntegrationCard() {
 
   const [activeJob, setActiveJob] = useState<SyncJob | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const toast = useAppToast();
+  const confirmDialog = useConfirm();
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -66,10 +70,11 @@ export function MoyskladIntegrationCard() {
     setConnectError(null);
     setConnecting(true);
     try {
-      await moyskladApi.connect(token.trim());
+      const res = await moyskladApi.connect(token.trim());
       setShowConnect(false);
       setToken("");
       await refreshStatus();
+      toast.success(`MoySklad ulandi: ${res.accountName ?? "hisob"}`);
     } catch (err) {
       setConnectError(err instanceof Error ? err.message : "Ulanish muvaffaqiyatsiz");
     } finally {
@@ -78,12 +83,20 @@ export function MoyskladIntegrationCard() {
   };
 
   const handleDisconnect = async () => {
-    if (!confirm("MoySklad ulanishini uzasizmi? Sinxronlangan ma'lumotlar saqlanib qoladi.")) return;
+    const ok = await confirmDialog({
+      title: "MoySklad ulanishini uzasizmi?",
+      description: "Sinxronlangan ma'lumotlar saqlanib qoladi, faqat token o'chiriladi.",
+      confirmText: "Uzish",
+      cancelText: "Bekor",
+      kind: "danger",
+    });
+    if (!ok) return;
     try {
       await moyskladApi.disconnect();
       await refreshStatus();
+      toast.success("MoySklad ulanishi uzildi");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Uzilishda xato");
+      toast.error(err instanceof Error ? err.message : "Uzilishda xato");
     }
   };
 
@@ -93,9 +106,10 @@ export function MoyskladIntegrationCard() {
       const { jobId } = await moyskladApi.startSync();
       const job = await moyskladApi.getJob(jobId);
       setActiveJob(job);
+      toast.info("Sinxronizatsiya boshlandi");
     } catch (err) {
       setSyncing(false);
-      alert(err instanceof Error ? err.message : "Sinxronizatsiyani boshlashda xato");
+      toast.error(err instanceof Error ? err.message : "Sinxronizatsiyani boshlashda xato");
     }
   };
 
@@ -103,13 +117,13 @@ export function MoyskladIntegrationCard() {
     try {
       const res = await moyskladApi.subscribeWebhooks();
       if (res.errors.length) {
-        alert(`${res.registered} ta webhook ro'yxatdan o'tdi, xatolar:\n${res.errors.join("\n")}`);
+        toast.error(`${res.registered} ta webhook ro'yxatdan o'tdi, ${res.errors.length} ta xato`);
       } else {
-        alert(`✅ ${res.registered} ta webhook muvaffaqiyatli ro'yxatdan o'tkazildi`);
+        toast.success(`${res.registered} ta webhook ro'yxatdan o'tkazildi`);
       }
       refreshStatus();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Webhook'larni ro'yxatdan o'tkazishda xato");
+      toast.error(err instanceof Error ? err.message : "Webhook'larni ro'yxatdan o'tkazishda xato");
     }
   };
 
