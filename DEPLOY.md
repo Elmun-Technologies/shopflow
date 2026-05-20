@@ -42,7 +42,7 @@ ssh root@<vps-ip>
 >
 > Tokenni nusxalang (`github_pat_...` bilan boshlanadi).
 
-Server ichida quyidagi buyruqlarni ishga tushiring (TOKEN o'rniga PAT'ni qo'ying):
+Server ichida quyidagi buyruqlarni ishga tushiring (TOKEN o'rniga PAT'ni qo'ying, `main` o'rniga kerakli branch nomi):
 
 ```bash
 export GH_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxxxxxx
@@ -141,14 +141,38 @@ GitHub'da Actions tab'ida deploy jarayonini real-time kuzata olasiz.
 
 ## 🛠 Qo'lda deploy (agar kerak bo'lsa)
 
-Agar tez bir narsani yangilamoqchi bo'lsangiz GitHub'siz:
+### Eng oson — yordamchi skript bilan
+
+Loyihada `scripts/deploy.sh` mavjud. U sinxron SSH ishlatadi, har bir qadam terminalda ko'rinadi va natija (success/fail) aniq qaytadi:
+
+```bash
+# Joriy branch'ni deploy qilish
+./scripts/deploy.sh root@83.229.86.232
+
+# Konkret branch
+./scripts/deploy.sh root@83.229.86.232 main
+```
+
+> Eslatma: skript faqat **GitHub'ga push qilingan** kodni deploy qiladi. Avval `git push` qiling.
+
+### Qo'lda SSH ichida
 
 ```bash
 ssh root@<vps-ip>
 cd /opt/shopflow
-git pull
-docker compose up -d --build
+git fetch origin
+git reset --hard origin/<branch-nomi>
+docker compose up -d --build --remove-orphans
+curl -fsS http://localhost/health   # "ok" qaytishi kerak
 ```
+
+### ⚠️ `nohup ... &` bilan deploy QILMANG
+
+`ssh root@host "nohup ... &"` shakli ko'pincha ishlamaydi:
+- SSH stdin/stdout fd'lari yopilmagani uchun ulanish osilib qoladi yoki
+- Buyruq fonda ketadi va siz natijani **ko'rmaysiz** — sayt yangilanmagani aniq.
+
+Buning o'rniga yuqoridagi `scripts/deploy.sh` ni ishlating yoki sinxron SSH bajaring.
 
 ---
 
