@@ -25,10 +25,8 @@ export function BottomNav({
   const accent = primaryColor || "#10b981";
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur border-t"
+      className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur border-t bg-slate-900/95 dark:bg-slate-900/95 border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.35)]"
       style={{
-        backgroundColor: "color-mix(in srgb, var(--tg-bg, #ffffff) 92%, transparent)",
-        borderColor: "var(--tg-border, rgba(0,0,0,0.06))",
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
@@ -46,7 +44,7 @@ export function BottomNav({
               aria-label={label}
               aria-current={isActive ? "page" : undefined}
               className="relative flex flex-col items-center justify-center gap-0.5 py-2.5 px-1 min-h-[56px] transition-colors active:opacity-70"
-              style={{ color: isActive ? accent : "var(--tg-hint, #94a3b8)" }}
+              style={{ color: isActive ? accent : "#94a3b8" }}
             >
               {/* Active indicator pill */}
               {isActive && (
