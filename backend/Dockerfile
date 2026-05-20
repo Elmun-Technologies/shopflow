@@ -26,4 +26,4 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD curl -fsS http://localhost:4000/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/server.js"]

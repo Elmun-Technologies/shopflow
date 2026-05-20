@@ -15,6 +15,7 @@ import type {
   SettingsTab, ProfileSettings, StoreSettings, NotificationGroup,
   Integration, SecuritySettings, ApiKey,
 } from "../data/settingsData";
+import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
 
 const integrationIconMap: Record<string, React.ElementType> = {
   Send, CreditCard, Wallet, BarChart3, Instagram: Globe, ShoppingBag, Calculator,
@@ -177,7 +178,9 @@ export default function SettingsPage() {
   );
 
   const renderIntegrations = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="space-y-4">
+      <MoyskladIntegrationCard />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {integrations.map((int) => {
         const Icon = integrationIconMap[int.icon] || Puzzle;
         const st = statusConfig[int.status];
@@ -214,6 +217,7 @@ export default function SettingsPage() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 

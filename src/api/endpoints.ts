@@ -169,3 +169,51 @@ export const dashboardApi = {
     api<{ name: string; sales: number; value: number }[]>("/dashboard/sales-by-category"),
   recentOrders: () => api<Order[]>("/dashboard/recent-orders"),
 };
+
+// ===== MoySklad Integration =====
+
+export interface MoyskladStatus {
+  status: "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ERROR";
+  accountName: string | null;
+  accountUuid?: string | null;
+  connectedAt?: string | null;
+  lastSyncAt: string | null;
+  lastWebhookAt?: string | null;
+  lastError: string | null;
+  webhookCount?: number;
+}
+
+export interface SyncJob {
+  id: string;
+  type: "INITIAL_IMPORT" | "INCREMENTAL_PRODUCTS" | "INCREMENTAL_CUSTOMERS" | "INCREMENTAL_ORDERS" | "PUSH_ORDER";
+  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+  progress: number;
+  processedItems: number;
+  totalItems: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  error: string | null;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const moyskladApi = {
+  status: () => api<MoyskladStatus>("/moysklad/status"),
+
+  connect: (token: string) =>
+    api<{ ok: boolean; status: string; accountName: string | null; accountUuid: string | null }>(
+      "/moysklad/connect",
+      { method: "POST", body: { token } },
+    ),
+
+  disconnect: () => api<{ ok: boolean }>("/moysklad/disconnect", { method: "POST" }),
+
+  startSync: () => api<{ ok: boolean; jobId: string }>("/moysklad/sync", { method: "POST" }),
+
+  getJob: (jobId: string) => api<SyncJob>(`/moysklad/sync/${jobId}`),
+
+  listJobs: () => api<{ jobs: SyncJob[] }>("/moysklad/sync"),
+
+  subscribeWebhooks: () =>
+    api<{ ok: boolean; registered: number; errors: string[] }>("/moysklad/webhooks/subscribe", { method: "POST" }),
+};
