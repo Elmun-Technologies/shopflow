@@ -294,6 +294,9 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Telegram Mini App orqali tanish — keyinchalik "Mening buyurtmalarim"
+  telegramUserId BigInt?
+
   // MoySklad sync uchun (counterparty)
   moyskladId      String?
   moyskladUpdated DateTime?
@@ -303,6 +306,7 @@ model Customer {
   @@unique([tenantId, moyskladId])
   @@index([tenantId, email])
   @@index([tenantId, phone])
+  @@index([tenantId, telegramUserId])
 }
 
 // ============== ORDERS ==============
