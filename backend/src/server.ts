@@ -55,6 +55,8 @@ await app.register(prismaPlugin);
 await app.register(authPlugin);
 
 app.get("/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
+// /api/health — Caddy /api/* ni backend'ga proxy qiladi, shu yo'l ham ishlashi uchun
+app.get("/api/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
 
 await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(tenantRoutes, { prefix: "/api/tenant" });
