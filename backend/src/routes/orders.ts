@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { nextOrderCode } from "../lib/codes.js";
+import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
 
 const statusEnum = z.enum(["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "REFUNDED"]);
 
@@ -114,6 +115,21 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!order) return reply.code(404).send({ error: "Not found" });
-    return app.prisma.order.update({ where: { id }, data });
+    const updated = await app.prisma.order.update({ where: { id }, data });
+
+    // Telegram push notification — status o'zgarganda
+    if (data.status && data.status !== order.status) {
+      const tenantId = req.session.tenantId;
+      // Fonda yuboramiz, response'ni kutmaymiz
+      notifyOrderStatusChange(app.prisma, tenantId, id, order.status, data.status)
+        .then((result) => {
+          if (!result.sent) {
+            app.log.debug({ orderId: id, reason: result.reason }, "TG push skipped");
+          }
+        })
+        .catch((err) => app.log.warn({ err, orderId: id }, "TG push failed"));
+    }
+
+    return updated;
   });
 };

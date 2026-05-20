@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Inbox, Eye, AlertCircle } from "lucide-react";
+import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { ordersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Order, OrderStatus } from "../types/api";
+import { useAppToast } from "./ui/Toast";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; bg: string }> = {
   PENDING: { label: "Kutilmoqda", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
@@ -125,7 +126,7 @@ export default function OrdersPage() {
             </p>
           </div>
         ) : (
-          <OrderTable orders={orders} currency={currency} />
+          <OrderTable orders={orders} currency={currency} onChanged={refetch} />
         )}
 
         {total > pageSize && (
@@ -156,7 +157,25 @@ export default function OrdersPage() {
   );
 }
 
-function OrderTable({ orders, currency }: { orders: Order[]; currency: string }) {
+function OrderTable({ orders, currency, onChanged }: { orders: Order[]; currency: string; onChanged: () => void }) {
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const toast = useAppToast();
+
+  const handleChangeStatus = async (orderId: string, status: OrderStatus, code: string) => {
+    setOpenMenuId(null);
+    setUpdatingId(orderId);
+    try {
+      await ordersApi.update(orderId, { status });
+      toast.success(`#${code} → ${statusConfig[status].label}`);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Status yangilanmadi");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -193,10 +212,40 @@ function OrderTable({ orders, currency }: { orders: Order[]; currency: string })
                     {formatCurrency(Number(order.total), order.currency || currency)}
                   </span>
                 </td>
-                <td className="py-3 px-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.color}`}>
+                <td className="py-3 px-4 relative">
+                  <button
+                    onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
+                    disabled={updatingId === order.id}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.color} hover:brightness-110 transition-all disabled:opacity-50`}
+                  >
+                    {updatingId === order.id && <Loader2 className="w-3 h-3 animate-spin" />}
                     {cfg.label}
-                  </span>
+                    <ChevronDown className="w-3 h-3 opacity-60" />
+                  </button>
+                  {openMenuId === order.id && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
+                      <div className="absolute top-full left-4 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[160px]">
+                        {(Object.keys(statusConfig) as OrderStatus[]).map((s) => {
+                          const sc = statusConfig[s];
+                          const isCurrent = s === order.status;
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => !isCurrent && handleChangeStatus(order.id, s, order.code)}
+                              disabled={isCurrent}
+                              className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-700 transition-colors ${
+                                isCurrent ? "opacity-60 cursor-default" : ""
+                              }`}
+                            >
+                              <span className={sc.color}>{sc.label}</span>
+                              {isCurrent && <span className="text-emerald-400">✓</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
