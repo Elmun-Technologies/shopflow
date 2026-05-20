@@ -28,11 +28,43 @@ jobs:
           node-version: "20.19"
           cache: "npm"
 
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run build
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Frontend typecheck
+        run: npm run typecheck
+
+      - name: Frontend lint
+        run: npm run lint
+
+      - name: Frontend tests
+        run: npm run test
+
+      - name: Frontend build
+        run: npm run build
+
+      # Backend: prisma generate + typecheck. No DB needed for tsc.
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Backend Prisma generate
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        run: npx prisma generate
+
+      - name: Backend typecheck
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        run: npx tsc --noEmit
+
+      - name: Backend Prisma schema validate
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        run: npx prisma validate
 
   deploy:
     name: Deploy
