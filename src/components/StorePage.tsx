@@ -1,14 +1,19 @@
 // Telegram Mini App (Web App) — mijozlarga ko'rsatiladigan ommaviy do'kon sahifasi.
 // Auth talab qilinmaydi. /api/storefront/:slug orqali ma'lumot olinadi.
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
   Tag,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
-import { ProfilePage } from "./storefront/ProfilePage";
+import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
+import { ProductGridSkeleton } from "./storefront/Skeleton";
+import { ToastProvider, useToast } from "./storefront/Toast";
+
+// Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
+const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 
 // Telegram Web App types
 declare global {
@@ -187,7 +192,15 @@ function formatPrice(price: string | number, currency: string): string {
   return n.toLocaleString() + " " + currency;
 }
 
-export default function StorePage({ slug }: { slug: string }) {
+export default function StorePage(props: { slug: string }) {
+  return (
+    <ToastProvider>
+      <StoreInner {...props} />
+    </ToastProvider>
+  );
+}
+
+function StoreInner({ slug }: { slug: string }) {
   const [data, setData] = useState<StorefrontData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -201,6 +214,7 @@ export default function StorePage({ slug }: { slug: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
+  const toast = useToast();
 
   // Telegram WebApp — darhol ready() chaqirish (yuklanish ekranini yashirish uchun)
   const twa = window.Telegram?.WebApp;
@@ -222,6 +236,11 @@ export default function StorePage({ slug }: { slug: string }) {
   }, []);
 
   const primaryColor = data?.brand?.primaryColor || "#10b981";
+
+  // Telegram theme'ni va brand color'ni CSS variable'lariga joylab qo'yamiz
+  useEffect(() => {
+    applyTelegramTheme(data?.brand?.primaryColor);
+  }, [data?.brand?.primaryColor]);
 
   useEffect(() => {
     fetchStorefront(slug)
@@ -254,12 +273,13 @@ export default function StorePage({ slug }: { slug: string }) {
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
 
   const addToCart = useCallback((product: StoreProduct) => {
-    twa?.HapticFeedback?.impactOccurred("light");
+    haptic.light();
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
       if (existing) {
         return prev.map((i) => i.productId === product.id ? { ...i, qty: i.qty + 1 } : i);
       }
+      toast.show(`${product.name} savatga qo'shildi`, "success");
       return [...prev, {
         productId: product.id,
         qty: 1,
@@ -268,9 +288,10 @@ export default function StorePage({ slug }: { slug: string }) {
         imageUrl: product.imageUrl,
       }];
     });
-  }, [twa]);
+  }, [toast]);
 
   const updateQty = useCallback((productId: string, delta: number) => {
+    haptic.soft();
     setCart((prev) => {
       const item = prev.find((i) => i.productId === productId);
       if (!item) return prev;
@@ -330,10 +351,24 @@ export default function StorePage({ slug }: { slug: string }) {
   // ---- LOADING ----
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: primaryColor }} />
-          <p className="text-sm text-slate-400">Yuklanmoqda...</p>
+      <div className="min-h-screen bg-slate-950">
+        {/* Header skeleton */}
+        <div className="px-4 pt-4 pb-3 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-800 animate-pulse" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 bg-slate-800 rounded-full w-1/2 animate-pulse" />
+            <div className="h-2.5 bg-slate-800 rounded-full w-1/3 animate-pulse" />
+          </div>
+        </div>
+        {/* Category chips skeleton */}
+        <div className="px-3 py-2 flex gap-2 overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-7 bg-slate-800 rounded-lg animate-pulse flex-shrink-0" style={{ width: 60 + (i % 3) * 20 }} />
+          ))}
+        </div>
+        {/* Product grid skeleton */}
+        <div className="p-3">
+          <ProductGridSkeleton count={6} />
         </div>
       </div>
     );
@@ -716,15 +751,23 @@ export default function StorePage({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
         <div className="flex-1 overflow-y-auto">
-          <ProfilePage
-            storeSlug={slug}
-            tenantName={data.tenant.name}
-            telegramUser={telegramUser}
-            operatorTelegram={brand?.phone || undefined}
-            apiBase={API_BASE}
-          />
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-6 h-6 animate-spin" style={{ color: primaryColor }} />
+              </div>
+            }
+          >
+            <ProfilePage
+              storeSlug={slug}
+              tenantName={data.tenant.name}
+              telegramUser={telegramUser}
+              operatorTelegram={brand?.phone || undefined}
+              apiBase={API_BASE}
+            />
+          </Suspense>
         </div>
-        <BottomNav active="profile" cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />
+        <BottomNav active="profile" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
       </div>
     );
   }
@@ -733,7 +776,7 @@ export default function StorePage({ slug }: { slug: string }) {
   if (view === "promotions") {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3">
+        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Tag className="w-5 h-5" style={{ color: primaryColor }} />
             Maxsus takliflar
@@ -751,7 +794,7 @@ export default function StorePage({ slug }: { slug: string }) {
             </div>
           )}
         </div>
-        <BottomNav active="promotions" cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />
+        <BottomNav active="promotions" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
         {selectedProduct && renderProductDetail()}
       </div>
     );
@@ -761,7 +804,7 @@ export default function StorePage({ slug }: { slug: string }) {
   if (view === "catalog") {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3">
+        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <h2 className="text-base font-semibold text-white">Katalog</h2>
         </div>
         {categories.length > 0 && (
@@ -799,7 +842,7 @@ export default function StorePage({ slug }: { slug: string }) {
             <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
           )}
         </div>
-        <BottomNav active="catalog" cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />
+        <BottomNav active="catalog" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
         {selectedProduct && renderProductDetail()}
       </div>
     );
@@ -975,7 +1018,7 @@ export default function StorePage({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur border-b border-slate-800/50 px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur border-b border-slate-800/50 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {brand.logo ? (
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}>
@@ -1078,7 +1121,7 @@ export default function StorePage({ slug }: { slug: string }) {
       )}
 
       {/* Bottom navigation — Home, Katalog, Savat, Takliflar, Profile */}
-      {currentTab && <BottomNav active={currentTab} cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />}
+      {currentTab && <BottomNav active={currentTab} cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />}
 
       {/* Product detail overlay */}
       {selectedProduct && renderProductDetail()}
