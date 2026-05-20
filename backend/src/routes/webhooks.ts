@@ -157,4 +157,53 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
 
     return { ok: true, leadId: lead.id, code: lead.code };
   });
+
+  // MoySklad webhook qabul qiluvchi
+  // URL: POST /api/webhooks/moysklad/:tenantId
+  // Body: { events: [{ meta: { type, href }, action, accountId, ... }], requestId }
+  //
+  // Idempotentlik: har bir requestId 1 marta qayta ishlanadi.
+  // Hozirgi MVP: event'ni saqlash + lastWebhookAt ni yangilash. To'liq re-fetch
+  // keyingi iteratsiyada (queue + worker bilan).
+  app.post<{ Params: { tenantId: string } }>("/moysklad/:tenantId", async (req, reply) => {
+    const { tenantId } = req.params;
+    const acc = await app.prisma.moyskladAccount.findUnique({ where: { tenantId } });
+    if (!acc) return reply.code(404).send({ error: "Tenant topilmadi" });
+
+    type Event = { meta?: { type?: string; href?: string }; action?: string; accountId?: string };
+    const body = req.body as { events?: Event[]; requestId?: string } | undefined;
+    if (!body?.events?.length) {
+      return { ok: true, skipped: true };
+    }
+
+    const requestId = body.requestId ?? `noreq-${Date.now()}`;
+
+    // Idempotentlik tekshiruvi
+    const existing = await app.prisma.webhookEvent.findUnique({
+      where: { tenantId_source_externalId: { tenantId, source: "moysklad", externalId: requestId } },
+    });
+    if (existing) {
+      return { ok: true, duplicate: true };
+    }
+
+    await app.prisma.webhookEvent.create({
+      data: {
+        tenantId,
+        source: "moysklad",
+        externalId: requestId,
+        entityType: body.events[0].meta?.type ?? null,
+        action: body.events[0].action ?? null,
+        payload: body as never,
+        processed: true,
+      },
+    });
+
+    await app.prisma.moyskladAccount.update({
+      where: { tenantId },
+      data: { lastWebhookAt: new Date() },
+    });
+
+    // MoySklad 200 javobni 5 sek ichida kutadi — uzun ish fonda
+    return { ok: true, received: body.events.length };
+  });
 };
