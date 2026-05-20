@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, GripVertical, Eye, EyeOff, Trash2, Copy, Palette,
@@ -6,25 +6,44 @@ import {
   Plus, Image, Sparkles, Percent, TrendingUp, Crown, Calendar,
   Grid3X3, Zap, Sun, Heart, LayoutGrid, List, LayoutTemplate as LayoutIcon,
   Play, Megaphone, X, Type, Phone, Mail, MapPin, ShoppingBag,
-  Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Star,
-  Home, ShoppingCart, Gift, User,
+  Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Loader2, Globe,
 } from "lucide-react";
 import {
   blockDefinitions, templates, defaultBrandSettings, categoryColors,
 } from "../data/uiBuilderData";
 import type { UIBlock, BrandSettings } from "../data/uiBuilderData";
-import { platformProducts } from "../data/platformsData";
+import { vitrinaApi, productsApi, categoriesApi } from "../api/endpoints";
+import type { Product, Category } from "../types/api";
 
 const iconMap: Record<string, React.ElementType> = {
   Image, Sparkles, Percent, TrendingUp, Crown, Calendar, Grid3X3, Zap, Sun, Heart,
   LayoutGrid, List, LayoutIcon, Play, Megaphone, Search, Type,
 };
 
-const productCategories = ["Telefonlar", "Noutbuklar", "Kiyim", "Oziq-ovqat", "Maishiy", "Sport", "Kitoblar", "O'yinchoqlar", "Aksessuarlar"];
+type PreviewProduct = {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number;
+  imageUrl?: string;
+  categoryName?: string;
+};
+
+function toPreviewProduct(p: Product): PreviewProduct {
+  return {
+    id: p.id,
+    name: p.name,
+    price: Number(p.price),
+    oldPrice: p.oldPrice != null ? Number(p.oldPrice) : undefined,
+    imageUrl: p.imageUrl ?? undefined,
+    categoryName: p.category?.name,
+  };
+}
 
 export default function UIBuilderPage() {
-  const [blocks, setBlocks] = useState<UIBlock[]>(JSON.parse(JSON.stringify(templates[3].blocks)));
+  const [blocks, setBlocks] = useState<UIBlock[]>([]);
   const [brand, setBrand] = useState<BrandSettings>(JSON.parse(JSON.stringify(defaultBrandSettings)));
+  const [published, setPublished] = useState(true);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("mobile");
   const [activePanel, setActivePanel] = useState<"blocks" | "templates" | "brand">("blocks");
@@ -34,8 +53,45 @@ export default function UIBuilderPage() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
   const [showPreview, setShowPreview] = useState(true);
-  const [previewTab, setPreviewTab] = useState<"home" | "catalog" | "cart" | "offers" | "profile">("home");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
+  const [realCategories, setRealCategories] = useState<Category[]>([]);
   const dragCounter = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [layout, prods, cats] = await Promise.all([
+          vitrinaApi.getLayout(),
+          productsApi.list({ pageSize: 50 }),
+          categoriesApi.list(),
+        ]);
+        if (cancelled) return;
+
+        const savedBlocks = layout.blocks as unknown as UIBlock[];
+        setBlocks(
+          savedBlocks.length > 0
+            ? savedBlocks
+            : JSON.parse(JSON.stringify(templates[3].blocks)).map((b: UIBlock) => ({
+                ...b,
+                id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              }))
+        );
+        setBrand({ ...defaultBrandSettings, ...(layout.brand as Partial<BrandSettings>) });
+        setPublished(layout.published);
+        setPreviewProducts(prods.items.map(toPreviewProduct));
+        setRealCategories(cats);
+      } catch {
+        // use defaults on error
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const selectedBlock = blocks.find((b) => b.id === selectedBlockId);
   const selectedDef = blockDefinitions.find((d) => d.type === selectedBlock?.type);
@@ -125,12 +181,19 @@ export default function UIBuilderPage() {
     });
   }, []);
 
-  const handleSave = useCallback(() => {
-    const data = { blocks, brand, savedAt: new Date().toISOString() };
-    localStorage.setItem("shopflow_ui_builder", JSON.stringify(data));
-    setSavedMessage("Saqlandi!");
-    setTimeout(() => setSavedMessage(""), 2000);
-  }, [blocks, brand]);
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await vitrinaApi.saveLayout({ blocks, brand: brand as unknown as Record<string, unknown>, published });
+      setSavedMessage("Saqlandi!");
+      setTimeout(() => setSavedMessage(""), 2500);
+    } catch {
+      setSavedMessage("Xato yuz berdi");
+      setTimeout(() => setSavedMessage(""), 2500);
+    } finally {
+      setSaving(false);
+    }
+  }, [blocks, brand, published]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -171,10 +234,20 @@ export default function UIBuilderPage() {
     setDragOverIndex(null);
   };
 
-  // Preview helpers
-  const getProducts = (count: number, category?: string) => {
-    const prods = category ? platformProducts.filter((p) => p.category === category) : platformProducts;
-    return prods.slice(0, Math.max(1, count));
+  const getProducts = (count: number, categoryName?: string) => {
+    const prods = categoryName
+      ? previewProducts.filter((p) => p.categoryName === categoryName)
+      : previewProducts;
+    const result = prods.slice(0, Math.max(1, count));
+    // pad with placeholders if not enough real products
+    if (result.length === 0) {
+      return Array.from<unknown, PreviewProduct>({ length: Math.min(count, 4) }, (_, i) => ({
+        id: `placeholder-${i}`,
+        name: `Mahsulot ${i + 1}`,
+        price: 0,
+      }));
+    }
+    return result;
   };
 
   const renderPreviewBlock = (block: UIBlock, isMobile: boolean) => {
@@ -207,18 +280,19 @@ export default function UIBuilderPage() {
             <div className={`grid gap-2 ${isMobile ? "grid-cols-2" : "grid-cols-4"}`}>
               {prods.map((p) => (
                 <div key={p.id} className="bg-slate-800 rounded-xl p-2.5 hover:bg-slate-750 transition-colors">
-                  <div className="w-full h-20 bg-slate-700 rounded-lg flex items-center justify-center mb-2">
-                    <Package className="w-7 h-7 text-slate-500" />
+                  <div className="w-full h-20 bg-slate-700 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-7 h-7 text-slate-500" />
+                    )}
                   </div>
                   <p className="text-[10px] text-white truncate">{p.name}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                    <span className="text-[9px] text-slate-500">{p.rating}</span>
-                  </div>
-                  <p className="text-[10px] text-emerald-400 font-bold mt-0.5">{p.price.toLocaleString()}</p>
-                  {p.oldPrice && <p className="text-[9px] text-slate-500 line-through">{p.oldPrice.toLocaleString()}</p>}
-                  {s.showBadge && p.badge && (
-                    <span className="inline-block mt-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded-full">{p.badge}</span>
+                  <p className="text-[10px] text-emerald-400 font-bold mt-0.5">
+                    {p.price > 0 ? p.price.toLocaleString() : "—"}
+                  </p>
+                  {p.oldPrice != null && (
+                    <p className="text-[9px] text-slate-500 line-through">{p.oldPrice.toLocaleString()}</p>
                   )}
                 </div>
               ))}
@@ -243,13 +317,21 @@ export default function UIBuilderPage() {
             <div className={`grid gap-2 ${isMobile ? "grid-cols-2" : "grid-cols-4"}`}>
               {fsProds.map((p) => (
                 <div key={p.id} className="bg-slate-800 rounded-xl p-2.5">
-                  <div className="w-full h-20 bg-slate-700 rounded-lg flex items-center justify-center mb-2">
-                    <Package className="w-7 h-7 text-slate-500" />
+                  <div className="w-full h-20 bg-slate-700 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-7 h-7 text-slate-500" />
+                    )}
                   </div>
                   <p className="text-[10px] text-white truncate">{p.name}</p>
                   <div className="flex items-center gap-1">
-                    <p className="text-[10px] text-red-400 font-bold">{p.price.toLocaleString()}</p>
-                    {p.oldPrice && <p className="text-[9px] text-slate-500 line-through">{p.oldPrice.toLocaleString()}</p>}
+                    <p className="text-[10px] text-red-400 font-bold">
+                      {p.price > 0 ? p.price.toLocaleString() : "—"}
+                    </p>
+                    {p.oldPrice != null && (
+                      <p className="text-[9px] text-slate-500 line-through">{p.oldPrice.toLocaleString()}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -259,37 +341,41 @@ export default function UIBuilderPage() {
       }
 
       case "product_of_day": {
-        const pod = platformProducts[0];
+        const pod = previewProducts[0];
         return (
           <div className="w-full bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-amber-400 mb-3">{s.title}</h3>
-            <div className="flex gap-3">
-              <div className="w-24 h-24 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Package className="w-10 h-10 text-slate-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">{pod.name}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold text-emerald-400">{pod.price.toLocaleString()}</span>
-                  {pod.oldPrice && <span className="text-sm text-slate-500 line-through">{pod.oldPrice.toLocaleString()}</span>}
+            {pod ? (
+              <div className="flex gap-3">
+                <div className="w-24 h-24 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {pod.imageUrl ? (
+                    <img src={pod.imageUrl} alt={pod.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Package className="w-10 h-10 text-slate-500" />
+                  )}
                 </div>
-                {s.showStockBar && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                      <span>Qoldi</span>
-                      <span>12 dona</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                      <div className="h-full w-[30%] bg-red-500 rounded-full" />
-                    </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{pod.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-lg font-bold text-emerald-400">{pod.price.toLocaleString()}</span>
+                    {pod.oldPrice != null && <span className="text-sm text-slate-500 line-through">{pod.oldPrice.toLocaleString()}</span>}
                   </div>
-                )}
-                <div className="flex items-center gap-1 mt-2">
-                  <Clock className="w-3 h-3 text-amber-400" />
-                  <span className="text-xs text-amber-400 font-mono">08:45:22</span>
+                  {s.showStockBar && (
+                    <div className="mt-2">
+                      <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full w-[40%] bg-amber-500 rounded-full" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 mt-2">
+                    <Clock className="w-3 h-3 text-amber-400" />
+                    <span className="text-xs text-amber-400 font-mono">08:45:22</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-xs text-slate-500">Mahsulotlar yo'q</div>
+            )}
           </div>
         );
       }
@@ -299,12 +385,18 @@ export default function UIBuilderPage() {
           <div className="w-full">
             <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
             <div className={`grid gap-2 ${isMobile ? "grid-cols-3" : "grid-cols-6"}`}>
-              {productCategories.slice(0, s.count || 6).map((cat) => (
-                <div key={cat} className="bg-slate-800 rounded-xl p-3 text-center hover:bg-slate-750 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-1" style={{ backgroundColor: categoryColors[cat] + "30" }}>
-                    <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat] }} />
+              {(realCategories.length > 0 ? realCategories : []).slice(0, s.count || 6).map((cat) => (
+                <div key={cat.id} className="bg-slate-800 rounded-xl p-3 text-center hover:bg-slate-750 transition-colors cursor-pointer">
+                  <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-1" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
+                    <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                   </div>
-                  <p className="text-[10px] text-white">{cat}</p>
+                  <p className="text-[10px] text-white">{cat.name}</p>
+                </div>
+              ))}
+              {realCategories.length === 0 && [1, 2, 3, 4, 5, 6].slice(0, s.count || 6).map((i) => (
+                <div key={i} className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-slate-700 mb-1" />
+                  <p className="text-[10px] text-slate-600">Kategoriya {i}</p>
                 </div>
               ))}
             </div>
@@ -316,13 +408,13 @@ export default function UIBuilderPage() {
           <div className="w-full">
             <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
             <div className="space-y-1">
-              {productCategories.map((cat) => (
-                <div key={cat} className="flex items-center justify-between bg-slate-800 rounded-lg px-3 py-2 hover:bg-slate-750 transition-colors cursor-pointer">
+              {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between bg-slate-800 rounded-lg px-3 py-2 hover:bg-slate-750 transition-colors cursor-pointer">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: categoryColors[cat] + "30" }}>
-                      <Grid3X3 className="w-3 h-3" style={{ color: categoryColors[cat] }} />
+                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
+                      <Grid3X3 className="w-3 h-3" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                     </div>
-                    <span className="text-xs text-white">{cat}</span>
+                    <span className="text-xs text-white">{cat.name}</span>
                   </div>
                   <ChevronRight className="w-3 h-3 text-slate-500" />
                 </div>
@@ -336,12 +428,12 @@ export default function UIBuilderPage() {
           <div className="w-full">
             <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
             <div className="grid grid-cols-2 gap-2">
-              {productCategories.slice(0, s.count || 4).map((cat) => (
-                <div key={cat} className="bg-slate-800 rounded-xl p-3 flex items-center gap-2 hover:bg-slate-750 transition-colors cursor-pointer">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: categoryColors[cat] + "30" }}>
-                    <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat] }} />
+              {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).slice(0, s.count || 4).map((cat) => (
+                <div key={cat.id} className="bg-slate-800 rounded-xl p-3 flex items-center gap-2 hover:bg-slate-750 transition-colors cursor-pointer">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
+                    <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                   </div>
-                  <span className="text-xs text-white">{cat}</span>
+                  <span className="text-xs text-white">{cat.name}</span>
                 </div>
               ))}
             </div>
@@ -397,6 +489,17 @@ export default function UIBuilderPage() {
     navigation: filteredDefs.filter((d) => d.category === "navigation"),
     media: filteredDefs.filter((d) => d.category === "media"),
   };
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex items-center gap-3 text-slate-400">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm">Yuklanmoqda...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex">
@@ -578,13 +681,28 @@ export default function UIBuilderPage() {
             <span className="text-sm font-semibold text-white">Muharrir</span>
             <span className="text-xs text-slate-500">{blocks.length} blok · {blocks.filter((b) => b.enabled).length} faol</span>
             {savedMessage && (
-              <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="text-xs text-emerald-400 flex items-center gap-1">
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className={`text-xs flex items-center gap-1 ${savedMessage === "Saqlandi!" ? "text-emerald-400" : "text-red-400"}`}
+              >
                 <CheckCircle2 className="w-3 h-3" />
                 {savedMessage}
               </motion.span>
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Published toggle */}
+            <button
+              onClick={() => setPublished(!published)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                published ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-slate-800 text-slate-500 border border-slate-700"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              {published ? "Nashr" : "Yashirin"}
+            </button>
             <div className="flex items-center bg-slate-800 rounded-lg p-0.5">
               <button onClick={() => setPreviewMode("mobile")} className={`p-1.5 rounded-md transition-all ${previewMode === "mobile" ? "bg-slate-700 text-white" : "text-slate-500"}`}>
                 <Smartphone className="w-4 h-4" />
@@ -596,8 +714,12 @@ export default function UIBuilderPage() {
             <button onClick={() => setShowPreview(!showPreview)} className={`p-1.5 rounded-lg transition-all ${showPreview ? "bg-emerald-500/10 text-emerald-400" : "text-slate-500"}`}>
               <Eye className="w-4 h-4" />
             </button>
-            <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-colors">
-              <Save className="w-3.5 h-3.5" />
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               Saqlash
             </button>
           </div>
@@ -699,9 +821,14 @@ export default function UIBuilderPage() {
               >
                 <div className="h-10 border-b border-slate-800 flex items-center justify-between px-3 flex-shrink-0">
                   <span className="text-xs font-medium text-slate-400">Preview</span>
-                  <span className="text-[10px] text-slate-600">{previewMode === "mobile" ? "375px" : "480px"}</span>
+                  <div className="flex items-center gap-2">
+                    {previewProducts.length > 0 && (
+                      <span className="text-[10px] text-slate-600">{previewProducts.length} mahsulot</span>
+                    )}
+                    <span className="text-[10px] text-slate-600">{previewMode === "mobile" ? "375px" : "480px"}</span>
+                  </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 pb-16">
+                <div className="flex-1 overflow-y-auto p-3">
                   <div className={`mx-auto ${previewMode === "mobile" ? "w-[320px]" : "w-full"}`}>
                     {/* Header */}
                     <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-800">
@@ -717,132 +844,23 @@ export default function UIBuilderPage() {
                       </div>
                     </div>
 
-                    {previewTab === "home" && (
-                      <>
-                        {/* Blocks */}
-                        <div className="space-y-3">
-                          {blocks.filter((b) => b.enabled).map((block) => (
-                            <div key={block.id}>{renderPreviewBlock(block, previewMode === "mobile")}</div>
-                          ))}
-                        </div>
+                    {/* Blocks */}
+                    <div className="space-y-3">
+                      {blocks.filter((b) => b.enabled).map((block) => (
+                        <div key={block.id}>{renderPreviewBlock(block, previewMode === "mobile")}</div>
+                      ))}
+                    </div>
 
-                        {/* Footer */}
-                        <div className="mt-6 pt-4 border-t border-slate-800 text-center">
-                          <p className="text-[10px] text-slate-500">{brand.name} © 2024</p>
-                          <div className="flex items-center justify-center gap-3 mt-2">
-                            <Phone className="w-3 h-3 text-slate-600" />
-                            <Mail className="w-3 h-3 text-slate-600" />
-                            <MapPin className="w-3 h-3 text-slate-600" />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {previewTab === "catalog" && (
-                      <div>
-                        <p className="text-xs text-slate-500 mb-2">Mahsulot kategoriyalari</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {productCategories.map((cat) => (
-                            <div key={cat} className="rounded-lg p-3 text-center text-xs text-white" style={{ backgroundColor: categoryColors[cat] || "#1e293b" }}>
-                              {cat}
-                            </div>
-                          ))}
-                        </div>
+                    {/* Footer */}
+                    <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+                      <p className="text-[10px] text-slate-500">{brand.name} © 2025</p>
+                      <div className="flex items-center justify-center gap-3 mt-2">
+                        {brand.phone && <Phone className="w-3 h-3 text-slate-600" />}
+                        {brand.email && <Mail className="w-3 h-3 text-slate-600" />}
+                        {brand.address && <MapPin className="w-3 h-3 text-slate-600" />}
                       </div>
-                    )}
-
-                    {previewTab === "cart" && (
-                      <div className="space-y-2">
-                        {platformProducts.slice(0, 2).map((p) => (
-                          <div key={p.id} className="bg-slate-900 rounded-lg p-2.5 flex items-center gap-2 border border-slate-800">
-                            <div className="w-10 h-10 bg-slate-800 rounded flex items-center justify-center">
-                              <Package className="w-5 h-5 text-slate-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-white truncate">{p.name}</p>
-                              <p className="text-[10px] font-bold" style={{ color: brand.primaryColor }}>{p.price.toLocaleString()} so'm</p>
-                            </div>
-                          </div>
-                        ))}
-                        <button className="w-full py-2 rounded-lg text-xs text-white mt-2" style={{ backgroundColor: brand.primaryColor }}>Buyurtma berish</button>
-                      </div>
-                    )}
-
-                    {previewTab === "offers" && (
-                      <div className="space-y-2">
-                        {[
-                          { title: "20% chegirma", subtitle: "Barcha telefonlarga" },
-                          { title: "Bepul yetkazib berish", subtitle: "100,000 so'mdan yuqori" },
-                          { title: "1+1 aksiya", subtitle: "Kitoblar bo'limi" },
-                        ].map((offer) => (
-                          <div key={offer.title} className="rounded-xl p-3" style={{ background: `linear-gradient(135deg, ${brand.primaryColor}, ${brand.accentColor})` }}>
-                            <div className="flex items-center gap-2 mb-1">
-                              <Gift className="w-3.5 h-3.5 text-white" />
-                              <p className="text-xs font-bold text-white">{offer.title}</p>
-                            </div>
-                            <p className="text-[10px] text-white/80">{offer.subtitle}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {previewTab === "profile" && (
-                      <div>
-                        <div className="bg-slate-900 rounded-xl p-3 mb-3 flex items-center gap-2 border border-slate-800">
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>AK</div>
-                          <div>
-                            <p className="text-xs text-white">Aziz Karimov</p>
-                            <p className="text-[10px] text-slate-500">+998 90 123 45 67</p>
-                          </div>
-                        </div>
-                        <div className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800">
-                          {[
-                            { icon: User, label: "Ma'lumotlarim" },
-                            { icon: ShoppingBag, label: "Buyurtmalarim" },
-                            { icon: Star, label: "Sharhlarim" },
-                            { icon: Percent, label: "Promokodlarim" },
-                            { icon: Heart, label: "Referallarim" },
-                            { icon: LayoutTemplate, label: "Ilova tili" },
-                            { icon: MapPin, label: "Manzillarim" },
-                          ].map((item) => {
-                            const Icon = item.icon;
-                            return (
-                              <div key={item.label} className="px-3 py-2.5 flex items-center gap-2 border-b border-slate-800/50 last:border-0">
-                                <Icon className="w-3.5 h-3.5" style={{ color: brand.primaryColor }} />
-                                <span className="text-[10px] text-white flex-1">{item.label}</span>
-                                <ChevronRight className="w-3 h-3 text-slate-600" />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-
-                {/* Bottom Nav (shell) */}
-                <div className="h-14 border-t border-slate-800 bg-slate-950 flex items-center justify-around px-1 flex-shrink-0">
-                  {[
-                    { key: "home" as const, icon: Home, label: "Bosh sahifa" },
-                    { key: "catalog" as const, icon: Grid3X3, label: "Katalog" },
-                    { key: "cart" as const, icon: ShoppingCart, label: "Savat" },
-                    { key: "offers" as const, icon: Gift, label: "Takliflar" },
-                    { key: "profile" as const, icon: User, label: "Profil" },
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = previewTab === tab.key;
-                    return (
-                      <button
-                        key={tab.key}
-                        onClick={() => setPreviewTab(tab.key)}
-                        className="flex flex-col items-center gap-0.5 flex-1"
-                        style={{ color: isActive ? brand.primaryColor : "#64748b" }}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span className="text-[8px]">{tab.label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
               </motion.div>
             )}
@@ -915,7 +933,10 @@ export default function UIBuilderPage() {
                         onChange={(e) => updateBlockSetting(selectedBlock.id, key, e.target.value)}
                         className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
                       >
-                        {productCategories.map((c) => (<option key={c} value={c}>{c}</option>))}
+                        <option value="">Barcha kategoriyalar</option>
+                        {realCategories.map((c) => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
                       </select>
                     </div>
                   );

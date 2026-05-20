@@ -1,1326 +1,651 @@
-import { lazy, Suspense, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import {
-  Globe,
-  QrCode,
-  ShoppingBag,
-  Zap,
-  CheckCircle2,
-  Clock,
-  Truck,
-  MapPin,
-  CreditCard,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
   Plus,
-  Minus,
-  Star,
-  Search,
-  ShoppingCart,
-  Heart,
+  Loader2,
+  AlertCircle,
+  Layers,
+  Copy,
+  Check,
+  Trash2,
+  Power,
+  PowerOff,
+  Globe,
+  Instagram,
   Send,
-  Bot,
-  Phone,
-  Home,
-  Grid3X3,
-  BarChart3,
-  Package,
-  Ban,
-  CheckCheck,
-  LayoutTemplate,
-  User,
-  Tag,
-  Users,
+  Facebook,
   MessageCircle,
-  Gift,
+  Mail,
+  Phone,
+  Users as UsersIcon,
+  Target,
+  ShoppingBag,
+  MapPin,
+  Monitor,
 } from "lucide-react";
-const UIBuilderPage = lazy(() => import("./UIBuilderPage"));
-import {
-  platformProducts,
-  platformOrders,
-  platformStats,
-  telegramSettings,
-  websiteSettings,
-  qrSettings,
-  platformDailyStats,
-  platformRevenueDaily,
-} from "../data/platformsData";
-import type { PlatformProduct, PlatformSetting } from "../data/platformsData";
-import type { ChartTooltipProps } from "../utils/chart";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
+import { useAsync } from "../hooks/useAsync";
+import { channelsApi } from "../api/endpoints";
+import { formatDate } from "../utils/format";
+import type { ChannelType, Channel } from "../types/api";
 
-type PlatformTab = "overview" | "telegram" | "website" | "qr" | "builder";
-type TelegramScreen =
-  | "welcome"
-  | "auth"
-  | "home"
-  | "catalog"
-  | "product"
-  | "cart"
-  | "location"
-  | "payment"
-  | "success"
-  | "offers"
-  | "profile"
-  | "profile_info"
-  | "profile_orders"
-  | "profile_reviews"
-  | "profile_promo"
-  | "profile_referrals"
-  | "profile_language"
-  | "profile_addresses";
-type WebsiteScreen = "home" | "product" | "cart" | "checkout";
-type QrScreen = "scan" | "catalog" | "product" | "order";
-
-const categories = ["Barcha", "Telefonlar", "Noutbuklar", "Kiyim", "Oziq-ovqat", "Maishiy", "Sport", "Kitoblar", "O'yinchoqlar", "Aksessuarlar"];
-
-const orderStatusConfig: Record<string, { color: string; bg: string; label: string; icon: React.ElementType }> = {
-  new: { color: "text-blue-400", bg: "bg-blue-500/10", label: "Yangi", icon: Clock },
-  processing: { color: "text-amber-400", bg: "bg-amber-500/10", label: "Jarayonda", icon: Zap },
-  shipped: { color: "text-violet-400", bg: "bg-violet-500/10", label: "Yuborildi", icon: Truck },
-  delivered: { color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Yetkazildi", icon: CheckCheck },
-  cancelled: { color: "text-red-400", bg: "bg-red-500/10", label: "Bekor", icon: Ban },
+const channelTypeMeta: Record<ChannelType, { label: string; icon: React.ElementType; color: string }> = {
+  WEBSITE: { label: "Veb-sayt", icon: Globe, color: "text-blue-400" },
+  LANDING_PAGE: { label: "Landing Page", icon: Monitor, color: "text-cyan-400" },
+  INSTAGRAM: { label: "Instagram", icon: Instagram, color: "text-pink-400" },
+  TELEGRAM: { label: "Telegram", icon: Send, color: "text-sky-400" },
+  FACEBOOK: { label: "Facebook", icon: Facebook, color: "text-blue-500" },
+  WHATSAPP: { label: "WhatsApp", icon: MessageCircle, color: "text-green-400" },
+  EMAIL: { label: "Email", icon: Mail, color: "text-amber-400" },
+  PHONE: { label: "Telefon", icon: Phone, color: "text-emerald-400" },
+  REFERRAL: { label: "Referral", icon: UsersIcon, color: "text-violet-400" },
+  GOOGLE_ADS: { label: "Google Ads", icon: Target, color: "text-red-400" },
+  YANDEX_DIRECT: { label: "Yandex Direct", icon: Target, color: "text-orange-400" },
+  MARKETPLACE: { label: "Marketplace", icon: ShoppingBag, color: "text-purple-400" },
+  OFFLINE: { label: "Offline", icon: MapPin, color: "text-slate-400" },
 };
 
-function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-xs text-white font-medium">{label}</p>
-        {payload.map((p) => (
-          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value}</p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-}
-
 export default function PlatformsPage() {
-  const [activeTab, setActiveTab] = useState<PlatformTab>("overview");
-  const [tgScreen, setTgScreen] = useState<TelegramScreen>("welcome");
-  const [webScreen, setWebScreen] = useState<WebsiteScreen>("home");
-  const [qrScreen, setQrScreen] = useState<QrScreen>("scan");
-  const [tgCart, setTgCart] = useState<{ product: PlatformProduct; qty: number }[]>([]);
-  const [webCart, setWebCart] = useState<{ product: PlatformProduct; qty: number }[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<PlatformProduct | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState("Barcha");
-  const [searchQuery, setSearchQuery] = useState("");
-  const filteredProducts = useMemo(() => {
-    let result = [...platformProducts];
-    if (selectedCategory !== "Barcha") result = result.filter((p) => p.category === selectedCategory);
-    if (searchQuery) result = result.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    return result;
-  }, [selectedCategory, searchQuery]);
+  const { data, loading, error, refetch } = useAsync(() => channelsApi.list(), []);
+  const [showAdd, setShowAdd] = useState(false);
+  const channels = data ?? [];
 
-  const addToTgCart = (product: PlatformProduct) => {
-    setTgCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) return prev.map((i) => (i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i));
-      return [...prev, { product, qty: 1 }];
-    });
+  const handleToggle = async (ch: Channel) => {
+    await channelsApi.update(ch.id, { active: !ch.active });
+    refetch();
   };
 
-  const addToWebCart = (product: PlatformProduct) => {
-    setWebCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) return prev.map((i) => (i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i));
-      return [...prev, { product, qty: 1 }];
-    });
-  };
-
-  const tgTotal = tgCart.reduce((s, i) => s + i.product.price * i.qty, 0);
-  const webTotal = webCart.reduce((s, i) => s + i.product.price * i.qty, 0);
-
-  const renderSetting = (setting: PlatformSetting) => {
-    return (
-      <div key={setting.key} className="flex items-center justify-between py-3 border-b border-slate-800/50 last:border-0">
-        <div>
-          <p className="text-sm text-white">{setting.label}</p>
-          {setting.type === "text" && <p className="text-xs text-slate-500 mt-0.5">{String(setting.value)}</p>}
-        </div>
-        {setting.type === "toggle" && (
-          <button className={`relative w-10 h-5 rounded-full transition-all ${setting.value ? "bg-emerald-500" : "bg-slate-700"}`}>
-            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${setting.value ? "left-5" : "left-0.5"}`} />
-          </button>
-        )}
-        {setting.type === "number" && (
-          <input type="number" defaultValue={setting.value as number} className="w-24 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-emerald-500/50" />
-        )}
-        {setting.type === "text" && (
-          <input defaultValue={setting.value as string} className="w-48 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500/50" />
-        )}
-        {setting.type === "select" && (
-          <select defaultValue={setting.value as string} className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500/50">
-            {setting.options?.map((o) => (<option key={o} value={o}>{o}</option>))}
-          </select>
-        )}
-      </div>
-    );
-  };
-
-  // TELEGRAM WEB APP PREVIEW
-  const renderTelegramPreview = () => {
-    const screenBg = "bg-[#0f1419]";
-    const cardBg = "bg-[#1a2332]";
-    const textPrimary = "text-white";
-    const textSecondary = "text-[#8b9bb4]";
-    const btnBg = "bg-[#5288c1]";
-
-    return (
-      <div className={`w-[320px] h-[580px] ${screenBg} rounded-3xl border-4 border-slate-700 overflow-hidden flex flex-col relative shadow-2xl mx-auto`}>
-        {/* Status Bar */}
-        <div className="h-6 flex items-center justify-between px-4 text-[10px] text-slate-400">
-          <span>9:41</span>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-slate-500" />
-            <div className="w-3 h-3 rounded-full border border-slate-500" />
-          </div>
-        </div>
-
-        {/* Header */}
-        <div className="h-10 flex items-center px-3 border-b border-slate-800/50">
-          {tgScreen !== "welcome" && tgScreen !== "success" && (
-            <button onClick={() => {
-              if (tgScreen === "auth") setTgScreen("welcome");
-              else if (tgScreen === "home") setTgScreen("welcome");
-              else if (tgScreen === "catalog") setTgScreen("home");
-              else if (tgScreen === "product") setTgScreen("catalog");
-              else if (tgScreen === "cart") setTgScreen(tgCart.length > 0 ? "catalog" : "home");
-              else if (tgScreen === "location") setTgScreen("cart");
-              else if (tgScreen === "payment") setTgScreen("location");
-              else if (tgScreen === "offers") setTgScreen("home");
-              else if (tgScreen === "profile") setTgScreen("home");
-              else if (tgScreen.startsWith("profile_")) setTgScreen("profile");
-            }} className="p-1 text-slate-400">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
-          <span className={`text-sm font-semibold ${textPrimary} flex-1 text-center ${tgScreen === "welcome" || tgScreen === "success" ? "" : "-ml-6"}`}>
-            {tgScreen === "welcome" && "ShopFlow"}
-            {tgScreen === "auth" && "Telefon"}
-            {tgScreen === "home" && "Bosh sahifa"}
-            {tgScreen === "catalog" && "Katalog"}
-            {tgScreen === "product" && selectedProduct?.name.slice(0, 20) + "..."}
-            {tgScreen === "cart" && `Savat (${tgCart.length})`}
-            {tgScreen === "location" && "Manzil"}
-            {tgScreen === "payment" && "To'lov"}
-            {tgScreen === "success" && "Buyurtma"}
-            {tgScreen === "offers" && "Takliflar"}
-            {tgScreen === "profile" && "Profil"}
-            {tgScreen === "profile_info" && "Ma'lumotlarim"}
-            {tgScreen === "profile_orders" && "Buyurtmalarim"}
-            {tgScreen === "profile_reviews" && "Sharhlarim"}
-            {tgScreen === "profile_promo" && "Promokodlarim"}
-            {tgScreen === "profile_referrals" && "Referallarim"}
-            {tgScreen === "profile_language" && "Ilova tili"}
-            {tgScreen === "profile_addresses" && "Manzillarim"}
-          </span>
-          {(tgScreen === "catalog" || tgScreen === "home") && (
-            <button onClick={() => setTgScreen("cart")} className="relative p-1 text-slate-400">
-              <ShoppingCart className="w-5 h-5" />
-              {tgCart.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center">{tgCart.reduce((s, i) => s + i.qty, 0)}</span>
-              )}
-            </button>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {/* WELCOME */}
-          {tgScreen === "welcome" && (
-            <div className="flex flex-col items-center justify-center h-full px-6">
-              <div className="w-20 h-20 bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-                <Bot className="w-10 h-10 text-emerald-400" />
-              </div>
-              <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>ShopFlow Bot</h2>
-              <p className={`text-xs ${textSecondary} text-center mb-6`}>Internet do'konimizga xush kelibsiz! Mahsulotlarni ko'rish va buyurtma berish uchun davom eting.</p>
-              <button onClick={() => setTgScreen("auth")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium mb-3`}>Davom etish</button>
-              <button onClick={() => setTgScreen("home")} className={`w-full ${cardBg} ${textSecondary} py-3 rounded-xl text-sm`}>Mehmon sifatida</button>
-            </div>
-          )}
-
-          {/* AUTH */}
-          {tgScreen === "auth" && (
-            <div className="p-4">
-              <p className={`text-sm ${textSecondary} mb-4`}>Telefon raqamingizni tasdiqlang</p>
-              <div className={`${cardBg} rounded-xl p-3 mb-3 flex items-center gap-2`}>
-                <Phone className="w-4 h-4 text-slate-500" />
-                <span className={`text-sm ${textPrimary}`}>+998</span>
-                <input className="bg-transparent text-sm text-white flex-1 outline-none" placeholder="90 123 45 67" />
-              </div>
-              <button onClick={() => setTgScreen("home")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Kod yuborish</button>
-            </div>
-          )}
-
-          {/* HOME */}
-          {tgScreen === "home" && (
-            <div className="p-3 space-y-3">
-              <div className={`${cardBg} rounded-xl p-3`}>
-                <p className={`text-xs ${textSecondary} mb-1`}>Xush kelibsiz!</p>
-                <p className={`text-sm ${textPrimary} font-medium`}>Yangi mahsulotlarni ko'ring</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {categories.slice(1, 5).map((cat) => (
-                  <button key={cat} onClick={() => { setSelectedCategory(cat); setTgScreen("catalog"); }} className={`${cardBg} rounded-xl p-3 text-left`}>
-                    <Grid3X3 className="w-5 h-5 text-emerald-400 mb-1" />
-                    <p className={`text-xs ${textPrimary}`}>{cat}</p>
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => { setSelectedCategory("Barcha"); setTgScreen("catalog"); }} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Barcha mahsulotlar</button>
-            </div>
-          )}
-
-          {/* CATALOG */}
-          {tgScreen === "catalog" && (
-            <div className="p-3">
-              <div className={`${cardBg} rounded-xl p-2 mb-3 flex items-center gap-2`}>
-                <Search className="w-4 h-4 text-slate-500" />
-                <input className="bg-transparent text-xs text-white flex-1 outline-none" placeholder="Qidirish..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
-              <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2">
-                {categories.map((cat) => (
-                  <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-2.5 py-1 rounded-lg text-[10px] whitespace-nowrap ${selectedCategory === cat ? "bg-emerald-500 text-white" : `${cardBg} ${textSecondary}`}`}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {filteredProducts.map((p) => (
-                  <button key={p.id} onClick={() => { setSelectedProduct(p); setTgScreen("product"); }} className={`${cardBg} rounded-xl p-2 text-left`}>
-                    <div className="w-full h-20 bg-slate-800 rounded-lg flex items-center justify-center mb-2">
-                      <Package className="w-8 h-8 text-slate-600" />
-                    </div>
-                    <p className={`text-[10px] ${textPrimary} truncate`}>{p.name}</p>
-                    <p className="text-[10px] text-emerald-400 font-bold">{p.price.toLocaleString()}</p>
-                    {p.oldPrice && <p className="text-[9px] text-slate-500 line-through">{p.oldPrice.toLocaleString()}</p>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PRODUCT */}
-          {tgScreen === "product" && selectedProduct && (
-            <div className="p-3">
-              <div className="w-full h-40 bg-slate-800 rounded-xl flex items-center justify-center mb-3">
-                <Package className="w-16 h-16 text-slate-600" />
-              </div>
-              <h3 className={`text-base font-bold ${textPrimary}`}>{selectedProduct.name}</h3>
-              <div className="flex items-center gap-1 mt-1">
-                <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                <span className="text-xs text-slate-400">{selectedProduct.rating} ({selectedProduct.reviews})</span>
-              </div>
-              <div className="flex items-end gap-2 mt-2">
-                <span className="text-lg font-bold text-emerald-400">{selectedProduct.price.toLocaleString()} so'm</span>
-                {selectedProduct.oldPrice && <span className="text-xs text-slate-500 line-through">{selectedProduct.oldPrice.toLocaleString()}</span>}
-              </div>
-              <p className={`text-xs ${textSecondary} mt-3`}>Mahsulot haqida: {selectedProduct.name} — sifatli va ishonchli. 1 yillik kafolat.</p>
-              <button onClick={() => { addToTgCart(selectedProduct); }} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium mt-4`}>Savatga qo'shish</button>
-            </div>
-          )}
-
-          {/* CART */}
-          {tgScreen === "cart" && (
-            <div className="p-3">
-              {tgCart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48">
-                  <ShoppingCart className="w-10 h-10 text-slate-700 mb-2" />
-                  <p className={`text-xs ${textSecondary}`}>Savat bo'sh</p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2 mb-3">
-                    {tgCart.map((item) => (
-                      <div key={item.product.id} className={`${cardBg} rounded-xl p-2.5 flex items-center gap-2`}>
-                        <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Package className="w-5 h-5 text-slate-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-[10px] ${textPrimary} truncate`}>{item.product.name}</p>
-                          <p className="text-[10px] text-emerald-400">{(item.product.price * item.qty).toLocaleString()}</p>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <button onClick={() => setTgCart((prev) => prev.map((i) => i.product.id === item.product.id ? { ...i, qty: Math.max(1, i.qty - 1) } : i))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-slate-400"><Minus className="w-3 h-3" /></button>
-                          <span className="text-xs text-white w-4 text-center">{item.qty}</span>
-                          <button onClick={() => setTgCart((prev) => prev.map((i) => i.product.id === item.product.id ? { ...i, qty: i.qty + 1 } : i))} className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-slate-400"><Plus className="w-3 h-3" /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className={`${cardBg} rounded-xl p-3 mb-3`}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className={textSecondary}>Mahsulotlar</span>
-                      <span className={textPrimary}>{tgTotal.toLocaleString()} so'm</span>
-                    </div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className={textSecondary}>Yetkazib berish</span>
-                      <span className={textPrimary}>30,000 so'm</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-slate-800">
-                      <span className={textPrimary}>Jami</span>
-                      <span className="text-emerald-400">{(tgTotal + 30000).toLocaleString()} so'm</span>
-                    </div>
-                  </div>
-                  <button onClick={() => setTgScreen("location")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Buyurtma berish</button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* LOCATION */}
-          {tgScreen === "location" && (
-            <div className="p-4">
-              <p className={`text-sm ${textSecondary} mb-3`}>Yetkazib berish manzilini tanlang</p>
-              <button className={`w-full ${cardBg} rounded-xl p-3 mb-2 flex items-center gap-3 text-left`}>
-                <MapPin className="w-5 h-5 text-emerald-400" />
-                <div>
-                  <p className={`text-xs ${textPrimary} font-medium`}>Joriy joylashuv</p>
-                  <p className={`text-[10px] ${textSecondary}`}>GPS orqali aniqlash</p>
-                </div>
-              </button>
-              <div className={`${cardBg} rounded-xl p-3 mb-3`}>
-                <p className={`text-xs ${textSecondary} mb-1`}>Yoki manzilni yozing</p>
-                <textarea className="w-full bg-transparent text-xs text-white outline-none resize-none" rows={3} placeholder="Shahar, ko'cha, uy..." defaultValue="Toshkent, Yakkasaroy tumani, Shota Rustaveli 45" />
-              </div>
-              <button onClick={() => setTgScreen("payment")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Davom etish</button>
-            </div>
-          )}
-
-          {/* PAYMENT */}
-          {tgScreen === "payment" && (
-            <div className="p-4">
-              <p className={`text-sm ${textSecondary} mb-3`}>To'lov usulini tanlang</p>
-              <div className="space-y-2 mb-4">
-                {["Click", "Payme", "Uzum", "Naqd pul"].map((method) => (
-                  <button key={method} className={`w-full ${cardBg} rounded-xl p-3 flex items-center gap-3 text-left`}>
-                    <CreditCard className="w-5 h-5 text-emerald-400" />
-                    <span className={`text-sm ${textPrimary}`}>{method}</span>
-                  </button>
-                ))}
-              </div>
-              <div className={`${cardBg} rounded-xl p-3 mb-4`}>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className={textSecondary}>Buyurtma</span>
-                  <span className={textPrimary}>{tgTotal.toLocaleString()} so'm</span>
-                </div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className={textSecondary}>Yetkazib berish</span>
-                  <span className={textPrimary}>30,000 so'm</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-slate-800">
-                  <span className={textPrimary}>Jami</span>
-                  <span className="text-emerald-400">{(tgTotal + 30000).toLocaleString()} so'm</span>
-                </div>
-              </div>
-              <button onClick={() => { setTgScreen("success"); setTgCart([]); }} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>To'lash</button>
-            </div>
-          )}
-
-          {/* SUCCESS */}
-          {tgScreen === "success" && (
-            <div className="flex flex-col items-center justify-center h-full px-6">
-              <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-              </div>
-              <h2 className={`text-lg font-bold ${textPrimary} mb-2`}>Buyurtma qabul qilindi!</h2>
-              <p className={`text-xs ${textSecondary} text-center mb-6`}>Buyurtma raqami: #TGB-009. Tez orada operatorimiz siz bilan bog'lanadi.</p>
-              <button onClick={() => setTgScreen("home")} className={`w-full ${btnBg} text-white py-3 rounded-xl text-sm font-medium`}>Bosh sahifa</button>
-            </div>
-          )}
-
-          {/* OFFERS */}
-          {tgScreen === "offers" && (
-            <div className="p-3 space-y-2">
-              {[
-                { title: "20% chegirma", subtitle: "Barcha telefonlarga", color: "from-emerald-500 to-emerald-700" },
-                { title: "Bepul yetkazib berish", subtitle: "100,000 so'mdan yuqori buyurtmalarga", color: "from-blue-500 to-blue-700" },
-                { title: "1+1 aksiya", subtitle: "Kitoblar bo'limi", color: "from-amber-500 to-amber-700" },
-                { title: "Yangi mijozlarga 50,000 so'm", subtitle: "Birinchi buyurtmaga", color: "from-violet-500 to-violet-700" },
-              ].map((offer) => (
-                <button key={offer.title} className={`w-full bg-gradient-to-r ${offer.color} rounded-xl p-3 text-left`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Gift className="w-4 h-4 text-white" />
-                    <p className="text-sm font-bold text-white">{offer.title}</p>
-                  </div>
-                  <p className="text-[10px] text-white/80">{offer.subtitle}</p>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* PROFILE */}
-          {tgScreen === "profile" && (
-            <div className="p-3">
-              <div className={`${cardBg} rounded-xl p-3 mb-3 flex items-center gap-3`}>
-                <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">AK</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${textPrimary}`}>Aziz Karimov</p>
-                  <p className={`text-[10px] ${textSecondary}`}>+998 90 123 45 67</p>
-                </div>
-              </div>
-              <div className={`${cardBg} rounded-xl overflow-hidden`}>
-                {[
-                  { key: "profile_info", icon: User, label: "Ma'lumotlarim" },
-                  { key: "profile_orders", icon: ShoppingBag, label: "Buyurtmalarim" },
-                  { key: "profile_reviews", icon: Star, label: "Sharhlarim" },
-                  { key: "profile_promo", icon: Tag, label: "Promokodlarim" },
-                  { key: "profile_referrals", icon: Users, label: "Referallarim" },
-                  { key: "profile_language", icon: Globe, label: "Ilova tili" },
-                  { key: "profile_addresses", icon: MapPin, label: "Mening manzillarim" },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => setTgScreen(item.key as TelegramScreen)}
-                      className="w-full px-3 py-2.5 flex items-center gap-2.5 border-b border-slate-800/50 last:border-0 text-left hover:bg-slate-800/30"
-                    >
-                      <Icon className="w-4 h-4 text-emerald-400" />
-                      <span className={`text-xs ${textPrimary} flex-1`}>{item.label}</span>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-                    </button>
-                  );
-                })}
-              </div>
-              <button className={`w-full ${cardBg} rounded-xl p-3 mt-3 flex items-center gap-2.5 hover:bg-slate-800/50`}>
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span className={`text-xs ${textPrimary} flex-1 text-left`}>Operatorga murojaat</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-              </button>
-            </div>
-          )}
-
-          {/* PROFILE: INFO */}
-          {tgScreen === "profile_info" && (
-            <div className="p-3 space-y-2">
-              {[
-                { label: "Ism", value: "Aziz" },
-                { label: "Familiya", value: "Karimov" },
-                { label: "Otasining ismi", value: "Bahodirovich" },
-                { label: "Telefon", value: "+998 90 123 45 67" },
-                { label: "Tug'ilgan sana", value: "15.03.1995" },
-                { label: "Jinsi", value: "Erkak" },
-              ].map((f) => (
-                <div key={f.label} className={`${cardBg} rounded-xl p-2.5`}>
-                  <p className={`text-[10px] ${textSecondary} mb-0.5`}>{f.label}</p>
-                  <input defaultValue={f.value} className={`w-full bg-transparent text-xs ${textPrimary} outline-none`} />
-                </div>
-              ))}
-              <button className={`w-full ${btnBg} text-white py-2.5 rounded-xl text-sm font-medium mt-2`}>Saqlash</button>
-            </div>
-          )}
-
-          {/* PROFILE: ORDERS */}
-          {tgScreen === "profile_orders" && (
-            <div className="p-3">
-              <div className="flex gap-1.5 mb-3">
-                <button className="flex-1 py-1.5 bg-emerald-500 text-white text-[10px] rounded-lg">Faol buyurtmalar</button>
-                <button className={`flex-1 py-1.5 ${cardBg} ${textSecondary} text-[10px] rounded-lg`}>Barchasi</button>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { id: "TGB-007", status: "Yetkazilmoqda", color: "text-blue-400", total: "245,000" },
-                  { id: "TGB-006", status: "Tayyorlanmoqda", color: "text-amber-400", total: "180,000" },
-                  { id: "TGB-005", status: "Qabul qilindi", color: "text-emerald-400", total: "92,000" },
-                ].map((o) => (
-                  <div key={o.id} className={`${cardBg} rounded-xl p-2.5`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <p className={`text-xs font-medium ${textPrimary}`}>#{o.id}</p>
-                      <span className={`text-[10px] ${o.color}`}>{o.status}</span>
-                    </div>
-                    <p className={`text-[10px] ${textSecondary}`}>{o.total} so'm</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PROFILE: REVIEWS */}
-          {tgScreen === "profile_reviews" && (
-            <div className="p-3">
-              <div className="flex gap-1.5 mb-3">
-                <button className="flex-1 py-1.5 bg-emerald-500 text-white text-[10px] rounded-lg">Baholash kutilmoqda</button>
-                <button className={`flex-1 py-1.5 ${cardBg} ${textSecondary} text-[10px] rounded-lg`}>Barcha fikrlarim</button>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { name: "iPhone 15 Pro", date: "2 kun oldin" },
-                  { name: "AirPods Pro", date: "1 hafta oldin" },
-                ].map((p) => (
-                  <div key={p.name} className={`${cardBg} rounded-xl p-2.5`}>
-                    <p className={`text-xs ${textPrimary}`}>{p.name}</p>
-                    <p className={`text-[10px] ${textSecondary} mt-0.5`}>{p.date}</p>
-                    <div className="flex gap-0.5 mt-1.5">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className="w-3 h-3 text-slate-600" />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PROFILE: PROMO */}
-          {tgScreen === "profile_promo" && (
-            <div className="p-3">
-              <div className={`${cardBg} rounded-xl p-3 mb-3`}>
-                <p className={`text-[10px] ${textSecondary} mb-1.5`}>Promokod kiritish</p>
-                <div className="flex gap-1.5">
-                  <input className={`flex-1 bg-slate-800 rounded-lg px-2 py-1.5 text-xs ${textPrimary} outline-none`} placeholder="PROMO-CODE" />
-                  <button className={`${btnBg} text-white px-3 rounded-lg text-xs`}>Qo'llash</button>
-                </div>
-              </div>
-              <p className={`text-[10px] ${textSecondary} mb-2 px-1`}>Faol promokodlar</p>
-              <div className="space-y-2">
-                {[
-                  { code: "WELCOME20", discount: "20% chegirma", expires: "31.12.2025" },
-                  { code: "FREESHIP", discount: "Bepul yetkazib berish", expires: "10.01.2026" },
-                ].map((p) => (
-                  <div key={p.code} className={`${cardBg} rounded-xl p-2.5 flex items-center gap-2`}>
-                    <Tag className="w-4 h-4 text-emerald-400" />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-medium ${textPrimary}`}>{p.code}</p>
-                      <p className={`text-[10px] ${textSecondary}`}>{p.discount}</p>
-                    </div>
-                    <p className="text-[9px] text-slate-500">{p.expires}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PROFILE: REFERRALS */}
-          {tgScreen === "profile_referrals" && (
-            <div className="p-3">
-              <div className={`${cardBg} rounded-xl p-3 mb-3 text-center`}>
-                <Users className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <p className={`text-xs ${textSecondary} mb-1`}>Sizning havolangiz</p>
-                <p className={`text-sm font-bold ${textPrimary} mb-2`}>t.me/shopflowbot?start=AK123</p>
-                <button className={`w-full ${btnBg} text-white py-2 rounded-lg text-xs`}>Havolani ulashish</button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className={`${cardBg} rounded-xl p-2.5 text-center`}>
-                  <p className="text-lg font-bold text-emerald-400">12</p>
-                  <p className={`text-[10px] ${textSecondary}`}>Taklif qilingan</p>
-                </div>
-                <div className={`${cardBg} rounded-xl p-2.5 text-center`}>
-                  <p className="text-lg font-bold text-emerald-400">120k</p>
-                  <p className={`text-[10px] ${textSecondary}`}>Bonus so'm</p>
-                </div>
-              </div>
-              <p className={`text-[10px] ${textSecondary} px-1 leading-relaxed`}>Har bir do'stingiz birinchi buyurtma berganda, sizga 10,000 so'm bonus tushadi.</p>
-            </div>
-          )}
-
-          {/* PROFILE: LANGUAGE */}
-          {tgScreen === "profile_language" && (
-            <div className="p-3 space-y-2">
-              {[
-                { code: "uz", label: "O'zbekcha", selected: true },
-                { code: "ru", label: "Русский", selected: false },
-              ].map((l) => (
-                <button key={l.code} className={`w-full ${cardBg} rounded-xl p-3 flex items-center justify-between`}>
-                  <span className={`text-sm ${textPrimary}`}>{l.label}</span>
-                  {l.selected && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* PROFILE: ADDRESSES */}
-          {tgScreen === "profile_addresses" && (
-            <div className="p-3">
-              <button className={`w-full ${btnBg} text-white py-2.5 rounded-xl text-xs font-medium mb-3 flex items-center justify-center gap-1.5`}>
-                <Plus className="w-4 h-4" />
-                Manzil qo'shish
-              </button>
-              <p className={`text-[10px] ${textSecondary} mb-2 px-1`}>Saqlangan manzillar</p>
-              <div className="space-y-2">
-                {[
-                  { label: "Uy", address: "Toshkent, Yakkasaroy, Sh. Rustaveli 45", primary: true },
-                  { label: "Ish", address: "Toshkent, Mirzo Ulug'bek, Universitet 7", primary: false },
-                ].map((a) => (
-                  <div key={a.label} className={`${cardBg} rounded-xl p-2.5 flex items-start gap-2`}>
-                    <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className={`text-xs font-medium ${textPrimary}`}>{a.label}</p>
-                        {a.primary && <span className="text-[8px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">Asosiy</span>}
-                      </div>
-                      <p className={`text-[10px] ${textSecondary} mt-0.5`}>{a.address}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Nav */}
-        {tgScreen !== "welcome" && tgScreen !== "auth" && tgScreen !== "success" && (
-          <div className="h-14 border-t border-slate-800/50 flex items-center justify-around px-1">
-            <button onClick={() => setTgScreen("home")} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "home" ? "text-emerald-400" : "text-slate-500"}`}>
-              <Home className="w-4 h-4" />
-              <span className="text-[8px]">Bosh sahifa</span>
-            </button>
-            <button onClick={() => { setSelectedCategory("Barcha"); setTgScreen("catalog"); }} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "catalog" || tgScreen === "product" ? "text-emerald-400" : "text-slate-500"}`}>
-              <Grid3X3 className="w-4 h-4" />
-              <span className="text-[8px]">Katalog</span>
-            </button>
-            <button onClick={() => setTgScreen("cart")} className={`relative flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "cart" || tgScreen === "location" || tgScreen === "payment" ? "text-emerald-400" : "text-slate-500"}`}>
-              <ShoppingCart className="w-4 h-4" />
-              <span className="text-[8px]">Savat</span>
-              {tgCart.length > 0 && (
-                <span className="absolute top-0 right-3 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center">{tgCart.reduce((s, i) => s + i.qty, 0)}</span>
-              )}
-            </button>
-            <button onClick={() => setTgScreen("offers")} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "offers" ? "text-emerald-400" : "text-slate-500"}`}>
-              <Gift className="w-4 h-4" />
-              <span className="text-[8px]">Takliflar</span>
-            </button>
-            <button onClick={() => setTgScreen("profile")} className={`flex flex-col items-center gap-0.5 flex-1 ${tgScreen === "profile" || tgScreen.startsWith("profile_") ? "text-emerald-400" : "text-slate-500"}`}>
-              <User className="w-4 h-4" />
-              <span className="text-[8px]">Profil</span>
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // WEBSITE PREVIEW
-  const renderWebsitePreview = () => {
-    return (
-      <div className="w-full h-[580px] bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col shadow-2xl">
-        {/* Header */}
-        <div className="h-12 bg-slate-900 border-b border-slate-800 flex items-center px-4 gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <ShoppingBag className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-sm font-bold text-white">ShopFlow</span>
-          </div>
-          <div className="flex-1 max-w-xs">
-            <div className="bg-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-slate-500" />
-              <input className="bg-transparent text-xs text-white outline-none w-full" placeholder="Qidirish..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="relative p-1.5 text-slate-400 hover:text-white">
-              <Heart className="w-4 h-4" />
-            </button>
-            <button onClick={() => setWebScreen("cart")} className="relative p-1.5 text-slate-400 hover:text-white">
-              <ShoppingCart className="w-4 h-4" />
-              {webCart.length > 0 && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center">{webCart.reduce((s, i) => s + i.qty, 0)}</span>}
-            </button>
-            <button className="w-7 h-7 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold">JD</button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {webScreen === "home" && (
-            <div>
-              {/* Hero */}
-              <div className="h-32 bg-emerald-500/10 flex items-center px-6">
-                <div>
-                  <p className="text-xs text-emerald-400 mb-1">Yangi kelganlar</p>
-                  <h2 className="text-lg font-bold text-white">iPhone 15 Pro Max</h2>
-                  <p className="text-xs text-slate-400 mt-1">14,500,000 so'mdan boshlab</p>
-                  <button onClick={() => { setSelectedProduct(platformProducts[0]); setWebScreen("product"); }} className="mt-2 px-3 py-1.5 bg-emerald-500 text-white text-xs rounded-lg">Batafsil</button>
-                </div>
-              </div>
-              {/* Categories */}
-              <div className="px-4 py-3">
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {categories.slice(1).map((cat) => (
-                    <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap ${selectedCategory === cat ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400"}`}>{cat}</button>
-                  ))}
-                </div>
-              </div>
-              {/* Products */}
-              <div className="px-4 pb-4 grid grid-cols-3 gap-3">
-                {filteredProducts.slice(0, 6).map((p) => (
-                  <button key={p.id} onClick={() => { setSelectedProduct(p); setWebScreen("product"); }} className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-left hover:border-slate-600 transition-colors">
-                    <div className="w-full h-20 bg-slate-800 rounded-lg flex items-center justify-center mb-2">
-                      <Package className="w-8 h-8 text-slate-600" />
-                    </div>
-                    <p className="text-[10px] text-white truncate">{p.name}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                      <span className="text-[9px] text-slate-500">{p.rating}</span>
-                    </div>
-                    <p className="text-[10px] text-emerald-400 font-bold mt-0.5">{p.price.toLocaleString()}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {webScreen === "product" && selectedProduct && (
-            <div className="p-4">
-              <button onClick={() => setWebScreen("home")} className="flex items-center gap-1 text-xs text-slate-400 mb-3"><ChevronLeft className="w-4 h-4" /> Orqaga</button>
-              <div className="w-full h-48 bg-slate-800 rounded-xl flex items-center justify-center mb-4">
-                <Package className="w-20 h-20 text-slate-600" />
-              </div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-white">{selectedProduct.name}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex items-center gap-0.5">
-                      {[1,2,3,4,5].map((s) => (<Star key={s} className={`w-3 h-3 ${s <= Math.floor(selectedProduct.rating) ? "text-amber-400 fill-amber-400" : "text-slate-600"}`} />))}
-                    </div>
-                    <span className="text-xs text-slate-500">{selectedProduct.reviews} sharh</span>
-                  </div>
-                </div>
-                <button className="p-2 bg-slate-800 rounded-lg text-slate-400 hover:text-red-400"><Heart className="w-4 h-4" /></button>
-              </div>
-              <div className="flex items-end gap-3 mt-3">
-                <span className="text-2xl font-bold text-emerald-400">{selectedProduct.price.toLocaleString()} so'm</span>
-                {selectedProduct.oldPrice && <span className="text-sm text-slate-500 line-through">{selectedProduct.oldPrice.toLocaleString()}</span>}
-              </div>
-              {selectedProduct.badge && <span className="inline-block mt-2 px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">{selectedProduct.badge}</span>}
-              <p className="text-xs text-slate-400 mt-4 leading-relaxed">{selectedProduct.name} — eng sifatli mahsulot. 1 yillik kafolat, bepul yetkazib berish, qaytarish kafolati.</p>
-              <button onClick={() => { addToWebCart(selectedProduct); }} className="w-full mt-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl transition-colors">Savatga qo'shish</button>
-            </div>
-          )}
-
-          {webScreen === "cart" && (
-            <div className="p-4">
-              <h2 className="text-lg font-bold text-white mb-4">Savat</h2>
-              {webCart.length === 0 ? (
-                <div className="text-center py-12">
-                  <ShoppingCart className="w-10 h-10 text-slate-700 mx-auto mb-2" />
-                  <p className="text-xs text-slate-500">Savat bo'sh</p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-3 mb-4">
-                    {webCart.map((item) => (
-                      <div key={item.product.id} className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
-                        <div className="w-14 h-14 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Package className="w-6 h-6 text-slate-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-white truncate">{item.product.name}</p>
-                          <p className="text-xs text-emerald-400">{item.product.price.toLocaleString()} so'm</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setWebCart((prev) => prev.map((i) => i.product.id === item.product.id ? { ...i, qty: Math.max(1, i.qty - 1) } : i))} className="w-7 h-7 bg-slate-800 rounded-lg flex items-center justify-center text-slate-400"><Minus className="w-3 h-3" /></button>
-                          <span className="text-xs text-white w-4 text-center">{item.qty}</span>
-                          <button onClick={() => setWebCart((prev) => prev.map((i) => i.product.id === item.product.id ? { ...i, qty: i.qty + 1 } : i))} className="w-7 h-7 bg-slate-800 rounded-lg flex items-center justify-center text-slate-400"><Plus className="w-3 h-3" /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4">
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="text-slate-400">Mahsulotlar</span>
-                      <span className="text-white">{webTotal.toLocaleString()} so'm</span>
-                    </div>
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="text-slate-400">Yetkazib berish</span>
-                      <span className="text-white">30,000 so'm</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-bold mt-3 pt-3 border-t border-slate-800">
-                      <span className="text-white">Jami</span>
-                      <span className="text-emerald-400">{(webTotal + 30000).toLocaleString()} so'm</span>
-                    </div>
-                  </div>
-                  <button onClick={() => setWebScreen("checkout")} className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl transition-colors">Buyurtma berish</button>
-                </>
-              )}
-            </div>
-          )}
-
-          {webScreen === "checkout" && (
-            <div className="p-4">
-              <h2 className="text-lg font-bold text-white mb-4">Buyurtma berish</h2>
-              <div className="space-y-3 mb-4">
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Ism</label>
-                  <input className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50" placeholder="Ismingiz" defaultValue="Azizbek" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Telefon</label>
-                  <input className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50" placeholder="+998 90 123 45 67" defaultValue="+998 90 123 45 67" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Manzil</label>
-                  <textarea className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50 resize-none" rows={2} placeholder="Manzil" defaultValue="Toshkent, Yakkasaroy, Shota Rustaveli 45" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">To'lov usuli</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {["Click", "Payme", "Uzum", "Naqd"].map((m) => (
-                      <button key={m} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white text-center hover:border-emerald-500/50 transition-colors">{m}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4">
-                <div className="flex justify-between text-sm font-bold">
-                  <span className="text-white">Jami</span>
-                  <span className="text-emerald-400">{(webTotal + 30000).toLocaleString()} so'm</span>
-                </div>
-              </div>
-              <button onClick={() => { setWebScreen("home"); setWebCart([]); }} className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl transition-colors">Buyurtma tasdiqlash</button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // QR CATALOG PREVIEW
-  const renderQrPreview = () => {
-    return (
-      <div className="w-[320px] h-[580px] bg-white rounded-3xl border-4 border-slate-700 overflow-hidden flex flex-col relative shadow-2xl mx-auto">
-        {qrScreen === "scan" && (
-          <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-50">
-            <div className="w-48 h-48 bg-white rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center mb-6">
-              <QrCode className="w-24 h-24 text-slate-800" />
-            </div>
-            <h2 className="text-lg font-bold text-slate-800 mb-2">ShopFlow Katalog</h2>
-            <p className="text-xs text-slate-500 text-center mb-6">QR kodni skanerlang yoki pastdagi tugmani bosing</p>
-            <button onClick={() => setQrScreen("catalog")} className="w-full py-3 bg-emerald-500 text-white rounded-xl text-sm font-medium">Katalogni ko'rish</button>
-            <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-              <Phone className="w-3 h-3" />
-              <span>Buyurtma uchun: +998 90 123 45 67</span>
-            </div>
-          </div>
-        )}
-
-        {qrScreen === "catalog" && (
-          <div className="flex flex-col h-full">
-            <div className="h-14 bg-emerald-500 flex items-center px-4">
-              <button onClick={() => setQrScreen("scan")} className="text-white"><ChevronLeft className="w-5 h-5" /></button>
-              <span className="text-white font-semibold flex-1 text-center -ml-5">Katalog</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 bg-slate-50">
-              <div className="space-y-2">
-                {platformProducts.slice(0, 8).map((p) => (
-                  <button key={p.id} onClick={() => { setSelectedProduct(p); setQrScreen("product"); }} className="w-full bg-white rounded-xl p-3 flex items-center gap-3 text-left shadow-sm">
-                    <div className="w-14 h-14 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Package className="w-6 h-6 text-slate-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-800 font-medium truncate">{p.name}</p>
-                      <p className="text-xs text-emerald-600 font-bold">{p.price.toLocaleString()} so'm</p>
-                      {p.oldPrice && <p className="text-[10px] text-slate-400 line-through">{p.oldPrice.toLocaleString()}</p>}
-                    </div>
-                    {p.badge && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[9px] rounded-full">{p.badge}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {qrScreen === "product" && selectedProduct && (
-          <div className="flex flex-col h-full bg-slate-50">
-            <div className="h-14 bg-emerald-500 flex items-center px-4">
-              <button onClick={() => setQrScreen("catalog")} className="text-white"><ChevronLeft className="w-5 h-5" /></button>
-              <span className="text-white font-semibold flex-1 text-center -ml-5">Mahsulot</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="w-full h-40 bg-white rounded-xl flex items-center justify-center mb-4 shadow-sm">
-                <Package className="w-16 h-16 text-slate-300" />
-              </div>
-              <h2 className="text-base font-bold text-slate-800">{selectedProduct.name}</h2>
-              <p className="text-lg text-emerald-600 font-bold mt-1">{selectedProduct.price.toLocaleString()} so'm</p>
-              {selectedProduct.oldPrice && <p className="text-sm text-slate-400 line-through">{selectedProduct.oldPrice.toLocaleString()}</p>}
-              <p className="text-xs text-slate-500 mt-3">Sifatli mahsulot. 1 yillik kafolat. Tez yetkazib berish.</p>
-              <button onClick={() => setQrScreen("order")} className="w-full mt-4 py-3 bg-emerald-500 text-white rounded-xl text-sm font-medium">Buyurtma berish</button>
-            </div>
-          </div>
-        )}
-
-        {qrScreen === "order" && selectedProduct && (
-          <div className="flex flex-col h-full bg-slate-50">
-            <div className="h-14 bg-emerald-500 flex items-center px-4">
-              <button onClick={() => setQrScreen("product")} className="text-white"><ChevronLeft className="w-5 h-5" /></button>
-              <span className="text-white font-semibold flex-1 text-center -ml-5">Tezkor buyurtma</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-                <p className="text-xs text-slate-500">Mahsulot</p>
-                <p className="text-sm font-medium text-slate-800">{selectedProduct.name}</p>
-                <p className="text-sm text-emerald-600 font-bold">{selectedProduct.price.toLocaleString()} so'm</p>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Ism</label>
-                  <input className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none" placeholder="Ismingiz" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Telefon</label>
-                  <input className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none" placeholder="+998 90 123 45 67" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Manzil</label>
-                  <textarea className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none resize-none" rows={2} placeholder="Manzil" />
-                </div>
-              </div>
-              <button onClick={() => setQrScreen("scan")} className="w-full mt-4 py-3 bg-emerald-500 text-white rounded-xl text-sm font-medium">Buyurtma yuborish</button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+  const handleDelete = async (ch: Channel) => {
+    if (!confirm(`"${ch.name}" kanalini o'chirish? Unga bog'langan lidlar saqlanadi.`)) return;
+    await channelsApi.delete(ch.id);
+    refetch();
   };
 
   return (
-    <div>
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between mb-6"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-white">Platformalar</h1>
-          <p className="text-sm text-slate-500 mt-1">Telegram Bot, Web-sayt va QR Katalog boshqaruvi</p>
+          <h1 className="text-2xl font-bold text-white">Kanallar</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Lid va buyurtma manbalari. Har bir kanal o'z webhook URL'iga ega.
+          </p>
         </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+        >
+          <Plus className="w-4 h-4" />
+          Yangi kanal
+        </button>
       </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {platformStats.map((stat, index) => (
-          <motion.div
-            key={stat.platform}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-slate-900 border border-slate-800 rounded-xl p-5"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              {stat.platform === "telegram" ? <Send className="w-5 h-5 text-blue-400" /> :
-               stat.platform === "website" ? <Globe className="w-5 h-5 text-emerald-400" /> :
-               <QrCode className="w-5 h-5 text-amber-400" />}
-              <span className="text-sm font-semibold text-white">
-                {stat.platform === "telegram" ? "Telegram Bot" : stat.platform === "website" ? "Web-sayt" : "QR Katalog"}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-slate-500">Tashriflar</p>
-                <p className="text-lg font-bold text-white">{stat.visitors.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Buyurtmalar</p>
-                <p className="text-lg font-bold text-emerald-400">{stat.orders}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Daromad</p>
-                <p className="text-lg font-bold text-white">{(stat.revenue / 1000000).toFixed(0)}M</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Konversiya</p>
-                <p className="text-lg font-bold text-violet-400">{stat.conversionRate}%</p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400" />
+          <p className="text-sm text-slate-300">{error.message}</p>
+        </div>
+      ) : channels.length === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
+          <Layers className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+          <p className="text-base font-semibold text-white">Hali kanal yo'q</p>
+          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            Birinchi kanalingizni qo'shing (masalan, Instagram yoki Telegram bot), keyin
+            uning webhook URL'ini tegishli platforma sozlamalariga joylashtiring.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {channels.map((ch) => (
+            <ChannelCard
+              key={ch.id}
+              channel={ch}
+              onToggle={() => handleToggle(ch)}
+              onDelete={() => handleDelete(ch)}
+              onChanged={refetch}
+            />
+          ))}
+        </div>
+      )}
+
+      {showAdd && (
+        <AddChannelModal
+          onClose={() => setShowAdd(false)}
+          onCreated={() => {
+            setShowAdd(false);
+            refetch();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function ChannelCard({
+  channel,
+  onToggle,
+  onDelete,
+  onChanged,
+}: {
+  channel: Channel;
+  onToggle: () => void;
+  onDelete: () => void;
+  onChanged: () => void;
+}) {
+  const meta = channelTypeMeta[channel.type];
+  const Icon = meta.icon;
+  const [copied, setCopied] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectMsg, setConnectMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const webhookPath = channel.type === "TELEGRAM" ? "telegram" : "lead";
+  const webhookUrl = `${window.location.origin}/api/webhooks/${webhookPath}/${channel.webhookKey}`;
+  const config = (channel.config ?? {}) as Record<string, unknown>;
+  const hasToken = channel.type === "TELEGRAM" && Boolean(config.botToken_set || config.botToken);
+  const botUsername = config.botUsername as string | undefined;
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleConnectTelegram = async () => {
+    if (!hasToken) {
+      setShowTokenModal(true);
+      return;
+    }
+    setConnecting(true);
+    setConnectMsg(null);
+    try {
+      const res = await fetch(
+        `${window.location.origin}/api/channels/${channel.id}/telegram/setup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("shopflow.token")}`,
+          },
+          body: JSON.stringify({ publicHost: window.location.origin }),
+        },
+      );
+      const json = (await res.json()) as { ok?: boolean; error?: string; bot?: { username?: string } };
+      if (!res.ok || !json.ok) {
+        setConnectMsg({ ok: false, text: json.error || "Xato" });
+      } else {
+        setConnectMsg({
+          ok: true,
+          text: `Ulanishi muvaffaqiyatli! Bot: @${json.bot?.username ?? "?"}`,
+        });
+        onChanged();
+      }
+    } catch (err) {
+      setConnectMsg({ ok: false, text: err instanceof Error ? err.message : "Xato" });
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center ${meta.color}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">{channel.name}</p>
+            <p className="text-xs text-slate-500">
+              {meta.label}
+              {botUsername && (
+                <>
+                  {" · "}
+                  <a
+                    href={`https://t.me/${botUsername}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-400 hover:underline"
+                  >
+                    @{botUsername}
+                  </a>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
+            channel.active ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-700 text-slate-400"
+          }`}
+        >
+          {channel.active ? "Aktiv" : "O'chirilgan"}
+        </span>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-800 mb-6">
-        {[
-          { key: "overview" as PlatformTab, label: "Umumiy analitika", icon: BarChart3 },
-          { key: "telegram" as PlatformTab, label: "Telegram Bot", icon: Send },
-          { key: "website" as PlatformTab, label: "Web-sayt", icon: Globe },
-          { key: "qr" as PlatformTab, label: "QR Katalog", icon: QrCode },
-          { key: "builder" as PlatformTab, label: "UI Builder", icon: LayoutTemplate },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          return (
+      {channel.type === "TELEGRAM" && (
+        <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 mb-3">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-slate-500 uppercase mb-0.5">Bot token</p>
+              <p className="text-[11px] text-slate-300 font-mono truncate">
+                {hasToken ? (config.botToken as string) : <span className="text-slate-600">kiritilmagan</span>}
+              </p>
+            </div>
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-all ${
-                activeTab === tab.key ? "text-emerald-400 border-b-2 border-emerald-400" : "text-slate-500 hover:text-white"
-              }`}
+              onClick={() => setShowTokenModal(true)}
+              className="ml-2 px-2 py-1 rounded text-emerald-400 hover:bg-slate-700 text-[11px] font-medium"
             >
-              <Icon className="w-4 h-4" />
-              {tab.label}
+              {hasToken ? "O'zgartirish" : "Qo'shish"}
             </button>
-          );
-        })}
+          </div>
+        </div>
+      )}
+
+      <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 mb-3">
+        <p className="text-[10px] text-slate-500 uppercase mb-1">Webhook URL</p>
+        <div className="flex items-center gap-2">
+          <code className="text-[11px] text-slate-300 font-mono truncate flex-1">{webhookUrl}</code>
+          <button
+            onClick={copy}
+            className="p-1 rounded text-slate-500 hover:text-white flex-shrink-0"
+            aria-label="Nusxa olish"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {/* OVERVIEW */}
-        {activeTab === "overview" && (
-          <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-white mb-4">Kunlik buyurtmalar</h3>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={platformDailyStats} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="telegram" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={16} />
-                      <Bar dataKey="website" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={16} />
-                      <Bar dataKey="qr" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={16} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-white mb-4">Kunlik daromad</h3>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={platformRevenueDaily} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <defs>
-                        <linearGradient id="tgGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
-                        <linearGradient id="webGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.15} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                        <linearGradient id="qrGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={(v) => `${v / 1000000}M`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="telegram" stroke="#3b82f6" strokeWidth={2} fill="url(#tgGrad)" dot={false} />
-                      <Area type="monotone" dataKey="website" stroke="#10b981" strokeWidth={2} fill="url(#webGrad)" dot={false} />
-                      <Area type="monotone" dataKey="qr" stroke="#f59e0b" strokeWidth={2} fill="url(#qrGrad)" dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
+      {channel.type === "TELEGRAM" && hasToken && (
+        <button
+          onClick={handleConnectTelegram}
+          disabled={connecting}
+          className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-lg text-sm font-medium text-sky-400 disabled:opacity-50"
+        >
+          {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          Telegram'ga avto-ulash (setWebhook)
+        </button>
+      )}
 
-            {/* Orders Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">So'nggi buyurtmalar</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-800/30">
-                      <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">ID</th>
-                      <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Mijoz</th>
-                      <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Platforma</th>
-                      <th className="py-3 px-5 text-right text-xs text-slate-500 uppercase">Summa</th>
-                      <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Status</th>
-                      <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">To'lov</th>
-                      <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Sana</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {platformOrders.map((order, i) => {
-                      const os = orderStatusConfig[order.status];
-                      const Icon = os.icon;
-                      return (
-                        <motion.tr key={order.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                          <td className="py-3 px-5 text-sm text-slate-400">{order.id}</td>
-                          <td className="py-3 px-5">
-                            <p className="text-sm text-white">{order.customer}</p>
-                            <p className="text-xs text-slate-500">{order.phone}</p>
-                          </td>
-                          <td className="py-3 px-5">
-                            <span className={`text-xs font-medium ${order.platform === "telegram" ? "text-blue-400" : order.platform === "website" ? "text-emerald-400" : "text-amber-400"}`}>
-                              {order.platform === "telegram" ? "Telegram" : order.platform === "website" ? "Web" : "QR"}
-                            </span>
-                          </td>
-                          <td className="py-3 px-5 text-sm font-semibold text-emerald-400 text-right">{order.total.toLocaleString()}</td>
-                          <td className="py-3 px-5">
-                            <span className={`inline-flex items-center gap-1 text-xs font-medium ${os.color}`}>
-                              <Icon className="w-3 h-3" />
-                              {os.label}
-                            </span>
-                          </td>
-                          <td className="py-3 px-5 text-sm text-slate-400">{order.paymentMethod}</td>
-                          <td className="py-3 px-5 text-sm text-slate-400">{order.date}</td>
-                        </motion.tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
+      {connectMsg && (
+        <div
+          className={`mb-3 px-3 py-2 rounded-lg text-xs ${
+            connectMsg.ok
+              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+              : "bg-red-500/10 border border-red-500/20 text-red-400"
+          }`}
+        >
+          {connectMsg.text}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-slate-500">Yaratilgan: {formatDate(channel.createdAt)}</span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="px-2 py-1 rounded text-emerald-400 hover:bg-slate-800 text-[11px] font-medium"
+          >
+            {showHelp ? "Yopish" : "Qanday ulanadi?"}
+          </button>
+          <button
+            onClick={onToggle}
+            className="p-1.5 rounded text-slate-500 hover:text-white hover:bg-slate-800"
+            title={channel.active ? "O'chirish" : "Yoqish"}
+          >
+            {channel.active ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-slate-800"
+            title="O'chirish"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {showHelp && <ChannelSetupHelp channelType={channel.type} webhookUrl={webhookUrl} />}
+
+      {showTokenModal && (
+        <BotTokenModal
+          channel={channel}
+          onClose={() => setShowTokenModal(false)}
+          onSaved={() => {
+            setShowTokenModal(false);
+            onChanged();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChannelSetupHelp({
+  channelType,
+  webhookUrl,
+}: {
+  channelType: ChannelType;
+  webhookUrl: string;
+}) {
+  const renderSteps = () => {
+    switch (channelType) {
+      case "TELEGRAM":
+        return (
+          <>
+            <Step n={1}>
+              Telegram'da{" "}
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 underline"
+              >
+                @BotFather
+              </a>
+              'ga yozing → <code>/newbot</code> → nomini va username'ini bering. Sizga <strong>bot token</strong>
+              beradi (masalan: <code>123456:ABCdef...</code>)
+            </Step>
+            <Step n={2}>
+              Brauzer adres satriga quyidagi URL'ni kiriting (TOKEN ni o'zgartirib):
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all whitespace-pre-wrap">
+                {`https://api.telegram.org/bot<TOKEN>/setWebhook?url=${webhookUrl}`}
+              </pre>
+            </Step>
+            <Step n={3}>
+              Javob <code>{`{"ok":true,"result":true}`}</code> bo'lsa, tayyor. Endi botingizga yozilgan har bir
+              xabar avtomatik <strong>Lidlar</strong> sahifasiga keladi.
+            </Step>
+          </>
+        );
+      case "WEBSITE":
+      case "LANDING_PAGE":
+        return (
+          <>
+            <Step n={1}>Veb-saytingizdagi forma'ni quyidagicha sozlang:</Step>
+            <Step n={2}>
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+{`<script>
+fetch("${webhookUrl}", {
+  method: "POST",
+  headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({
+    name: "Ism",
+    phone: "+998901234567",
+    email: "user@example.com"
+  })
+});
+</script>`}
+              </pre>
+            </Step>
+          </>
+        );
+      case "INSTAGRAM":
+      case "FACEBOOK":
+      case "WHATSAPP":
+        return (
+          <>
+            <Step n={1}>
+              <a
+                href="https://developers.facebook.com/apps"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 underline"
+              >
+                Meta for Developers
+              </a>{" "}
+              → App yarating (Business type)
+            </Step>
+            <Step n={2}>
+              App'ga Webhook qo'shing. Callback URL sifatida quyidagini kiriting:
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all">
+                {webhookUrl}
+              </pre>
+            </Step>
+            <Step n={3}>
+              ⚠️ Meta HTTPS talab qiladi. Domain va SSL sertifikat kerak (hozir HTTP'da ishlamaydi).
+            </Step>
+          </>
+        );
+      default:
+        return (
+          <>
+            <Step n={1}>Tashqi platforma webhook'iga quyidagi URL'ni kiriting:</Step>
+            <Step n={2}>
+              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all">
+                {webhookUrl}
+              </pre>
+            </Step>
+            <Step n={3}>
+              Body formati: <code>{`{"name":"...","phone":"...","email":"...","notes":"..."}`}</code>
+            </Step>
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-800 space-y-2">
+      <p className="text-xs font-semibold text-white mb-2">Sozlash bosqichlari</p>
+      {renderSteps()}
+    </div>
+  );
+}
+
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 text-xs text-slate-300">
+      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-bold">
+        {n}
+      </span>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [type, setType] = useState<ChannelType>("TELEGRAM");
+  const [name, setName] = useState("");
+  const [botToken, setBotToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const config: Record<string, unknown> = {};
+      if (type === "TELEGRAM" && botToken.trim()) {
+        config.botToken = botToken.trim();
+      }
+      await channelsApi.create({ type, name, config });
+      onCreated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Xato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
+      >
+        <h2 className="text-lg font-bold text-white">Yangi kanal</h2>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Kanal turi</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as ChannelType)}
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+          >
+            {(Object.keys(channelTypeMeta) as ChannelType[]).map((k) => (
+              <option key={k} value={k}>
+                {channelTypeMeta[k].label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Nom</label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={type === "TELEGRAM" ? "Mening Telegram botim" : "Kanal nomi"}
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        {type === "TELEGRAM" && (
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              Bot token{" "}
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-400 hover:underline"
+              >
+                (@BotFather'dan oling)
+              </a>
+            </label>
+            <input
+              type="text"
+              value={botToken}
+              onChange={(e) => setBotToken(e.target.value)}
+              placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Token xavfsiz saqlanadi va GET so'rovlarida yashiringan ko'rsatiladi.
+            </p>
+          </div>
         )}
 
-        {/* TELEGRAM */}
-        {activeTab === "telegram" && (
-          <motion.div key="telegram" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white">Telegram Bot Web App Preview</h3>
-                  <button onClick={() => setTgScreen("welcome")} className="text-xs text-emerald-400 hover:text-emerald-300">Qayta yuklash</button>
-                </div>
-                {renderTelegramPreview()}
-              </div>
-              <div className="space-y-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-slate-400" />
-                      Sozlamalar
-                    </h3>
-                  </div>
-                  <div className="space-y-1">
-                    {telegramSettings.map((s) => renderSetting(s))}
-                  </div>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-white mb-4">Statistika</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Tashriflar</p>
-                      <p className="text-lg font-bold text-white">2,340</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Buyurtmalar</p>
-                      <p className="text-lg font-bold text-emerald-400">156</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Konversiya</p>
-                      <p className="text-lg font-bold text-violet-400">6.7%</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">O'rtacha chek</p>
-                      <p className="text-lg font-bold text-white">3.1M</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
-        {/* WEBSITE */}
-        {activeTab === "website" && (
-          <motion.div key="website" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white">Web-sayt Preview</h3>
-                  <button onClick={() => setWebScreen("home")} className="text-xs text-emerald-400 hover:text-emerald-300">Qayta yuklash</button>
-                </div>
-                {renderWebsitePreview()}
-              </div>
-              <div className="space-y-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-slate-400" />
-                    Sozlamalar
-                  </h3>
-                  <div className="space-y-1">
-                    {websiteSettings.map((s) => renderSetting(s))}
-                  </div>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-white mb-4">Statistika</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Tashriflar</p>
-                      <p className="text-lg font-bold text-white">4,560</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Buyurtmalar</p>
-                      <p className="text-lg font-bold text-emerald-400">289</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Konversiya</p>
-                      <p className="text-lg font-bold text-violet-400">6.3%</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">O'rtacha chek</p>
-                      <p className="text-lg font-bold text-white">3.1M</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        <div className="flex items-center gap-2 justify-end">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-400 hover:text-white">
+            Bekor qilish
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Yaratish
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
-        {/* QR */}
-        {activeTab === "qr" && (
-          <motion.div key="qr" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white">QR Katalog Preview</h3>
-                  <button onClick={() => setQrScreen("scan")} className="text-xs text-emerald-400 hover:text-emerald-300">Qayta yuklash</button>
-                </div>
-                {renderQrPreview()}
-              </div>
-              <div className="space-y-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-slate-400" />
-                    Sozlamalar
-                  </h3>
-                  <div className="space-y-1">
-                    {qrSettings.map((s) => renderSetting(s))}
-                  </div>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-white mb-4">Statistika</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Skanerlar</p>
-                      <p className="text-lg font-bold text-white">890</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Buyurtmalar</p>
-                      <p className="text-lg font-bold text-emerald-400">67</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">Konversiya</p>
-                      <p className="text-lg font-bold text-violet-400">7.5%</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500">O'rtacha chek</p>
-                      <p className="text-lg font-bold text-white">2.3M</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-white mb-3">QR Kod</h3>
-                  <div className="flex items-center justify-center">
-                    <div className="w-40 h-40 bg-white rounded-xl flex items-center justify-center">
-                      <QrCode className="w-28 h-28 text-slate-800" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500 text-center mt-3">Bu QR kodni chop eting yoki onlayn tarzda ulashing</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+function BotTokenModal({
+  channel,
+  onClose,
+  onSaved,
+}: {
+  channel: Channel;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-        {/* BUILDER */}
-        {activeTab === "builder" && (
-          <motion.div key="builder" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-[calc(100vh-280px)]">
-            <Suspense fallback={<div className="flex items-center justify-center h-full text-slate-500">Yuklanmoqda...</div>}>
-              <UIBuilderPage />
-            </Suspense>
-          </motion.div>
-        )}
-      </AnimatePresence>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await channelsApi.update(channel.id, { config: { botToken: token.trim() } });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Xato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
+      >
+        <h2 className="text-lg font-bold text-white">Bot token</h2>
+
+        <div className="text-xs text-slate-400 space-y-2 bg-slate-800/50 border border-slate-800 rounded-lg p-3">
+          <p>1. Telegram'da{" "}
+            <a
+              href="https://t.me/BotFather"
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-400 underline"
+            >
+              @BotFather
+            </a>
+            'ga yozing
+          </p>
+          <p>2. <code className="bg-slate-900 px-1 rounded">/newbot</code> komandasini yuboring</p>
+          <p>3. Bot nomi va username'ni bering</p>
+          <p>4. BotFather sizga token beradi (masalan: <code className="bg-slate-900 px-1 rounded">7891234567:AAE...</code>)</p>
+          <p>5. Tokenni nusxalab, quyiga joylashtiring</p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Bot token</label>
+          <input
+            type="text"
+            required
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
+            autoFocus
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <div className="flex items-center gap-2 justify-end">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-400 hover:text-white">
+            Bekor qilish
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !token.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Saqlash
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

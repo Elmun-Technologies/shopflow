@@ -4,61 +4,90 @@ import {
   X,
   Phone,
   Mail,
-  MapPin,
   Building2,
-  Briefcase,
+  MapPin,
   Tag,
-  Calendar,
   Clock,
-  User,
   MessageSquare,
   Send,
   FileText,
   GitBranch,
-  Users,
-  MessageCircle,
-  CheckCircle2,
-  Star,
-  Plus,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-import type { Lead } from "../data/leadsData";
-import { statusLabels, statusConfig, priorityConfig, sourceLabels, interactionTypeConfig } from "../data/leadsData";
+import { useAsync } from "../hooks/useAsync";
+import { leadsApi } from "../api/endpoints";
+import { useAuth } from "../contexts/AuthContext";
+import { formatCompactCurrency, formatDateTime, formatRelative } from "../utils/format";
+import type { LeadStatus, InteractionType, Interaction } from "../types/api";
 
 interface Props {
-  lead: Lead | null;
+  leadId: string;
   onClose: () => void;
-  onStatusChange?: (leadId: string, newStatus: string) => void;
+  onUpdated?: () => void;
 }
 
-type Tab = "overview" | "interactions" | "details";
-
-const interactionIcons: Record<string, React.ElementType> = {
-  Phone,
-  Mail,
-  MessageSquare,
-  MessageCircle,
-  Send,
-  Users,
-  FileText,
-  GitBranch,
+const statusConfig: Record<LeadStatus, { label: string; color: string; bg: string }> = {
+  NEW: { label: "Yangi", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+  CONTACTED: { label: "Bog'lanildi", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  QUALIFIED: { label: "Saralangan", color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+  PROPOSAL: { label: "Taklif", color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+  NEGOTIATION: { label: "Muzokara", color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
+  WON: { label: "Yutuq", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+  LOST: { label: "Yoqotildi", color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
 };
 
-export default function LeadDetailModal({ lead, onClose, onStatusChange }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [newNote, setNewNote] = useState("");
+const allStatuses: LeadStatus[] = [
+  "NEW",
+  "CONTACTED",
+  "QUALIFIED",
+  "PROPOSAL",
+  "NEGOTIATION",
+  "WON",
+  "LOST",
+];
+
+const interactionIcons: Record<InteractionType, React.ElementType> = {
+  CALL: Phone,
+  EMAIL: Mail,
+  SMS: MessageSquare,
+  WHATSAPP: MessageSquare,
+  TELEGRAM: Send,
+  MEETING: Building2,
+  NOTE: FileText,
+  STATUS_CHANGE: GitBranch,
+};
+
+export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
+  const { tenant } = useAuth();
+  const currency = tenant?.currency ?? "UZS";
+  const { data: lead, loading, error, refetch } = useAsync(() => leadsApi.get(leadId), [leadId]);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  if (!lead) return null;
+  const handleStatusChange = async (newStatus: LeadStatus) => {
+    setShowStatusMenu(false);
+    await leadsApi.update(leadId, { status: newStatus });
+    refetch();
+    onUpdated?.();
+  };
 
-  const status = statusConfig[lead.status];
-  const priority = priorityConfig[lead.priority];
-
-  const pipelineStatuses = ["new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"] as const;
-  const currentIndex = pipelineStatuses.indexOf(lead.status);
-
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
-    setNewNote("");
+  const handleAddNote = async () => {
+    if (!noteText.trim()) return;
+    setSubmitting(true);
+    try {
+      await leadsApi.addInteraction(leadId, {
+        type: "NOTE",
+        direction: "OUTBOUND",
+        content: noteText,
+      });
+      setNoteText("");
+      refetch();
+      onUpdated?.();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -67,421 +96,178 @@ export default function LeadDetailModal({ lead, onClose, onStatusChange }: Props
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ duration: 0.2 }}
-          className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl"
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
           onClick={(e) => e.stopPropagation()}
+          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         >
-          {/* Header */}
-          <div className="flex items-start justify-between p-6 border-b border-slate-800">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-lg font-bold flex-shrink-0">
-                {lead.name.split(" ").map((n) => n[0]).join("")}
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">{lead.name}</h2>
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${status.bg} ${status.color}`}>
-                    {statusLabels[lead.status]}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${priority.bg} ${priority.color}`}>
-                    <Star className="w-3 h-3" />
-                    {priority.label}
-                  </span>
-                  {lead.tags.map((tag) => (
-                    <span key={tag} className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <button
-                  onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all"
-                >
-                  <GitBranch className="w-4 h-4" />
-                  Status
-                </button>
-                <AnimatePresence>
-                  {showStatusMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                      className="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-10"
-                    >
-                      {pipelineStatuses.map((s) => {
-                        const cfg = statusConfig[s];
-                        return (
-                          <button
-                            key={s}
-                            onClick={() => {
-                              onStatusChange?.(lead.id, s);
-                              setShowStatusMenu(false);
-                            }}
-                            className={`w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors ${
-                              lead.status === s ? "bg-emerald-500/10 text-emerald-400" : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
-                            }`}
-                          >
-                            <div className={`w-2 h-2 rounded-full ${cfg.color.replace("text-", "bg-")}`} />
-                            {statusLabels[s]}
-                            {lead.status === s && <CheckCircle2 className="w-3.5 h-3.5 ml-auto" />}
-                          </button>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+          ) : error || !lead ? (
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+              <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
+              <p className="text-sm text-slate-300">{error?.message ?? "Lid topilmadi"}</p>
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                className="mt-4 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300"
               >
-                <X className="w-5 h-5" />
+                Yopish
               </button>
             </div>
-          </div>
-
-          {/* Pipeline Progress */}
-          <div className="px-6 py-4 border-b border-slate-800">
-            <div className="flex items-center gap-1">
-              {pipelineStatuses.map((s, i) => {
-                const cfg = statusConfig[s];
-                const isActive = i <= currentIndex;
-                const isCurrent = i === currentIndex;
-                return (
-                  <div key={s} className="flex items-center flex-1">
-                    <div className="flex flex-col items-center flex-1">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                          isCurrent
-                            ? `${cfg.bg} ${cfg.color} border-current`
-                            : isActive
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                            : "bg-slate-800 text-slate-600 border-slate-700"
-                        }`}
+          ) : (
+            <>
+              {/* Header */}
+              <div className="flex items-start justify-between p-5 border-b border-slate-800">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">#{lead.code}</p>
+                  <h2 className="text-xl font-bold text-white mt-0.5 truncate">{lead.name}</h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowStatusMenu(!showStatusMenu)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusConfig[lead.status].bg} ${statusConfig[lead.status].color}`}
                       >
-                        {isActive && i < currentIndex ? (
-                          <CheckCircle2 className="w-4 h-4" />
-                        ) : (
-                          i + 1
-                        )}
-                      </div>
-                      <span className={`text-[10px] mt-1.5 text-center leading-tight ${isActive ? "text-slate-300" : "text-slate-600"}`}>
-                        {statusLabels[s]}
+                        {statusConfig[lead.status].label}
+                      </button>
+                      {showStatusMenu && (
+                        <div className="absolute top-full mt-1 left-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-10 min-w-[150px]">
+                          {allStatuses.map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => handleStatusChange(s)}
+                              className={`w-full px-3 py-1.5 text-left text-xs hover:bg-slate-700 ${statusConfig[s].color}`}
+                            >
+                              {statusConfig[s].label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {lead.channel && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-xs text-slate-300">
+                        {lead.channel.name}
                       </span>
-                    </div>
-                    {i < pipelineStatuses.length - 1 && (
-                      <div className={`flex-1 h-0.5 mx-1 ${i < currentIndex ? "bg-emerald-500/50" : "bg-slate-800"}`} />
                     )}
+                    <span className="text-xs text-slate-500">
+                      <Clock className="w-3 h-3 inline mr-0.5" />
+                      {formatRelative(lead.createdAt)}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex items-center gap-1 px-4 pt-4 border-b border-slate-800">
-            {[
-              { key: "overview" as Tab, label: "Umumiy", icon: User },
-              { key: "interactions" as Tab, label: "Interaksiyalar", icon: MessageSquare },
-              { key: "details" as Tab, label: "Batafsil", icon: FileText },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              return (
+                </div>
                 <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all ${
-                    activeTab === tab.key
-                      ? "text-emerald-400 border-b-2 border-emerald-400"
-                      : "text-slate-500 hover:text-white"
-                  }`}
+                  onClick={onClose}
+                  className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
                 >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
+                  <X className="w-5 h-5" />
                 </button>
-              );
-            })}
-          </div>
+              </div>
 
-          <div className="p-6">
-            <AnimatePresence mode="wait">
-              {/* OVERVIEW TAB */}
-              {activeTab === "overview" && (
-                <motion.div
-                  key="overview"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="space-y-5"
-                >
-                  {/* Contact Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-800/50 rounded-xl p-4">
-                      <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-slate-400" />
-                        Aloqa ma'lumotlari
-                      </h3>
-                      <div className="space-y-2.5">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                          <span className="text-white">{lead.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Mail className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                          <span className="text-white">{lead.email}</span>
-                        </div>
-                        {lead.location && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                            <span className="text-slate-300">{lead.location}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {/* Info grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <InfoRow icon={Phone} label="Telefon" value={lead.phone} />
+                  <InfoRow icon={Mail} label="Email" value={lead.email} />
+                  <InfoRow icon={Building2} label="Kompaniya" value={lead.company} />
+                  <InfoRow icon={MapPin} label="Manzil" value={lead.location} />
+                  <InfoRow
+                    icon={Tag}
+                    label="Qiymat"
+                    value={formatCompactCurrency(Number(lead.value), currency)}
+                  />
+                </div>
 
-                    <div className="bg-slate-800/50 rounded-xl p-4">
-                      <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-slate-400" />
-                        Kompaniya
-                      </h3>
-                      <div className="space-y-2.5">
-                        {lead.company && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Building2 className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                            <span className="text-white">{lead.company}</span>
-                          </div>
-                        )}
-                        {lead.position && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Briefcase className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                            <span className="text-slate-300">{lead.position}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-sm">
-                          <User className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                          <span className="text-slate-300">Mas'ul: {lead.assignedTo}</span>
-                        </div>
-                      </div>
-                    </div>
+                {lead.notes && (
+                  <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 mb-1">Izoh</p>
+                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{lead.notes}</p>
                   </div>
+                )}
 
-                  {/* Deal Value & Source */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-slate-800/50 rounded-xl p-4">
-                      <p className="text-xs text-slate-500">Potensial qiymat</p>
-                      <p className="text-2xl font-bold text-emerald-400 mt-1">
-                        {lead.value.toLocaleString()} {lead.currency}
-                      </p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-xl p-4">
-                      <p className="text-xs text-slate-500">Manba</p>
-                      <p className="text-lg font-bold text-white mt-1">{sourceLabels[lead.source]}</p>
-                    </div>
-                    <div className="bg-slate-800/50 rounded-xl p-4">
-                      <p className="text-xs text-slate-500">Yaratilgan</p>
-                      <p className="text-lg font-bold text-white mt-1">{lead.createdAt.split(" ")[0]}</p>
-                    </div>
-                  </div>
-
-                  {/* UTM Info */}
-                  {(lead.utmSource || lead.utmMedium || lead.utmCampaign) && (
-                    <div className="bg-slate-800/30 rounded-xl p-4">
-                      <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-slate-400" />
-                        UTM teglar
-                      </h3>
-                      <div className="grid grid-cols-3 gap-3">
-                        {lead.utmSource && (
-                          <div>
-                            <p className="text-xs text-slate-500">Source</p>
-                            <p className="text-sm text-white mt-0.5">{lead.utmSource}</p>
-                          </div>
-                        )}
-                        {lead.utmMedium && (
-                          <div>
-                            <p className="text-xs text-slate-500">Medium</p>
-                            <p className="text-sm text-white mt-0.5">{lead.utmMedium}</p>
-                          </div>
-                        )}
-                        {lead.utmCampaign && (
-                          <div>
-                            <p className="text-xs text-slate-500">Campaign</p>
-                            <p className="text-sm text-white mt-0.5">{lead.utmCampaign}</p>
-                          </div>
-                        )}
-                      </div>
+                {/* Interactions */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-3">Aloqalar tarixi</h3>
+                  {lead.interactions.length === 0 ? (
+                    <p className="text-xs text-slate-500">Aloqa yo'q</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {lead.interactions.map((interaction) => (
+                        <InteractionRow key={interaction.id} interaction={interaction} />
+                      ))}
                     </div>
                   )}
+                </div>
 
-                  {/* Notes */}
-                  <div className="bg-slate-800/30 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-slate-400" />
-                      Eslatmalar
-                    </h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">{lead.notes}</p>
-                  </div>
-
-                  {/* Next Actions */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-800/30 rounded-xl p-4">
-                      <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        So'nggi aloqa
-                      </p>
-                      <p className="text-sm font-medium text-white mt-1">{lead.lastContact}</p>
-                    </div>
-                    <div className="bg-slate-800/30 rounded-xl p-4">
-                      <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
-                        Keyingi qo'ng'iroq
-                      </p>
-                      <p className="text-sm font-medium text-emerald-400 mt-1">{lead.nextFollowUp}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* INTERACTIONS TAB */}
-              {activeTab === "interactions" && (
-                <motion.div
-                  key="interactions"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="space-y-5"
-                >
-                  {/* Add Note */}
-                  <div className="bg-slate-800/30 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3">Yangi interaksiya</h3>
-                    <div className="flex gap-2">
-                      <textarea
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                        placeholder="Eslatma, qo'ng'iroq natijasi yoki boshqa ma'lumot..."
-                        rows={2}
-                        className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
-                      />
-                      <button
-                        onClick={handleAddNote}
-                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors self-end"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      {["call", "email", "sms", "whatsapp", "telegram", "meeting"].map((type) => {
-                        const cfg = interactionTypeConfig[type];
-                        const Icon = interactionIcons[cfg.icon] || FileText;
-                        return (
-                          <button
-                            key={type}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-400 hover:text-white transition-all"
-                          >
-                            <Icon className="w-3 h-3" />
-                            {cfg.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Timeline */}
-                  <div className="relative">
-                    <div className="absolute left-[19px] top-2 bottom-2 w-px bg-slate-800" />
-                    <div className="space-y-4">
-                      {lead.interactions.map((interaction, i) => {
-                        const cfg = interactionTypeConfig[interaction.type];
-                        const Icon = interactionIcons[cfg.icon] || FileText;
-                        return (
-                          <motion.div
-                            key={interaction.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            className="flex items-start gap-3 relative"
-                          >
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${cfg.color.replace("text-", "bg-").replace("400", "500")}/10`}>
-                              <Icon className={`w-4 h-4 ${cfg.color}`} />
-                            </div>
-                            <div className="flex-1 bg-slate-800/30 rounded-xl p-3">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium text-white">{cfg.label}</span>
-                                <span className="text-xs text-slate-500">{interaction.createdAt}</span>
-                              </div>
-                              <p className="text-sm text-slate-300">{interaction.content}</p>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                <span className="text-xs text-slate-500">{interaction.createdBy}</span>
-                                {interaction.duration && (
-                                  <span className="text-xs text-slate-500">
-                                    {Math.floor(interaction.duration / 60)}:{(interaction.duration % 60).toString().padStart(2, "0")}
-                                  </span>
-                                )}
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${interaction.direction === "inbound" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"}`}>
-                                  {interaction.direction === "inbound" ? "Kiruvchi" : "Chiquvchi"}
-                                </span>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* DETAILS TAB */}
-              {activeTab === "details" && (
-                <motion.div
-                  key="details"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="space-y-4"
-                >
-                  {[
-                    { label: "LID ID", value: lead.id },
-                    { label: "Ism", value: lead.name },
-                    { label: "Telefon", value: lead.phone },
-                    { label: "Email", value: lead.email },
-                    { label: "Manba", value: sourceLabels[lead.source] },
-                    { label: "Status", value: statusLabels[lead.status] },
-                    { label: "Prioritet", value: priority.label },
-                    { label: "Potensial qiymat", value: `${lead.value.toLocaleString()} ${lead.currency}` },
-                    { label: "Mas'ul", value: lead.assignedTo },
-                    { label: "Yaratilgan", value: lead.createdAt },
-                    { label: "Yangilangan", value: lead.updatedAt },
-                    { label: "So'nggi aloqa", value: lead.lastContact },
-                    { label: "Keyingi qo'ng'iroq", value: lead.nextFollowUp },
-                    { label: "Kompaniya", value: lead.company || "—" },
-                    { label: "Lavozim", value: lead.position || "—" },
-                    { label: "Joylashuv", value: lead.location || "—" },
-                    { label: "UTM Source", value: lead.utmSource || "—" },
-                    { label: "UTM Medium", value: lead.utmMedium || "—" },
-                    { label: "UTM Campaign", value: lead.utmCampaign || "—" },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-slate-800/50">
-                      <span className="text-sm text-slate-500">{item.label}</span>
-                      <span className="text-sm text-white font-medium">{item.value}</span>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                {/* Add note */}
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-2">Eslatma qo'shish</h3>
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    rows={3}
+                    placeholder="Lid haqida eslatma yozing..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                  />
+                  <button
+                    onClick={handleAddNote}
+                    disabled={!noteText.trim() || submitting}
+                    className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white transition-all"
+                  >
+                    {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    Qo'shish
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+      <div className="min-w-0">
+        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-sm text-slate-200 truncate">{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
+
+function InteractionRow({ interaction }: { interaction: Interaction }) {
+  const Icon = interactionIcons[interaction.type] ?? MessageSquare;
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Icon className="w-3.5 h-3.5 text-slate-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-300 font-medium">{interaction.createdBy}</span>
+          <span className="text-slate-600">·</span>
+          <span className="text-slate-500">{formatDateTime(interaction.createdAt)}</span>
+        </div>
+        <p className="text-sm text-slate-200 mt-0.5 whitespace-pre-wrap">{interaction.content}</p>
+      </div>
+    </div>
   );
 }
