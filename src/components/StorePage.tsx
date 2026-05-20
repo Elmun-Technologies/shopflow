@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react
 import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
-  Tag,
+  Tag, Heart,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -71,6 +71,17 @@ declare global {
   }
 }
 
+type SaleBadgeColor = "RED" | "ORANGE" | "EMERALD" | "PURPLE" | "BLUE";
+
+type StoreSaleCampaign = {
+  id: string;
+  label: string;
+  badgeColor: SaleBadgeColor;
+  active: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+};
+
 type StoreProduct = {
   id: string;
   sku: string;
@@ -85,7 +96,47 @@ type StoreProduct = {
   featured: boolean;
   categoryId: string | null;
   category: { id: string; name: string; slug: string } | null;
+  saleCampaign?: StoreSaleCampaign | null;
 };
+
+const SALE_BADGE_STYLES: Record<SaleBadgeColor, string> = {
+  RED: "bg-rose-500 text-white",
+  ORANGE: "bg-orange-500 text-white",
+  EMERALD: "bg-emerald-500 text-white",
+  PURPLE: "bg-purple-500 text-white",
+  BLUE: "bg-blue-500 text-white",
+};
+
+function isCampaignLive(c: StoreSaleCampaign | null | undefined): boolean {
+  if (!c || !c.active) return false;
+  const now = Date.now();
+  if (c.startsAt && new Date(c.startsAt).getTime() > now) return false;
+  if (c.endsAt && new Date(c.endsAt).getTime() < now) return false;
+  return true;
+}
+
+function calcDiscountPct(price: number, oldPrice: number | null | undefined): number {
+  if (!oldPrice || oldPrice <= price) return 0;
+  return Math.round(((oldPrice - price) / oldPrice) * 100);
+}
+
+const FAV_KEY = (slug: string) => `shopflow:store:${slug}:favorites`;
+function loadFavorites(slug: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(FAV_KEY(slug));
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+function saveFavorites(slug: string, favs: Set<string>) {
+  try {
+    localStorage.setItem(FAV_KEY(slug), JSON.stringify(Array.from(favs)));
+  } catch {
+    // ignore
+  }
+}
 
 type StoreCategory = {
   id: string;
@@ -215,7 +266,19 @@ function StoreInner({ slug }: { slug: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites(slug));
   const toast = useToast();
+
+  const toggleFavorite = useCallback((productId: string) => {
+    haptic.light();
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      saveFavorites(slug, next);
+      return next;
+    });
+  }, [slug]);
 
   // Telegram WebApp — darhol ready() chaqirish (yuklanish ekranini yashirish uchun)
   const twa = window.Telegram?.WebApp;
@@ -631,70 +694,146 @@ function StoreInner({ slug }: { slug: string }) {
   const renderProductDetail = () => {
     if (!selectedProduct) return null;
     const qty = cartQty(selectedProduct.id);
+    const price = Number(selectedProduct.price);
+    const oldPrice = selectedProduct.oldPrice != null ? Number(selectedProduct.oldPrice) : null;
+    const discountPct = calcDiscountPct(price, oldPrice);
+    const savings = oldPrice && oldPrice > price ? oldPrice - price : 0;
+    const liveCampaign = isCampaignLive(selectedProduct.saleCampaign);
+    const isFav = favorites.has(selectedProduct.id);
+
     return (
-      <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3">
-          <button onClick={() => setSelectedProduct(null)} className="p-2 rounded-xl text-slate-400 hover:text-white">
+      <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col animate-in fade-in duration-150">
+        {/* Top bar */}
+        <div
+          className="px-4 pb-2 flex items-center justify-between bg-slate-950"
+          style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        >
+          <button
+            onClick={() => setSelectedProduct(null)}
+            className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center text-white active:scale-90 transition-transform"
+            aria-label="Yopish"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => toggleFavorite(selectedProduct.id)}
+            className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+            aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+          >
+            <Heart className={`w-4.5 h-4.5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
+          </button>
         </div>
+
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full aspect-square bg-slate-900 flex items-center justify-center overflow-hidden">
+          {/* Image + badges */}
+          <div className="w-full aspect-square bg-slate-900 flex items-center justify-center overflow-hidden relative">
             {selectedProduct.imageUrl ? (
               <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover" />
             ) : (
               <Package className="w-20 h-20 text-slate-600" />
             )}
-          </div>
-          <div className="p-4">
-            <h2 className="text-xl font-bold text-white mb-2">{selectedProduct.name}</h2>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl font-bold" style={{ color: primaryColor }}>
-                {formatPrice(selectedProduct.price, data.tenant.currency)}
-              </span>
-              {selectedProduct.oldPrice != null && Number(selectedProduct.oldPrice) > 0 && (
-                <span className="text-base text-slate-500 line-through">
-                  {formatPrice(selectedProduct.oldPrice, data.tenant.currency)}
+            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+              {discountPct > 0 && (
+                <span className="bg-rose-500 text-white text-sm font-bold px-2 py-1 rounded-lg shadow-lg">
+                  −{discountPct}%
+                </span>
+              )}
+              {liveCampaign && selectedProduct.saleCampaign && (
+                <span className={`text-xs font-bold px-2 py-1 rounded-lg shadow-lg ${SALE_BADGE_STYLES[selectedProduct.saleCampaign.badgeColor]}`}>
+                  {selectedProduct.saleCampaign.label}
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="p-5">
+            {/* Price block — WB style */}
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-3xl font-bold text-white">
+                {price.toLocaleString("uz-UZ")}
+                <span className="text-base font-normal text-slate-400 ml-1">
+                  {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                </span>
+              </span>
+              {oldPrice != null && oldPrice > price && (
+                <span className="text-base text-slate-500 line-through">
+                  {oldPrice.toLocaleString("uz-UZ")}
+                </span>
+              )}
+            </div>
+            {savings > 0 && (
+              <div className="inline-block bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-1 rounded-md mb-3">
+                Tejovingiz: {savings.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+              </div>
+            )}
+
+            {/* Title */}
+            <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
+
+            {/* Quick stats */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {selectedProduct.category && (
+                <span className="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-1 rounded-md">
+                  {selectedProduct.category.name}
+                </span>
+              )}
+              {selectedProduct.stock > 0 ? (
+                <span className="text-[11px] text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded-md">
+                  ✓ Mavjud
+                </span>
+              ) : (
+                <span className="text-[11px] text-rose-300 bg-rose-500/10 px-2 py-1 rounded-md">
+                  Tugagan
+                </span>
+              )}
+              {selectedProduct.featured && (
+                <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md">⭐ Bestseller</span>
+              )}
+            </div>
+
             {selectedProduct.description && (
-              <p className="text-sm text-slate-400 leading-relaxed">{selectedProduct.description}</p>
+              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedProduct.description}</p>
             )}
           </div>
         </div>
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
+
+        {/* Sticky bottom CTA */}
+        <div
+          className="border-t border-slate-800 bg-slate-950 p-4"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
           {qty === 0 ? (
             <button
               onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
-              className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98]"
+              className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               style={{ backgroundColor: primaryColor }}
             >
-              Savatga qo'shish
+              <Plus className="w-5 h-5" />
+              Savatga qo'shish · {price.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
             </button>
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center bg-slate-800 rounded-2xl">
                 <button
                   onClick={() => updateQty(selectedProduct.id, -1)}
-                  className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white active:scale-90 transition-transform"
+                  className="w-12 h-12 flex items-center justify-center text-white active:scale-90 transition-transform"
                 >
                   <Minus className="w-5 h-5" />
                 </button>
-                <span className="text-xl font-bold text-white w-8 text-center">{qty}</span>
+                <span className="text-base font-bold text-white px-3 min-w-[36px] text-center">{qty}</span>
                 <button
                   onClick={() => updateQty(selectedProduct.id, 1)}
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-transform"
-                  style={{ backgroundColor: primaryColor }}
+                  className="w-12 h-12 flex items-center justify-center text-white active:scale-90 transition-transform"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
               <button
-                onClick={() => setSelectedProduct(null)}
-                className="flex-1 ml-3 py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98]"
+                onClick={() => { setSelectedProduct(null); setView("cart"); }}
+                className="flex-1 py-3 rounded-2xl font-semibold text-white text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
                 style={{ backgroundColor: primaryColor }}
               >
+                <ShoppingCart className="w-4 h-4" />
                 Savatga o'tish
               </button>
             </div>
@@ -707,40 +846,89 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- HOME ----
   const renderProductCard = (product: StoreProduct) => {
     const qty = cartQty(product.id);
+    const price = Number(product.price);
+    const oldPrice = product.oldPrice != null ? Number(product.oldPrice) : null;
+    const discountPct = calcDiscountPct(price, oldPrice);
+    const liveCampaign = isCampaignLive(product.saleCampaign);
+    const isFav = favorites.has(product.id);
+
     return (
       <div
         key={product.id}
-        className="bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+        className="bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group"
         onClick={() => setSelectedProduct(product)}
       >
+        {/* Top-left badges (discount + campaign) */}
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+          {discountPct > 0 && (
+            <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+              −{discountPct}%
+            </span>
+          )}
+          {liveCampaign && product.saleCampaign && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${SALE_BADGE_STYLES[product.saleCampaign.badgeColor]}`}>
+              {product.saleCampaign.label}
+            </span>
+          )}
+        </div>
+
+        {/* Top-right heart (favorite) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+          aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+          className="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+        >
+          <Heart
+            className={`w-3.5 h-3.5 transition-colors ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`}
+            strokeWidth={2}
+          />
+        </button>
+
+        {/* Image */}
         <div className="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden">
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
           ) : (
             <Package className="w-10 h-10 text-slate-600" />
           )}
         </div>
+
+        {/* Info */}
         <div className="p-2.5">
-          <p className="text-xs text-white font-medium line-clamp-2 leading-tight mb-1.5">{product.name}</p>
-          <div className="flex items-center justify-between gap-1">
-            <div className="min-w-0">
-              <p className="text-xs font-bold truncate" style={{ color: primaryColor }}>
-                {formatPrice(product.price, data.tenant.currency)}
-              </p>
-              {product.oldPrice != null && Number(product.oldPrice) > 0 && (
-                <p className="text-[10px] text-slate-500 line-through">
-                  {formatPrice(product.oldPrice, data.tenant.currency)}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-              className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 text-white active:scale-90 transition-transform"
-              style={{ backgroundColor: qty > 0 ? "#10b981" : primaryColor }}
-            >
-              {qty > 0 ? <span className="text-[10px] font-bold">{qty}</span> : <Plus className="w-3.5 h-3.5" />}
-            </button>
+          {/* Price line — WB-style: big bold + small struck */}
+          <div className="flex items-baseline gap-1.5 mb-1">
+            <span className="text-sm font-bold text-white">
+              {price.toLocaleString("uz-UZ")}
+              <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
+            </span>
+            {oldPrice != null && oldPrice > price && (
+              <span className="text-[10px] text-slate-500 line-through">
+                {oldPrice.toLocaleString("uz-UZ")}
+              </span>
+            )}
           </div>
+
+          {/* Name */}
+          <p className="text-[11px] text-slate-300 line-clamp-2 leading-tight mb-2 min-h-[28px]">{product.name}</p>
+
+          {/* Add to cart */}
+          <button
+            onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+            className="w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all"
+            style={{ backgroundColor: qty > 0 ? "#10b981" : primaryColor }}
+          >
+            {qty > 0 ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Savatda · {qty} dona
+              </>
+            ) : (
+              <>
+                <Plus className="w-3.5 h-3.5" />
+                Savatga
+              </>
+            )}
+          </button>
         </div>
       </div>
     );
