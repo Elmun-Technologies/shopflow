@@ -1,160 +1,61 @@
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Search,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  MoreHorizontal,
-  Package,
   Plus,
-  ArrowUpDown,
-  Download,
+  Loader2,
+  Package,
+  AlertCircle,
+  Edit2,
   Trash2,
-  CheckSquare,
-  Square,
-  TrendingUp,
-  AlertTriangle,
-  Grid3X3,
-  List,
-  Barcode,
-  Tag,
-  Warehouse,
-  Boxes,
-  Percent,
-  MapPin,
-  User,
-  Layers,
-  DollarSign,
+  X,
+  Star,
 } from "lucide-react";
-import { products, categories, warehouses, ikpuCodes, saleRecords } from "../data/productsData";
-import type { Product } from "../data/productsData";
-import ProductDetailModal from "./ProductDetailModal";
-
-type Tab = "products" | "categories" | "sales" | "ikpu" | "warehouse";
-type ProductSort = "name" | "price" | "stock" | "sold" | "rating";
-type SortDir = "asc" | "desc";
-type ViewMode = "grid" | "list";
-
-const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
-  active: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Faol" },
-  inactive: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20", label: "Nofaol" },
-  out_of_stock: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", label: "Tugagan" },
-  discontinued: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Bekor" },
-};
-
-const warehouseStatusConfig: Record<string, { color: string; bg: string; label: string }> = {
-  active: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Faol" },
-  maintenance: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Ta'mir" },
-  full: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", label: "To'la" },
-};
+import { useAsync } from "../hooks/useAsync";
+import { productsApi, categoriesApi } from "../api/endpoints";
+import { useAuth } from "../contexts/AuthContext";
+import { formatCurrency } from "../utils/format";
+import type { Product, Category } from "../types/api";
 
 export default function ProductsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("products");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [warehouseFilter, setWarehouseFilter] = useState("all");
-  const [sortKey, setSortKey] = useState<ProductSort>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [productList, setProductList] = useState<Product[]>(products);
-  const [showFilters, setShowFilters] = useState(false);
+  const { tenant } = useAuth();
+  const currency = tenant?.currency ?? "UZS";
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 24;
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
 
-  // Stats
-  const totalProducts = productList.length;
-  const lowStockCount = productList.filter((p) => p.stock <= p.minStock && p.stock > 0).length;
-  const outOfStockCount = productList.filter((p) => p.stock === 0).length;
-  const totalValue = productList.reduce((sum, p) => sum + p.price * p.stock, 0);
-
-  const filteredProducts = useMemo(() => {
-    let result = [...productList];
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.barcode.includes(q) ||
-          p.ikpu.includes(q)
-      );
-    }
-
-    if (categoryFilter !== "all") {
-      result = result.filter((p) => p.categoryId === categoryFilter);
-    }
-
-    if (statusFilter !== "all") {
-      result = result.filter((p) => p.status === statusFilter);
-    }
-
-    if (warehouseFilter !== "all") {
-      result = result.filter((p) => p.warehouseId === warehouseFilter);
-    }
-
-    result.sort((a, b) => {
-      const aVal: string | number = a[sortKey];
-      const bVal: string | number = b[sortKey];
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [searchQuery, categoryFilter, statusFilter, warehouseFilter, sortKey, sortDir, productList]);
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const params = useMemo(
+    () => ({
+      page,
+      pageSize,
+      search: search || undefined,
+      categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+    }),
+    [page, search, categoryFilter],
   );
+  const { data, loading, error, refetch } = useAsync(() => productsApi.list(params), [
+    page,
+    search,
+    categoryFilter,
+  ]);
+  const { data: categories, refetch: refetchCategories } = useAsync(() => categoriesApi.list(), []);
 
-  const handleSort = (key: ProductSort) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-    setCurrentPage(1);
+  const products = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const cats = categories ?? [];
+
+  const handleDelete = async (p: Product) => {
+    if (!confirm(`"${p.name}" mahsulotini o'chirish?`)) return;
+    await productsApi.delete(p.id);
+    refetch();
   };
-
-  const toggleSelectAll = () => {
-    if (selectedProducts.size === paginatedProducts.length) {
-      setSelectedProducts(new Set());
-    } else {
-      setSelectedProducts(new Set(paginatedProducts.map((p) => p.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedProducts);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedProducts(next);
-  };
-
-  const handleUpdateProduct = (updated: Product) => {
-    setProductList((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-  };
-
-  const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
-    { key: "products", label: "Tovarlar", icon: Package },
-    { key: "categories", label: "Kategoriyalar", icon: Layers },
-    { key: "sales", label: "Sotuvlar", icon: TrendingUp },
-    { key: "ikpu", label: "IKPU", icon: Tag },
-    { key: "warehouse", label: "Ombor", icon: Warehouse },
-  ];
 
   return (
-    <div>
-      {/* Header */}
+    <>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -163,739 +64,644 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Mahsulotlar</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Tovarlar, kategoriyalar, IKPU va ombor boshqaruvi
+            {total > 0 ? `${total} ta mahsulot` : "Katalog va omborlar"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">
-            <Download className="w-4 h-4" />
-            Export
+          <button
+            onClick={() => setShowCategories(true)}
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white"
+          >
+            Kategoriyalar ({cats.length})
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-all">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+          >
             <Plus className="w-4 h-4" />
-            Yangi tovar
+            Yangi mahsulot
           </button>
         </div>
       </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: "Jami tovarlar", value: totalProducts.toString(), change: "+12", positive: true },
-          { label: "Kam zaxira", value: lowStockCount.toString(), change: "Diqqat", positive: false, alert: true },
-          { label: "Tugagan", value: outOfStockCount.toString(), change: "Zaxira kerak", positive: false, alert: true },
-          { label: "Zaxira qiymati", value: (totalValue / 1000000).toFixed(1) + "M so'm", change: "+5.2%", positive: true },
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.08 }}
-            className={`bg-slate-900 border rounded-xl p-5 ${stat.alert ? "border-red-500/20" : "border-slate-800"}`}
-          >
-            <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-            <div className="flex items-end justify-between mt-2">
-              <p className={`text-2xl font-bold ${stat.alert ? "text-red-400" : "text-white"}`}>{stat.value}</p>
-              <span className={`text-xs font-semibold ${stat.positive ? "text-emerald-400" : "text-red-400"}`}>
-                {stat.change}
-              </span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 mb-4 border-b border-slate-800 overflow-x-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.key
-                  ? "text-emerald-400 border-b-2 border-emerald-400"
-                  : "text-slate-500 hover:text-white"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <AnimatePresence mode="wait">
-        {/* PRODUCTS TAB */}
-        {activeTab === "products" && (
-          <motion.div
-            key="products"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            {/* Filters */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4">
-              <div className="flex flex-col lg:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Tovar nomi, SKU, barcode, IKPU bo'yicha qidirish..."
-                    value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
-                    className="p-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white transition-all"
-                  >
-                    {viewMode === "list" ? <Grid3X3 className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-slate-400 hover:text-white transition-all"
-                  >
-                    <Filter className="w-4 h-4" />
-                    Filterlar
-                  </button>
-                </div>
-              </div>
-
-              <AnimatePresence>
-                {showFilters && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 mt-3 border-t border-slate-800">
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1.5 block">Kategoriya</label>
-                        <select
-                          value={categoryFilter}
-                          onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50"
-                        >
-                          <option value="all">Barcha kategoriyalar</option>
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1.5 block">Status</label>
-                        <select
-                          value={statusFilter}
-                          onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50"
-                        >
-                          <option value="all">Barcha statuslar</option>
-                          <option value="active">Faol</option>
-                          <option value="inactive">Nofaol</option>
-                          <option value="out_of_stock">Tugagan</option>
-                          <option value="discontinued">Bekor qilingan</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1.5 block">Ombor</label>
-                        <select
-                          value={warehouseFilter}
-                          onChange={(e) => { setWarehouseFilter(e.target.value); setCurrentPage(1); }}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50"
-                        >
-                          <option value="all">Barcha omborlar</option>
-                          {warehouses.map((w) => (
-                            <option key={w.id} value={w.id}>{w.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1.5 block">Sahifada</label>
-                        <select
-                          value={itemsPerPage}
-                          onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50"
-                        >
-                          <option value={10}>10 ta</option>
-                          <option value={20}>20 ta</option>
-                          <option value={50}>50 ta</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-slate-800 flex justify-end">
-                      <button
-                        onClick={() => {
-                          setSearchQuery("");
-                          setCategoryFilter("all");
-                          setStatusFilter("all");
-                          setWarehouseFilter("all");
-                          setSortKey("name");
-                          setSortDir("asc");
-                          setCurrentPage(1);
-                        }}
-                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-slate-400 hover:text-white transition-all"
-                      >
-                        Filterlarni tozalash
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Bulk Actions */}
-            <AnimatePresence>
-              {selectedProducts.size > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 mb-4"
-                >
-                  <p className="text-sm text-emerald-400 font-medium">
-                    {selectedProducts.size} ta tovar tanlandi
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-colors">
-                      <CheckSquare className="w-3.5 h-3.5" />
-                      Faollashtirish
-                    </button>
-                    <button
-                      onClick={() => setSelectedProducts(new Set())}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-medium rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Tozalash
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Products List/Grid */}
-            {viewMode === "list" ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-800 bg-slate-800/30">
-                        <th className="py-3 px-4 w-10">
-                          <button onClick={toggleSelectAll} className="text-slate-500 hover:text-white transition-colors">
-                            {selectedProducts.size === paginatedProducts.length && paginatedProducts.length > 0 ? (
-                              <CheckSquare className="w-4 h-4 text-emerald-400" />
-                            ) : (
-                              <Square className="w-4 h-4" />
-                            )}
-                          </button>
-                        </th>
-                        <th className="py-3 px-4 text-left">
-                          <button onClick={() => handleSort("name")} className="flex items-center gap-1 text-xs font-medium text-slate-500 uppercase tracking-wider hover:text-white transition-colors">
-                            Tovar <ArrowUpDown className="w-3 h-3" />
-                          </button>
-                        </th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SKU</th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Kategoriya</th>
-                        <th className="py-3 px-4 text-right">
-                          <button onClick={() => handleSort("price")} className="flex items-center gap-1 text-xs font-medium text-slate-500 uppercase tracking-wider hover:text-white transition-colors ml-auto">
-                            Narx <ArrowUpDown className="w-3 h-3" />
-                          </button>
-                        </th>
-                        <th className="py-3 px-4 text-right">
-                          <button onClick={() => handleSort("stock")} className="flex items-center gap-1 text-xs font-medium text-slate-500 uppercase tracking-wider hover:text-white transition-colors ml-auto">
-                            Zaxira <ArrowUpDown className="w-3 h-3" />
-                          </button>
-                        </th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                        <th className="py-3 px-4 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Amallar</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedProducts.length === 0 ? (
-                        <tr>
-                          <td colSpan={8} className="py-16 text-center">
-                            <Package className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-                            <p className="text-sm text-slate-500">Tovarlar topilmadi</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedProducts.map((product, index) => {
-                          const sCfg = statusConfig[product.status];
-                          const isSelected = selectedProducts.has(product.id);
-                          const isLow = product.stock <= product.minStock && product.stock > 0;
-                          const isOut = product.stock === 0;
-
-                          return (
-                            <motion.tr
-                              key={product.id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: index * 0.03 }}
-                              className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors ${isSelected ? "bg-emerald-500/5" : ""}`}
-                            >
-                              <td className="py-3.5 px-4">
-                                <button onClick={() => toggleSelect(product.id)} className="text-slate-500 hover:text-white transition-colors">
-                                  {isSelected ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4" />}
-                                </button>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Package className="w-5 h-5 text-slate-500" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-white truncate">{product.name}</p>
-                                    <p className="text-xs text-slate-500">{product.ikpu}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className="text-sm text-slate-400">{product.sku}</span>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className="text-sm text-slate-300">{product.category}</span>
-                              </td>
-                              <td className="py-3.5 px-4 text-right">
-                                <p className="text-sm font-semibold text-white">{product.price.toLocaleString()}</p>
-                                {product.salePrice && (
-                                  <p className="text-xs text-amber-400 line-through">{product.salePrice.toLocaleString()}</p>
-                                )}
-                              </td>
-                              <td className="py-3.5 px-4 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className={`text-sm font-semibold ${isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-white"}`}>
-                                    {product.stock}
-                                  </span>
-                                  {isLow && <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
-                                </div>
-                                <div className="w-16 h-1 bg-slate-700 rounded-full mt-1 ml-auto overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${isOut ? "bg-red-500" : isLow ? "bg-amber-500" : "bg-emerald-500"}`}
-                                    style={{ width: `${Math.min(100, (product.stock / product.maxStock) * 100)}%` }}
-                                  />
-                                </div>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${sCfg.bg} ${sCfg.color}`}>
-                                  {sCfg.label}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <button
-                                    onClick={() => setDetailProduct(product)}
-                                    className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </motion.tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {filteredProducts.length > 0 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800">
-                    <p className="text-xs text-slate-500">
-                      {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProducts.length)} / {filteredProducts.length} ta
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-30 transition-all">
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum: number;
-                        if (totalPages <= 5) pageNum = i + 1;
-                        else if (currentPage <= 3) pageNum = i + 1;
-                        else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                        else pageNum = currentPage - 2 + i;
-                        return (
-                          <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`w-7 h-7 rounded-lg text-xs font-medium transition-all ${currentPage === pageNum ? "bg-emerald-500 text-white" : "text-slate-500 hover:text-white hover:bg-slate-800"}`}>
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                      <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-30 transition-all">
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* GRID VIEW */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {paginatedProducts.map((product, index) => {
-                  const sCfg = statusConfig[product.status];
-                  const isLow = product.stock <= product.minStock && product.stock > 0;
-                  const isOut = product.stock === 0;
-                  return (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors cursor-pointer"
-                      onClick={() => setDetailProduct(product)}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
-                          <Package className="w-6 h-6 text-slate-500" />
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${sCfg.bg} ${sCfg.color}`}>
-                          {sCfg.label}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-semibold text-white truncate">{product.name}</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{product.sku}</p>
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-sm font-bold text-emerald-400">{product.price.toLocaleString()} so'm</span>
-                        <div className="flex items-center gap-1">
-                          {isLow && <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
-                          <span className={`text-xs font-medium ${isOut ? "text-red-400" : isLow ? "text-amber-400" : "text-slate-400"}`}>
-                            {product.stock} {product.unit}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${isOut ? "bg-red-500" : isLow ? "bg-amber-500" : "bg-emerald-500"}`}
-                          style={{ width: `${Math.min(100, (product.stock / product.maxStock) * 100)}%` }}
-                        />
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* CATEGORIES TAB */}
-        {activeTab === "categories" && (
-          <motion.div
-            key="categories"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-          >
-            {categories.map((cat, index) => {
-              const catProducts = productList.filter((p) => p.categoryId === cat.id);
-              const catValue = catProducts.reduce((sum, p) => sum + p.price * p.stock, 0);
-              return (
-                <motion.div
-                  key={cat.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.08 }}
-                  className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: cat.color + "20" }}
-                    >
-                      <Layers className="w-6 h-6" style={{ color: cat.color }} />
-                    </div>
-                    <span className="text-xs font-medium text-slate-500">{cat.slug}</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-white">{cat.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1">{cat.description}</p>
-                  <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-800">
-                    <div>
-                      <p className="text-xs text-slate-500">Tovarlar</p>
-                      <p className="text-lg font-bold text-white">{cat.productsCount}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Qiymati</p>
-                      <p className="text-lg font-bold text-emerald-400">{(catValue / 1000000).toFixed(1)}M</p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
-
-        {/* SALES TAB */}
-        {activeTab === "sales" && (
-          <motion.div
-            key="sales"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[
-                { label: "Jami sotuvlar", value: saleRecords.length.toString(), icon: TrendingUp },
-                { label: "Umumiy daromad", value: (saleRecords.reduce((s, r) => s + r.total, 0) / 1000000).toFixed(1) + "M so'm", icon: DollarSign },
-                { label: "O'rtacha chek", value: Math.round(saleRecords.reduce((s, r) => s + r.total, 0) / saleRecords.length).toLocaleString() + " so'm", icon: Percent },
-                { label: "Bugun", value: saleRecords.filter((s) => s.date === "2024-12-15").length.toString(), icon: TrendingUp },
-              ].map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.08 }}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-5"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon className="w-4 h-4 text-slate-500" />
-                      <p className="text-xs text-slate-500">{stat.label}</p>
-                    </div>
-                    <p className="text-xl font-bold text-white">{stat.value}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-800">
-                <h3 className="text-sm font-semibold text-white">So'nggi sotuvlar</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-800/30">
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Tovar</th>
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Mijoz</th>
-                      <th className="py-3 px-5 text-right text-xs font-medium text-slate-500 uppercase">Soni</th>
-                      <th className="py-3 px-5 text-right text-xs font-medium text-slate-500 uppercase">Narxi</th>
-                      <th className="py-3 px-5 text-right text-xs font-medium text-slate-500 uppercase">Jami</th>
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Sana</th>
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Ombor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {saleRecords.map((sale, index) => (
-                      <motion.tr
-                        key={sale.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.03 }}
-                        className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
-                      >
-                        <td className="py-3 px-5 text-sm text-slate-400">{sale.id}</td>
-                        <td className="py-3 px-5 text-sm text-white">{sale.productName}</td>
-                        <td className="py-3 px-5 text-sm text-slate-300">{sale.customer}</td>
-                        <td className="py-3 px-5 text-sm text-white text-right">{sale.quantity}</td>
-                        <td className="py-3 px-5 text-sm text-slate-400 text-right">{sale.price.toLocaleString()}</td>
-                        <td className="py-3 px-5 text-sm font-semibold text-emerald-400 text-right">{sale.total.toLocaleString()}</td>
-                        <td className="py-3 px-5 text-sm text-slate-400">{sale.date}</td>
-                        <td className="py-3 px-5 text-sm text-slate-400">{sale.warehouse}</td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* IKPU TAB */}
-        {activeTab === "ikpu" && (
-          <motion.div
-            key="ikpu"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-emerald-400" />
-                  IKPU Klassifikator
-                </h3>
-                <span className="text-xs text-slate-500">{ikpuCodes.length} ta kod</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-800/30">
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Kod</th>
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Nomi</th>
-                      <th className="py-3 px-5 text-left text-xs font-medium text-slate-500 uppercase">Kategoriya</th>
-                      <th className="py-3 px-5 text-center text-xs font-medium text-slate-500 uppercase">QQS</th>
-                      <th className="py-3 px-5 text-right text-xs font-medium text-slate-500 uppercase">Tovarlar</th>
-                      <th className="py-3 px-5 text-right text-xs font-medium text-slate-500 uppercase">Amallar</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ikpuCodes.map((ikpu, index) => (
-                      <motion.tr
-                        key={ikpu.code}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.03 }}
-                        className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
-                      >
-                        <td className="py-3.5 px-5">
-                          <div className="flex items-center gap-2">
-                            <Barcode className="w-4 h-4 text-slate-500" />
-                            <span className="text-sm font-mono font-medium text-white">{ikpu.code}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-5 text-sm text-white">{ikpu.name}</td>
-                        <td className="py-3.5 px-5 text-sm text-slate-300">{ikpu.category}</td>
-                        <td className="py-3.5 px-5 text-center">
-                          <span className={`text-sm font-medium ${ikpu.vatPercent === 0 ? "text-emerald-400" : "text-amber-400"}`}>
-                            {ikpu.vatPercent}%
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-5 text-right">
-                          <span className="text-sm font-semibold text-white">{ikpu.productsCount}</span>
-                        </td>
-                        <td className="py-3.5 px-5 text-right">
-                          <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* WAREHOUSE TAB */}
-        {activeTab === "warehouse" && (
-          <motion.div
-            key="warehouse"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-              {warehouses.map((wh, index) => {
-                const whStatus = warehouseStatusConfig[wh.status];
-                const usedPercent = Math.round((wh.used / wh.capacity) * 100);
-                return (
-                  <motion.div
-                    key={wh.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.08 }}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-5"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center">
-                          <Warehouse className="w-6 h-6 text-slate-500" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-semibold text-white">{wh.name}</h3>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <MapPin className="w-3 h-3 text-slate-500" />
-                            <span className="text-xs text-slate-500">{wh.location}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${whStatus.bg} ${whStatus.color}`}>
-                        {whStatus.label}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="bg-slate-800/50 rounded-lg p-3">
-                        <p className="text-xs text-slate-500">Tovarlar</p>
-                        <p className="text-lg font-bold text-white">{wh.productsCount}</p>
-                      </div>
-                      <div className="bg-slate-800/50 rounded-lg p-3">
-                        <p className="text-xs text-slate-500">Sig'im</p>
-                        <p className="text-lg font-bold text-white">{wh.capacity.toLocaleString()}</p>
-                      </div>
-                      <div className="bg-slate-800/50 rounded-lg p-3">
-                        <p className="text-xs text-slate-500">Band</p>
-                        <p className={`text-lg font-bold ${usedPercent > 90 ? "text-red-400" : usedPercent > 70 ? "text-amber-400" : "text-emerald-400"}`}>
-                          {wh.used.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs text-slate-500">To'ldirilganligi</span>
-                        <span className={`text-xs font-bold ${usedPercent > 90 ? "text-red-400" : usedPercent > 70 ? "text-amber-400" : "text-emerald-400"}`}>
-                          {usedPercent}%
-                        </span>
-                      </div>
-                      <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${usedPercent}%` }}
-                          transition={{ duration: 0.8, delay: 0.2 }}
-                          className={`h-full rounded-full ${usedPercent > 90 ? "bg-red-500" : usedPercent > 70 ? "bg-amber-500" : "bg-emerald-500"}`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-3 border-t border-slate-800">
-                      <User className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="text-xs text-slate-400">Menejer: {wh.manager}</span>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Warehouse Summary */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-slate-400" />
-                Omborlar umumiy statistikasi
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <p className="text-xs text-slate-500">Jami omborlar</p>
-                  <p className="text-2xl font-bold text-white">{warehouses.length}</p>
-                </div>
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <p className="text-xs text-slate-500">Umumiy sig'im</p>
-                  <p className="text-2xl font-bold text-white">{warehouses.reduce((s, w) => s + w.capacity, 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <p className="text-xs text-slate-500">Band joy</p>
-                  <p className="text-2xl font-bold text-amber-400">{warehouses.reduce((s, w) => s + w.used, 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                  <p className="text-xs text-slate-500">Bo'sh joy</p>
-                  <p className="text-2xl font-bold text-emerald-400">
-                    {(warehouses.reduce((s, w) => s + w.capacity, 0) - warehouses.reduce((s, w) => s + w.used, 0)).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Product Detail Modal */}
-      <AnimatePresence>
-        {detailProduct && (
-          <ProductDetailModal
-            product={detailProduct}
-            onClose={() => setDetailProduct(null)}
-            onUpdate={handleUpdateProduct}
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <label className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Mahsulot nomi yoki SKU..."
+            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
           />
+        </label>
+        <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setPage(1);
+          }}
+          className="px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500/50 min-w-[180px]"
+        >
+          <option value="all">Barcha kategoriyalar</option>
+          {cats.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
+          <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
+          <p className="text-sm text-slate-300">{error.message}</p>
+          <button
+            onClick={refetch}
+            className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300"
+          >
+            Qaytadan urinish
+          </button>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
+          <Package className="w-12 h-12 text-slate-700 mb-3" />
+          <p className="text-base font-semibold text-white">
+            {search ? "Mahsulot topilmadi" : "Hozircha mahsulotlar yo'q"}
+          </p>
+          <p className="text-sm text-slate-500 mt-1 max-w-md">
+            "Yangi mahsulot" tugmasi orqali birinchi mahsulotingizni qo'shing. Mahsulot Vitrina'da
+            ko'rinishi uchun "featured" bayrog'ini yoqing.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {products.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              currency={currency}
+              onEdit={() => setEditing(p)}
+              onDelete={() => handleDelete(p)}
+            />
+          ))}
+        </div>
+      )}
+
+      {total > pageSize && (
+        <div className="flex items-center justify-between mt-4 text-xs text-slate-500">
+          <span>
+            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+            >
+              Oldingi
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page * pageSize >= total}
+              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+            >
+              Keyingi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(showAdd || editing) && (
+        <ProductFormModal
+          product={editing}
+          categories={cats}
+          currency={currency}
+          onClose={() => {
+            setShowAdd(false);
+            setEditing(null);
+          }}
+          onSaved={() => {
+            setShowAdd(false);
+            setEditing(null);
+            refetch();
+          }}
+        />
+      )}
+
+      {showCategories && (
+        <CategoriesModal
+          categories={cats}
+          onClose={() => setShowCategories(false)}
+          onChanged={() => {
+            refetchCategories();
+            refetch();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function ProductCard({
+  product,
+  currency,
+  onEdit,
+  onDelete,
+}: {
+  product: Product;
+  currency: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors group">
+      <div className="w-full aspect-video bg-slate-800 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
+        {product.imageUrl ? (
+          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        ) : (
+          <Package className="w-8 h-8 text-slate-600" />
         )}
-      </AnimatePresence>
+        {product.featured && (
+          <span className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur text-amber-300 text-[10px] font-medium">
+            <Star className="w-3 h-3 fill-amber-300" />
+            Vitrina
+          </span>
+        )}
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={onEdit}
+            className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-white"
+            title="Tahrirlash"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-red-400"
+            title="O'chirish"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-slate-500 uppercase tracking-wider">{product.sku}</p>
+      <p className="text-sm font-semibold text-white truncate mt-0.5">{product.name}</p>
+      <p className="text-xs text-slate-500 mt-1">{product.category?.name ?? "Kategoriyasiz"}</p>
+      <div className="flex items-center justify-between mt-3">
+        <div>
+          <span className="text-base font-bold text-white">
+            {formatCurrency(Number(product.price), product.currency || currency)}
+          </span>
+          {product.oldPrice && Number(product.oldPrice) > Number(product.price) && (
+            <span className="block text-xs text-slate-500 line-through">
+              {formatCurrency(Number(product.oldPrice), currency)}
+            </span>
+          )}
+        </div>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-md ${
+            product.stock > 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+          }`}
+        >
+          Ombor: {product.stock}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ProductFormModal({
+  product,
+  categories,
+  currency,
+  onClose,
+  onSaved,
+}: {
+  product: Product | null;
+  categories: Category[];
+  currency: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [sku, setSku] = useState(product?.sku ?? "");
+  const [name, setName] = useState(product?.name ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [price, setPrice] = useState(String(product?.price ?? ""));
+  const [oldPrice, setOldPrice] = useState(product?.oldPrice ? String(product.oldPrice) : "");
+  const [stock, setStock] = useState(String(product?.stock ?? "0"));
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
+  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [featured, setFeatured] = useState(product?.featured ?? false);
+  const [active, setActive] = useState(product?.active ?? true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const token = localStorage.getItem("shopflow.token");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Yuklash xatosi" }));
+        throw new Error((err as { error?: string }).error || "Yuklash xatosi");
+      }
+      const { url } = await res.json() as { url: string };
+      setImageUrl(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Rasm yuklanmadi");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const data = {
+        sku,
+        name,
+        description: description || undefined,
+        price: Number(price),
+        oldPrice: oldPrice ? Number(oldPrice) : null,
+        stock: Number(stock) || 0,
+        currency,
+        categoryId: categoryId || null,
+        imageUrl: imageUrl || null,
+        featured,
+        active,
+      };
+      if (product) {
+        await productsApi.update(product.id, data);
+      } else {
+        await productsApi.create(data);
+      }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Xato");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
+          <h2 className="text-lg font-bold text-white">
+            {product ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Field label="SKU (kod) *">
+              <input
+                type="text"
+                required
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="IPH-15-PRO"
+                className="input"
+              />
+            </Field>
+            <Field label="Kategoriya">
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="input"
+              >
+                <option value="">— tanlanmagan —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Mahsulot nomi *">
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="iPhone 15 Pro Max 256GB"
+              className="input"
+            />
+          </Field>
+
+          <Field label="Tavsif">
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Mahsulot haqida qisqacha..."
+              className="input resize-none"
+            />
+          </Field>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Field label={`Narx (${currency}) *`}>
+              <input
+                type="number"
+                required
+                min="0"
+                step="any"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="14500000"
+                className="input"
+              />
+            </Field>
+            <Field label={`Eski narx (chegirma uchun)`}>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={oldPrice}
+                onChange={(e) => setOldPrice(e.target.value)}
+                placeholder="15200000"
+                className="input"
+              />
+            </Field>
+            <Field label="Omborda">
+              <input
+                type="number"
+                min="0"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+                className="input"
+              />
+            </Field>
+          </div>
+
+          <Field label="Rasm">
+            <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${uploading ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-slate-500 bg-slate-800/50"}`}>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-emerald-400">Yuklanmoqda...</span>
+                </div>
+              ) : imageUrl ? (
+                <div className="relative w-full h-full">
+                  <img src={imageUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                    <span className="text-xs text-white">Rasmni o'zgartirish</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-xs text-slate-400">Rasm yuklash uchun bosing</span>
+                  <span className="text-[10px] text-slate-600">JPEG, PNG, WebP · max 8MB</span>
+                </div>
+              )}
+            </label>
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                className="mt-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Rasmni olib tashlash
+              </button>
+            )}
+          </Field>
+
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+              />
+              <span className="text-sm text-slate-300">
+                ⭐ Vitrina'da ko'rsatish (asosiy sahifada)
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+              />
+              <span className="text-sm text-slate-300">Sotuvda</span>
+            </label>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 justify-end p-5 border-t border-slate-800 sticky bottom-0 bg-slate-900">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-slate-400 hover:text-white"
+          >
+            Bekor qilish
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {product ? "Saqlash" : "Yaratish"}
+          </button>
+        </div>
+
+        <style>{`
+          .input {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            background: rgb(30 41 59);
+            border: 1px solid rgb(51 65 85);
+            border-radius: 0.5rem;
+            color: white;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.15s;
+          }
+          .input:focus {
+            border-color: rgb(16 185 129);
+          }
+        `}</style>
+      </form>
+    </div>
+  );
+}
+
+function CategoriesModal({
+  categories,
+  onClose,
+  onChanged,
+}: {
+  categories: Category[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [newName, setNewName] = useState("");
+  const [newSlug, setNewSlug] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setSaving(true);
+    try {
+      await categoriesApi.create({
+        name: newName.trim(),
+        slug:
+          newSlug.trim() ||
+          newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      });
+      setNewName("");
+      setNewSlug("");
+      onChanged();
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (c: Category) => {
+    if (!confirm(`"${c.name}" kategoriyani o'chirish?`)) return;
+    await categoriesApi.delete(c.id);
+    onChanged();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+          <h2 className="text-lg font-bold text-white">Kategoriyalar</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleAdd} className="p-5 border-b border-slate-800 space-y-2">
+          <input
+            type="text"
+            required
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Yangi kategoriya nomi"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+          />
+          <input
+            type="text"
+            value={newSlug}
+            onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+            placeholder="slug (ixtiyoriy) — telefonlar"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+          />
+          <button
+            type="submit"
+            disabled={saving || !newName.trim()}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <Plus className="w-3.5 h-3.5" />
+            Qo'shish
+          </button>
+        </form>
+
+        <div className="p-3">
+          {categories.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-6">Hali kategoriya yo'q</p>
+          ) : (
+            categories.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between px-3 py-2 hover:bg-slate-800 rounded-lg"
+              >
+                <div>
+                  <p className="text-sm text-white">{c.name}</p>
+                  <p className="text-xs text-slate-500">{c.slug}</p>
+                </div>
+                <button
+                  onClick={() => handleDelete(c)}
+                  className="p-1.5 rounded text-slate-500 hover:text-red-400"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>
+      {children}
     </div>
   );
 }

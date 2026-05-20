@@ -1,16 +1,14 @@
-# 🛍️ ShopFlow — E-commerce Admin Dashboard
+# 🛍️ ShopFlow — Multi-tenant E-commerce CRM
 
 <div align="center">
 
-![ShopFlow](https://img.shields.io/badge/ShopFlow-E--commerce%20Dashboard-6366f1?style=for-the-badge&logo=shopify&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Fastify](https://img.shields.io/badge/Fastify-5-000000?style=for-the-badge&logo=fastify)
+![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?style=for-the-badge&logo=prisma)
+![Postgres](https://img.shields.io/badge/Postgres-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-7.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-**Zamonaviy, keng funksiyali e-commerce boshqaruv paneli**
-
-[Demo](#) · [Hujjatlar](#foydalanish) · [Xato bildirish](https://github.com/Elmun-Technologies/shopflow/issues)
+**Ko'p kanalli CRM va e-commerce boshqaruv paneli**
 
 </div>
 
@@ -18,290 +16,235 @@
 
 ## 📋 Loyiha haqida
 
-**ShopFlow** — bu zamonaviy elektron tijorat bizneslarini boshqarish uchun mo'ljallangan to'liq funksiyali admin dashboard. React 19, TypeScript va Tailwind CSS 4 asosida qurilgan bo'lib, real vaqtda ma'lumotlarni kuzatish, buyurtmalarni boshqarish, mijozlar bilan ishlash va marketing kampaniyalarini nazorat qilish imkonini beradi.
+**ShopFlow** — multi-tenant CRM. Har bir tashkilot o'zining alohida ma'lumotlar bazasi,
+foydalanuvchilari va kanallariga ega. Lidlar va buyurtmalar Instagram, Telegram, WhatsApp,
+veb-sayt va boshqa kanallardan webhook orqali avtomatik qabul qilinadi.
 
 ### ✨ Asosiy xususiyatlar
 
-- 📊 **Interaktiv Analitika** — Recharts kutubxonasi asosida daromad, sotuvlar va trafik grafiklari
-- 🛒 **Buyurtmalar Boshqaruvi** — Buyurtmalarni kuzatish, filtr va izlash, batafsil modal ko'rinish
-- 👥 **Mijozlar CRM** — Mijozlar profili, xarid tarixi va segmentatsiya
-- 📦 **Mahsulotlar Katalogi** — Mahsulot qo'shish, tahrirlash, stock nazorati
-- 🚚 **Yetkazib Berish** — Kuryerlar va yetkazib berish holatlari paneli
-- 💳 **To'lovlar** — To'lov tranzaksiyalari va moliyaviy hisobotlar
-- 🎯 **Marketing** — Kampaniyalar, promokodlar, SMS va email rassilka
-- 🤝 **Leads (Mijoz murojaatlari)** — Potensial mijozlarni boshqarish
-- 🏪 **Platformalar** — Ko'p kanallik savdo integratsiyasi
-- 💬 **Chat** — Mijozlar bilan jonli muloqot
-- 🎨 **UI Builder** — Drag-and-drop interfeys yaratuvchi
-- ⚙️ **Sozlamalar** — Profil, xavfsizlik, bildirishnomalar va integratsiyalar
+- 🏢 **Multi-tenant** — har bir tashkilot uchun izolyatsiya qilingan ma'lumotlar
+- 🔐 **JWT auth** — argon2 parol hash + JWT token + role-based access (OWNER/ADMIN/MANAGER/AGENT)
+- 📥 **Kanal webhooklari** — Telegram bot, Instagram, web forma, WhatsApp va boshqalar uchun
+  tenantga xos webhook URL
+- 📊 **Real dashboard** — KPIlar, daromad trendi, kanal bo'yicha sotuvlar — barchasi DBdan
+- 🎯 **Lidlar CRM** — status pipeline, interaksiyalar tarixi, tayinlash, filtrlash
+- 🛒 **Buyurtmalar** — items, status, kanal, mijoz aloqasi
+- 👥 **Mijozlar bazasi** — teglar, izohlar, sotib olishlar tarixi
+- 🛠️ **Mahsulot katalogi** — SKU, kategoriya, narx, ombor
+- 🚀 **Docker Compose** — Postgres + Backend + Frontend + Caddy (HTTPS) bir buyruqda
 
 ---
 
-## 🛠️ Texnologiyalar
-
-| Texnologiya | Versiya | Maqsad |
-|-------------|---------|--------|
-| **React** | 19.2 | UI framework |
-| **TypeScript** | 5.9 | Tip xavfsizligi |
-| **Vite** | 7.2 | Build tool va dev server |
-| **Tailwind CSS** | 4.1 | Utility-first styling |
-| **Recharts** | 3.8 | Ma'lumot vizualizatsiyasi |
-| **Framer Motion** | 12 | Animatsiyalar |
-| **Lucide React** | 1.11 | Ikonlar kutubxonasi |
-| **date-fns** | 4.1 | Sana formatlash |
-| **clsx** | 2.1 | CSS klasslarni birlashtirish |
-
----
-
-## 📁 Loyiha Tuzilmasi
+## 🏗 Arxitektura
 
 ```
-shopflow/
-├── public/
-├── src/
-│   ├── components/
-│   │   ├── pages/                  # Marketing sub-sahifalari
-│   │   │   ├── BannerPage.tsx
-│   │   │   ├── GiveawayPage.tsx
-│   │   │   ├── IzohlarPage.tsx
-│   │   │   ├── KanalPage.tsx
-│   │   │   ├── ManbaPage.tsx
-│   │   │   ├── PromoPage.tsx
-│   │   │   ├── RassilkaPage.tsx
-│   │   │   ├── SegmentsPage.tsx
-│   │   │   ├── SmsPage.tsx
-│   │   │   ├── SodiqlikPage.tsx
-│   │   │   ├── SovgalarPage.tsx
-│   │   │   └── TranzaksiyalarPage.tsx
-│   │   ├── AnalyticsPage.tsx       # Analitika sahifasi
-│   │   ├── ChatPage.tsx            # Chat sahifasi
-│   │   ├── CustomerDetailModal.tsx # Mijoz batafsil modal
-│   │   ├── CustomersPage.tsx       # Mijozlar sahifasi
-│   │   ├── DeliveryPage.tsx        # Yetkazib berish sahifasi
-│   │   ├── EmptyState.tsx          # Bo'sh holat komponenti
-│   │   ├── Header.tsx              # Yuqori panel
-│   │   ├── KPICards.tsx            # KPI kartochkalari
-│   │   ├── LeadDetailModal.tsx     # Lead batafsil modal
-│   │   ├── LeadsPage.tsx           # Leads sahifasi
-│   │   ├── MarketingPage.tsx       # Marketing sahifasi
-│   │   ├── OrderDetailModal.tsx    # Buyurtma batafsil modal
-│   │   ├── OrdersPage.tsx          # Buyurtmalar sahifasi
-│   │   ├── PaymentsPage.tsx        # To'lovlar sahifasi
-│   │   ├── PlatformsPage.tsx       # Platformalar sahifasi
-│   │   ├── ProductDetailModal.tsx  # Mahsulot batafsil modal
-│   │   ├── ProductsPage.tsx        # Mahsulotlar sahifasi
-│   │   ├── RecentOrders.tsx        # So'nggi buyurtmalar widget
-│   │   ├── RevenueChart.tsx        # Daromad grafigi
-│   │   ├── SalesByCategory.tsx     # Kategoriya bo'yicha sotuvlar
-│   │   ├── SettingsPage.tsx        # Sozlamalar sahifasi
-│   │   ├── Sidebar.tsx             # Yon panel navigatsiyasi
-│   │   ├── TopProducts.tsx         # Eng ko'p sotilgan mahsulotlar
-│   │   ├── TrafficSources.tsx      # Trafik manbalari
-│   │   ├── UIBuilderPage.tsx       # UI Builder sahifasi
-│   │   └── WeeklySales.tsx         # Haftalik sotuvlar grafigi
-│   ├── data/
-│   │   ├── analyticsData.ts        # Analitika ma'lumotlari
-│   │   ├── chatData.ts             # Chat ma'lumotlari
-│   │   ├── customersData.ts        # Mijozlar ma'lumotlari
-│   │   ├── dashboardData.ts        # Dashboard ma'lumotlari
-│   │   ├── deliveryData.ts         # Yetkazib berish ma'lumotlari
-│   │   ├── leadsData.ts            # Leads ma'lumotlari
-│   │   ├── marketingData.ts        # Marketing ma'lumotlari
-│   │   ├── ordersData.ts           # Buyurtmalar ma'lumotlari
-│   │   ├── paymentsData.ts         # To'lovlar ma'lumotlari
-│   │   ├── platformsData.ts        # Platformalar ma'lumotlari
-│   │   ├── productsData.ts         # Mahsulotlar ma'lumotlari
-│   │   ├── settingsData.ts         # Sozlamalar ma'lumotlari
-│   │   └── uiBuilderData.ts        # UI Builder ma'lumotlari
-│   ├── utils/
-│   │   └── cn.ts                   # className utility
-│   ├── App.tsx                     # Asosiy ilova komponenti
-│   ├── index.css                   # Global stilllar
-│   └── main.tsx                    # Kirish nuqtasi
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+┌──────────────────┐         ┌──────────────────┐
+│  Frontend (Vite) │ ──────► │     Caddy        │
+│  React + TS      │         │  /  + /api/*     │
+└──────────────────┘         └────────┬─────────┘
+                                      │
+                                      ├──► nginx (static React)
+                                      │
+                                      └──► Backend (Fastify + Prisma)
+                                                  │
+                                                  ▼
+                                             Postgres 16
+
+    Tashqi kanallar (Telegram bot, Instagram webhook, ...)
+                    │
+                    └──► POST /api/webhooks/lead/{webhookKey}
 ```
+
+### Texnologiyalar
+
+| Qatlam | Texnologiya |
+|---|---|
+| Frontend | React 19, TypeScript 5.9, Vite 7, Tailwind 4, Recharts, Framer Motion |
+| Backend | Fastify 5, TypeScript, Zod (validatsiya), Argon2, JWT |
+| ORM / DB | Prisma 5, PostgreSQL 16 |
+| Infra | Docker Compose, Caddy (HTTPS), GitHub Actions |
 
 ---
 
-## 🚀 Ishga Tushirish
+## 🚀 Ishga tushirish
 
-### Talablar
-
-- **Node.js** v18 yoki undan yuqori
-- **npm** v9 yoki undan yuqori
-
-### O'rnatish
+### Mahalliy (development)
 
 ```bash
-# Reponi clone qiling
-git clone https://github.com/Elmun-Technologies/shopflow.git
+# 1. Postgres'ni ko'taring
+docker compose up -d postgres
 
-# Papkaga kiring
-cd shopflow
-
-# Bog'liqliklarni o'rnating
+# 2. Backend
+cd backend
+cp .env.example .env  # DATABASE_URL, JWT_SECRET to'ldiring
 npm install
-```
+npx prisma migrate dev
+npm run seed  # birinchi tenant va admin
+npm run dev
 
-### Development serverni ishga tushirish
-
-```bash
+# 3. Frontend (boshqa terminalda)
+cd ..
+npm install
 npm run dev
 ```
 
-Brauzerda oching: [http://localhost:5173](http://localhost:5173)
+Login: `.env`dagi `SEED_EMAIL` va `SEED_PASSWORD`.
 
-### Production build
+### Production (VPSda)
 
-```bash
-npm run build
-```
-
-Build fayllari `dist/` papkasiga joylashadi.
-
-### Build natijasini oldindan ko'rish
+Bir buyruq bilan:
 
 ```bash
-npm run preview
+ssh root@<vps-ip>
+curl -fsSL https://raw.githubusercontent.com/Elmun-Technologies/shopflow/main/scripts/bootstrap.sh | bash -s -- main shopflow.example.com admin@example.com
+```
+
+Bootstrap skripti:
+- Docker o'rnatadi
+- `.env` ni avtomatik generatsiya qiladi (POSTGRES parol va JWT secret xavfsiz)
+- Postgres + Backend + Frontend + Caddy konteynerlarini ko'taradi
+- Prisma migrate va seed bajaradi
+- Birinchi admin akkauntni terminalga chiqaradi
+
+---
+
+## 📡 Kanal webhook ulash
+
+Yangi kanal qo'shilgach (Platformalar sahifasi), tizim unga unikal `webhookKey` beradi.
+URL: `https://your-domain.com/api/webhooks/lead/{webhookKey}`
+
+### Veb-sayt forma uchun
+
+```html
+<form action="https://shopflow.example.com/api/webhooks/lead/CHANNEL_KEY" method="POST">
+  <input name="name" required />
+  <input name="phone" />
+  <input name="email" />
+  <button type="submit">Yuborish</button>
+</form>
+```
+
+### Telegram bot uchun
+
+BotFather'da webhook URL ni quying:
+```
+https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://shopflow.example.com/api/webhooks/telegram/CHANNEL_KEY
+```
+
+### Generic JSON
+
+```bash
+curl -X POST https://shopflow.example.com/api/webhooks/lead/CHANNEL_KEY \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Aliyor","phone":"+998901234567","value":500000}'
 ```
 
 ---
 
-## 📱 Sahifalar va Funksiyalar
+## 🔑 Auth flow
 
-### 🏠 Dashboard (Asosiy sahifa)
-- KPI kartochkalari: Jami daromad, buyurtmalar, mijozlar, konversiya
-- Daromad grafigi (Recharts)
-- Kategoriya bo'yicha sotuvlar doira diagrammasi
-- Haftalik sotuvlar bar grafigi
-- Trafik manbalari tahlili
-- Eng ko'p sotilgan mahsulotlar
-- So'nggi buyurtmalar jadvali
-
-### 📊 Analytics (Analitika)
-- Kengaytirilgan statistika va KPI ko'rsatkichlari
-- Daromad va foyda tahlili
-- Geografik tarqatish
-- Mijoz xatti-harakatlari tahlili
-- Konversiya funnel
-
-### 🛒 Orders (Buyurtmalar)
-- Barcha buyurtmalar ro'yxati
-- Status bo'yicha filtr (yangi, jarayonda, yetkazildi, bekor qilindi)
-- Qidiruv funksiyasi
-- Buyurtma batafsil modal (mahsulotlar, yetkazib berish, to'lov ma'lumotlari)
-- Eksport funksiyasi
-
-### 👥 Customers (Mijozlar)
-- Mijozlar ro'yxati va profillari
-- Xarid tarixi va statistika
-- Mijoz segmentatsiyasi (VIP, muntazam, yangi)
-- Batafsil mijoz modal paneli
-
-### 📦 Products (Mahsulotlar)
-- Mahsulotlar katalogi
-- Kategoriya va brand bo'yicha filtr
-- Stock holati kuzatuvi
-- Mahsulot qo'shish/tahrirlash/o'chirish
-- Batafsil mahsulot modal
-
-### 🚚 Delivery (Yetkazib berish)
-- Yetkazib berish buyurtmalari kuzatuvi
-- Kuryer boshqaruvi
-- Real-time holat yangilanishlari
-- Yetkazib berish hududlari xaritasi
-
-### 💳 Payments (To'lovlar)
-- Tranzaksiyalar tarixi
-- To'lov usullari tahlili
-- Qaytarishlar va chargeback boshqaruvi
-- Moliyaviy hisobotlar
-
-### 🎯 Marketing
-- **Rassilka** — Email va SMS kampaniyalar
-- **Promo kodlar** — Chegirmalar va aksiyalar
-- **Segmentlar** — Mijoz guruhlari
-- **Banner** — Reklama bannerlari boshqaruvi
-- **Sovgalar** — Sovg'a dasturlari
-- **Sodiqlik** — Bonus va ballar tizimi
-- **Giveaway** — Tanlovlar va taqsimotlar
-- **Kanal** — Marketing kanallari
-- **Manba** — Trafik manbalari
-- **Izohlar** — Mijoz sharhlari boshqaruvi
-- **Tranzaksiyalar** — Marketing to'lovlari
-
-### 🤝 Leads
-- Potensial mijozlar ro'yxati
-- Murojaat holati kuzatuvi
-- Lead batafsil modal
-- CRM pipeline
-
-### 🏪 Platforms (Platformalar)
-- Ko'p platformali savdo integratsiyasi
-- Platforma statistikasi va hisobotlari
-- API ulanish sozlamalari
-
-### 💬 Chat
-- Jonli mijoz qo'llab-quvvatlash
-- Suhbat tarixi
-- Tezkor javoblar
-
-### 🎨 UI Builder
-- Drag-and-drop interfeys yaratuvchi
-- Komponentlar kutubxonasi
-- Sahifa dizayni muharriri
-
-### ⚙️ Settings (Sozlamalar)
-- **Profil** — Foydalanuvchi ma'lumotlari
-- **Xavfsizlik** — Parol va 2FA
-- **Bildirishnomalar** — Xabarnoma sozlamalari
-- **Integratsiyalar** — Uchinchi tomon xizmatlar
-- **To'lov usullari** — Kassa sozlamalari
-- **Yetkazib berish** — Yetkazib berish sozlamalari
+1. Frontend `POST /api/auth/register` (yangi tashkilot) yoki `POST /api/auth/login`
+2. Backend JWT qaytaradi (`{tenantId, userId, role}` payload)
+3. Frontend tokenni `localStorage` saqlaydi
+4. Har bir API so'rovi `Authorization: Bearer <token>` qo'shadi
+5. Backend tokendan `tenantId` ni chiqaradi va barcha querylarni shu tenant bilan cheklaydi
+6. 401 da frontend avtomatik logout qiladi
 
 ---
 
-## 🎨 Dizayn Tizimi
+## 📁 Loyiha tuzilmasi
 
-- **Rang palitasi**: Indigo/Purple gradientlar asosida dark mode dizayn
-- **Tipografiya**: Inter, Roboto (Google Fonts)
-- **Animatsiyalar**: Framer Motion yordamida smooth o'tishlar
-- **Ikonlar**: Lucide React ikonlar to'plami
-- **Komponentlar**: Reusable, TypeScript-tipizatsiyalangan komponentlar
+```
+shopflow/
+├── src/                          # Frontend (React + Vite)
+│   ├── api/
+│   │   ├── client.ts             # JWT + fetch wrapper
+│   │   └── endpoints.ts          # Typed API client (leads, orders, ...)
+│   ├── contexts/
+│   │   └── AuthContext.tsx       # JWT/tenant context
+│   ├── hooks/
+│   │   ├── useAsync.ts           # Loading/error/refetch hook
+│   │   └── useFocusTrap.ts
+│   ├── types/
+│   │   └── api.ts                # Backend bilan moslashgan tiplar
+│   ├── components/
+│   │   ├── LoginPage.tsx
+│   │   ├── Sidebar.tsx           # Grupp + collapsible
+│   │   ├── Header.tsx
+│   │   ├── DashboardPage komponentlari (KPICards, RevenueChart, ...)
+│   │   ├── LeadsPage.tsx + LeadDetailModal.tsx
+│   │   ├── OrdersPage.tsx
+│   │   ├── ProductsPage.tsx
+│   │   ├── CustomersPage.tsx
+│   │   ├── PlatformsPage.tsx     # Kanal CRUD + webhook URL
+│   │   └── pages/                # Hali API'ga ulanmagan modullar (marketing)
+│   └── utils/format.ts           # Pul, sana formatlash
+├── backend/                       # Fastify backend
+│   ├── prisma/
+│   │   ├── schema.prisma         # Multi-tenant schema (Tenant, User, Lead, ...)
+│   │   └── seed.ts
+│   ├── src/
+│   │   ├── server.ts             # Fastify entry
+│   │   ├── plugins/{auth,prisma}.ts
+│   │   ├── lib/codes.ts          # LID-2025001, ORD-7523 generatorlari
+│   │   └── routes/
+│   │       ├── auth.ts           # /api/auth/{register,login,me}
+│   │       ├── tenants.ts        # /api/tenant
+│   │       ├── leads.ts          # /api/leads + interactions
+│   │       ├── orders.ts
+│   │       ├── products.ts
+│   │       ├── customers.ts
+│   │       ├── channels.ts
+│   │       ├── dashboard.ts      # KPIs, charts uchun aggregatsiyalar
+│   │       └── webhooks.ts       # Lid qabul qilish endpointlari
+│   └── Dockerfile
+├── docker-compose.yml             # Postgres + Backend + Frontend + Caddy
+├── Caddyfile                      # HTTPS + reverse proxy
+├── Dockerfile                     # Frontend (nginx)
+└── scripts/bootstrap.sh           # VPS bir-buyruqli setup
+```
 
 ---
 
-## 🤝 Hissa Qo'shish
+## 🛣 Yo'l xaritasi
 
-1. Reponi fork qiling
-2. Feature branch yarating: `git checkout -b feature/yangi-funksiya`
-3. O'zgarishlaringizni commit qiling: `git commit -m 'feat: yangi funksiya qo'shildi'`
-4. Branch'ni push qiling: `git push origin feature/yangi-funksiya`
-5. Pull Request oching
+Ushbu PR'da bajarilgan:
+
+- [x] Multi-tenant Prisma schema (Tenant, User, Lead, Order, Product, Customer, Channel, Interaction)
+- [x] JWT auth + role guards + tenant scoping
+- [x] CRUD: leads, orders, products, customers, channels
+- [x] Dashboard aggregatsiyalari (KPI, trendlar, kanal bo'yicha sotuvlar)
+- [x] Webhook endpointlar (umumiy lead + Telegram)
+- [x] Frontend: AuthContext, API client, Login sahifasi
+- [x] Frontend: Dashboard, Leads, Orders, Products, Customers, Platforms — barchasi API'dan
+- [x] Sidebar refactor — grupplangan, collapsible, localStorage state, user info, logout
+- [x] Demo raqamlar olib tashlandi — bo'sh holatlar va loading'lar bilan
+- [x] Docker Compose: Postgres + Backend
+- [x] Bootstrap skript: avto-generatsiya, seed
+
+Kelajakda:
+
+- [ ] Marketing modullari (rassilka, promokod, sovgalar, sms va h.k.) API integratsiyasi
+- [ ] Analytics sahifasi — chuqurroq hisobotlar
+- [ ] Settings sahifasi — tenant sozlamalari (currency, timezone, foydalanuvchilarni boshqarish)
+- [ ] Chat: real-time WebSocket + kanal xabarlari
+- [ ] Instagram/Facebook/WhatsApp Cloud API to'liq webhook integratsiyalari
+- [ ] Payment provider'lar (Click, Payme, Uzcard)
+- [ ] Yetkazib berish API'lari (Yandex, BTS, Express24)
+- [ ] Export (CSV/Excel), email rassilka cron jobs
 
 ---
 
-## 📄 Litsenziya
+## 🧪 Testing
 
-Bu loyiha [MIT License](LICENSE) ostida litsenziyalangan.
-
----
-
-## 👨‍💻 Ishlab Chiquvchi
-
-**Elmun Technologies**
-
-- GitHub: [@Elmun-Technologies](https://github.com/Elmun-Technologies)
+```bash
+npm run test           # frontend testlar
+npm run typecheck      # TS tekshiruvi
+cd backend && npx tsc --noEmit  # backend TS
+```
 
 ---
 
-<div align="center">
+## 📜 Litsenziya
 
-⭐ Agar loyiha foydali bo'lsa, **star** bosing!
-
-Made with ❤️ by **Elmun Technologies**
-
-</div>
+MIT
