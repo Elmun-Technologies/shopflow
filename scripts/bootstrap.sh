@@ -28,6 +28,15 @@ if [ -n "$GH_TOKEN" ]; then
   REPO_URL="https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git"
 fi
 
+# stdin pipe orqali kelganda (curl | bash) interactive prompt ishlamaydi
+if [ ! -t 0 ] && { [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; }; then
+  echo "❌ Pipe orqali ishga tushirilganda DOMAIN va EMAIL parametr bo'lib berilishi kerak." >&2
+  echo "   Misol: curl -fsSL .../bootstrap.sh | bash -s -- main shopflow.example.com you@mail.com" >&2
+  echo "   Yoki domain o'rniga ':80' (faqat HTTP, IP bo'yicha):" >&2
+  echo "   curl -fsSL .../bootstrap.sh | bash -s -- main :80 admin@example.com" >&2
+  exit 1
+fi
+
 echo "🚀 ShopFlow VPS bootstrap"
 echo "   Branch: $BRANCH"
 
@@ -73,8 +82,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 if [ -d "$REPO_ROOT/.git" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
   echo "   Skript repo ichidan ishga tushirildi: $REPO_ROOT"
   cd "$REPO_ROOT"
-  git fetch --all
-  git checkout "$BRANCH"
+  git fetch --all --prune
+  git checkout -B "$BRANCH" "origin/$BRANCH"
   git reset --hard "origin/$BRANCH"
 else
   mkdir -p /opt
@@ -82,8 +91,8 @@ else
   if [ -d shopflow/.git ]; then
     echo "   Repo allaqachon mavjud, yangilanmoqda..."
     cd shopflow
-    git fetch --all
-    git checkout "$BRANCH"
+    git fetch --all --prune
+    git checkout -B "$BRANCH" "origin/$BRANCH"
     git reset --hard "origin/$BRANCH"
   else
     if [ -z "$GH_TOKEN" ]; then
@@ -113,13 +122,21 @@ docker compose up -d --build
 
 echo ""
 echo "===== 8. Holatni tekshirish ====="
-sleep 5
 docker compose ps
 echo ""
-echo "Health check:"
-if curl -fsS http://localhost/health; then
-  echo ""
-  echo ""
+echo "Health check (10 urinish, har 3 sekundda):"
+HEALTH_OK=false
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS http://localhost/health >/dev/null 2>&1; then
+    echo "   ✅ Health OK ($i-urinish)"
+    HEALTH_OK=true
+    break
+  fi
+  sleep 3
+done
+
+echo ""
+if [ "$HEALTH_OK" = true ]; then
   echo "✅ Muvaffaqiyatli! ShopFlow ishga tushdi."
   if [ "$DOMAIN" != ":80" ] && [ -n "$DOMAIN" ]; then
     echo "   Tashrif buyuring: https://$DOMAIN"
@@ -128,5 +145,7 @@ if curl -fsS http://localhost/health; then
     echo "   Tashrif buyuring: http://$PUBLIC_IP"
   fi
 else
-  echo "❌ Health check muvaffaqiyatsiz. 'docker compose logs' bilan tekshiring."
+  echo "❌ Health check muvaffaqiyatsiz. Tekshirish:"
+  echo "   docker compose logs --tail=80"
+  exit 1
 fi

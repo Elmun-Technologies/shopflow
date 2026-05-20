@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - main
-      - claude/conduct-full-audit-6lZcQ
-      - claude/debug-shop-flow-integrations-yu3Tn
+      - "claude/**"
   workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy (default: current)"
+        required: false
+        default: ""
 
 concurrency:
-  group: deploy-vps
+  group: deploy-vps-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -34,15 +38,25 @@ jobs:
     name: Deploy
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/conduct-full-audit-6lZcQ' || github.ref == 'refs/heads/claude/debug-shop-flow-integrations-yu3Tn'
     steps:
+      - name: Resolve deploy branch
+        id: branch
+        run: |
+          INPUT_BRANCH="${{ github.event.inputs.branch }}"
+          if [ -n "$INPUT_BRANCH" ]; then
+            echo "name=$INPUT_BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check VPS secrets configured
         id: check
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          if [ -z "$VPS_HOST" ]; then
-            echo "::warning::VPS_HOST secret not configured — skipping deploy. See DEPLOY.md to set up."
+          if [ -z "$VPS_HOST" ] || [ -z "$VPS_SSH_KEY" ]; then
+            echo "::warning::VPS_HOST / VPS_SSH_KEY secrets not configured — skipping deploy. See DEPLOY.md."
             echo "configured=false" >> "$GITHUB_OUTPUT"
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -56,23 +70,43 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 20m
           script: |
-            set -e
+            set -euo pipefail
             cd /opt/shopflow
+            echo "==> Fetching origin"
             git fetch --all --prune
-            git reset --hard origin/${GITHUB_REF_NAME:-main}
-            docker compose pull || true
+            echo "==> Checking out ${DEPLOY_BRANCH}"
+            git checkout -B "${DEPLOY_BRANCH}" "origin/${DEPLOY_BRANCH}"
+            git reset --hard "origin/${DEPLOY_BRANCH}"
+            echo "==> HEAD is $(git rev-parse --short HEAD) ($(git log -1 --pretty=%s))"
+            echo "==> Building & starting containers"
             docker compose up -d --build --remove-orphans
+            echo "==> Pruning old images"
             docker image prune -f
-            sleep 5
-            curl -fsS http://localhost/health
-          envs: GITHUB_REF_NAME
+            echo "==> Waiting for healthcheck"
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS http://localhost/health >/dev/null; then
+                echo "✅ Health OK on attempt $i"
+                break
+              fi
+              if [ "$i" = "10" ]; then
+                echo "❌ Health check failed after 10 attempts"
+                docker compose ps
+                docker compose logs --tail=80
+                exit 1
+              fi
+              sleep 3
+            done
+            echo "==> Final status"
+            docker compose ps
+          envs: DEPLOY_BRANCH
         env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
+          DEPLOY_BRANCH: ${{ steps.branch.outputs.name }}
 
       - name: Notify success
         if: steps.check.outputs.configured == 'true' && success()
-        run: echo "✅ Deployed ${{ github.ref_name }}@${{ github.sha }} to VPS"
+        run: echo "✅ Deployed ${{ steps.branch.outputs.name }}@${{ github.sha }} to VPS"
 
       - name: Skip notice
         if: steps.check.outputs.configured == 'false'
