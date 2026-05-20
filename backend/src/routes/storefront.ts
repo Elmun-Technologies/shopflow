@@ -103,10 +103,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     const total = items.reduce((s, i) => s + i.qty * i.price, 0);
 
-    // Mijozni topish yoki yaratish (telefon bo'yicha)
-    let customer = await app.prisma.customer.findFirst({
-      where: { tenantId: tenant.id, phone: data.customer.phone },
-    });
+    // Mijozni topish yoki yaratish — avval Telegram userId bo'yicha, keyin telefon bo'yicha
+    const tgUserId = data.telegram?.userId ? BigInt(data.telegram.userId) : null;
+    let customer = null as Awaited<ReturnType<typeof app.prisma.customer.findFirst>> | null;
+    if (tgUserId) {
+      customer = await app.prisma.customer.findFirst({
+        where: { tenantId: tenant.id, telegramUserId: tgUserId },
+      });
+    }
+    if (!customer && data.customer.phone) {
+      customer = await app.prisma.customer.findFirst({
+        where: { tenantId: tenant.id, phone: data.customer.phone },
+      });
+    }
     if (!customer) {
       customer = await app.prisma.customer.create({
         data: {
@@ -115,7 +124,14 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           phone: data.customer.phone,
           email: data.customer.email || null,
           notes: data.customer.notes,
+          telegramUserId: tgUserId,
         },
+      });
+    } else if (tgUserId && customer.telegramUserId !== tgUserId) {
+      // Mavjud mijozga Telegram userId ni bog'lab qo'yamiz
+      customer = await app.prisma.customer.update({
+        where: { id: customer.id },
+        data: { telegramUserId: tgUserId },
       });
     }
 
@@ -177,5 +193,45 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       total,
       currency: tenant.currency,
     });
+  });
+
+  // Mijozning shu do'kondagi buyurtmalari — Telegram userId orqali aniqlanadi.
+  // GET /api/storefront/:tenantSlug/orders?tgUserId=12345
+  app.get("/:tenantSlug/orders", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true, currency: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) {
+      return { orders: [] };
+    }
+
+    const orders = await app.prisma.order.findMany({
+      where: { tenantId: tenant.id, customerId: customer.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { _count: { select: { items: true } } },
+    });
+
+    return {
+      orders: orders.map((o) => ({
+        id: o.id,
+        code: o.code,
+        status: o.status,
+        total: Number(o.total),
+        currency: o.currency,
+        createdAt: o.createdAt.toISOString(),
+        items: o._count.items,
+      })),
+    };
   });
 };

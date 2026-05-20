@@ -5,7 +5,10 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
+  Tag,
 } from "lucide-react";
+import { BottomNav, type StoreTab } from "./storefront/BottomNav";
+import { ProfilePage } from "./storefront/ProfilePage";
 
 // Telegram Web App types
 declare global {
@@ -127,7 +130,24 @@ type CheckoutForm = {
   notes: string;
 };
 
-type StoreView = "home" | "category" | "cart" | "checkout" | "success";
+type StoreView = "home" | "catalog" | "promotions" | "profile" | "category" | "cart" | "checkout" | "success";
+
+const TAB_VIEWS: Record<StoreTab, StoreView> = {
+  home: "home",
+  catalog: "catalog",
+  cart: "cart",
+  promotions: "promotions",
+  profile: "profile",
+};
+
+function viewToTab(v: StoreView): StoreTab | null {
+  if (v === "home") return "home";
+  if (v === "catalog" || v === "category") return "catalog";
+  if (v === "cart") return "cart";
+  if (v === "promotions") return "promotions";
+  if (v === "profile") return "profile";
+  return null;
+}
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -210,11 +230,13 @@ export default function StorePage({ slug }: { slug: string }) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Telegram BackButton management
+  // Telegram BackButton management — faqat checkout/success/category'da ko'rsatiladi
+  // (asosiy 5 tab uchun BottomNav o'zi navigatsiya qiladi)
   useEffect(() => {
     const bb = twa?.BackButton;
     if (!bb) return;
-    if (view !== "home") {
+    const isMainTab = viewToTab(view) !== null;
+    if (!isMainTab) {
       bb.show();
       const handler = () => {
         if (view === "checkout") { setView("cart"); return; }
@@ -333,6 +355,14 @@ export default function StorePage({ slug }: { slug: string }) {
   }
 
   const { brand, products, categories, layout } = data;
+  void layout;
+  const featuredProducts = products.filter((p) => p.featured) ?? [];
+  const promotionProducts = featuredProducts.length > 0 ? featuredProducts : products;
+  const currentTab = viewToTab(view);
+  const tgUserRaw = twa?.initDataUnsafe?.user;
+  const telegramUser = tgUserRaw
+    ? { userId: tgUserRaw.id, username: tgUserRaw.username, firstName: tgUserRaw.first_name, lastName: tgUserRaw.last_name }
+    : undefined;
 
   // ---- SUCCESS ----
   if (view === "success" && orderResult) {
@@ -681,6 +711,100 @@ export default function StorePage({ slug }: { slug: string }) {
   };
 
   // Render blocks from layout, or fall back to plain products grid
+  // ---- PROFILE ----
+  if (view === "profile") {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+        <div className="flex-1 overflow-y-auto">
+          <ProfilePage
+            storeSlug={slug}
+            tenantName={data.tenant.name}
+            telegramUser={telegramUser}
+            operatorTelegram={brand?.phone || undefined}
+            apiBase={API_BASE}
+          />
+        </div>
+        <BottomNav active="profile" cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />
+      </div>
+    );
+  }
+
+  // ---- PROMOTIONS ----
+  if (view === "promotions") {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3">
+          <h2 className="text-base font-semibold text-white flex items-center gap-2">
+            <Tag className="w-5 h-5" style={{ color: primaryColor }} />
+            Maxsus takliflar
+          </h2>
+        </div>
+        <div className="flex-1 overflow-y-auto pb-24 p-3">
+          {promotionProducts.length === 0 ? (
+            <div className="py-16 text-center">
+              <Tag className="w-12 h-12 mx-auto text-slate-700 mb-3" />
+              <p className="text-sm text-slate-400">Hozircha takliflar yo'q</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {promotionProducts.map(renderProductCard)}
+            </div>
+          )}
+        </div>
+        <BottomNav active="promotions" cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />
+        {selectedProduct && renderProductDetail()}
+      </div>
+    );
+  }
+
+  // ---- CATALOG ----
+  if (view === "catalog") {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3">
+          <h2 className="text-base font-semibold text-white">Katalog</h2>
+        </div>
+        {categories.length > 0 && (
+          <div className="bg-slate-950 border-b border-slate-800 px-3 py-2 overflow-x-auto whitespace-nowrap flex gap-2">
+            <button
+              onClick={() => setSelectedCategoryId(null)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                !selectedCategoryId ? "text-white" : "bg-slate-800 text-slate-400"
+              }`}
+              style={!selectedCategoryId ? { backgroundColor: primaryColor } : {}}
+            >
+              Barchasi
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategoryId(cat.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  selectedCategoryId === cat.id ? "text-white" : "bg-slate-800 text-slate-400"
+                }`}
+                style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor } : {}}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto pb-24 p-3">
+          {filteredProducts.length === 0 ? (
+            <div className="py-16 text-center">
+              <Package className="w-12 h-12 mx-auto text-slate-700 mb-3" />
+              <p className="text-sm text-slate-400">Bu bo'limda mahsulot yo'q</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
+          )}
+        </div>
+        <BottomNav active="catalog" cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />
+        {selectedProduct && renderProductDetail()}
+      </div>
+    );
+  }
+
   const renderHomeContent = () => {
     const enabledBlocks = layout.filter((b) => b.enabled);
 
@@ -936,15 +1060,15 @@ export default function StorePage({ slug }: { slug: string }) {
         {renderHomeContent()}
       </div>
 
-      {/* Cart FAB (if cart has items and we're on home) */}
+      {/* Cart preview banner (Home — agar savatda mahsulot bo'lsa, total ko'rsatamiz) */}
       {cartCount > 0 && view === "home" && (
-        <div className="fixed bottom-6 left-4 right-4 z-20">
+        <div className="fixed bottom-16 left-4 right-4 z-30">
           <button
             onClick={() => setView("cart")}
-            className="w-full py-4 rounded-2xl font-semibold text-white text-base flex items-center justify-between px-5 shadow-xl transition-all active:scale-[0.98]"
+            className="w-full py-3 rounded-2xl font-semibold text-white text-sm flex items-center justify-between px-5 shadow-xl transition-all active:scale-[0.98]"
             style={{ backgroundColor: primaryColor }}
           >
-            <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
               <span className="text-xs font-bold">{cartCount}</span>
             </div>
             <span>Savatga o'tish</span>
@@ -952,6 +1076,9 @@ export default function StorePage({ slug }: { slug: string }) {
           </button>
         </div>
       )}
+
+      {/* Bottom navigation — Home, Katalog, Savat, Takliflar, Profile */}
+      {currentTab && <BottomNav active={currentTab} cartCount={cartCount} onChange={(t) => setView(TAB_VIEWS[t])} />}
 
       {/* Product detail overlay */}
       {selectedProduct && renderProductDetail()}
