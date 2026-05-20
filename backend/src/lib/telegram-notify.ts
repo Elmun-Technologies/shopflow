@@ -1,0 +1,139 @@
+// Telegram bot orqali tenant mijozlariga xabar yuboruvchi yordamchi.
+// Foydalanish:
+//   await notifyTelegram(prisma, tenantId, customer, "🎉 Buyurtmangiz tayyor!");
+// Agar tenant'ning Telegram kanali yo'q yoki bot tokeni yo'q bo'lsa, jim qaytadi.
+
+import type { PrismaClient } from "@prisma/client";
+
+interface BotConfig {
+  botToken?: string;
+}
+
+async function sendTelegramMessage(token: string, chatId: number | string, text: string, options?: Record<string, unknown>): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        ...options,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.warn("[tg-notify] sendMessage failed", res.status, body.slice(0, 200));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("[tg-notify] network error", err);
+    return false;
+  }
+}
+
+interface NotifyResult {
+  sent: boolean;
+  reason?: string;
+}
+
+/** Tenant'ning Telegram kanali tokenini topadi (birinchi aktiv TELEGRAM Channel) */
+async function getTenantBotToken(prisma: PrismaClient, tenantId: string): Promise<string | null> {
+  const channel = await prisma.channel.findFirst({
+    where: { tenantId, type: "TELEGRAM", active: true },
+    select: { config: true },
+  });
+  if (!channel) return null;
+  const cfg = channel.config as BotConfig | null;
+  return cfg?.botToken?.trim() || null;
+}
+
+/** Mijozning Telegram chat ID — Customer.telegramUserId. */
+async function getCustomerTelegramId(prisma: PrismaClient, customerId: string): Promise<bigint | null> {
+  const customer = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { telegramUserId: true },
+  });
+  return customer?.telegramUserId ?? null;
+}
+
+/** Bitta mijozga xabar yuborish (chat ID'ni Customer'dan oladi) */
+export async function notifyCustomer(
+  prisma: PrismaClient,
+  tenantId: string,
+  customerId: string,
+  text: string,
+  options?: Record<string, unknown>,
+): Promise<NotifyResult> {
+  const tgId = await getCustomerTelegramId(prisma, customerId);
+  if (!tgId) return { sent: false, reason: "Customer has no telegramUserId" };
+
+  const token = await getTenantBotToken(prisma, tenantId);
+  if (!token) return { sent: false, reason: "Tenant has no Telegram bot token" };
+
+  const ok = await sendTelegramMessage(token, tgId.toString(), text, options);
+  return { sent: ok, reason: ok ? undefined : "sendMessage rejected" };
+}
+
+/** Buyurtma status'i o'zgarganda standart xabar formatlash + yuborish. */
+export async function notifyOrderStatusChange(
+  prisma: PrismaClient,
+  tenantId: string,
+  orderId: string,
+  oldStatus: string,
+  newStatus: string,
+): Promise<NotifyResult> {
+  if (oldStatus === newStatus) return { sent: false, reason: "Status unchanged" };
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      code: true,
+      total: true,
+      currency: true,
+      customerId: true,
+    },
+  });
+  if (!order || !order.customerId) return { sent: false, reason: "Order or customer missing" };
+
+  const text = formatStatusMessage(order.code, Number(order.total), order.currency, newStatus);
+  if (!text) return { sent: false, reason: `No template for status ${newStatus}` };
+
+  return notifyCustomer(prisma, tenantId, order.customerId, text);
+}
+
+function formatStatusMessage(orderCode: string, total: number, currency: string, status: string): string | null {
+  const totalStr = currency === "UZS" ? `${total.toLocaleString("uz-UZ")} so'm` : `${total} ${currency}`;
+  const templates: Record<string, { emoji: string; title: string; body: string }> = {
+    PENDING: {
+      emoji: "🆕",
+      title: "Yangi buyurtma qabul qilindi",
+      body: "Tez orada operatorimiz siz bilan bog'lanadi.",
+    },
+    PROCESSING: {
+      emoji: "🔄",
+      title: "Buyurtmangiz tayyorlanmoqda",
+      body: "Buyurtmangiz tayyorlanmoqda. Tez orada yetkazib beriladi.",
+    },
+    COMPLETED: {
+      emoji: "✅",
+      title: "Buyurtmangiz yetkazildi",
+      body: "Bizdan xarid qilganingiz uchun rahmat!",
+    },
+    CANCELLED: {
+      emoji: "❌",
+      title: "Buyurtma bekor qilindi",
+      body: "Agar bu xato bo'lsa, operatorimiz bilan bog'laning.",
+    },
+    REFUNDED: {
+      emoji: "↩️",
+      title: "Mablag' qaytarildi",
+      body: "Mablag'ingiz hisobingizga qaytarildi.",
+    },
+  };
+  const t = templates[status];
+  if (!t) return null;
+  return `${t.emoji} <b>${t.title}</b>\n\nBuyurtma: <b>#${orderCode}</b>\nSumma: ${totalStr}\n\n${t.body}`;
+}

@@ -4,6 +4,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { notifyCustomer } from "../lib/telegram-notify.js";
 
 export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Tenant'ning to'liq Vitrina ma'lumotlari:
@@ -186,6 +187,20 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       },
       include: { items: true },
     });
+
+    // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
+    if (customer.telegramUserId) {
+      const totalStr = tenant.currency === "UZS"
+        ? `${total.toLocaleString("uz-UZ")} so'm`
+        : `${total} ${tenant.currency}`;
+      const text =
+        `🆕 <b>Buyurtmangiz qabul qilindi!</b>\n\n` +
+        `Buyurtma: <b>#${order.code}</b>\n` +
+        `Summa: ${totalStr}\n\n` +
+        `Tez orada operatorimiz siz bilan bog'lanadi.`;
+      notifyCustomer(app.prisma, tenant.id, customer.id, text)
+        .catch((err) => app.log.warn({ err, orderId: order.id }, "Checkout TG notify failed"));
+    }
 
     return reply.code(201).send({
       id: order.id,
