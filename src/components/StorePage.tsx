@@ -11,6 +11,7 @@ import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
 import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
+import { PopupHost } from "./storefront/PopupHost";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -1122,6 +1123,23 @@ function StoreInner({ slug }: { slug: string }) {
 
       {/* Bottom navigation — Home, Katalog, Savat, Takliflar, Profile */}
       {currentTab && <BottomNav active={currentTab} cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />}
+
+      {/* Marketing popups — admin paneldan boshqariladi */}
+      <PopupHost
+        storeSlug={slug}
+        apiBase={API_BASE}
+        primaryColor={primaryColor}
+        onCtaClick={(url) => {
+          if (url.startsWith("/")) {
+            // Ichki yo'l: hozircha shu storefrontda — keyingi etapda routing
+            if (url.includes("catalog")) setView("catalog");
+            else if (url.includes("promotions")) setView("promotions");
+            else if (url.includes("profile")) setView("profile");
+          } else {
+            window.open(url, "_blank");
+          }
+        }}
+      />
 
       {/* Product detail overlay */}
       {selectedProduct && renderProductDetail()}

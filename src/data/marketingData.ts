@@ -1,6 +1,7 @@
 /** Marketing moduli — lokal demo ma'lumotlari */
 
 export type MarketingSub =
+  | "popups"
   | "rassilka"
   | "promokod"
   | "sovgalar"
@@ -14,6 +15,7 @@ export type MarketingSub =
   | "tranzaksiyalar";
 
 export const marketingSubLabels: Record<MarketingSub, string> = {
+  popups: "Popup'lar",
   rassilka: "Rassilka",
   promokod: "Promo kodlar",
   sovgalar: "Sovg'alar",
@@ -28,6 +30,7 @@ export const marketingSubLabels: Record<MarketingSub, string> = {
 };
 
 export const marketingSubOrder: MarketingSub[] = [
+  "popups",
   "rassilka",
   "promokod",
   "sovgalar",

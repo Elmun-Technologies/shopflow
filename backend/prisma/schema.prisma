@@ -35,6 +35,7 @@ model Tenant {
   moyskladAccount MoyskladAccount?
   syncJobs        SyncJob[]
   webhookEvents   WebhookEvent[]
+  popups          Popup[]
 }
 
 enum UserRole {
@@ -453,4 +454,59 @@ model WebhookEvent {
 
   @@unique([tenantId, source, externalId])
   @@index([tenantId, processed])
+}
+
+// ============== Popup / Marketing campaigns ==============
+// Mini App ochilganda mijozga ko'rsatiladigan banner/modal.
+// Admin paneldan boshqariladi: jadval, target, frequency.
+
+enum PopupKind {
+  MODAL // To'liq ekranli, dismiss talab qiladi
+  BANNER // Tepasidagi katta, auto-collapse
+  TOAST // Toast (kichik), ekranning yuqori qismida
+}
+
+enum PopupTrigger {
+  ON_OPEN // App ochilganda (1 marta)
+  AFTER_DELAY // X soniyadan keyin
+  ON_TAB_CHANGE // Tab bosilganda (cart, profile, ...)
+  ON_CART_ABANDON // Savatda mahsulot bor, lekin checkout qilinmagan (Phase 2)
+}
+
+model Popup {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  title    String
+  body     String  @db.Text
+  imageUrl String?
+  ctaText  String? // "Xarid qilish", "Batafsil", ...
+  ctaUrl   String? // ichki yo'l "/store/x/promotions" yoki tashqi URL
+
+  kind            PopupKind    @default(MODAL)
+  trigger         PopupTrigger @default(ON_OPEN)
+  triggerDelaySec Int          @default(0) // AFTER_DELAY uchun
+
+  // Faollik va jadval
+  active   Boolean   @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  // Bir foydalanuvchiga necha marta ko'rsatish (0 = cheksiz)
+  maxImpressionsPerUser Int @default(1)
+  // Ko'rsatishlar orasidagi minimal soat
+  cooldownHours         Int @default(24)
+
+  priority Int @default(0) // Yuqori → birinchi ko'rsatiladi
+
+  // Analytika
+  impressions Int @default(0)
+  clicks      Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+  @@index([tenantId, priority])
 }
