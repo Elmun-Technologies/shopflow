@@ -249,4 +249,85 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       })),
     };
   });
+
+  /**
+   * Mini App ochilganda ko'rsatish uchun aktiv popup'lar ro'yxati.
+   * GET /api/storefront/:tenantSlug/popups?trigger=ON_OPEN
+   *
+   * Faqat:
+   *   - active = true
+   *   - startsAt <= now <= endsAt (yoki belgilanmagan)
+   *   - sorted by priority desc
+   * Frequency/cooldown tekshiruvi clientda localStorage orqali (yengilroq).
+   */
+  app.get("/:tenantSlug/popups", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const { trigger } = z
+      .object({ trigger: z.enum(["ON_OPEN", "AFTER_DELAY", "ON_TAB_CHANGE", "ON_CART_ABANDON"]).optional() })
+      .parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const now = new Date();
+    const popups = await app.prisma.popup.findMany({
+      where: {
+        tenantId: tenant.id,
+        active: true,
+        ...(trigger ? { trigger } : {}),
+        OR: [
+          { startsAt: null, endsAt: null },
+          { startsAt: { lte: now }, endsAt: null },
+          { startsAt: null, endsAt: { gte: now } },
+          { startsAt: { lte: now }, endsAt: { gte: now } },
+        ],
+      },
+      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        imageUrl: true,
+        ctaText: true,
+        ctaUrl: true,
+        kind: true,
+        trigger: true,
+        triggerDelaySec: true,
+        maxImpressionsPerUser: true,
+        cooldownHours: true,
+        priority: true,
+      },
+    });
+
+    return { popups };
+  });
+
+  /**
+   * Popup ko'rsatildi / bosildi — analitika uchun.
+   * POST /api/storefront/:tenantSlug/popups/:popupId/event
+   * Body: { kind: "impression" | "click" }
+   */
+  app.post<{ Params: { tenantSlug: string; popupId: string } }>(
+    "/:tenantSlug/popups/:popupId/event",
+    async (req, reply) => {
+      const { tenantSlug, popupId } = req.params;
+      const { kind } = z.object({ kind: z.enum(["impression", "click"]) }).parse(req.body);
+
+      const tenant = await app.prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true } });
+      if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+      const popup = await app.prisma.popup.findFirst({ where: { id: popupId, tenantId: tenant.id } });
+      if (!popup) return reply.code(404).send({ error: "Popup topilmadi" });
+
+      await app.prisma.popup.update({
+        where: { id: popupId },
+        data: kind === "impression" ? { impressions: { increment: 1 } } : { clicks: { increment: 1 } },
+      });
+      return { ok: true };
+    },
+  );
 };

@@ -103,12 +103,12 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `Assalomu alaykum, ${firstName}! 👋\n\n🛍 *${storeName}* do'koniga xush kelibsiz!\n\nQuyidagi tugmani bosib xarid qiling:`,
-            parse_mode: "Markdown",
+            text: `🛍 <b>${storeName}</b>\n\nXush kelibsiz, ${firstName}! Quyidagi tugmani bosib do'konga kiring 👇`,
+            parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [[
                 {
-                  text: `🛒 ${storeName} do'koniga kirish`,
+                  text: "🛒 Do'konga kirish",
                   web_app: { url: storeUrl },
                 },
               ]],
