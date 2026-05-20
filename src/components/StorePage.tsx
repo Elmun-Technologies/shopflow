@@ -138,6 +138,38 @@ function saveFavorites(slug: string, favs: Set<string>) {
   }
 }
 
+const CART_KEY = (slug: string) => `shopflow:store:${slug}:cart`;
+interface StoredCart { items: CartItem[]; ts: number }
+function loadStoredCart(slug: string): CartItem[] {
+  try {
+    const raw = localStorage.getItem(CART_KEY(slug));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as StoredCart;
+    return Array.isArray(parsed.items) ? parsed.items : [];
+  } catch {
+    return [];
+  }
+}
+function loadCartMeta(slug: string): StoredCart | null {
+  try {
+    const raw = localStorage.getItem(CART_KEY(slug));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredCart;
+    if (!Array.isArray(parsed.items)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function saveCart(slug: string, items: CartItem[]) {
+  try {
+    if (items.length === 0) localStorage.removeItem(CART_KEY(slug));
+    else localStorage.setItem(CART_KEY(slug), JSON.stringify({ items, ts: Date.now() }));
+  } catch {
+    // ignore
+  }
+}
+
 type StoreCategory = {
   id: string;
   name: string;
@@ -260,7 +292,9 @@ function StoreInner({ slug }: { slug: string }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart(slug));
+  const [cartRemindShown, setCartRemindShown] = useState(false);
+  const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "newest">("popular");
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
   const [form, setForm] = useState<CheckoutForm>({ name: "", phone: "", email: "", address: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -312,6 +346,26 @@ function StoreInner({ slug }: { slug: string }) {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Savatni localStorage'ga saqlash (mijoz Mini App'ni yopib qaytsa ham qoladi)
+  useEffect(() => {
+    saveCart(slug, cart);
+  }, [cart, slug]);
+
+  // Cart abandonment reminder — agar mijozning savati 1 soatdan ortiq bo'lsa,
+  // do'kon ochilganida bir martalik reminder ko'rsatamiz.
+  useEffect(() => {
+    if (cartRemindShown || loading || !data) return;
+    const meta = loadCartMeta(slug);
+    if (!meta || meta.items.length === 0) return;
+    const ageMs = Date.now() - meta.ts;
+    if (ageMs < 60 * 60 * 1000) return; // 1 soatdan kam — eslatish shart emas
+    const itemCount = meta.items.reduce((s, i) => s + i.qty, 0);
+    setCartRemindShown(true);
+    setTimeout(() => {
+      toast.show(`🛒 Savatingizda ${itemCount} ta mahsulot kutmoqda!`, "info");
+    }, 1200);
+  }, [loading, data, slug, cartRemindShown, toast]);
 
   // Telegram BackButton management — faqat checkout/success/category'da ko'rsatiladi
   // (asosiy 5 tab uchun BottomNav o'zi navigatsiya qiladi)
@@ -403,14 +457,32 @@ function StoreInner({ slug }: { slug: string }) {
 
   const filteredProducts = useMemo(() => {
     if (!data) return [];
-    let prods = data.products;
+    let prods = data.products.slice();
     if (selectedCategoryId) prods = prods.filter((p) => p.categoryId === selectedCategoryId);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      prods = prods.filter((p) => p.name.toLowerCase().includes(q));
+      prods = prods.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+    }
+    switch (sortBy) {
+      case "price_asc":
+        prods.sort((a, b) => Number(a.price) - Number(b.price));
+        break;
+      case "price_desc":
+        prods.sort((a, b) => Number(b.price) - Number(a.price));
+        break;
+      case "newest":
+        // Backend already orders by featured desc then createdAt desc — keep that
+        // but explicit fallback: featured first
+        prods.sort((a, b) => Number(b.featured) - Number(a.featured));
+        break;
+      case "popular":
+      default:
+        // Popular = featured first, then default backend order
+        prods.sort((a, b) => Number(b.featured) - Number(a.featured));
+        break;
     }
     return prods;
-  }, [data, selectedCategoryId, searchQuery]);
+  }, [data, selectedCategoryId, searchQuery, sortBy]);
 
   // ---- LOADING ----
   if (loading) {
@@ -993,8 +1065,24 @@ function StoreInner({ slug }: { slug: string }) {
   if (view === "catalog") {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <h2 className="text-base font-semibold text-white">Katalog</h2>
+        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <h2 className="text-base font-semibold text-white mb-2 px-1">Katalog</h2>
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Mahsulot qidirish..."
+              className="w-full bg-slate-800 rounded-xl pl-9 pr-9 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
         {categories.length > 0 && (
           <div className="bg-slate-950 border-b border-slate-800 px-3 py-2 overflow-x-auto whitespace-nowrap flex gap-2">
@@ -1021,11 +1109,38 @@ function StoreInner({ slug }: { slug: string }) {
             ))}
           </div>
         )}
+        {/* Sort + result count bar */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/50">
+          <span className="text-[11px] text-slate-500">{filteredProducts.length} ta mahsulot</span>
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="appearance-none bg-slate-800 border border-slate-700 text-xs text-white pl-3 pr-8 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            >
+              <option value="popular">Mashhur</option>
+              <option value="price_asc">Narx: arzondan</option>
+              <option value="price_desc">Narx: qimmatdan</option>
+              <option value="newest">Yangi</option>
+            </select>
+            <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 rotate-90 pointer-events-none" />
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {filteredProducts.length === 0 ? (
             <div className="py-16 text-center">
               <Package className="w-12 h-12 mx-auto text-slate-700 mb-3" />
-              <p className="text-sm text-slate-400">Bu bo'limda mahsulot yo'q</p>
+              <p className="text-sm text-slate-400">
+                {searchQuery ? `"${searchQuery}" bo'yicha topilmadi` : "Bu bo'limda mahsulot yo'q"}
+              </p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="mt-3 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
+                >
+                  Qidiruvni tozalash
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
