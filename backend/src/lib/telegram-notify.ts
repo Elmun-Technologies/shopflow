@@ -137,7 +137,7 @@ function formatStatusMessage(orderCode: string, total: number, currency: string,
     PENDING: {
       emoji: "🆕",
       title: "Yangi buyurtma qabul qilindi",
-      body: "Tez orada operatorimiz siz bilan bog'lanadi.",
+      body: "Mahsulotlar tayyorlanmoqda. Status o'zgarganda xabar yuboramiz.",
     },
     PROCESSING: {
       emoji: "🔄",
