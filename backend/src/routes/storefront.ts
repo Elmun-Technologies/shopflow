@@ -18,7 +18,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    const [storefront, products, categories] = await Promise.all([
+    const [storefront, products, categories, weeklyOrderItems] = await Promise.all([
       app.prisma.storefront.findUnique({
         where: { tenantId: tenant.id },
       }),
@@ -48,17 +48,34 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         where: { tenantId: tenant.id },
         orderBy: { name: "asc" },
       }),
+      // Social proof — oxirgi 7 kun ichidagi har bir mahsulot uchun unique
+      // mijoz buyurtmalari soni
+      app.prisma.orderItem.groupBy({
+        by: ["productId"],
+        where: {
+          order: {
+            tenantId: tenant.id,
+            createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+          },
+        },
+        _count: { _all: true },
+      }),
     ]);
 
     if (storefront && !storefront.published) {
       return reply.code(403).send({ error: "Do'kon yopiq" });
     }
 
+    const weeklyBuyersMap = new Map<string, number>();
+    for (const item of weeklyOrderItems) {
+      weeklyBuyersMap.set(item.productId, item._count._all);
+    }
+
     return {
       tenant,
       layout: storefront?.blocks ?? [],
       brand: storefront?.brand ?? {},
-      products,
+      products: products.map((p) => ({ ...p, weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0 })),
       categories,
     };
   });
