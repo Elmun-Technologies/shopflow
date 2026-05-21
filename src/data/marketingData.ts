@@ -3,6 +3,7 @@
 export type MarketingSub =
   | "popups"
   | "aksiyalar"
+  | "abandoned"
   | "rassilka"
   | "promokod"
   | "sovgalar"
@@ -18,6 +19,7 @@ export type MarketingSub =
 export const marketingSubLabels: Record<MarketingSub, string> = {
   popups: "Popup'lar",
   aksiyalar: "Aksiyalar",
+  abandoned: "Tashlangan savatlar",
   rassilka: "Rassilka",
   promokod: "Promo kodlar",
   sovgalar: "Sovg'alar",
@@ -34,6 +36,7 @@ export const marketingSubLabels: Record<MarketingSub, string> = {
 export const marketingSubOrder: MarketingSub[] = [
   "popups",
   "aksiyalar",
+  "abandoned",
   "rassilka",
   "promokod",
   "sovgalar",
