@@ -11,6 +11,7 @@ import {
   X,
   Star,
   ImagePlus,
+  CheckCircle2,
 } from "lucide-react";
 
 const MAX_IMAGES = 10;
@@ -20,6 +21,18 @@ import { api } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import type { Product, Category } from "../types/api";
+
+// "50000" → "50,000". Bo'sh / noto'g'ri input → "".
+function formatGrouped(raw: string): string {
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+// "50,000" yoki "50 000" → "50000" (faqat raqamlar).
+function unformatGrouped(formatted: string): string {
+  return String(formatted).replace(/\D/g, "");
+}
 
 export default function ProductsPage() {
   const { tenant } = useAuth();
@@ -298,9 +311,11 @@ function ProductFormModal({
   const [sku, setSku] = useState(product?.sku ?? "");
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [price, setPrice] = useState(String(product?.price ?? ""));
-  const [oldPrice, setOldPrice] = useState(product?.oldPrice ? String(product.oldPrice) : "");
-  const [stock, setStock] = useState(String(product?.stock ?? "0"));
+  // Narxlar va omborda — vergul bilan formatlangan ko'rinishda saqlanadi
+  // ("14,500,000"). Submit oldidan unformatGrouped bilan toza raqamga aylanadi.
+  const [price, setPrice] = useState(product?.price ? formatGrouped(String(product.price)) : "");
+  const [oldPrice, setOldPrice] = useState(product?.oldPrice ? formatGrouped(String(product.oldPrice)) : "");
+  const [stock, setStock] = useState(product?.stock != null ? formatGrouped(String(product.stock)) : "0");
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   // Bitta galereya — birinchi rasm avtomatik asosiy (cover). Edit rejimida
   // mavjud imageUrl va images[] birlashtirilib, takrorlanishlar olib tashlanadi.
@@ -357,6 +372,8 @@ function ProductFormModal({
   const [active, setActive] = useState(product?.active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [imageToast, setImageToast] = useState<string | null>(null);
 
   const uploadSingle = async (file: File): Promise<string> => {
     const form = new FormData();
@@ -388,6 +405,15 @@ function ProductFormModal({
         urls.push(await uploadSingle(file));
       }
       setImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+      const skipped = fileArr.length - toUpload.length;
+      setImageToast(
+        skipped > 0
+          ? `${toUpload.length} ta rasm yuklandi · ${skipped} ta o'tkazib yuborildi (limit ${MAX_IMAGES})`
+          : toUpload.length === 1
+            ? "Rasm yuklandi"
+            : `${toUpload.length} ta rasm yuklandi`,
+      );
+      setTimeout(() => setImageToast(null), 2500);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Rasm yuklanmadi");
     } finally {
@@ -428,9 +454,10 @@ function ProductFormModal({
         sku,
         name,
         description: description || undefined,
-        price: Number(price),
-        oldPrice: oldPrice ? Number(oldPrice) : null,
-        stock: Number(stock) || 0,
+        // Vergulli formatdan toza raqamga
+        price: Number(unformatGrouped(price)),
+        oldPrice: oldPrice ? Number(unformatGrouped(oldPrice)) : null,
+        stock: Number(unformatGrouped(stock)) || 0,
         currency,
         categoryId: categoryId || null,
         // Birinchi rasm — asosiy (cover), qolganlari galereya
@@ -447,8 +474,8 @@ function ProductFormModal({
         savedProductId = created.id;
       }
 
-      // Combo addons saqlash
-      if (savedProductId) {
+      // Combo addons saqlash — faqat ulanma bo'lsa
+      if (savedProductId && comboAddons.length > 0) {
         await api(`/products/${savedProductId}/addons`, {
           method: "PUT",
           body: {
@@ -461,7 +488,9 @@ function ProductFormModal({
           },
         });
       }
-      onSaved();
+      // Success state — 1.2 soniya ko'rsatib, keyin yopiladi
+      setSuccess(product ? "O'zgarishlar saqlandi" : "Mahsulot yaratildi");
+      setTimeout(() => onSaved(), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xato");
     } finally {
@@ -477,7 +506,7 @@ function ProductFormModal({
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
           <h2 className="text-lg font-bold text-white">
@@ -544,33 +573,32 @@ function ProductFormModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Field label={`Narx (${currency}) *`}>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 required
-                min="0"
-                step="any"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="14500000"
+                onChange={(e) => setPrice(formatGrouped(e.target.value))}
+                placeholder="14,500,000"
                 className="input"
               />
             </Field>
-            <Field label={`Eski narx (chegirma uchun)`}>
+            <Field label="Eski narx (chegirma uchun)">
               <input
-                type="number"
-                min="0"
-                step="any"
+                type="text"
+                inputMode="numeric"
                 value={oldPrice}
-                onChange={(e) => setOldPrice(e.target.value)}
-                placeholder="15200000"
+                onChange={(e) => setOldPrice(formatGrouped(e.target.value))}
+                placeholder="15,200,000"
                 className="input"
               />
             </Field>
             <Field label="Omborda">
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="numeric"
                 value={stock}
-                onChange={(e) => setStock(e.target.value)}
+                onChange={(e) => setStock(formatGrouped(e.target.value))}
+                placeholder="0"
                 className="input"
               />
             </Field>
@@ -663,7 +691,11 @@ function ProductFormModal({
           </Field>
 
           {/* Combo picker modal */}
-          {comboPickerOpen && (
+          {comboPickerOpen && (() => {
+            const available = productsCatalog.filter(
+              (p) => p.id !== product?.id && !comboAddons.find((a) => a.addonProductId === p.id),
+            );
+            return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4" onClick={() => setComboPickerOpen(false)}>
               <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
@@ -672,8 +704,32 @@ function ProductFormModal({
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+                {available.length === 0 ? (
+                  <div className="px-6 py-10 flex flex-col items-center gap-3 text-center">
+                    <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center">
+                      <Package className="w-7 h-7 text-slate-500" />
+                    </div>
+                    <p className="text-sm font-medium text-white">
+                      {productsCatalog.length === 0
+                        ? "Hali boshqa mahsulotlar yo'q"
+                        : "Hamma mahsulotlar allaqachon qo'shilgan"}
+                    </p>
+                    <p className="text-xs text-slate-500 max-w-xs">
+                      {productsCatalog.length === 0
+                        ? "Avval boshqa mahsulotlarni yarating — keyin shu mahsulot bilan birga combo sifatida bog'lashingiz mumkin (Mini App'da \"Bularni ham qo'shing\" sifatida ko'rinadi)."
+                        : "Yangi combo qo'shish uchun avval boshqa mahsulot yarating."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setComboPickerOpen(false)}
+                      className="mt-1 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-slate-300"
+                    >
+                      Tushunarli
+                    </button>
+                  </div>
+                ) : (
                 <div className="p-2 space-y-1">
-                  {productsCatalog.filter((p) => p.id !== product?.id && !comboAddons.find((a) => a.addonProductId === p.id)).map((p) => (
+                  {available.map((p) => (
                     <button
                       key={p.id}
                       type="button"
@@ -706,9 +762,11 @@ function ProductFormModal({
                     </button>
                   ))}
                 </div>
+                )}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -740,6 +798,27 @@ function ProductFormModal({
             </div>
           )}
         </div>
+
+        {/* Success overlay — yaratish/saqlashdan keyin */}
+        {success && (
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center z-20 rounded-2xl">
+            <div className="flex flex-col items-center gap-3 px-6 py-8">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center animate-in zoom-in duration-300">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+              </div>
+              <p className="text-base font-semibold text-white">{success}</p>
+              {name && <p className="text-sm text-slate-400">{name}</p>}
+            </div>
+          </div>
+        )}
+
+        {/* Image upload toast — yuqori o'ngda */}
+        {imageToast && (
+          <div className="fixed top-6 right-6 z-[90] flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-lg shadow-2xl animate-in slide-in-from-right duration-200">
+            <CheckCircle2 className="w-4 h-4" />
+            <span className="text-sm font-medium">{imageToast}</span>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 justify-end p-5 border-t border-slate-800 sticky bottom-0 bg-slate-900">
           <button
