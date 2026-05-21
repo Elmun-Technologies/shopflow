@@ -302,12 +302,13 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Mijoz profilini topish (yoki birinchi marta avto-yaratish).
   // Mini App ochilganda chaqiriladi — foydalanuvchi checkout'gacha kutmasdan
   // tizimga ro'yxat oladi (telegramUserId orqali identifikatsiya).
-  // GET /api/storefront/:tenantSlug/profile?tgUserId=12345&firstName=...&lastName=...&username=...
+  // GET /api/storefront/:tenantSlug/profile?tgUserId=12345&firstName=...&lastName=...&username=...&ref=referrerTgId
   const profileQuerySchema = z.object({
     tgUserId: z.coerce.number().int().positive(),
     firstName: z.string().max(80).optional(),
     lastName: z.string().max(80).optional(),
     username: z.string().max(80).optional(),
+    ref: z.coerce.number().int().positive().optional(),
   });
   app.get("/:tenantSlug/profile", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
@@ -325,9 +326,21 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
     });
 
-    // Birinchi marta — avto-ro'yxat (firstName/lastName Telegram'dan)
+    // Birinchi marta — avto-ro'yxat (firstName/lastName Telegram'dan).
+    // ?ref=<referrerTgId> bo'lsa, referral grafini bog'laymiz (faqat birinchi marta,
+    // o'zini o'zi taklif qila olmaydi).
     if (!customer) {
       const displayName = [q.firstName, q.lastName].filter(Boolean).join(" ") || "Mijoz";
+
+      let referredByCustomerId: string | null = null;
+      if (q.ref && q.ref !== q.tgUserId) {
+        const referrer = await app.prisma.customer.findFirst({
+          where: { tenantId: tenant.id, telegramUserId: BigInt(q.ref) },
+          select: { id: true },
+        });
+        if (referrer) referredByCustomerId = referrer.id;
+      }
+
       customer = await app.prisma.customer.create({
         data: {
           tenantId: tenant.id,
@@ -336,6 +349,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           lastName: q.lastName ?? null,
           telegramUserId: tgId,
           telegramUsername: q.username ?? null,
+          referredByCustomerId,
         },
         include: { addresses: true },
       });
@@ -354,6 +368,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         gender: customer.gender,
         language: customer.language,
         avatar: customer.avatar,
+        notifyOrderUpdates: customer.notifyOrderUpdates,
+        notifyCartAbandonment: customer.notifyCartAbandonment,
+        notifyPromotions: customer.notifyPromotions,
         telegramUserId: customer.telegramUserId?.toString() ?? null,
         telegramUsername: customer.telegramUsername,
         createdAt: customer.createdAt.toISOString(),
@@ -381,6 +398,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal("")),
     gender: z.enum(["male", "female"]).optional().nullable().or(z.literal("")),
     language: z.enum(["uz", "ru"]).optional(),
+    // Notification preferences
+    notifyOrderUpdates: z.boolean().optional(),
+    notifyCartAbandonment: z.boolean().optional(),
+    notifyPromotions: z.boolean().optional(),
   });
   app.patch("/:tenantSlug/profile", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
@@ -415,6 +436,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         }),
         ...(data.gender !== undefined && { gender: data.gender || null }),
         ...(data.language !== undefined && { language: data.language }),
+        ...(data.notifyOrderUpdates !== undefined && { notifyOrderUpdates: data.notifyOrderUpdates }),
+        ...(data.notifyCartAbandonment !== undefined && { notifyCartAbandonment: data.notifyCartAbandonment }),
+        ...(data.notifyPromotions !== undefined && { notifyPromotions: data.notifyPromotions }),
         ...(displayParts.length > 0 && { name: displayParts.join(" ") }),
       },
     });
@@ -432,6 +456,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         gender: updated.gender,
         language: updated.language,
         avatar: updated.avatar,
+        notifyOrderUpdates: updated.notifyOrderUpdates,
+        notifyCartAbandonment: updated.notifyCartAbandonment,
+        notifyPromotions: updated.notifyPromotions,
       },
     };
   });
@@ -555,6 +582,168 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     if (!existing) return reply.code(404).send({ error: "Manzil topilmadi" });
 
     await app.prisma.customerAddress.delete({ where: { id: params.id } });
+    return { ok: true };
+  });
+
+  // Wishlist / favorites — Mini App "Sevimlilar" tab
+  // GET /api/storefront/:tenantSlug/wishlist?tgUserId=12345
+  // Returns full product objects so the cabinet renders without a join
+  app.get("/:tenantSlug/wishlist", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) return { items: [] };
+
+    const items = await app.prisma.wishlistItem.findMany({
+      where: { customerId: customer.id, tenantId: tenant.id },
+      include: {
+        product: {
+          select: {
+            id: true, sku: true, name: true, price: true, oldPrice: true,
+            currency: true, stock: true, imageUrl: true, active: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      items: items.map((w) => ({
+        id: w.id,
+        productId: w.productId,
+        createdAt: w.createdAt.toISOString(),
+        product: w.product
+          ? {
+              id: w.product.id, sku: w.product.sku, name: w.product.name,
+              price: Number(w.product.price),
+              oldPrice: w.product.oldPrice != null ? Number(w.product.oldPrice) : null,
+              currency: w.product.currency,
+              stock: w.product.stock,
+              imageUrl: w.product.imageUrl,
+              active: w.product.active,
+            }
+          : null,
+      })),
+    };
+  });
+
+  // Referrals — mijoz tomonidan taklif qilinganlar va ularning faolligi
+  // GET /api/storefront/:tenantSlug/referrals?tgUserId=12345
+  app.get("/:tenantSlug/referrals", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const me = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+      select: { id: true },
+    });
+    if (!me) return { invited: [], totals: { invitedCount: 0, withOrdersCount: 0 } };
+
+    const invited = await app.prisma.customer.findMany({
+      where: { tenantId: tenant.id, referredByCustomerId: me.id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        createdAt: true,
+        _count: { select: { orders: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return {
+      totals: {
+        invitedCount: invited.length,
+        withOrdersCount: invited.filter((c) => c._count.orders > 0).length,
+      },
+      invited: invited.map((c) => ({
+        id: c.id,
+        // Maxfiylik — to'liq ism o'rniga faqat birinchi ism + familiya bosh harfi
+        displayName: c.firstName || c.lastName
+          ? `${c.firstName ?? ""}${c.lastName ? " " + c.lastName.slice(0, 1) + "." : ""}`.trim()
+          : c.name.slice(0, 12),
+        createdAt: c.createdAt.toISOString(),
+        ordersCount: c._count.orders,
+      })),
+    };
+  });
+
+  // Wishlist — qo'shish (idempotent — upsert orqali)
+  app.post("/:tenantSlug/wishlist", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const data = z
+      .object({ tgUserId: z.coerce.number().int().positive(), productId: z.string() })
+      .parse(req.body);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    // Mahsulot shu tenant'ga tegishliligini tekshiramiz
+    const product = await app.prisma.product.findFirst({
+      where: { id: data.productId, tenantId: tenant.id },
+      select: { id: true },
+    });
+    if (!product) return reply.code(404).send({ error: "Mahsulot topilmadi" });
+
+    const item = await app.prisma.wishlistItem.upsert({
+      where: { customerId_productId: { customerId: customer.id, productId: data.productId } },
+      create: {
+        customerId: customer.id,
+        productId: data.productId,
+        tenantId: tenant.id,
+      },
+      update: {},
+    });
+    return reply.code(201).send({ id: item.id });
+  });
+
+  // Wishlist — o'chirish (productId orqali, idempotent)
+  app.delete("/:tenantSlug/wishlist/:productId", async (req, reply) => {
+    const params = z.object({ tenantSlug: z.string(), productId: z.string() }).parse(req.params);
+    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: params.tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) return { ok: true };
+
+    await app.prisma.wishlistItem.deleteMany({
+      where: { customerId: customer.id, productId: params.productId },
+    });
     return { ok: true };
   });
 

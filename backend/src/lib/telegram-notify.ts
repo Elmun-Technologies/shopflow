@@ -116,6 +116,15 @@ export async function notifyOrderStatusChange(
   });
   if (!order || !order.customerId) return { sent: false, reason: "Order or customer missing" };
 
+  // Notification opt-out — mijoz "buyurtma yangiliklari" ni o'chirgan bo'lsa, jim
+  const cust = await prisma.customer.findUnique({
+    where: { id: order.customerId },
+    select: { notifyOrderUpdates: true },
+  });
+  if (cust && !cust.notifyOrderUpdates) {
+    return { sent: false, reason: "Customer opted out of order updates" };
+  }
+
   const text = formatStatusMessage(order.code, Number(order.total), order.currency, newStatus);
   if (!text) return { sent: false, reason: `No template for status ${newStatus}` };
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ChevronRight, ArrowLeft, User as UserIcon, ShoppingBag, Star, Ticket, Users,
   Globe, MapPin, MessageCircle, Phone, Calendar, Plus, Trash2, ChevronDown, Loader2, Send,
+  Bell as BellIcon,
 } from "lucide-react";
 import { formatUzPhone } from "../../utils/phone";
 
@@ -13,7 +14,8 @@ type ProfileView =
   | "promocodes"
   | "referrals"
   | "language"
-  | "addresses";
+  | "addresses"
+  | "notifications";
 
 type Lang = "uz" | "ru";
 type Gender = "male" | "female" | "";
@@ -25,6 +27,18 @@ interface ProfileData {
   phone: string;
   birthDate: string; // YYYY-MM-DD
   gender: Gender;
+}
+
+interface NotificationPrefs {
+  orderUpdates: boolean;
+  cartAbandonment: boolean;
+  promotions: boolean;
+}
+
+interface ReferralStats {
+  invitedCount: number;
+  withOrdersCount: number;
+  invited: Array<{ id: string; displayName: string; createdAt: string; ordersCount: number }>;
 }
 
 interface Address {
@@ -119,6 +133,12 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
   const [orders, setOrders] = useState<CustomerOrder[] | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [notifyPrefs, setNotifyPrefs] = useState<NotificationPrefs>({
+    orderUpdates: true,
+    cartAbandonment: true,
+    promotions: true,
+  });
+  const [referrals, setReferrals] = useState<ReferralStats | null>(null);
 
   const tgUserId = telegramUser?.userId;
   const isOnline = !!tgUserId;
@@ -136,7 +156,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
     });
     fetch(`${profileUrl}?${params}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data: { customer: Partial<ProfileData> & { firstName: string | null; lastName: string | null; patronymic: string | null; phone: string | null; birthDate: string | null; gender: string | null; language?: string }; addresses: Address[] }) => {
+      .then((data: { customer: Partial<ProfileData> & { firstName: string | null; lastName: string | null; patronymic: string | null; phone: string | null; birthDate: string | null; gender: string | null; language?: string; notifyOrderUpdates?: boolean; notifyCartAbandonment?: boolean; notifyPromotions?: boolean }; addresses: Address[] }) => {
         const c = data.customer;
         const next: ProfileData = {
           firstName: c.firstName ?? "",
@@ -152,6 +172,11 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
           setLang(c.language);
           try { localStorage.setItem(lsKey(storeSlug, "lang"), c.language); } catch { /* ignore */ }
         }
+        setNotifyPrefs({
+          orderUpdates: c.notifyOrderUpdates ?? true,
+          cartAbandonment: c.notifyCartAbandonment ?? true,
+          promotions: c.notifyPromotions ?? true,
+        });
         const serverAddrs = (data.addresses ?? []).map((a) => ({
           id: a.id, label: a.label, city: a.city ?? "", street: a.street,
           apartment: a.apartment ?? "", notes: a.notes ?? "", isDefault: a.isDefault,
@@ -186,6 +211,24 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       // Tarmoq xatosi — localStorage'da saqlandi
     }
   }, [storeSlug, isOnline, profileUrl, tgUserId]);
+
+  // Notification preferences saqlash — har bir toggle alohida PATCH
+  const saveNotifyPref = useCallback(async (key: keyof NotificationPrefs, value: boolean) => {
+    setNotifyPrefs((prev) => ({ ...prev, [key]: value }));
+    if (!isOnline) return;
+    const fieldMap = {
+      orderUpdates: "notifyOrderUpdates",
+      cartAbandonment: "notifyCartAbandonment",
+      promotions: "notifyPromotions",
+    } as const;
+    try {
+      await fetch(profileUrl, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tgUserId, [fieldMap[key]]: value }),
+      });
+    } catch { /* offline */ }
+  }, [isOnline, profileUrl, tgUserId]);
 
   const saveLang = useCallback(async (next: Lang) => {
     setLang(next);
@@ -260,6 +303,21 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       .finally(() => setOrdersLoading(false));
   }, [view, orders, tgUserId, storeSlug, apiBase]);
 
+  // Fetch referrals stats when entering referrals view
+  useEffect(() => {
+    if (view !== "referrals" || referrals !== null || !tgUserId) return;
+    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/referrals?tgUserId=${tgUserId}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: { totals: { invitedCount: number; withOrdersCount: number }; invited: ReferralStats["invited"] }) => {
+        setReferrals({
+          invitedCount: data.totals.invitedCount,
+          withOrdersCount: data.totals.withOrdersCount,
+          invited: data.invited,
+        });
+      })
+      .catch(() => setReferrals({ invitedCount: 0, withOrdersCount: 0, invited: [] }));
+  }, [view, referrals, tgUserId, storeSlug, apiBase]);
+
   if (view === "menu") {
     return (
       <ProfileMenu
@@ -279,9 +337,10 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
         {view === "orders" && <OrdersList orders={orders} loading={ordersLoading} />}
         {view === "reviews" && <PlaceholderTwoTab labelA="Baholanishi kutilmoqda" labelB="Barcha fikrlarim" />}
         {view === "promocodes" && <PromocodeForm storeSlug={storeSlug} />}
-        {view === "referrals" && <ReferralsView telegramUser={telegramUser} />}
+        {view === "referrals" && <ReferralsView telegramUser={telegramUser} stats={referrals} />}
         {view === "language" && <LanguagePicker lang={lang} onChange={saveLang} />}
         {view === "addresses" && <AddressesList addresses={addresses} onAdd={addAddress} onRemove={removeAddress} />}
+        {view === "notifications" && <NotificationsView prefs={notifyPrefs} onChange={saveNotifyPref} isOnline={isOnline} />}
       </div>
     </div>
   );
@@ -296,6 +355,7 @@ function titleFor(v: ProfileView): string {
     case "referrals": return "Referallarim";
     case "language": return "Ilova tili";
     case "addresses": return "Mening manzillarim";
+    case "notifications": return "Bildirishnomalar";
     default: return "Profile";
   }
 }
@@ -330,11 +390,12 @@ function ProfileMenu({
   const items: Array<{ id: ProfileView; label: string; Icon: typeof UserIcon; sub?: string }> = [
     { id: "info", label: "Ma'lumotlarim", Icon: UserIcon, sub: profile.phone || "To'ldirilmagan" },
     { id: "orders", label: "Buyurtmalarim", Icon: ShoppingBag },
+    { id: "addresses", label: "Mening manzillarim", Icon: MapPin },
+    { id: "notifications", label: "Bildirishnomalar", Icon: BellIcon },
+    { id: "referrals", label: "Referallarim", Icon: Users },
     { id: "reviews", label: "Sharhlarim", Icon: Star },
     { id: "promocodes", label: "Promokodlarim", Icon: Ticket },
-    { id: "referrals", label: "Referallarim", Icon: Users },
     { id: "language", label: "Ilova tili", Icon: Globe, sub: "uz/ru" },
-    { id: "addresses", label: "Mening manzillarim", Icon: MapPin },
   ];
 
   return (
@@ -724,10 +785,19 @@ function PromocodeForm({ storeSlug }: { storeSlug: string }) {
   );
 }
 
-function ReferralsView({ telegramUser }: { telegramUser?: ProfilePageProps["telegramUser"] }) {
+function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProps["telegramUser"]; stats: ReferralStats | null }) {
   const refLink = telegramUser?.userId
     ? `${typeof window !== "undefined" ? window.location.origin : ""}${window.location.pathname}?ref=${telegramUser.userId}`
     : "";
+  const [copied, setCopied] = useState(false);
+
+  const copyRef = () => {
+    if (!refLink) return;
+    navigator.clipboard?.writeText(refLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => null);
+  };
 
   return (
     <div>
@@ -736,11 +806,26 @@ function ReferralsView({ telegramUser }: { telegramUser?: ProfilePageProps["tele
           Do'stlaringizni taklif qiling
         </div>
         <div className="text-xs text-emerald-700 dark:text-emerald-300">
-          Har bir taklif uchun bonus oling
+          Havolani ulashing — do'stingiz Mini App'ni ochganida ro'yxat sizga bog'lanadi
         </div>
       </div>
+
+      {/* Statistika kartochkalari */}
+      {stats && (
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.invitedCount}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Taklif qilingan</div>
+          </div>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.withOrdersCount}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Buyurtma qildi</div>
+          </div>
+        </div>
+      )}
+
       {refLink && (
-        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 mb-3">
           <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sizning referal havolangiz</div>
           <div className="flex items-center gap-2">
             <input
@@ -749,20 +834,102 @@ function ReferralsView({ telegramUser }: { telegramUser?: ProfilePageProps["tele
               className="flex-1 bg-transparent text-xs text-slate-700 dark:text-slate-200 truncate focus:outline-none"
             />
             <button
-              onClick={() => {
-                navigator.clipboard?.writeText(refLink).catch(() => null);
-              }}
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400"
+              onClick={copyRef}
+              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap"
             >
-              Nusxa
+              {copied ? "✓ Nusxa olindi" : "Nusxa"}
             </button>
           </div>
         </div>
       )}
-      <div className="py-6 text-center">
-        <Users className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-        <div className="text-sm text-slate-500 dark:text-slate-400">Hali taklif qilingan do'stlar yo'q</div>
-      </div>
+
+      {/* Taklif qilinganlar ro'yxati */}
+      {stats && stats.invited.length > 0 ? (
+        <div className="space-y-1.5">
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 px-1 mb-1.5">Taklif qilinganlar</div>
+          {stats.invited.map((r) => (
+            <div key={r.id} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl">
+              <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {(r.displayName[0] || "M").toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{r.displayName}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {new Date(r.createdAt).toLocaleDateString("uz-UZ", { year: "numeric", month: "short", day: "numeric" })}
+                </div>
+              </div>
+              {r.ordersCount > 0 ? (
+                <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-full">
+                  {r.ordersCount} buyurtma
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">Yangi</span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-6 text-center">
+          <Users className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
+          <div className="text-sm text-slate-500 dark:text-slate-400">Hali taklif qilingan do'stlar yo'q</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotificationsView({
+  prefs,
+  onChange,
+  isOnline,
+}: {
+  prefs: NotificationPrefs;
+  onChange: (key: keyof NotificationPrefs, value: boolean) => void;
+  isOnline: boolean;
+}) {
+  const items: Array<{ key: keyof NotificationPrefs; label: string; desc: string; emoji: string }> = [
+    { key: "orderUpdates", label: "Buyurtma yangiliklari", desc: "Buyurtmangiz statusi o'zgarganda xabar", emoji: "📦" },
+    { key: "cartAbandonment", label: "Savat eslatmalari", desc: "Savatingizda mahsulot qolsa, bir soatdan keyin eslatma", emoji: "🛒" },
+    { key: "promotions", label: "Aksiyalar va chegirmalar", desc: "Yangi aksiyalar va maxsus takliflar", emoji: "🎁" },
+  ];
+
+  return (
+    <div className="space-y-2">
+      {!isOnline && (
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center mb-2">
+          ⓘ Telegram bot ichida ochilmagan — bildirishnoma sozlamalari faqat shu qurilmada saqlanadi
+        </p>
+      )}
+      {items.map(({ key, label, desc, emoji }) => (
+        <label
+          key={key}
+          className="flex items-start gap-3 px-3 py-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer active:bg-slate-50 dark:active:bg-slate-800"
+        >
+          <div className="text-xl flex-shrink-0">{emoji}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-slate-900 dark:text-white">{label}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{desc}</div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={prefs[key]}
+            onClick={(e) => {
+              e.preventDefault();
+              onChange(key, !prefs[key]);
+            }}
+            className={`flex-shrink-0 mt-0.5 w-10 h-6 rounded-full transition-colors relative ${
+              prefs[key] ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${
+                prefs[key] ? "left-[18px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </label>
+      ))}
     </div>
   );
 }
