@@ -299,34 +299,73 @@ function ProductFormModal({
   const [stock, setStock] = useState(String(product?.stock ?? "0"));
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
+  const [extraImages, setExtraImages] = useState<string[]>(product?.images ?? []);
   const [uploading, setUploading] = useState(false);
+  const [extraUploading, setExtraUploading] = useState(false);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const uploadSingle = async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("file", file);
+    const token = localStorage.getItem("shopflow.token");
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Yuklash xatosi" }));
+      throw new Error((err as { error?: string }).error || "Yuklash xatosi");
+    }
+    const { url } = (await res.json()) as { url: string };
+    return url;
+  };
+
   const handleImageUpload = async (file: File) => {
     setUploading(true);
+    setError(null);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const token = localStorage.getItem("shopflow.token");
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: form,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Yuklash xatosi" }));
-        throw new Error((err as { error?: string }).error || "Yuklash xatosi");
-      }
-      const { url } = await res.json() as { url: string };
+      const url = await uploadSingle(file);
       setImageUrl(url);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Rasm yuklanmadi");
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleExtraUpload = async (files: FileList) => {
+    setExtraUploading(true);
+    setError(null);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        const url = await uploadSingle(file);
+        urls.push(url);
+      }
+      setExtraImages((prev) => [...prev, ...urls].slice(0, 9));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Rasmlar yuklanmadi");
+    } finally {
+      setExtraUploading(false);
+    }
+  };
+
+  const removeExtraImage = (idx: number) => {
+    setExtraImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const moveExtraImage = (idx: number, dir: -1 | 1) => {
+    setExtraImages((prev) => {
+      const next = prev.slice();
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -344,6 +383,7 @@ function ProductFormModal({
         currency,
         categoryId: categoryId || null,
         imageUrl: imageUrl || null,
+        images: extraImages,
         featured,
         active,
       };
@@ -511,6 +551,73 @@ function ProductFormModal({
                 Rasmni olib tashlash
               </button>
             )}
+          </Field>
+
+          {/* Qo'shimcha rasmlar (carousel uchun) */}
+          <Field label={`Qo'shimcha rasmlar (${extraImages.length}/9 — Mini App'da swipe karusel)`}>
+            <div className="grid grid-cols-4 gap-2">
+              {extraImages.map((url, i) => (
+                <div key={`${url}-${i}`} className="relative group aspect-square bg-slate-800 rounded-lg overflow-hidden">
+                  <img src={url} alt={`extra ${i + 1}`} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveExtraImage(i, -1)}
+                        disabled={i === 0}
+                        className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 text-white text-xs disabled:opacity-30"
+                        aria-label="Chapga"
+                      >‹</button>
+                      <button
+                        type="button"
+                        onClick={() => moveExtraImage(i, 1)}
+                        disabled={i === extraImages.length - 1}
+                        className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 text-white text-xs disabled:opacity-30"
+                        aria-label="O'ngga"
+                      >›</button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeExtraImage(i)}
+                      className="text-[10px] text-rose-300 hover:text-rose-200"
+                    >
+                      O'chirish
+                    </button>
+                  </div>
+                  <div className="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1 rounded">
+                    {i + 1}
+                  </div>
+                </div>
+              ))}
+              {extraImages.length < 9 && (
+                <label className={`aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  extraUploading ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+                }`}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    className="hidden"
+                    disabled={extraUploading}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) handleExtraUpload(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  {extraUploading ? (
+                    <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span className="text-xl text-slate-500 leading-none">+</span>
+                      <span className="text-[10px] text-slate-500 mt-1">Qo'shish</span>
+                    </>
+                  )}
+                </label>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">
+              Bir necha rasmni bir vaqtda tanlashingiz mumkin. Hover qilib tartibni o'zgartiring yoki o'chiring.
+            </p>
           </Field>
 
           <div className="flex flex-wrap gap-4">
