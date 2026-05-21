@@ -11,8 +11,9 @@ const productSchema = z.object({
   stock: z.number().int().nonnegative().default(0),
   active: z.boolean().default(true),
   featured: z.boolean().default(false),
-  imageUrl: z.string().url().optional().nullable().or(z.literal("")),
-  images: z.array(z.string().url()).optional(),
+  // Local upload paths ("/uploads/...") yoki absolute URL — har ikkalasi ham qabul
+  imageUrl: z.string().max(500).optional().nullable(),
+  images: z.array(z.string().max(500)).optional(),
   categoryId: z.string().optional().nullable(),
 });
 
