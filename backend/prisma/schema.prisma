@@ -42,6 +42,7 @@ model Tenant {
   paymentMethods  PaymentMethod[]
   conversations   Conversation[]
   segments        CustomerSegment[]
+  reviews         Review[]
 }
 
 enum UserRole {
@@ -69,6 +70,7 @@ model User {
   auditLogs      AuditLog[]
   assignedConversations Conversation[]        @relation("ConversationAssignee")
   conversationMessages  ConversationMessage[] @relation("ConversationMessageAuthor")
+  moderatedReviews      Review[]              @relation("ReviewModerator")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -267,6 +269,8 @@ model Product {
   // Wishlist / favorites
   wishlistedBy WishlistItem[]
 
+  reviews Review[]
+
   @@unique([tenantId, sku])
   @@unique([tenantId, moyskladId])
   @@index([tenantId, active])
@@ -351,6 +355,7 @@ model Customer {
   addresses     CustomerAddress[]
   wishlist      WishlistItem[]
   conversations Conversation[]
+  reviews       Review[]
 
   @@unique([tenantId, moyskladId])
   @@index([tenantId, email])
@@ -572,6 +577,46 @@ model ConversationMessage {
 
   @@index([conversationId, sentAt])
   @@index([conversationId, direction, read])
+}
+
+// ============== PRODUCT REVIEWS ==============
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id        String @id @default(cuid())
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Mijoz — Mini App'dan kelgan bo'lsa Customer ulangan
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName String // snapshot — Customer o'chirilsa ham qoladi
+
+  rating  Int    // 1..5
+  text    String @db.Text
+  photos  String[] @default([])
+
+  status     ReviewStatus @default(PENDING)
+  // Moderatsiya
+  moderatedById String?
+  moderatedBy   User?   @relation("ReviewModerator", fields: [moderatedById], references: [id], onDelete: SetNull)
+  moderatedAt   DateTime?
+  // Rad etish sababi (status=REJECTED bo'lsa)
+  rejectReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, productId, status])
+  @@index([customerId])
 }
 
 // ============== CUSTOMER SEGMENTS ==============

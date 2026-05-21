@@ -1,9 +1,47 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Check, X, Star, MessageSquare } from "lucide-react";
+import { Search, Check, X, Star, MessageSquare, Loader2 } from "lucide-react";
 import type { ProductReview, ReviewStatus } from "../../data/marketingData";
-import { initialReviews, reviewStatusLabels } from "../../data/marketingData";
+import { reviewStatusLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
+import { api } from "../../api/client";
+
+// Backend'dan keladigan format (uppercase enum)
+interface ApiReview {
+  id: string;
+  productId: string;
+  productName: string;
+  productImage: string | null;
+  customerId: string | null;
+  customerName: string;
+  rating: number;
+  text: string;
+  photos: string[];
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  moderatedAt: string | null;
+  rejectReason: string | null;
+  createdAt: string;
+}
+
+interface ApiStats {
+  avgRating: number;
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+function adapt(r: ApiReview): ProductReview {
+  return {
+    id: r.id,
+    customerName: r.customerName,
+    productName: r.productName,
+    rating: r.rating,
+    text: r.text,
+    status: r.status.toLowerCase() as ReviewStatus,
+    createdAt: new Date(r.createdAt).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" }),
+  };
+}
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -25,10 +63,36 @@ function ReviewStatusBadge({ status }: { status: ReviewStatus }) {
 }
 
 export default function IzohlarPage() {
-  const [reviews, setReviews] = useState<ProductReview[]>(initialReviews);
+  const [apiReviews, setApiReviews] = useState<ApiReview[]>([]);
+  const [apiStats, setApiStats] = useState<ApiStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<ReviewStatus | "all">("all");
   const [selectedReview, setSelectedReview] = useState<ProductReview | null>(null);
+
+  const reload = async () => {
+    try {
+      const res = await api<{ items: ApiReview[]; stats: ApiStats }>("/reviews");
+      setApiReviews(res.items);
+      setApiStats(res.stats);
+    } catch { /* offline */ } finally { setLoading(false); }
+  };
+  useEffect(() => { reload(); }, []);
+
+  const reviews = useMemo(() => apiReviews.map(adapt), [apiReviews]);
+
+  const moderate = async (id: string, status: "APPROVED" | "REJECTED") => {
+    setBusyId(id);
+    try {
+      await api(`/reviews/${id}`, { method: "PATCH", body: { status } });
+      await reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Xato");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -40,11 +104,18 @@ export default function IzohlarPage() {
   }, [reviews, search, filterStatus]);
 
   const stats = useMemo(() => {
+    if (apiStats) {
+      return {
+        pending: apiStats.pending,
+        approved: apiStats.approved,
+        avgRating: apiStats.total > 0 ? apiStats.avgRating.toFixed(1) : "0.0",
+      };
+    }
     const pending = reviews.filter((r) => r.status === "pending").length;
     const approved = reviews.filter((r) => r.status === "approved").length;
-    const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+    const avgRating = reviews.length > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "0.0";
     return { pending, approved, avgRating };
-  }, [reviews]);
+  }, [reviews, apiStats]);
 
   return (
     <div className="space-y-6">
@@ -103,7 +174,12 @@ export default function IzohlarPage() {
       </div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-        {reviews.length === 0 ? (
+        {loading ? (
+          <div className="py-12 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            Yuklanmoqda…
+          </div>
+        ) : reviews.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
             title="Hali izohlar yo'q"
@@ -139,14 +215,18 @@ export default function IzohlarPage() {
                     {r.status === "pending" && (
                       <div className="flex gap-2">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setReviews(reviews.map(rv => rv.id === r.id ? { ...rv, status: "approved" as ReviewStatus } : rv)); }}
-                          className="p-1.5 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-700"
+                          onClick={(e) => { e.stopPropagation(); moderate(r.id, "APPROVED"); }}
+                          disabled={busyId === r.id}
+                          className="p-1.5 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-700 disabled:opacity-50"
+                          title="Tasdiqlash"
                         >
-                          <Check className="w-4 h-4" />
+                          {busyId === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setReviews(reviews.map(rv => rv.id === r.id ? { ...rv, status: "rejected" as ReviewStatus } : rv)); }}
-                          className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-700"
+                          onClick={(e) => { e.stopPropagation(); moderate(r.id, "REJECTED"); }}
+                          disabled={busyId === r.id}
+                          className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-700 disabled:opacity-50"
+                          title="Rad etish"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -181,14 +261,16 @@ export default function IzohlarPage() {
                   {selectedReview.status === "pending" && (
                     <>
                       <button
-                        onClick={() => { setReviews(reviews.map(r => r.id === selectedReview.id ? { ...r, status: "rejected" as ReviewStatus } : r)); setSelectedReview(null); }}
-                        className="px-3 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium"
+                        onClick={() => { moderate(selectedReview.id, "REJECTED"); setSelectedReview(null); }}
+                        disabled={busyId === selectedReview.id}
+                        className="px-3 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-medium"
                       >
                         Rad etish
                       </button>
                       <button
-                        onClick={() => { setReviews(reviews.map(r => r.id === selectedReview.id ? { ...r, status: "approved" as ReviewStatus } : r)); setSelectedReview(null); }}
-                        className="px-3 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                        onClick={() => { moderate(selectedReview.id, "APPROVED"); setSelectedReview(null); }}
+                        disabled={busyId === selectedReview.id}
+                        className="px-3 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium"
                       >
                         Tasdiqlash
                       </button>
