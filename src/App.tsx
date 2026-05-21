@@ -30,6 +30,7 @@ const RassilkaPage = lazy(() => import("./components/pages/RassilkaPage"));
 const PromoPage = lazy(() => import("./components/pages/PromoPage"));
 const PopupsPage = lazy(() => import("./components/PopupsPage"));
 const SaleCampaignsPage = lazy(() => import("./components/SaleCampaignsPage"));
+const AbandonedCartsPage = lazy(() => import("./components/AbandonedCartsPage"));
 const SovgalarPage = lazy(() => import("./components/pages/SovgalarPage"));
 const SmsPage = lazy(() => import("./components/pages/SmsPage"));
 const KanalPage = lazy(() => import("./components/pages/KanalPage"));
@@ -192,6 +193,8 @@ function AppShell() {
             return <PopupsPage />;
           case "aksiyalar":
             return <SaleCampaignsPage />;
+          case "abandoned":
+            return <AbandonedCartsPage />;
           case "rassilka":
             return <RassilkaPage />;
           case "promokod":
