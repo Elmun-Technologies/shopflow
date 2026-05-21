@@ -171,6 +171,45 @@ function saveCart(slug: string, items: CartItem[]) {
   }
 }
 
+// Profile / Manzillar — Mini App profilida saqlangan, checkout'da auto-fill uchun
+interface StoredProfile {
+  firstName?: string;
+  lastName?: string;
+  patronymic?: string;
+  phone?: string;
+  birthDate?: string;
+  gender?: string;
+}
+interface StoredAddress {
+  id: string;
+  label: string;
+  city: string;
+  street: string;
+  apartment?: string;
+  notes?: string;
+}
+function loadStoredProfile(slug: string): StoredProfile | null {
+  try {
+    const raw = localStorage.getItem(`shopflow:store:${slug}:profile`);
+    if (!raw) return null;
+    return JSON.parse(raw) as StoredProfile;
+  } catch {
+    return null;
+  }
+}
+function loadStoredAddresses(slug: string): StoredAddress[] {
+  try {
+    const raw = localStorage.getItem(`shopflow:store:${slug}:addresses`);
+    if (!raw) return [];
+    return JSON.parse(raw) as StoredAddress[];
+  } catch {
+    return [];
+  }
+}
+function formatAddress(a: StoredAddress): string {
+  return [a.city, a.street, a.apartment].filter(Boolean).join(", ");
+}
+
 type StoreCategory = {
   id: string;
   name: string;
@@ -302,6 +341,7 @@ function StoreInner({ slug }: { slug: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites(slug));
+  const [savedAddresses] = useState<StoredAddress[]>(() => loadStoredAddresses(slug));
   const toast = useToast();
 
   const toggleFavorite = useCallback((productId: string) => {
@@ -325,12 +365,20 @@ function StoreInner({ slug }: { slug: string }) {
       // Telegram WebApp mavjud bo'lmagan muhitda xatolikni e'tiborsiz qoldiramiz
     }
 
-    // Pre-fill name from Telegram
+    // Pre-fill name from Profile (saqlangan ma'lumotlar) → fallback Telegram
+    const savedProfile = loadStoredProfile(slug);
+    const profileName = savedProfile ? [savedProfile.firstName, savedProfile.lastName].filter(Boolean).join(" ").trim() : "";
+    const savedAddrs = loadStoredAddresses(slug);
+    const defaultAddress = savedAddrs[0];
     const tgUser = twa?.initDataUnsafe?.user;
-    if (tgUser) {
-      const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-      setForm((prev) => ({ ...prev, name: prev.name || fullName }));
-    }
+    const tgFullName = tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") : "";
+
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name || profileName || tgFullName,
+      phone: prev.phone || savedProfile?.phone || "",
+      address: prev.address || (defaultAddress ? formatAddress(defaultAddress) : ""),
+    }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -633,6 +681,29 @@ function StoreInner({ slug }: { slug: string }) {
 
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Manzil</label>
+              {savedAddresses.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+                  {savedAddresses.map((a) => {
+                    const full = formatAddress(a);
+                    const isActive = form.address === full;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, address: full }))}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${
+                          isActive
+                            ? "text-white"
+                            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                        }`}
+                        style={isActive ? { backgroundColor: primaryColor } : {}}
+                      >
+                        📍 {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
