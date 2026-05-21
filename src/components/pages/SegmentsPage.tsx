@@ -1,8 +1,39 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, Users, Filter, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, Users, Filter, AlertCircle, CheckCircle2, Loader2, Send } from "lucide-react";
 import type { CustomerSegment, SegmentType, SegmentCondition } from "../../data/customersData";
-import { initialSegments, segmentTypeLabels, segmentConditionFields, customers } from "../../data/customersData";
+import { segmentTypeLabels, segmentConditionFields, customers } from "../../data/customersData";
+import { api } from "../../api/client";
+
+// Backend'dan keladigan format (uppercase enum)
+interface ApiSegment {
+  id: string;
+  name: string;
+  description: string;
+  type: "AUTOMATIC" | "MANUAL" | "SMART";
+  active: boolean;
+  conditions: unknown;
+  tags: string[];
+  memberCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function adaptSegment(s: ApiSegment): CustomerSegment {
+  return {
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    type: s.type.toLowerCase() as SegmentType,
+    active: s.active,
+    conditions: (Array.isArray(s.conditions) ? s.conditions : []) as SegmentCondition[],
+    tags: s.tags ?? [],
+    memberCount: s.memberCount,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+    createdBy: "—",
+  };
+}
 
 const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
 const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
@@ -31,12 +62,26 @@ function ConditionsList({ conditions }: { conditions: SegmentCondition[] }) {
 }
 
 export default function SegmentsPage() {
-  const [segments, setSegments] = useState<CustomerSegment[]>(initialSegments);
+  const [segments, setSegments] = useState<CustomerSegment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [pageMode, setPageMode] = useState<"list" | "create" | "edit" | "view">("list");
   const [editItem, setEditItem] = useState<CustomerSegment | null>(null);
   const [viewItem, setViewItem] = useState<CustomerSegment | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [broadcastFor, setBroadcastFor] = useState<CustomerSegment | null>(null);
+
+  // Backend'dan yuklash
+  const reload = async () => {
+    try {
+      const res = await api<{ items: ApiSegment[] }>("/segments");
+      setSegments(res.items.map(adaptSegment));
+    } catch { /* offline */ } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { reload(); }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -53,26 +98,58 @@ export default function SegmentsPage() {
     return <SegmentDetailView segment={viewItem} onBack={() => { setPageMode("list"); setViewItem(null); }} />;
   }
 
-  const handleSave = (data: Pick<CustomerSegment, "name" | "description" | "type" | "active">) => {
-    if (!data.name.trim()) return;
-    const now = new Date().toISOString();
-    if (editItem) {
-      setSegments((prev) => prev.map((s) => (s.id === editItem.id ? { ...editItem, ...data, updatedAt: now } : s)));
-    } else {
-      const newSegment: CustomerSegment = {
-        id: `segment-${Date.now()}`,
-        conditions: [],
-        memberCount: 0,
-        createdAt: now,
-        updatedAt: now,
-        createdBy: "admin",
-        tags: [],
-        ...data,
+  const handleSave = async (data: Pick<CustomerSegment, "name" | "description" | "type" | "active">) => {
+    if (!data.name.trim() || busy) return;
+    setBusy(true);
+    try {
+      const body = {
+        name: data.name.trim(),
+        description: data.description ?? "",
+        type: data.type.toUpperCase(),
+        active: data.active,
       };
-      setSegments((prev) => [newSegment, ...prev]);
+      if (editItem) {
+        await api(`/segments/${editItem.id}`, { method: "PATCH", body });
+      } else {
+        await api("/segments", { method: "POST", body });
+      }
+      await reload();
+      setPageMode("list");
+      setEditItem(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Saqlanmadi");
+    } finally {
+      setBusy(false);
     }
-    setPageMode("list");
-    setEditItem(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    setPendingDelete(null);
+    setBusy(true);
+    try {
+      await api(`/segments/${id}`, { method: "DELETE" });
+      await reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "O'chirilmadi");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleBroadcast = async (segment: CustomerSegment, text: string) => {
+    setBroadcastFor(null);
+    setBusy(true);
+    try {
+      const res = await api<{ sent: number; skipped: number; total: number }>(
+        `/segments/${segment.id}/broadcast`,
+        { method: "POST", body: { text } },
+      );
+      alert(`Rassilka yakunlandi: ${res.sent}/${res.total} ta yetkazildi, ${res.skipped} ta o'tkazib yuborildi`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Rassilka yuborilmadi");
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (pageMode !== "list") {
@@ -128,7 +205,9 @@ export default function SegmentsPage() {
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 py-12 text-center text-slate-500">Segmentlar topilmadi</div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 py-12 text-center text-slate-500">
+            {loading ? "Yuklanmoqda…" : "Segmentlar topilmadi"}
+          </div>
         ) : (
           filtered.map((segment) => (
             <motion.div key={segment.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 hover:bg-slate-900/70 transition-colors">
@@ -150,6 +229,14 @@ export default function SegmentsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => setBroadcastFor(segment)}
+                    disabled={segment.memberCount === 0}
+                    className="p-2 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={segment.memberCount === 0 ? "A'zo yo'q" : "Rassilka yuborish"}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
                   <button onClick={() => { setViewItem(segment); setPageMode("view"); }} className="p-2 rounded text-slate-400 hover:text-white hover:bg-slate-800" title="Ko'rish">
                     <Eye className="w-4 h-4" />
                   </button>
@@ -174,12 +261,61 @@ export default function SegmentsPage() {
               <p className="text-sm text-slate-400 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-                <button onClick={() => { setSegments((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium">O'chirish</button>
+                <button onClick={() => handleDelete(pendingDelete)} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium">O'chirish</button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Rassilka modali */}
+      {broadcastFor && (
+        <BroadcastModal
+          segment={broadcastFor}
+          busy={busy}
+          onClose={() => setBroadcastFor(null)}
+          onSend={(text) => handleBroadcast(broadcastFor, text)}
+        />
+      )}
+    </div>
+  );
+}
+
+function BroadcastModal({
+  segment, busy, onClose, onSend,
+}: {
+  segment: CustomerSegment;
+  busy: boolean;
+  onClose: () => void;
+  onSend: (text: string) => void;
+}) {
+  const [text, setText] = useState("");
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-white mb-1">Rassilka</h3>
+        <p className="text-xs text-slate-400 mb-4">
+          Segment: <span className="text-white">{segment.name}</span> · <span className="text-emerald-400">{segment.memberCount} a'zo</span>
+        </p>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={5}
+          placeholder="Xabar matnini yozing… (faqat 'notifyPromotions' yoqilgan mijozlar oladi)"
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+        />
+        <div className="flex gap-2 mt-4 justify-end">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
+          <button
+            onClick={() => text.trim() && onSend(text.trim())}
+            disabled={!text.trim() || busy}
+            className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium flex items-center gap-1.5"
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Yuborish
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
