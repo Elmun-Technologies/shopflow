@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { productsApi, categoriesApi } from "../api/endpoints";
+import { api } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import type { Product, Category } from "../types/api";
@@ -300,6 +301,47 @@ function ProductFormModal({
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
   const [extraImages, setExtraImages] = useState<string[]>(product?.images ?? []);
+  const [comboAddons, setComboAddons] = useState<Array<{ addonProductId: string; discountPct: number; defaultSelected: boolean; position: number; productName?: string; productImage?: string | null; productPrice?: string | number }>>([]);
+  const [comboPickerOpen, setComboPickerOpen] = useState(false);
+  const [productsCatalog, setProductsCatalog] = useState<Array<{ id: string; name: string; sku: string; price: string | number; imageUrl: string | null }>>([]);
+
+  // Edit rejimida mavjud combo'larni yuklash
+  useEffect(() => {
+    if (!product?.id) return;
+    let cancelled = false;
+    api<{ addons: Array<{ id: string; addonProductId: string; position: number; discountPct: number; defaultSelected: boolean; product: { id: string; name: string; sku: string; price: string | number; imageUrl: string | null } }> }>(
+      `/products/${product.id}/addons`,
+    )
+      .then((res) => {
+        if (cancelled) return;
+        setComboAddons(
+          res.addons.map((a) => ({
+            addonProductId: a.addonProductId,
+            discountPct: a.discountPct,
+            defaultSelected: a.defaultSelected,
+            position: a.position,
+            productName: a.product.name,
+            productImage: a.product.imageUrl,
+            productPrice: a.product.price,
+          })),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.id]);
+
+  // Combo picker ochilganda mahsulotlar ro'yxatini yuklash
+  useEffect(() => {
+    if (!comboPickerOpen || productsCatalog.length > 0) return;
+    api<{ items: Array<{ id: string; name: string; sku: string; price: string | number; imageUrl: string | null }> }>(
+      "/products",
+      { query: { pageSize: 200 } },
+    )
+      .then((res) => setProductsCatalog(res.items))
+      .catch(() => undefined);
+  }, [comboPickerOpen, productsCatalog.length]);
   const [uploading, setUploading] = useState(false);
   const [extraUploading, setExtraUploading] = useState(false);
   const [featured, setFeatured] = useState(product?.featured ?? false);
@@ -387,10 +429,27 @@ function ProductFormModal({
         featured,
         active,
       };
+      let savedProductId = product?.id;
       if (product) {
         await productsApi.update(product.id, data);
       } else {
-        await productsApi.create(data);
+        const created = await productsApi.create(data);
+        savedProductId = created.id;
+      }
+
+      // Combo addons saqlash
+      if (savedProductId) {
+        await api(`/products/${savedProductId}/addons`, {
+          method: "PUT",
+          body: {
+            addons: comboAddons.map((a, i) => ({
+              addonProductId: a.addonProductId,
+              position: a.position ?? i,
+              discountPct: a.discountPct,
+              defaultSelected: a.defaultSelected,
+            })),
+          },
+        });
       }
       onSaved();
     } catch (err) {
@@ -619,6 +678,123 @@ function ProductFormModal({
               Bir necha rasmni bir vaqtda tanlashingiz mumkin. Hover qilib tartibni o'zgartiring yoki o'chiring.
             </p>
           </Field>
+
+          {/* Combo / qo'shimcha mahsulotlar (Amazon-style) */}
+          <Field label={`🎁 Combo qo'shimchalari (${comboAddons.length}) — Mini App'da "Bularni ham qo'shing"`}>
+            {comboAddons.length > 0 && (
+              <div className="space-y-2 mb-2">
+                {comboAddons.map((addon, i) => (
+                  <div key={addon.addonProductId} className="flex items-center gap-2 bg-slate-800/50 border border-slate-800 rounded-lg p-2">
+                    {addon.productImage ? (
+                      <img src={addon.productImage} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center flex-shrink-0">
+                        <Package className="w-4 h-4 text-slate-600" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-white truncate">{addon.productName}</div>
+                      <div className="text-[10px] text-slate-500">{Number(addon.productPrice ?? 0).toLocaleString("uz-UZ")} so'm</div>
+                    </div>
+                    <label className="flex items-center gap-1 text-[10px] text-slate-400">
+                      <input
+                        type="number"
+                        value={addon.discountPct}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                          setComboAddons((prev) => prev.map((a, j) => j === i ? { ...a, discountPct: v } : a));
+                        }}
+                        min={0}
+                        max={100}
+                        className="w-12 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs text-white text-center"
+                      />
+                      <span>%</span>
+                    </label>
+                    <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={addon.defaultSelected}
+                        onChange={(e) => {
+                          const ck = e.target.checked;
+                          setComboAddons((prev) => prev.map((a, j) => j === i ? { ...a, defaultSelected: ck } : a));
+                        }}
+                        className="w-3 h-3"
+                      />
+                      <span>default</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setComboAddons((prev) => prev.filter((_, j) => j !== i))}
+                      className="text-slate-500 hover:text-rose-400 p-1"
+                      aria-label="O'chirish"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setComboPickerOpen(true)}
+              className="w-full py-2 border-2 border-dashed border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 rounded-lg text-xs text-slate-400 hover:text-emerald-300 transition-colors flex items-center justify-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Qo'shimcha mahsulot qo'shish
+            </button>
+            <p className="text-[10px] text-slate-500 mt-1.5">
+              Mijoz Mini App'da bu mahsulotni ochganda "Bularni ham qo'shing" bo'limi ko'rinadi.
+              `default` belgisi — checkbox boshlang'ich tanlangan bo'ladi. `%` — combo bilan birga olganda chegirma.
+            </p>
+          </Field>
+
+          {/* Combo picker modal */}
+          {comboPickerOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4" onClick={() => setComboPickerOpen(false)}>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Mahsulot qo'shish</h3>
+                  <button type="button" onClick={() => setComboPickerOpen(false)} className="p-1 text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-2 space-y-1">
+                  {productsCatalog.filter((p) => p.id !== product?.id && !comboAddons.find((a) => a.addonProductId === p.id)).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setComboAddons((prev) => [...prev, {
+                          addonProductId: p.id,
+                          discountPct: 0,
+                          defaultSelected: false,
+                          position: prev.length,
+                          productName: p.name,
+                          productImage: p.imageUrl,
+                          productPrice: p.price,
+                        }]);
+                        setComboPickerOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800/60 text-left"
+                    >
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover" />
+                      ) : (
+                        <div className="w-9 h-9 rounded bg-slate-800 flex items-center justify-center">
+                          <Package className="w-4 h-4 text-slate-600" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-white truncate">{p.name}</div>
+                        <div className="text-[10px] text-slate-500">{p.sku} · {Number(p.price).toLocaleString("uz-UZ")} so'm</div>
+                      </div>
+                      <Plus className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">

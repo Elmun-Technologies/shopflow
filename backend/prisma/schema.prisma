@@ -250,6 +250,10 @@ model Product {
 
   orderItems OrderItem[]
 
+  // Combo / qo'shimcha mahsulotlar (Amazon-style "Frequently bought together")
+  comboAddons     ProductAddon[] @relation("ComboMain")
+  belongsToCombos ProductAddon[] @relation("ComboAddon")
+
   @@unique([tenantId, sku])
   @@unique([tenantId, moyskladId])
   @@index([tenantId, active])
@@ -582,4 +586,34 @@ model AbandonedCart {
   @@unique([tenantId, telegramUserId])
   @@index([tenantId, lastActiveAt])
   @@index([reminderSentAt])
+}
+
+// ============== Product Combo / Add-ons ==============
+// Amazon-style "Frequently bought together":
+// Bir mahsulotga qo'shimcha mahsulotlar biriktiriladi. Mini App'da quick view'da
+// "Bularni ham qo'shing" bo'limi paydo bo'ladi.
+
+model ProductAddon {
+  id       String @id @default(cuid())
+  tenantId String
+
+  // Asosiy mahsulot (uning quick view'ida add-on'lar ko'rinadi)
+  mainProductId String
+  mainProduct   Product @relation("ComboMain", fields: [mainProductId], references: [id], onDelete: Cascade)
+
+  // Qo'shimcha mahsulot (savatga qo'shiladigan ekstra)
+  addonProductId String
+  addonProduct   Product @relation("ComboAddon", fields: [addonProductId], references: [id], onDelete: Cascade)
+
+  // Tartib (kim birinchi ko'rinadi)
+  position        Int     @default(0)
+  // Combo bilan birga olinsa qancha foiz chegirma (0..100)
+  discountPct     Int     @default(0)
+  // Default tanlangan bo'lsinmi (true = checkbox tanlangan)
+  defaultSelected Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([mainProductId, addonProductId])
+  @@index([tenantId, mainProductId])
 }

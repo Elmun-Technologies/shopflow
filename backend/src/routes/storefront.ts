@@ -29,6 +29,18 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           saleCampaign: {
             select: { id: true, label: true, badgeColor: true, active: true, startsAt: true, endsAt: true },
           },
+          comboAddons: {
+            orderBy: { position: "asc" },
+            select: {
+              id: true,
+              position: true,
+              discountPct: true,
+              defaultSelected: true,
+              addonProduct: {
+                select: { id: true, name: true, sku: true, price: true, imageUrl: true, stock: true, active: true },
+              },
+            },
+          },
         },
         orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
       }),
