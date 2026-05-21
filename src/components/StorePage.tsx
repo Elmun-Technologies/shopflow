@@ -290,6 +290,8 @@ type CheckoutForm = {
   email: string;
   address: string;
   notes: string;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 type StoreView = "home" | "catalog" | "promotions" | "profile" | "category" | "cart" | "checkout" | "success";
@@ -369,7 +371,8 @@ function StoreInner({ slug }: { slug: string }) {
   const [cartRemindShown, setCartRemindShown] = useState(false);
   const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "newest">("popular");
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
-  const [form, setForm] = useState<CheckoutForm>({ name: "", phone: "", email: "", address: "", notes: "" });
+  const [form, setForm] = useState<CheckoutForm>({ name: "", phone: "", email: "", address: "", notes: "", lat: null, lng: null });
+  const [gpsBusy, setGpsBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
@@ -943,10 +946,55 @@ function StoreInner({ slug }: { slug: string }) {
                   type="text"
                   placeholder="Yetkazib berish manzili"
                   value={form.address}
-                  onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
+              {/* GPS — joriy joylashuvni olish */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    alert("Bu brauzerda GPS qo'llab-quvvatlanmaydi");
+                    return;
+                  }
+                  setGpsBusy(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const { latitude, longitude } = pos.coords;
+                      const lat = Number(latitude.toFixed(6));
+                      const lng = Number(longitude.toFixed(6));
+                      // Address bo'sh bo'lsa, koordinatadan o'qiladigan label yasaymiz
+                      setForm((f) => ({
+                        ...f,
+                        lat,
+                        lng,
+                        address: f.address.trim() || `GPS: ${lat}, ${lng}`,
+                      }));
+                      haptic.medium();
+                      setGpsBusy(false);
+                    },
+                    (err) => {
+                      setGpsBusy(false);
+                      alert(err.code === err.PERMISSION_DENIED
+                        ? "GPS ruxsati berilmagan — sozlamalardan ruxsat bering"
+                        : "Joriy joylashuvni aniqlab bo'lmadi");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+                  );
+                }}
+                disabled={gpsBusy}
+                className="mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/15 disabled:opacity-50 rounded-xl text-sm text-sky-300 transition-colors"
+              >
+                {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="text-base leading-none">📍</span>}
+                Joriy joylashuvni olish
+              </button>
+              {form.lat != null && form.lng != null && (
+                <p className="text-[11px] text-emerald-300 mt-1.5 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  GPS aniqlandi: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
+                </p>
+              )}
             </div>
 
             <div>

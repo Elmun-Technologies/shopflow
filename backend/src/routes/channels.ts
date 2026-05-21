@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
+import { pingBotToken, sendTelegramRaw } from "../lib/telegram-notify.js";
 
 const channelTypeEnum = z.enum([
   "WEBSITE",
@@ -185,6 +186,80 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
           error: "Telegram API'ga ulanib bo'lmadi: " + (err instanceof Error ? err.message : "xato"),
         });
       }
+    },
+  );
+
+  // Telegram kanal diagnostikasi — token to'g'rimi, bot username, webhook URL
+  app.get("/:id/telegram/diagnose", async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const ch = await app.prisma.channel.findFirst({
+      where: { id, tenantId: req.session.tenantId },
+    });
+    if (!ch) return reply.code(404).send({ error: "Channel topilmadi" });
+    if (ch.type !== "TELEGRAM") {
+      return reply.code(400).send({ error: "Faqat Telegram kanali uchun" });
+    }
+    const config = (ch.config ?? {}) as Record<string, unknown>;
+    const token = config.botToken as string | undefined;
+    if (!token) {
+      return {
+        ok: false,
+        steps: {
+          tokenConfigured: false,
+          botReachable: false,
+          webhookKey: ch.webhookKey,
+        },
+        hint: "Bot tokenini sozlash kerak",
+      };
+    }
+    const ping = await pingBotToken(token);
+    return {
+      ok: ping.ok,
+      steps: {
+        tokenConfigured: true,
+        botReachable: ping.ok,
+        botUsername: ping.username,
+        webhookKey: ch.webhookKey,
+      },
+      hint: ping.ok
+        ? "Bot ishlamoqda — mijozlar /start bossa xabar yuborish mumkin"
+        : `Bot javob bermayapti: ${ping.description ?? "?"}`,
+    };
+  });
+
+  // Telegram test xabari — admin chatId kiritadi, mijoz holatini simulyatsiya qiladi
+  app.post(
+    "/:id/telegram/test",
+    { preHandler: [app.requireRole("OWNER", "ADMIN")] },
+    async (req, reply) => {
+      const { id } = z.object({ id: z.string() }).parse(req.params);
+      const body = z.object({ chatId: z.union([z.number(), z.string()]), text: z.string().min(1).max(500).optional() }).parse(req.body);
+      const ch = await app.prisma.channel.findFirst({
+        where: { id, tenantId: req.session.tenantId },
+      });
+      if (!ch) return reply.code(404).send({ error: "Channel topilmadi" });
+      if (ch.type !== "TELEGRAM") {
+        return reply.code(400).send({ error: "Faqat Telegram kanali uchun" });
+      }
+      const config = (ch.config ?? {}) as Record<string, unknown>;
+      const token = config.botToken as string | undefined;
+      if (!token) return reply.code(400).send({ error: "Bot token sozlanmagan" });
+
+      const text = body.text ?? "✅ <b>ShopFlow test xabari</b>\n\nBot ishlayapti.";
+      const result = await sendTelegramRaw(token, body.chatId, text);
+      if (!result.ok) {
+        return reply.code(400).send({
+          ok: false,
+          errorCode: result.errorCode,
+          description: result.description,
+          hint: result.errorCode === 403
+            ? "Mijoz bot bilan suhbatni boshlamagan — /start bossa kerak"
+            : result.errorCode === 400
+              ? "Chat ID noto'g'ri yoki bot bloklangan"
+              : "Telegram API'da xato — token to'g'riligini tekshiring",
+        });
+      }
+      return { ok: true };
     },
   );
 };

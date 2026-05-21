@@ -71,6 +71,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       weeklyBuyersMap.set(item.productId, item._count._all);
     }
 
+    // Cache-Control — storefront ma'lumotlari sekundlar miqyosida o'zgarmaydi.
+    // 30 soniya client-side + 60 soniya stale-while-revalidate Caddy/CDN uchun.
+    reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+
     return {
       tenant,
       layout: storefront?.blocks ?? [],
@@ -88,6 +92,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       email: z.string().email().optional().or(z.literal("")),
       address: z.string().max(500).optional(),
       notes: z.string().max(1000).optional(),
+      // GPS koordinatalari — Mini App'da "📍 Joriy joylashuvni olish" tugmasi
+      lat: z.number().min(-90).max(90).optional(),
+      lng: z.number().min(-180).max(180).optional(),
     }),
     items: z
       .array(
@@ -211,6 +218,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         notes: noteParts.join(" | ") || null,
         customerId: customer.id,
         channelId,
+        // GPS koordinata mavjud bo'lsa yetkazib berish manzili sifatida saqlanadi
+        shippingAddress: data.customer.address || null,
+        shippingLat: data.customer.lat ?? null,
+        shippingLng: data.customer.lng ?? null,
         items: {
           create: items.map((i) => ({
             productId: i.productId,
