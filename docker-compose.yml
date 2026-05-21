@@ -38,8 +38,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-shopflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopflow}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env da o'rnating (kamida 32 belgi)}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      DOMAIN: ${DOMAIN:-localhost}
       PORT: "4000"
       UPLOADS_DIR: /app/uploads
+      # AI yordamchi — ixtiyoriy. Sozlansa Telegram'da mijoz xabarlariga AI javob beradi
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - uploads_data:/app/uploads
     expose:
