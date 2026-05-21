@@ -47,6 +47,8 @@ interface SidebarProps {
   onPageChange: (page: Page) => void;
   marketingSub: MarketingSub;
   onMarketingNavigate: (sub: MarketingSub) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 interface NavItem {
@@ -125,7 +127,7 @@ function loadState(): SidebarState {
   };
 }
 
-export default function Sidebar({ currentPage, onPageChange, marketingSub, onMarketingNavigate }: SidebarProps) {
+export default function Sidebar({ currentPage, onPageChange, marketingSub, onMarketingNavigate, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [state, setState] = useState<SidebarState>(loadState);
   const { user, tenant, logout } = useAuth();
   const confirmDialog = useConfirm();
@@ -162,12 +164,30 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
     .toUpperCase();
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{ width: collapsed ? 72 : 240 }}
-      transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="fixed left-0 top-0 h-screen bg-slate-900 border-r border-slate-800 z-50 flex flex-col"
-    >
+    <>
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onMobileClose}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 72 : 240 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        className={`fixed left-0 top-0 h-screen bg-slate-900 border-r border-slate-800 z-50 flex flex-col transition-transform duration-200 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
       {/* Logo */}
       <div className="flex items-center h-16 px-4 border-b border-slate-800">
         <div className="flex items-center gap-3 min-w-0">
@@ -268,7 +288,8 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           )}
         </button>
       </div>
-    </motion.aside>
+      </motion.aside>
+    </>
   );
 }
 
