@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { logAudit } from "../lib/audit.js";
 
 const productSchema = z.object({
   sku: z.string().min(1).max(60),
@@ -54,7 +55,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const data = productSchema.parse(req.body);
-    return app.prisma.product.create({
+    const created = await app.prisma.product.create({
       data: {
         ...data,
         imageUrl: data.imageUrl || null,
@@ -63,6 +64,18 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
         tenantId: req.session.tenantId,
       },
     });
+    const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
+    await logAudit({
+      prisma: app.prisma,
+      tenantId: req.session.tenantId,
+      actorId: req.session.userId,
+      actorName: actor?.name ?? null,
+      action: "CREATE",
+      resourceType: "product",
+      resourceId: created.id,
+      summary: `Mahsulot yaratildi: ${created.name}`,
+    });
+    return created;
   });
 
   app.patch("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
@@ -72,7 +85,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
-    return app.prisma.product.update({
+    const updated = await app.prisma.product.update({
       where: { id },
       data: {
         ...data,
@@ -80,6 +93,19 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
         ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
       },
     });
+    const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
+    const changedKeys = (Object.keys(data) as Array<keyof typeof data>).filter((k) => data[k] !== undefined);
+    await logAudit({
+      prisma: app.prisma,
+      tenantId: req.session.tenantId,
+      actorId: req.session.userId,
+      actorName: actor?.name ?? null,
+      action: "UPDATE",
+      resourceType: "product",
+      resourceId: id,
+      summary: `Tahrirlandi: ${changedKeys.length ? changedKeys.join(", ") : "—"}`,
+    });
+    return updated;
   });
 
   app.delete("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN")] }, async (req, reply) => {
@@ -89,6 +115,17 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
     await app.prisma.product.delete({ where: { id } });
+    const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
+    await logAudit({
+      prisma: app.prisma,
+      tenantId: req.session.tenantId,
+      actorId: req.session.userId,
+      actorName: actor?.name ?? null,
+      action: "DELETE",
+      resourceType: "product",
+      resourceId: id,
+      summary: `Mahsulot o'chirildi: ${product.name}`,
+    });
     return { ok: true };
   });
 };

@@ -25,6 +25,7 @@ import { popupRoutes } from "./routes/popups.js";
 import { saleCampaignRoutes } from "./routes/sale-campaigns.js";
 import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
 import { productAddonRoutes } from "./routes/product-addons.js";
+import { auditRoutes } from "./routes/audit.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
 
 const app = Fastify({
@@ -80,6 +81,7 @@ await app.register(saleCampaignRoutes, { prefix: "/api/sale-campaigns" });
 await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
 // Combo / product addons — mahsulotga qo'shimcha tovarlar (Amazon-style)
 await app.register(productAddonRoutes, { prefix: "/api/products" });
+await app.register(auditRoutes, { prefix: "/api/audit" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
