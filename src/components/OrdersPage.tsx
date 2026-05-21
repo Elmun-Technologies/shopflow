@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown } from "lucide-react";
+import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { ordersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
@@ -179,7 +179,7 @@ function OrderTable({
     setUpdatingId(orderId);
     try {
       await ordersApi.update(orderId, { status });
-      toast.success(`#${code} → ${statusConfig[status].label}`);
+      toast.success(`#${code} — ${statusConfig[status].label} · 📨 Mijoz xabardor qilindi`);
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Status yangilanmadi");
@@ -205,8 +205,17 @@ function OrderTable({
         <tbody>
           {orders.map((order) => {
             const cfg = statusConfig[order.status];
+            // PENDING — "Qabul qilish" (PROCESSING); PROCESSING — "Yetkazildi" (COMPLETED)
+            const quickAction: { next: OrderStatus; label: string } | null =
+              order.status === "PENDING" ? { next: "PROCESSING", label: "Qabul qilish" }
+              : order.status === "PROCESSING" ? { next: "COMPLETED", label: "Yetkazildi" }
+              : null;
             return (
-              <tr key={order.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+              <tr
+                key={order.id}
+                onClick={() => onOpen(order.id)}
+                className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
+              >
                 <td className="py-3 px-4">
                   <span className="text-sm font-medium text-white">#{order.code}</span>
                 </td>
@@ -224,7 +233,7 @@ function OrderTable({
                     {formatCurrency(Number(order.total), order.currency || currency)}
                   </span>
                 </td>
-                <td className="py-3 px-4 relative">
+                <td className="py-3 px-4 relative" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
                     disabled={updatingId === order.id}
@@ -262,14 +271,27 @@ function OrderTable({
                 <td className="py-3 px-4">
                   <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
                 </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    onClick={() => onOpen(order.id)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
-                    aria-label="Batafsil ko'rish"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
+                <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="inline-flex items-center gap-1.5">
+                    {quickAction && (
+                      <button
+                        onClick={() => handleChangeStatus(order.id, quickAction.next, order.code)}
+                        disabled={updatingId === order.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
+                        title={`${quickAction.label} → mijozga Telegram xabar yuboriladi`}
+                      >
+                        {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                        {quickAction.label}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onOpen(order.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                      aria-label="Batafsil ko'rish"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

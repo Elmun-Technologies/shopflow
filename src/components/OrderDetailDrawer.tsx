@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import {
   X, Phone, Mail, MapPin, Package as PackageIcon, ChevronDown, Loader2,
-  AlertCircle, User as UserIcon, Calendar, MessageSquare,
+  AlertCircle, User as UserIcon, Calendar, MessageSquare, Check, Send,
 } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
@@ -114,7 +114,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         body: { status },
       });
       setOrder({ ...order, status: updated.status });
-      toast.success(`Status: ${STATUS_CONFIG[status].label}`);
+      toast.success(`${STATUS_CONFIG[status].label} · 📨 Mijoz Telegram'da xabardor qilindi`);
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Status yangilanmadi");
@@ -174,6 +174,46 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
             </div>
 
             <div className="flex-1 p-5 space-y-5">
+              {/* Quick action panel — joriy status'ga ko'ra eng mantiqiy keyingi qadam */}
+              {(order.status === "PENDING" || order.status === "PROCESSING") && (
+                <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <Send className="w-3.5 h-3.5" />
+                    Keyingi qadam — bossangiz mijozga avtomatik Telegram xabar yuboriladi
+                  </div>
+                  <div className="flex gap-2">
+                    {order.status === "PENDING" && (
+                      <button
+                        onClick={() => handleStatusChange("PROCESSING")}
+                        disabled={updating}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-colors"
+                      >
+                        {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        Qabul qilish
+                      </button>
+                    )}
+                    {order.status === "PROCESSING" && (
+                      <button
+                        onClick={() => handleStatusChange("COMPLETED")}
+                        disabled={updating}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-colors"
+                      >
+                        {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        Yetkazildi
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleStatusChange("CANCELLED")}
+                      disabled={updating}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-700 hover:bg-rose-500/20 hover:text-rose-300 disabled:opacity-50 rounded-lg text-sm font-medium text-slate-300 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      Bekor
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Status dropdown */}
               <div className="relative">
                 <button
