@@ -7,6 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Order, OrderStatus } from "../types/api";
 import { useAppToast } from "./ui/Toast";
+import OrderDetailDrawer from "./OrderDetailDrawer";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; bg: string }> = {
   PENDING: { label: "Kutilmoqda", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
@@ -20,6 +21,7 @@ export default function OrdersPage() {
   const { tenant } = useAuth();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -126,7 +128,7 @@ export default function OrdersPage() {
             </p>
           </div>
         ) : (
-          <OrderTable orders={orders} currency={currency} onChanged={refetch} />
+          <OrderTable orders={orders} currency={currency} onChanged={refetch} onOpen={setOpenOrderId} />
         )}
 
         {total > pageSize && (
@@ -153,11 +155,21 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      <OrderDetailDrawer
+        orderId={openOrderId}
+        onClose={() => setOpenOrderId(null)}
+        onChanged={refetch}
+      />
     </>
   );
 }
 
-function OrderTable({ orders, currency, onChanged }: { orders: Order[]; currency: string; onChanged: () => void }) {
+function OrderTable({
+  orders, currency, onChanged, onOpen,
+}: {
+  orders: Order[]; currency: string; onChanged: () => void; onOpen: (id: string) => void;
+}) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const toast = useAppToast();
@@ -251,7 +263,11 @@ function OrderTable({ orders, currency, onChanged }: { orders: Order[]; currency
                   <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button
+                    onClick={() => onOpen(order.id)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                    aria-label="Batafsil ko'rish"
+                  >
                     <Eye className="w-4 h-4" />
                   </button>
                 </td>
