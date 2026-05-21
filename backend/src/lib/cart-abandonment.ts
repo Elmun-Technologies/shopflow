@@ -73,6 +73,20 @@ async function processOnce(prisma: PrismaClient, log: (msg: string, ...rest: unk
         await prisma.abandonedCart.delete({ where: { id: cart.id } });
         continue;
       }
+      // Notification opt-out — agar mijoz savat eslatmasini o'chirgan bo'lsa,
+      // shu eslatmani yuborilgan deb belgilab keyingisini o'tkazib yuboramiz.
+      const matchingCustomer = await prisma.customer.findFirst({
+        where: { tenantId: cart.tenantId, telegramUserId: cart.telegramUserId },
+        select: { notifyCartAbandonment: true },
+      });
+      if (matchingCustomer && !matchingCustomer.notifyCartAbandonment) {
+        await prisma.abandonedCart.update({
+          where: { id: cart.id },
+          data: { reminderSentAt: new Date(), remindersSent: { increment: 1 } },
+        });
+        log(`[cart-abandonment] ⏭ opted-out tenant=${cart.tenantId} tgUser=${cart.telegramUserId}`);
+        continue;
+      }
       const text = buildReminderText({
         storeName: cart.tenant.name,
         customerName: cart.customerName,

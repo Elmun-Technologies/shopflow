@@ -384,13 +384,34 @@ function StoreInner({ slug }: { slug: string }) {
 
   const toggleFavorite = useCallback((productId: string) => {
     haptic.light();
+    let added = false;
     setFavorites((prev) => {
       const next = new Set(prev);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
+      if (next.has(productId)) {
+        next.delete(productId);
+        added = false;
+      } else {
+        next.add(productId);
+        added = true;
+      }
       saveFavorites(slug, next);
       return next;
     });
+    // Server sync — Telegram user mavjud bo'lsa
+    const tgUid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    if (tgUid) {
+      if (added) {
+        fetch(`/api/storefront/${slug}/wishlist`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tgUserId: tgUid, productId }),
+        }).catch(() => null);
+      } else {
+        fetch(`/api/storefront/${slug}/wishlist/${productId}?tgUserId=${tgUid}`, {
+          method: "DELETE",
+        }).catch(() => null);
+      }
+    }
   }, [slug]);
 
   // Telegram WebApp — darhol ready() chaqirish (yuklanish ekranini yashirish uchun)
@@ -421,16 +442,34 @@ function StoreInner({ slug }: { slug: string }) {
     // Avto-ro'yxat — Telegram'dan tanilgan mijozni serverga yozib qo'yamiz
     // (telegramUserId bo'yicha upsert). Bu checkout'gacha kutmasdan
     // Customer record yaratadi va profile sync ishlashi uchun zarur.
+    // ?ref=<tgId> URL parametri bo'lsa, referral grafini bog'laymiz.
     if (tgUser) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refFromUrl = urlParams.get("ref");
+      // Telegram Mini App start_param ham referral sifatida ishlatiladi
+      type TwaWithStart = { initDataUnsafe?: { start_param?: string } };
+      const refFromTg = (twa as unknown as TwaWithStart | undefined)?.initDataUnsafe?.start_param;
+      const ref = refFromUrl || refFromTg;
       const params = new URLSearchParams({
         tgUserId: String(tgUser.id),
         ...(tgUser.first_name && { firstName: tgUser.first_name }),
         ...(tgUser.last_name && { lastName: tgUser.last_name }),
         ...(tgUser.username && { username: tgUser.username }),
+        ...(ref && /^\d+$/.test(ref) ? { ref } : {}),
       });
       fetch(`/api/storefront/${slug}/profile?${params}`).catch(() => {
         // Tarmoq xatosi — Mini App ishlashda davom etadi, checkout vaqtida qayta urinadi
       });
+      // Wishlist'ni server'dan yuklab, lokal favoritlar bilan birlashtiramiz.
+      // Server "haqiqat" manbai — qurilmadan-qurilmaga sevimlilar saqlanadi.
+      fetch(`/api/storefront/${slug}/wishlist?tgUserId=${tgUser.id}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+        .then((data: { items: Array<{ productId: string }> }) => {
+          const serverFavs = new Set(data.items.map((i) => i.productId));
+          setFavorites(serverFavs);
+          saveFavorites(slug, serverFavs);
+        })
+        .catch(() => { /* offline — localStorage'da turgan favoritlar saqlanadi */ });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

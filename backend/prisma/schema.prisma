@@ -255,6 +255,9 @@ model Product {
   comboAddons     ProductAddon[] @relation("ComboMain")
   belongsToCombos ProductAddon[] @relation("ComboAddon")
 
+  // Wishlist / favorites
+  wishlistedBy WishlistItem[]
+
   @@unique([tenantId, sku])
   @@unique([tenantId, moyskladId])
   @@index([tenantId, active])
@@ -320,17 +323,46 @@ model Customer {
   telegramUserId BigInt?
   telegramUsername String?
 
+  // Notification preferences — har bir kanal alohida o'chirilishi mumkin.
+  // Default — hammasi yoqilgan; foydalanuvchi xohlasa Profile'dan o'chiradi.
+  notifyOrderUpdates    Boolean @default(true)
+  notifyCartAbandonment Boolean @default(true)
+  notifyPromotions      Boolean @default(true)
+
+  // Referral graph — kim taklif qilgan (Customer.id), nechta odamga taklif yuborgan
+  referredByCustomerId String?
+  referredByCustomer   Customer?  @relation("Referrals", fields: [referredByCustomerId], references: [id], onDelete: SetNull)
+  referrals            Customer[] @relation("Referrals")
+
   // MoySklad sync uchun (counterparty)
   moyskladId      String?
   moyskladUpdated DateTime?
 
   orders    Order[]
   addresses CustomerAddress[]
+  wishlist  WishlistItem[]
 
   @@unique([tenantId, moyskladId])
   @@index([tenantId, email])
   @@index([tenantId, phone])
   @@index([tenantId, telegramUserId])
+  @@index([referredByCustomerId])
+}
+
+// Mijoz sevimli mahsulotlari
+model WishlistItem {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenantId   String
+
+  createdAt DateTime @default(now())
+
+  @@unique([customerId, productId])
+  @@index([customerId])
+  @@index([tenantId, productId])
 }
 
 // Mijoz manzillar kitobi — Mini App'dagi address chips, checkout autofill
