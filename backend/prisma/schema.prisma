@@ -307,19 +307,51 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Profil maydonlari — Mini App'dagi mijoz kabineti uchun
+  firstName  String?
+  lastName   String?
+  patronymic String?
+  birthDate  DateTime?
+  gender     String?   // "male" | "female"
+  language   String    @default("uz")
+  avatar     String?
+
   // Telegram Mini App orqali tanish — keyinchalik "Mening buyurtmalarim"
   telegramUserId BigInt?
+  telegramUsername String?
 
   // MoySklad sync uchun (counterparty)
   moyskladId      String?
   moyskladUpdated DateTime?
 
-  orders Order[]
+  orders    Order[]
+  addresses CustomerAddress[]
 
   @@unique([tenantId, moyskladId])
   @@index([tenantId, email])
   @@index([tenantId, phone])
   @@index([tenantId, telegramUserId])
+}
+
+// Mijoz manzillar kitobi — Mini App'dagi address chips, checkout autofill
+model CustomerAddress {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenantId   String
+
+  label      String   // "Uy", "Ish", "Onamning uyi"
+  city       String?
+  street     String   // ko'cha + uy raqami
+  apartment  String?
+  notes      String?
+  isDefault  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([tenantId, customerId])
 }
 
 // ============== ORDERS ==============
