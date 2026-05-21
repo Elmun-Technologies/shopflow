@@ -77,6 +77,24 @@ export async function notifyCustomer(
   return { sent: ok, reason: ok ? undefined : "sendMessage rejected" };
 }
 
+/**
+ * Customer yozuvi yo'q bo'lganda Telegram userId orqali to'g'ridan-to'g'ri
+ * xabar yuborish (cart abandonment va shu kabi holatlar uchun).
+ */
+export async function notifyCustomerByTelegramId(
+  prisma: PrismaClient,
+  tenantId: string,
+  telegramUserId: bigint,
+  text: string,
+  options?: Record<string, unknown>,
+): Promise<NotifyResult> {
+  const token = await getTenantBotToken(prisma, tenantId);
+  if (!token) return { sent: false, reason: "Tenant has no Telegram bot token" };
+
+  const ok = await sendTelegramMessage(token, telegramUserId.toString(), text, options);
+  return { sent: ok, reason: ok ? undefined : "sendMessage rejected" };
+}
+
 /** Buyurtma status'i o'zgarganda standart xabar formatlash + yuborish. */
 export async function notifyOrderStatusChange(
   prisma: PrismaClient,

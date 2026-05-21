@@ -23,6 +23,7 @@ import { uploadRoutes } from "./routes/upload.js";
 import { moyskladRoutes } from "./routes/moysklad.js";
 import { popupRoutes } from "./routes/popups.js";
 import { saleCampaignRoutes } from "./routes/sale-campaigns.js";
+import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
 
 const app = Fastify({
   logger: {
@@ -81,6 +82,13 @@ const host = process.env.HOST ?? "0.0.0.0";
 try {
   await app.listen({ port, host });
   app.log.info(`ShopFlow backend ${host}:${port} da ishlamoqda`);
+
+  // Cart abandonment scheduler — 1 soatdan ortiq tinch turgan savatlarga
+  // Telegram orqali "savatingiz kutmoqda" eslatma yuboradi. Har 5 daqiqada skanlaydi.
+  const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
+  app.addHook("onClose", async () => {
+    stopScheduler();
+  });
 } catch (err) {
   app.log.error(err);
   process.exit(1);

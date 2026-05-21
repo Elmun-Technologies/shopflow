@@ -37,6 +37,7 @@ model Tenant {
   webhookEvents   WebhookEvent[]
   popups          Popup[]
   saleCampaigns   SaleCampaign[]
+  abandonedCarts  AbandonedCart[]
 }
 
 enum UserRole {
@@ -549,4 +550,36 @@ model Popup {
 
   @@index([tenantId, active])
   @@index([tenantId, priority])
+}
+
+// ============== Cart abandonment ==============
+// Mijoz savatga mahsulot qo'shsa, server'da saqlanadi. Scheduler 1 soat kechikkanda
+// Telegram orqali "savatingiz kutmoqda" eslatma yuboradi.
+
+model AbandonedCart {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Mijoz identifikatori
+  telegramUserId BigInt
+  customerName   String?
+
+  // Savat tarkibi (JSON): [{ productId, qty, name, price, imageUrl }]
+  items    Json
+  total    Decimal @default(0) @db.Decimal(14, 2)
+  currency String  @default("UZS")
+
+  // Vaqt jadvali
+  lastActiveAt   DateTime  @default(now())
+  reminderSentAt DateTime?
+  // Reminder maksimal qancha marta yuboriladi (default 1 — 1 ta eslatma)
+  remindersSent  Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, telegramUserId])
+  @@index([tenantId, lastActiveAt])
+  @@index([reminderSentAt])
 }
