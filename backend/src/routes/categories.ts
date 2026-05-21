@@ -9,6 +9,7 @@ const categorySchema = z.object({
     .max(80)
     .regex(/^[a-z0-9-]+$/, "Faqat lotin harflar, raqamlar va tire"),
   parentId: z.string().optional().nullable(),
+  imageUrl: z.string().max(500).optional().nullable(),
 });
 
 export const categoryRoutes: FastifyPluginAsync = async (app) => {
@@ -30,6 +31,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         data: {
           ...data,
           parentId: data.parentId || null,
+          imageUrl: data.imageUrl || null,
           tenantId: req.session.tenantId,
         },
       });
@@ -48,7 +50,11 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       if (!c) return reply.code(404).send({ error: "Not found" });
       return app.prisma.category.update({
         where: { id },
-        data: { ...data, parentId: data.parentId || null },
+        data: {
+          ...data,
+          parentId: data.parentId || null,
+          imageUrl: data.imageUrl === undefined ? undefined : data.imageUrl || null,
+        },
       });
     },
   );

@@ -877,7 +877,35 @@ function CategoriesModal({
 }) {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const token = localStorage.getItem("shopflow.token");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || "Yuklash xatosi");
+      }
+      const { url } = (await res.json()) as { url: string };
+      setNewImageUrl(url);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Rasm yuklanmadi");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -889,9 +917,12 @@ function CategoriesModal({
         slug:
           newSlug.trim() ||
           newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+        imageUrl: newImageUrl || null,
       });
       setNewName("");
       setNewSlug("");
+      setNewImageUrl("");
+      setUploadError(null);
       onChanged();
     } catch {
       // ignore
@@ -941,9 +972,53 @@ function CategoriesModal({
             placeholder="slug (ixtiyoriy) — telefonlar"
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
+          <label
+            className={`flex items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+              uploading
+                ? "border-emerald-500/50 bg-emerald-500/5"
+                : newImageUrl
+                  ? "border-slate-700"
+                  : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+            }`}
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file);
+                e.target.value = "";
+              }}
+            />
+            {uploading ? (
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Yuklanmoqda...
+              </div>
+            ) : newImageUrl ? (
+              <div className="flex items-center gap-2">
+                <img src={newImageUrl} alt="preview" className="w-12 h-12 rounded object-cover" />
+                <span className="text-xs text-slate-400">Rasmni o'zgartirish</span>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-500">Rasm yuklash (ixtiyoriy)</span>
+            )}
+          </label>
+          {newImageUrl && !uploading && (
+            <button
+              type="button"
+              onClick={() => setNewImageUrl("")}
+              className="text-[11px] text-red-400 hover:text-red-300"
+            >
+              Rasmni olib tashlash
+            </button>
+          )}
+          {uploadError && <p className="text-[11px] text-red-400">{uploadError}</p>}
           <button
             type="submit"
-            disabled={saving || !newName.trim()}
+            disabled={saving || uploading || !newName.trim()}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -959,15 +1034,26 @@ function CategoriesModal({
             categories.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between px-3 py-2 hover:bg-slate-800 rounded-lg"
+                className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 rounded-lg"
               >
-                <div>
-                  <p className="text-sm text-white">{c.name}</p>
-                  <p className="text-xs text-slate-500">{c.slug}</p>
+                {c.imageUrl ? (
+                  <img
+                    src={c.imageUrl}
+                    alt={c.name}
+                    className="w-10 h-10 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-4 h-4 text-slate-600" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{c.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{c.slug}</p>
                 </div>
                 <button
                   onClick={() => handleDelete(c)}
-                  className="p-1.5 rounded text-slate-500 hover:text-red-400"
+                  className="p-1.5 rounded text-slate-500 hover:text-red-400 flex-shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
