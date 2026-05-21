@@ -4,11 +4,13 @@ import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle } from "
 import { useAsync } from "../hooks/useAsync";
 import { customersApi } from "../api/endpoints";
 import { formatDate } from "../utils/format";
+import CustomerDetailDrawer from "./CustomerDetailDrawer";
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 30;
+  const [openCustomerId, setOpenCustomerId] = useState<string | null>(null);
 
   const params = useMemo(
     () => ({ page, pageSize, search: search || undefined }),
@@ -85,7 +87,11 @@ export default function CustomersPage() {
               </thead>
               <tbody>
                 {customers.map((c) => (
-                  <tr key={c.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                  <tr
+                    key={c.id}
+                    className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                    onClick={() => setOpenCustomerId(c.id)}
+                  >
                     <td className="py-3 px-4">
                       <p className="text-sm font-medium text-white">{c.name}</p>
                       {c.tags.length > 0 && (
@@ -153,6 +159,12 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      <CustomerDetailDrawer
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        onChanged={refetch}
+      />
     </>
   );
 }

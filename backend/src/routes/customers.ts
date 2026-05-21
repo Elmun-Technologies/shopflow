@@ -43,6 +43,52 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     return { total, page: q.page, pageSize: q.pageSize, items };
   });
 
+  /** GET /:id — mijoz to'liq ma'lumot + buyurtma tarixi + statistika */
+  app.get("/:id", async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const tenantId = req.session.tenantId;
+    const customer = await app.prisma.customer.findFirst({
+      where: { id, tenantId },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    const [orderAgg, orders] = await Promise.all([
+      app.prisma.order.aggregate({
+        where: { tenantId, customerId: id, status: { in: ["COMPLETED", "PROCESSING", "PENDING"] } },
+        _sum: { total: true },
+        _count: { _all: true },
+      }),
+      app.prisma.order.findMany({
+        where: { tenantId, customerId: id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        include: {
+          items: { include: { product: { select: { name: true } } } },
+        },
+      }),
+    ]);
+
+    return {
+      customer: {
+        ...customer,
+        telegramUserId: customer.telegramUserId?.toString() ?? null,
+      },
+      stats: {
+        totalSpent: Number(orderAgg._sum.total ?? 0),
+        orderCount: orderAgg._count._all,
+      },
+      orders: orders.map((o) => ({
+        id: o.id,
+        code: o.code,
+        status: o.status,
+        total: Number(o.total),
+        currency: o.currency,
+        createdAt: o.createdAt,
+        itemCount: o.items.reduce((s, i) => s + i.qty, 0),
+      })),
+    };
+  });
+
   app.post("/", async (req) => {
     const data = customerSchema.parse(req.body);
     return app.prisma.customer.create({
