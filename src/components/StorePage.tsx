@@ -417,6 +417,21 @@ function StoreInner({ slug }: { slug: string }) {
       phone: prev.phone || savedProfile?.phone || "",
       address: prev.address || (defaultAddress ? formatAddress(defaultAddress) : ""),
     }));
+
+    // Avto-ro'yxat — Telegram'dan tanilgan mijozni serverga yozib qo'yamiz
+    // (telegramUserId bo'yicha upsert). Bu checkout'gacha kutmasdan
+    // Customer record yaratadi va profile sync ishlashi uchun zarur.
+    if (tgUser) {
+      const params = new URLSearchParams({
+        tgUserId: String(tgUser.id),
+        ...(tgUser.first_name && { firstName: tgUser.first_name }),
+        ...(tgUser.last_name && { lastName: tgUser.last_name }),
+        ...(tgUser.username && { username: tgUser.username }),
+      });
+      fetch(`/api/storefront/${slug}/profile?${params}`).catch(() => {
+        // Tarmoq xatosi — Mini App ishlashda davom etadi, checkout vaqtida qayta urinadi
+      });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

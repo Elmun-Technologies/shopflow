@@ -268,7 +268,16 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       where: { tenantId: tenant.id, customerId: customer.id },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { _count: { select: { items: true } } },
+      include: {
+        items: {
+          select: {
+            id: true,
+            qty: true,
+            price: true,
+            product: { select: { id: true, name: true, imageUrl: true, sku: true } },
+          },
+        },
+      },
     });
 
     return {
@@ -278,10 +287,275 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         status: o.status,
         total: Number(o.total),
         currency: o.currency,
+        notes: o.notes,
         createdAt: o.createdAt.toISOString(),
-        items: o._count.items,
+        items: o.items.map((it) => ({
+          id: it.id,
+          qty: it.qty,
+          price: Number(it.price),
+          product: it.product,
+        })),
       })),
     };
+  });
+
+  // Mijoz profilini topish (yoki birinchi marta avto-yaratish).
+  // Mini App ochilganda chaqiriladi — foydalanuvchi checkout'gacha kutmasdan
+  // tizimga ro'yxat oladi (telegramUserId orqali identifikatsiya).
+  // GET /api/storefront/:tenantSlug/profile?tgUserId=12345&firstName=...&lastName=...&username=...
+  const profileQuerySchema = z.object({
+    tgUserId: z.coerce.number().int().positive(),
+    firstName: z.string().max(80).optional(),
+    lastName: z.string().max(80).optional(),
+    username: z.string().max(80).optional(),
+  });
+  app.get("/:tenantSlug/profile", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const q = profileQuerySchema.parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const tgId = BigInt(q.tgUserId);
+    let customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: tgId },
+      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+    });
+
+    // Birinchi marta — avto-ro'yxat (firstName/lastName Telegram'dan)
+    if (!customer) {
+      const displayName = [q.firstName, q.lastName].filter(Boolean).join(" ") || "Mijoz";
+      customer = await app.prisma.customer.create({
+        data: {
+          tenantId: tenant.id,
+          name: displayName,
+          firstName: q.firstName ?? null,
+          lastName: q.lastName ?? null,
+          telegramUserId: tgId,
+          telegramUsername: q.username ?? null,
+        },
+        include: { addresses: true },
+      });
+    }
+
+    return {
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        patronymic: customer.patronymic,
+        phone: customer.phone,
+        email: customer.email,
+        birthDate: customer.birthDate?.toISOString().slice(0, 10) ?? null,
+        gender: customer.gender,
+        language: customer.language,
+        avatar: customer.avatar,
+        telegramUserId: customer.telegramUserId?.toString() ?? null,
+        telegramUsername: customer.telegramUsername,
+        createdAt: customer.createdAt.toISOString(),
+      },
+      addresses: customer.addresses.map((a) => ({
+        id: a.id,
+        label: a.label,
+        city: a.city,
+        street: a.street,
+        apartment: a.apartment,
+        notes: a.notes,
+        isDefault: a.isDefault,
+      })),
+    };
+  });
+
+  // Mijoz profilini yangilash
+  const profilePatchSchema = z.object({
+    tgUserId: z.coerce.number().int().positive(),
+    firstName: z.string().max(80).optional().nullable(),
+    lastName: z.string().max(80).optional().nullable(),
+    patronymic: z.string().max(80).optional().nullable(),
+    phone: z.string().max(40).optional().nullable(),
+    email: z.string().email().optional().nullable().or(z.literal("")),
+    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal("")),
+    gender: z.enum(["male", "female"]).optional().nullable().or(z.literal("")),
+    language: z.enum(["uz", "ru"]).optional(),
+  });
+  app.patch("/:tenantSlug/profile", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const data = profilePatchSchema.parse(req.body);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const tgId = BigInt(data.tgUserId);
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: tgId },
+      select: { id: true },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    // Display name = firstName + lastName (mavjudlarini birlashtirib)
+    const displayParts = [data.firstName, data.lastName].filter(Boolean) as string[];
+
+    const updated = await app.prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        ...(data.firstName !== undefined && { firstName: data.firstName || null }),
+        ...(data.lastName !== undefined && { lastName: data.lastName || null }),
+        ...(data.patronymic !== undefined && { patronymic: data.patronymic || null }),
+        ...(data.phone !== undefined && { phone: data.phone || null }),
+        ...(data.email !== undefined && { email: data.email || null }),
+        ...(data.birthDate !== undefined && {
+          birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        }),
+        ...(data.gender !== undefined && { gender: data.gender || null }),
+        ...(data.language !== undefined && { language: data.language }),
+        ...(displayParts.length > 0 && { name: displayParts.join(" ") }),
+      },
+    });
+
+    return {
+      customer: {
+        id: updated.id,
+        name: updated.name,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        patronymic: updated.patronymic,
+        phone: updated.phone,
+        email: updated.email,
+        birthDate: updated.birthDate?.toISOString().slice(0, 10) ?? null,
+        gender: updated.gender,
+        language: updated.language,
+        avatar: updated.avatar,
+      },
+    };
+  });
+
+  // Manzillar kitobi — CRUD (telegramUserId orqali identifikatsiya)
+  const addressSchema = z.object({
+    tgUserId: z.coerce.number().int().positive(),
+    label: z.string().min(1).max(40),
+    city: z.string().max(80).optional().nullable(),
+    street: z.string().min(1).max(200),
+    apartment: z.string().max(40).optional().nullable(),
+    notes: z.string().max(500).optional().nullable(),
+    isDefault: z.boolean().optional(),
+  });
+
+  app.post("/:tenantSlug/addresses", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const data = addressSchema.parse(req.body);
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    if (data.isDefault) {
+      // Boshqalardan default'ni olib tashlash
+      await app.prisma.customerAddress.updateMany({
+        where: { customerId: customer.id, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    const address = await app.prisma.customerAddress.create({
+      data: {
+        customerId: customer.id,
+        tenantId: tenant.id,
+        label: data.label,
+        city: data.city || null,
+        street: data.street,
+        apartment: data.apartment || null,
+        notes: data.notes || null,
+        isDefault: data.isDefault ?? false,
+      },
+    });
+
+    return reply.code(201).send({ address });
+  });
+
+  app.patch("/:tenantSlug/addresses/:id", async (req, reply) => {
+    const params = z.object({ tenantSlug: z.string(), id: z.string() }).parse(req.params);
+    const data = addressSchema.partial({ label: true, street: true }).parse(req.body);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: params.tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const tgUserId = data.tgUserId;
+    if (tgUserId == null) return reply.code(400).send({ error: "tgUserId kerak" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    const existing = await app.prisma.customerAddress.findFirst({
+      where: { id: params.id, customerId: customer.id },
+      select: { id: true },
+    });
+    if (!existing) return reply.code(404).send({ error: "Manzil topilmadi" });
+
+    if (data.isDefault) {
+      await app.prisma.customerAddress.updateMany({
+        where: { customerId: customer.id, isDefault: true, id: { not: params.id } },
+        data: { isDefault: false },
+      });
+    }
+
+    const address = await app.prisma.customerAddress.update({
+      where: { id: params.id },
+      data: {
+        ...(data.label !== undefined && { label: data.label }),
+        ...(data.street !== undefined && { street: data.street }),
+        ...(data.city !== undefined && { city: data.city || null }),
+        ...(data.apartment !== undefined && { apartment: data.apartment || null }),
+        ...(data.notes !== undefined && { notes: data.notes || null }),
+        ...(data.isDefault !== undefined && { isDefault: data.isDefault }),
+      },
+    });
+    return { address };
+  });
+
+  app.delete("/:tenantSlug/addresses/:id", async (req, reply) => {
+    const params = z.object({ tenantSlug: z.string(), id: z.string() }).parse(req.params);
+    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: params.tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+      select: { id: true },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    const existing = await app.prisma.customerAddress.findFirst({
+      where: { id: params.id, customerId: customer.id },
+      select: { id: true },
+    });
+    if (!existing) return reply.code(404).send({ error: "Manzil topilmadi" });
+
+    await app.prisma.customerAddress.delete({ where: { id: params.id } });
+    return { ok: true };
   });
 
   /**

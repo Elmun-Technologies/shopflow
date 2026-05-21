@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ChevronRight, ArrowLeft, User as UserIcon, ShoppingBag, Star, Ticket, Users,
-  Globe, MapPin, MessageCircle, Phone, Calendar, Plus, Trash2,
+  Globe, MapPin, MessageCircle, Phone, Calendar, Plus, Trash2, ChevronDown, Loader2, Send,
 } from "lucide-react";
 import { formatUzPhone } from "../../utils/phone";
 
@@ -34,6 +34,14 @@ interface Address {
   street: string;
   apartment?: string;
   notes?: string;
+  isDefault?: boolean;
+}
+
+interface OrderItemView {
+  id: string;
+  qty: number;
+  price: number;
+  product: { id: string; name: string; imageUrl: string | null; sku: string };
 }
 
 interface CustomerOrder {
@@ -42,8 +50,16 @@ interface CustomerOrder {
   status: string;
   total: number;
   currency: string;
+  notes?: string | null;
   createdAt: string;
-  items: number;
+  items: OrderItemView[];
+}
+
+// Telegram WebApp — requestContact API uchun (mahalliy declaration)
+type TwaContactResponse = { status: "sent" | "cancelled"; response?: { contact?: { phone_number?: string } } };
+interface TwaApi {
+  requestContact?: (cb: (ok: boolean, ev?: TwaContactResponse) => void) => void;
+  HapticFeedback?: { impactOccurred?: (s: string) => void; notificationOccurred?: (t: string) => void };
 }
 
 interface ProfilePageProps {
@@ -102,49 +118,147 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
   const [addresses, setAddresses] = useState<Address[]>(() => loadAddresses(storeSlug));
   const [orders, setOrders] = useState<CustomerOrder[] | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // Save handlers
-  const saveProfile = useCallback((next: ProfileData) => {
+  const tgUserId = telegramUser?.userId;
+  const isOnline = !!tgUserId;
+  const profileUrl = `${apiBase}/storefront/${encodeURIComponent(storeSlug)}/profile`;
+  const addressesUrl = `${apiBase}/storefront/${encodeURIComponent(storeSlug)}/addresses`;
+
+  // Serverdan profilni va manzillarni yuklash (telegramUser bo'lsa)
+  useEffect(() => {
+    if (!isOnline || profileLoaded) return;
+    const params = new URLSearchParams({
+      tgUserId: String(tgUserId),
+      ...(telegramUser?.firstName && { firstName: telegramUser.firstName }),
+      ...(telegramUser?.lastName && { lastName: telegramUser.lastName }),
+      ...(telegramUser?.username && { username: telegramUser.username }),
+    });
+    fetch(`${profileUrl}?${params}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: { customer: Partial<ProfileData> & { firstName: string | null; lastName: string | null; patronymic: string | null; phone: string | null; birthDate: string | null; gender: string | null; language?: string }; addresses: Address[] }) => {
+        const c = data.customer;
+        const next: ProfileData = {
+          firstName: c.firstName ?? "",
+          lastName: c.lastName ?? "",
+          patronymic: c.patronymic ?? "",
+          phone: c.phone ? formatUzPhone(c.phone) : "",
+          birthDate: c.birthDate ?? "",
+          gender: (c.gender === "male" || c.gender === "female") ? c.gender : "",
+        };
+        setProfile(next);
+        try { localStorage.setItem(lsKey(storeSlug, "profile"), JSON.stringify(next)); } catch { /* ignore */ }
+        if (c.language === "uz" || c.language === "ru") {
+          setLang(c.language);
+          try { localStorage.setItem(lsKey(storeSlug, "lang"), c.language); } catch { /* ignore */ }
+        }
+        const serverAddrs = (data.addresses ?? []).map((a) => ({
+          id: a.id, label: a.label, city: a.city ?? "", street: a.street,
+          apartment: a.apartment ?? "", notes: a.notes ?? "", isDefault: a.isDefault,
+        }));
+        setAddresses(serverAddrs);
+        try { localStorage.setItem(lsKey(storeSlug, "addresses"), JSON.stringify(serverAddrs)); } catch { /* ignore */ }
+      })
+      .catch(() => { /* offline fallback — localStorage allaqachon yuklangan */ })
+      .finally(() => setProfileLoaded(true));
+  }, [isOnline, profileLoaded, tgUserId, profileUrl, telegramUser, storeSlug]);
+
+  // Save handlers — server PATCH + localStorage cache
+  const saveProfile = useCallback(async (next: ProfileData) => {
     setProfile(next);
+    try { localStorage.setItem(lsKey(storeSlug, "profile"), JSON.stringify(next)); } catch { /* ignore */ }
+    if (!isOnline) return;
     try {
-      localStorage.setItem(lsKey(storeSlug, "profile"), JSON.stringify(next));
+      await fetch(profileUrl, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tgUserId,
+          firstName: next.firstName || null,
+          lastName: next.lastName || null,
+          patronymic: next.patronymic || null,
+          phone: next.phone ? next.phone.replace(/\D/g, "") : null,
+          birthDate: next.birthDate || null,
+          gender: next.gender || null,
+        }),
+      });
     } catch {
-      // ignore
+      // Tarmoq xatosi — localStorage'da saqlandi
     }
-  }, [storeSlug]);
+  }, [storeSlug, isOnline, profileUrl, tgUserId]);
 
-  const saveLang = useCallback((next: Lang) => {
+  const saveLang = useCallback(async (next: Lang) => {
     setLang(next);
+    try { localStorage.setItem(lsKey(storeSlug, "lang"), next); } catch { /* ignore */ }
+    if (!isOnline) return;
     try {
-      localStorage.setItem(lsKey(storeSlug, "lang"), next);
-    } catch {
-      // ignore
-    }
-  }, [storeSlug]);
+      await fetch(profileUrl, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tgUserId, language: next }),
+      });
+    } catch { /* offline cache only */ }
+  }, [storeSlug, isOnline, profileUrl, tgUserId]);
 
-  const saveAddresses = useCallback((next: Address[]) => {
-    setAddresses(next);
-    try {
-      localStorage.setItem(lsKey(storeSlug, "addresses"), JSON.stringify(next));
-    } catch {
-      // ignore
+  // Manzillar — server CRUD bilan
+  const addAddress = useCallback(async (draft: Omit<Address, "id">) => {
+    if (!isOnline) {
+      const local: Address = { ...draft, id: `addr-${Date.now()}` };
+      const next = [...addresses, local];
+      setAddresses(next);
+      try { localStorage.setItem(lsKey(storeSlug, "addresses"), JSON.stringify(next)); } catch { /* ignore */ }
+      return;
     }
-  }, [storeSlug]);
+    try {
+      const res = await fetch(addressesUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tgUserId,
+          label: draft.label,
+          city: draft.city || null,
+          street: draft.street,
+          apartment: draft.apartment || null,
+          notes: draft.notes || null,
+          isDefault: draft.isDefault ?? false,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = (await res.json()) as { address: Address };
+      const next = [...addresses, {
+        id: json.address.id, label: json.address.label, city: json.address.city ?? "",
+        street: json.address.street, apartment: json.address.apartment ?? "",
+        notes: json.address.notes ?? "", isDefault: json.address.isDefault,
+      }];
+      setAddresses(next);
+      try { localStorage.setItem(lsKey(storeSlug, "addresses"), JSON.stringify(next)); } catch { /* ignore */ }
+    } catch { /* show error in form ideally */ }
+  }, [isOnline, addressesUrl, tgUserId, addresses, storeSlug]);
+
+  const removeAddress = useCallback(async (id: string) => {
+    const next = addresses.filter((x) => x.id !== id);
+    setAddresses(next);
+    try { localStorage.setItem(lsKey(storeSlug, "addresses"), JSON.stringify(next)); } catch { /* ignore */ }
+    if (!isOnline || id.startsWith("addr-")) return; // localStorage IDsi server'da yo'q
+    try {
+      await fetch(`${addressesUrl}/${id}?tgUserId=${tgUserId}`, { method: "DELETE" });
+    } catch { /* ignore */ }
+  }, [addresses, isOnline, addressesUrl, tgUserId, storeSlug]);
 
   // Fetch orders when entering orders view
   useEffect(() => {
     if (view !== "orders" || orders !== null) return;
-    if (!telegramUser?.userId) {
+    if (!tgUserId) {
       setOrders([]);
       return;
     }
     setOrdersLoading(true);
-    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/orders?tgUserId=${telegramUser.userId}`)
+    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/orders?tgUserId=${tgUserId}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: { orders: CustomerOrder[] }) => setOrders(data.orders ?? []))
       .catch(() => setOrders([]))
       .finally(() => setOrdersLoading(false));
-  }, [view, orders, telegramUser, storeSlug, apiBase]);
+  }, [view, orders, tgUserId, storeSlug, apiBase]);
 
   if (view === "menu") {
     return (
@@ -161,13 +275,13 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
     <div className="pb-24">
       <SubHeader title={titleFor(view)} onBack={() => setView("menu")} />
       <div className="px-4 py-4">
-        {view === "info" && <InfoForm profile={profile} onSave={saveProfile} />}
+        {view === "info" && <InfoForm profile={profile} onSave={saveProfile} isOnline={isOnline} />}
         {view === "orders" && <OrdersList orders={orders} loading={ordersLoading} />}
         {view === "reviews" && <PlaceholderTwoTab labelA="Baholanishi kutilmoqda" labelB="Barcha fikrlarim" />}
         {view === "promocodes" && <PromocodeForm storeSlug={storeSlug} />}
         {view === "referrals" && <ReferralsView telegramUser={telegramUser} />}
         {view === "language" && <LanguagePicker lang={lang} onChange={saveLang} />}
-        {view === "addresses" && <AddressesList addresses={addresses} onSave={saveAddresses} />}
+        {view === "addresses" && <AddressesList addresses={addresses} onAdd={addAddress} onRemove={removeAddress} />}
       </div>
     </div>
   );
@@ -305,30 +419,73 @@ function Field({
   );
 }
 
-function InfoForm({ profile, onSave }: { profile: ProfileData; onSave: (p: ProfileData) => void }) {
+function InfoForm({ profile, onSave, isOnline }: { profile: ProfileData; onSave: (p: ProfileData) => void | Promise<void>; isOnline: boolean }) {
   const [draft, setDraft] = useState<ProfileData>(profile);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [contactBusy, setContactBusy] = useState(false);
+
+  // Profil tashqi (server) yangilanishlardan keyin draft'ni sinxronlash
+  useEffect(() => { setDraft(profile); }, [profile]);
+
+  const requestContact = () => {
+    const twa = (window as unknown as { Telegram?: { WebApp?: TwaApi } }).Telegram?.WebApp;
+    if (!twa?.requestContact) {
+      // Telegram'da bu API yo'q — foydalanuvchi qo'lda yozadi
+      return;
+    }
+    setContactBusy(true);
+    try {
+      twa.requestContact((ok: boolean, ev?: TwaContactResponse) => {
+        setContactBusy(false);
+        if (!ok) return;
+        const phoneRaw = ev?.response?.contact?.phone_number;
+        if (phoneRaw) {
+          setDraft((d) => ({ ...d, phone: formatUzPhone(phoneRaw) }));
+          twa.HapticFeedback?.notificationOccurred?.("success");
+        }
+      });
+    } catch {
+      setContactBusy(false);
+    }
+  };
 
   return (
     <form
       className="space-y-3"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        onSave(draft);
-        setSavedFlash(true);
-        setTimeout(() => setSavedFlash(false), 1500);
+        setSaving(true);
+        try {
+          await onSave(draft);
+          setSavedFlash(true);
+          setTimeout(() => setSavedFlash(false), 1500);
+        } finally {
+          setSaving(false);
+        }
       }}
     >
       <Field label="Ism" value={draft.firstName} onChange={(v) => setDraft({ ...draft, firstName: v })} />
       <Field label="Familiya" value={draft.lastName} onChange={(v) => setDraft({ ...draft, lastName: v })} />
       <Field label="Otasining ismi" value={draft.patronymic} onChange={(v) => setDraft({ ...draft, patronymic: v })} />
-      <Field
-        label="Telefon raqam"
-        value={draft.phone}
-        onChange={(v) => setDraft({ ...draft, phone: formatUzPhone(v) })}
-        type="tel"
-        icon={Phone}
-      />
+      <div className="space-y-1.5">
+        <Field
+          label="Telefon raqam"
+          value={draft.phone}
+          onChange={(v) => setDraft({ ...draft, phone: formatUzPhone(v) })}
+          type="tel"
+          icon={Phone}
+        />
+        <button
+          type="button"
+          onClick={requestContact}
+          disabled={contactBusy}
+          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/15 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {contactBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          Telefonni Telegram'dan olish
+        </button>
+      </div>
       <Field
         label="Tug'ilgan kun"
         value={draft.birthDate}
@@ -355,11 +512,17 @@ function InfoForm({ profile, onSave }: { profile: ProfileData; onSave: (p: Profi
           ))}
         </div>
       </div>
+      {!isOnline && (
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">
+          ⓘ Telegram bot ichida ochilmagan — ma'lumotlar faqat shu qurilmada saqlanadi
+        </p>
+      )}
       <button
         type="submit"
-        className="w-full py-3 mt-4 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors"
+        disabled={saving}
+        className="w-full py-3 mt-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
       >
-        {savedFlash ? "✓ Saqlandi" : "Saqlash"}
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : savedFlash ? "✓ Saqlandi" : "Saqlash"}
       </button>
     </form>
   );
@@ -367,6 +530,8 @@ function InfoForm({ profile, onSave }: { profile: ProfileData; onSave: (p: Profi
 
 function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loading: boolean }) {
   const [tab, setTab] = useState<"active" | "all">("active");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
   if (loading) {
     return (
       <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Yuklanmoqda…</div>
@@ -375,6 +540,15 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
   if (!orders) return null;
   const isActive = (o: CustomerOrder) => ["PENDING", "PROCESSING"].includes(o.status);
   const filtered = tab === "active" ? orders.filter(isActive) : orders;
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <div>
@@ -409,26 +583,78 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((o) => (
-            <div
-              key={o.id}
-              className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-sm font-semibold text-slate-900 dark:text-white">#{o.code}</div>
-                <StatusBadge status={o.status} />
+          {filtered.map((o) => {
+            const isOpen = expanded.has(o.id);
+            const currencyStr = o.currency === "UZS" ? "so'm" : o.currency;
+            return (
+              <div
+                key={o.id}
+                className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleExpand(o.id)}
+                  className="w-full p-3 text-left active:bg-slate-50 dark:active:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">#{o.code}</div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={o.status} />
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    {new Date(o.createdAt).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className="text-slate-500 dark:text-slate-400">{o.items.length} mahsulot</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {Number(o.total).toLocaleString("uz-UZ")} {currencyStr}
+                    </span>
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-3 bg-slate-50/60 dark:bg-slate-900/40">
+                    <div className="space-y-2">
+                      {o.items.map((it) => (
+                        <div key={it.id} className="flex items-center gap-3">
+                          {it.product.imageUrl ? (
+                            <img
+                              src={it.product.imageUrl}
+                              alt={it.product.name}
+                              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-slate-100 dark:bg-slate-800"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                              <ShoppingBag className="w-4 h-4 text-slate-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-slate-900 dark:text-white truncate">{it.product.name}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {it.qty} × {Number(it.price).toLocaleString("uz-UZ")} {currencyStr}
+                            </div>
+                          </div>
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white whitespace-nowrap">
+                            {(it.qty * Number(it.price)).toLocaleString("uz-UZ")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {o.notes && (
+                      <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Eslatma</div>
+                        <div className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{o.notes}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                {new Date(o.createdAt).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-slate-500 dark:text-slate-400">{o.items} mahsulot</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {Number(o.total).toLocaleString("uz-UZ")} {o.currency === "UZS" ? "so'm" : o.currency}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -575,19 +801,25 @@ function LanguagePicker({ lang, onChange }: { lang: Lang; onChange: (l: Lang) =>
   );
 }
 
-function AddressesList({ addresses, onSave }: { addresses: Address[]; onSave: (a: Address[]) => void }) {
+function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; onAdd: (a: Omit<Address, "id">) => Promise<void> | void; onRemove: (id: string) => Promise<void> | void }) {
   const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Omit<Address, "id">>({ label: "", city: "", street: "", apartment: "", notes: "" });
 
   if (adding) {
     return (
       <form
         className="space-y-3"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          onSave([...addresses, { ...draft, id: `addr-${Date.now()}` }]);
-          setDraft({ label: "", city: "", street: "", apartment: "", notes: "" });
-          setAdding(false);
+          setBusy(true);
+          try {
+            await onAdd(draft);
+            setDraft({ label: "", city: "", street: "", apartment: "", notes: "" });
+            setAdding(false);
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <Field label="Nomi (uy / ish / ...)" value={draft.label} onChange={(v) => setDraft({ ...draft, label: v })} />
@@ -605,10 +837,10 @@ function AddressesList({ addresses, onSave }: { addresses: Address[]; onSave: (a
           </button>
           <button
             type="submit"
-            disabled={!draft.label.trim() || !draft.street.trim()}
-            className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg"
+            disabled={busy || !draft.label.trim() || !draft.street.trim()}
+            className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2"
           >
-            Saqlash
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Saqlash"}
           </button>
         </div>
       </form>
@@ -635,7 +867,14 @@ function AddressesList({ addresses, onSave }: { addresses: Address[]; onSave: (a
             <div key={a.id} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-white">{a.label}</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">{a.label}</div>
+                    {a.isDefault && (
+                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded">
+                        ASOSIY
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
                     {a.city && `${a.city}, `}{a.street}
                     {a.apartment && `, ${a.apartment}`}
@@ -643,8 +882,9 @@ function AddressesList({ addresses, onSave }: { addresses: Address[]; onSave: (a
                   {a.notes && <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{a.notes}</div>}
                 </div>
                 <button
-                  onClick={() => onSave(addresses.filter((x) => x.id !== a.id))}
+                  onClick={() => onRemove(a.id)}
                   className="p-1.5 -mr-1 text-slate-400 hover:text-rose-500 rounded"
+                  aria-label="O'chirish"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
