@@ -133,6 +133,8 @@ function AppShell() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [marketingSub, setMarketingSub] = useState<MarketingSub>("rassilka");
   const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
 
   const goToMarketing = (sub: MarketingSub) => {
     setMarketingSub(sub);
@@ -152,6 +154,13 @@ function AppShell() {
     observer.observe(sidebar);
     return () => observer.disconnect();
   }, [user]);
+
+  // Mobile breakpoint kuzatish (Tailwind's md: 768px)
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   if (loading) {
     return (
@@ -235,13 +244,15 @@ function AppShell() {
     <div className="min-h-screen bg-slate-950">
       <Sidebar
         currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        onPageChange={(p) => { setCurrentPage(p); setMobileSidebarOpen(false); }}
         marketingSub={marketingSub}
-        onMarketingNavigate={goToMarketing}
+        onMarketingNavigate={(sub) => { goToMarketing(sub); setMobileSidebarOpen(false); }}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
       />
-      <div className="transition-all duration-300" style={{ marginLeft: sidebarWidth }}>
-        <Header />
-        <main className="p-6">
+      <div className="md:transition-all md:duration-300" style={{ marginLeft: isMobile ? 0 : sidebarWidth }}>
+        <Header onMobileMenuOpen={() => setMobileSidebarOpen(true)} />
+        <main className="p-4 md:p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPage}
