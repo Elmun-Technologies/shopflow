@@ -2,6 +2,15 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { nextOrderCode } from "../lib/codes.js";
 import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
+import { logAudit } from "../lib/audit.js";
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "Yangi",
+  PROCESSING: "Tayyorlanmoqda",
+  COMPLETED: "Yetkazildi",
+  CANCELLED: "Bekor qilindi",
+  REFUNDED: "Qaytarildi",
+};
 
 const statusEnum = z.enum(["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "REFUNDED"]);
 
@@ -108,7 +117,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       .object({
         status: statusEnum.optional(),
         notes: z.string().optional(),
-        assigneeId: z.string().optional(),
+        assigneeId: z.string().nullable().optional(),
       })
       .parse(req.body);
     const order = await app.prisma.order.findFirst({
@@ -117,9 +126,26 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     if (!order) return reply.code(404).send({ error: "Not found" });
     const updated = await app.prisma.order.update({ where: { id }, data });
 
-    // Telegram push notification — status o'zgarganda
+    const tenantId = req.session.tenantId;
+    const actorId = req.session.userId;
+    const actor = await app.prisma.user.findUnique({ where: { id: actorId }, select: { name: true } });
+    const actorName = actor?.name ?? null;
+
+    // Audit log + Telegram push notification — status o'zgarganda
     if (data.status && data.status !== order.status) {
-      const tenantId = req.session.tenantId;
+      const fromLabel = STATUS_LABEL[order.status] ?? order.status;
+      const toLabel = STATUS_LABEL[data.status] ?? data.status;
+      await logAudit({
+        prisma: app.prisma,
+        tenantId,
+        actorId,
+        actorName,
+        action: "STATUS_CHANGE",
+        resourceType: "order",
+        resourceId: id,
+        summary: `Status: ${fromLabel} → ${toLabel}`,
+        changes: { from: order.status, to: data.status },
+      });
       // Fonda yuboramiz, response'ni kutmaymiz
       notifyOrderStatusChange(app.prisma, tenantId, id, order.status, data.status)
         .then((result) => {
@@ -130,6 +156,89 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         .catch((err) => app.log.warn({ err, orderId: id }, "TG push failed"));
     }
 
+    // Audit — assignee o'zgarishi
+    if (data.assigneeId !== undefined && data.assigneeId !== order.assigneeId) {
+      let summary = "Mas'ul olib tashlandi";
+      if (data.assigneeId) {
+        const assignee = await app.prisma.user.findFirst({
+          where: { id: data.assigneeId, tenantId },
+          select: { name: true },
+        });
+        summary = `Mas'ul tayinlandi: ${assignee?.name ?? "?"}`;
+      }
+      await logAudit({
+        prisma: app.prisma,
+        tenantId,
+        actorId,
+        actorName,
+        action: "ASSIGN",
+        resourceType: "order",
+        resourceId: id,
+        summary,
+        changes: { from: order.assigneeId, to: data.assigneeId },
+      });
+    }
+
     return updated;
+  });
+
+  // Internal notes — buyurtmaga ichki izoh (admin team uchun, mijoz ko'rmaydi)
+  app.get("/:id/notes", async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const order = await app.prisma.order.findFirst({
+      where: { id, tenantId: req.session.tenantId },
+      select: { id: true },
+    });
+    if (!order) return reply.code(404).send({ error: "Not found" });
+    const notes = await app.prisma.orderNote.findMany({
+      where: { orderId: id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return { notes };
+  });
+
+  app.post("/:id/notes", async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const data = z.object({ content: z.string().min(1).max(2000) }).parse(req.body);
+    const order = await app.prisma.order.findFirst({
+      where: { id, tenantId: req.session.tenantId },
+      select: { id: true },
+    });
+    if (!order) return reply.code(404).send({ error: "Not found" });
+    const actor = await app.prisma.user.findUnique({
+      where: { id: req.session.userId },
+      select: { name: true },
+    });
+    const note = await app.prisma.orderNote.create({
+      data: {
+        tenantId: req.session.tenantId,
+        orderId: id,
+        authorId: req.session.userId,
+        authorName: actor?.name ?? null,
+        content: data.content,
+      },
+    });
+    await logAudit({
+      prisma: app.prisma,
+      tenantId: req.session.tenantId,
+      actorId: req.session.userId,
+      actorName: actor?.name ?? null,
+      action: "NOTE_ADDED",
+      resourceType: "order",
+      resourceId: id,
+      summary: `Izoh qoldirildi: "${data.content.slice(0, 80)}${data.content.length > 80 ? "..." : ""}"`,
+    });
+    return reply.code(201).send({ note });
+  });
+
+  app.delete("/:id/notes/:noteId", async (req, reply) => {
+    const params = z.object({ id: z.string(), noteId: z.string() }).parse(req.params);
+    const note = await app.prisma.orderNote.findFirst({
+      where: { id: params.noteId, orderId: params.id, tenantId: req.session.tenantId },
+    });
+    if (!note) return reply.code(404).send({ error: "Not found" });
+    await app.prisma.orderNote.delete({ where: { id: params.noteId } });
+    return { ok: true };
   });
 };

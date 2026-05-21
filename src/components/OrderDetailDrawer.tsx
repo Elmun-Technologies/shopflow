@@ -5,10 +5,15 @@ import { useEffect, useState } from "react";
 import {
   X, Phone, Mail, MapPin, Package as PackageIcon, ChevronDown, Loader2,
   AlertCircle, User as UserIcon, Calendar, MessageSquare, Check, Send,
+  Clock, Trash2,
 } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
+
+interface TeamMember { id: string; name: string; role: string; active: boolean }
+interface OrderNote { id: string; content: string; authorId: string | null; authorName: string | null; createdAt: string }
+interface AuditEntry { id: string; action: string; summary: string | null; actorName: string | null; createdAt: string }
 
 interface OrderDetailResponse {
   id: string;
@@ -17,6 +22,7 @@ interface OrderDetailResponse {
   total: string | number;
   currency: string;
   notes: string | null;
+  assigneeId: string | null;
   createdAt: string;
   updatedAt: string;
   customer: {
@@ -76,6 +82,13 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
+  const [updatingAssignee, setUpdatingAssignee] = useState(false);
+  const [orderNotes, setOrderNotes] = useState<OrderNote[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const toast = useAppToast();
 
   useEffect(() => {
@@ -83,6 +96,8 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
     setLoading(true);
     setError(null);
     setOrder(null);
+    setOrderNotes([]);
+    setAuditLog([]);
     api<OrderDetailResponse>(`/orders/${orderId}`)
       .then((res) => {
         setOrder(res);
@@ -90,7 +105,27 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [orderId]);
+    // Tarix, notes va jamoa parallel yuklanadi
+    api<{ items: AuditEntry[] }>(`/audit?resourceType=order&resourceId=${orderId}`)
+      .then((r) => setAuditLog(r.items))
+      .catch(() => null);
+    api<{ notes: OrderNote[] }>(`/orders/${orderId}/notes`)
+      .then((r) => setOrderNotes(r.notes))
+      .catch(() => null);
+    if (team.length === 0) {
+      api<TeamMember[]>("/tenant/users")
+        .then((users) => setTeam(users.filter((u) => u.active)))
+        .catch(() => null);
+    }
+  }, [orderId, team.length]);
+
+  const refreshTimeline = async () => {
+    if (!orderId) return;
+    try {
+      const r = await api<{ items: AuditEntry[] }>(`/audit?resourceType=order&resourceId=${orderId}`);
+      setAuditLog(r.items);
+    } catch { /* ignore */ }
+  };
 
   // Escape closes the drawer
   useEffect(() => {
@@ -116,10 +151,62 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
       setOrder({ ...order, status: updated.status });
       toast.success(`${STATUS_CONFIG[status].label} · 📨 Mijoz Telegram'da xabardor qilindi`);
       onChanged();
+      await refreshTimeline();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Status yangilanmadi");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleAssign = async (assigneeId: string | null) => {
+    if (!order) return;
+    setShowAssigneeMenu(false);
+    setUpdatingAssignee(true);
+    try {
+      const updated = await api<OrderDetailResponse>(`/orders/${order.id}`, {
+        method: "PATCH",
+        body: { assigneeId },
+      });
+      setOrder({ ...order, assigneeId: updated.assigneeId });
+      const name = assigneeId ? team.find((t) => t.id === assigneeId)?.name : null;
+      toast.success(assigneeId ? `Mas'ul: ${name}` : "Mas'ul olib tashlandi");
+      onChanged();
+      await refreshTimeline();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Mas'ul tayinlanmadi");
+    } finally {
+      setUpdatingAssignee(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!order || !newNote.trim()) return;
+    setAddingNote(true);
+    try {
+      const { note } = await api<{ note: OrderNote }>(`/orders/${order.id}/notes`, {
+        method: "POST",
+        body: { content: newNote.trim() },
+      });
+      setOrderNotes((prev) => [note, ...prev]);
+      setNewNote("");
+      toast.success("Izoh qo'shildi");
+      await refreshTimeline();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Izoh saqlanmadi");
+    } finally {
+      setAddingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!order) return;
+    if (!confirm("Izohni o'chirish?")) return;
+    try {
+      await api(`/orders/${order.id}/notes/${noteId}`, { method: "DELETE" });
+      setOrderNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "O'chirilmadi");
     }
   };
 
@@ -345,13 +432,120 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                 </div>
               </Section>
 
-              {/* Notes editor */}
-              <Section title="Izoh" icon={MessageSquare}>
+              {/* Mas'ul (assignee) */}
+              <Section title="Mas'ul" icon={UserIcon}>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAssigneeMenu(!showAssigneeMenu)}
+                    disabled={updatingAssignee}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-2">
+                      {updatingAssignee && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {order.assigneeId
+                        ? team.find((t) => t.id === order.assigneeId)?.name ?? "?"
+                        : <span className="text-slate-500">— tayinlanmagan —</span>}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-slate-500" />
+                  </button>
+                  {showAssigneeMenu && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setShowAssigneeMenu(false)} />
+                      <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 max-h-60 overflow-y-auto">
+                        <button
+                          onClick={() => handleAssign(null)}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-700"
+                        >
+                          — tayinlamaslik —
+                        </button>
+                        {team.map((u) => (
+                          <button
+                            key={u.id}
+                            onClick={() => handleAssign(u.id)}
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-slate-700"
+                          >
+                            <span className="text-white">{u.name}</span>
+                            <span className="text-[10px] text-slate-500">{u.role}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Section>
+
+              {/* Ichki izohlar / kommentariya thread */}
+              <Section title={`Ichki izohlar (${orderNotes.length})`} icon={MessageSquare}>
+                <div className="space-y-2 mb-2">
+                  <textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    rows={2}
+                    placeholder="Jamoa uchun izoh yozing (mijoz ko'rmaydi)..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                  />
+                  {newNote.trim() && (
+                    <button
+                      onClick={handleAddNote}
+                      disabled={addingNote}
+                      className="px-3 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium flex items-center gap-1.5"
+                    >
+                      {addingNote && <Loader2 className="w-3 h-3 animate-spin" />}
+                      Qo'shish
+                    </button>
+                  )}
+                </div>
+                {orderNotes.length > 0 && (
+                  <div className="divide-y divide-slate-800/60">
+                    {orderNotes.map((n) => (
+                      <div key={n.id} className="py-2 group flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white whitespace-pre-wrap">{n.content}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {n.authorName ?? "—"} · {formatDateTime(n.createdAt)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteNote(n.id)}
+                          className="p-1 text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="O'chirish"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
+
+              {/* Tarix / audit timeline */}
+              <Section title="Tarix" icon={Clock}>
+                {auditLog.length === 0 ? (
+                  <p className="text-xs text-slate-500">Hozircha yozuv yo'q</p>
+                ) : (
+                  <div className="space-y-2">
+                    {auditLog.map((a) => (
+                      <div key={a.id} className="flex items-start gap-2.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-slate-200">{a.summary ?? a.action}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {a.actorName ?? "Tizim"} · {formatDateTime(a.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
+
+              {/* Eski erkin notes maydoni (mijoz uchun chiqishi mumkin bo'lgan) */}
+              <Section title="Buyurtma izohi" icon={MessageSquare}>
                 <textarea
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}
-                  rows={3}
-                  placeholder="Buyurtma haqida ichki izoh..."
+                  rows={2}
+                  placeholder="Mijoz buyurtma vaqtida yozgan izoh..."
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
                 />
                 {notesDraft !== (order.notes ?? "") && (
