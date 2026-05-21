@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react
 import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
-  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck, Bell,
+  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck, Bell, Star, Send,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -119,7 +119,18 @@ type StoreProduct = {
   saleCampaign?: StoreSaleCampaign | null;
   comboAddons?: StoreAddon[];
   weeklyBuyers?: number;
+  avgRating?: number;
+  reviewCount?: number;
 };
+
+interface StoreReview {
+  id: string;
+  customerName: string;
+  rating: number;
+  text: string;
+  photos: string[];
+  createdAt: string;
+}
 
 // Uzbek oylar — yetkazib berish sanasi va shu kabi formatlash uchun
 const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
@@ -382,6 +393,14 @@ function StoreInner({ slug }: { slug: string }) {
   // Profile sahifasi tashqi nuqtadan ochilganda boshlang'ich subview
   // (masalan, success screen'dan "Buyurtmalarim" tugmasi)
   const [profileInitialView, setProfileInitialView] = useState<"menu" | "orders" | undefined>(undefined);
+  // PDP — reviews va form
+  const [productReviews, setProductReviews] = useState<StoreReview[]>([]);
+  const [reviewForm, setReviewForm] = useState<{ open: boolean; rating: number; text: string; busy: boolean }>({
+    open: false,
+    rating: 5,
+    text: "",
+    busy: false,
+  });
   // Mahsulot detali — sticky header (scroll'da), trust badge modal, description toggle
   const [pdpScrolled, setPdpScrolled] = useState(false);
   const [trustSheet, setTrustSheet] = useState<"original" | "warranty" | null>(null);
@@ -505,6 +524,8 @@ function StoreInner({ slug }: { slug: string }) {
     setPdpScrolled(false);
     setTrustSheet(null);
     setDescExpanded(false);
+    setProductReviews([]);
+    setReviewForm({ open: false, rating: 5, text: "", busy: false });
     if (!selectedProduct) {
       setSelectedAddons(new Set());
       return;
@@ -516,7 +537,14 @@ function StoreInner({ slug }: { slug: string }) {
       }
     }
     setSelectedAddons(defaults);
-  }, [selectedProduct]);
+    // Reviews yuklash
+    if ((selectedProduct.reviewCount ?? 0) > 0) {
+      fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}/products/${selectedProduct.id}/reviews`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+        .then((data: { items: StoreReview[] }) => setProductReviews(data.items))
+        .catch(() => null);
+    }
+  }, [selectedProduct, slug]);
 
   // Savatni server'ga sinxronlash — cart abandonment scheduler uchun.
   // Faqat Telegram user mavjud bo'lganda. Debounce 1.5s — har keypress uchun emas.
@@ -1301,6 +1329,16 @@ function StoreInner({ slug }: { slug: string }) {
             {/* Title */}
             <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
 
+            {/* Rating chip — sharhlar bo'lsa Uzum/WB uslubida */}
+            {(selectedProduct.reviewCount ?? 0) > 0 && (
+              <div className="flex items-center gap-1.5 mb-3">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
+                <span className="text-xs text-slate-500">·</span>
+                <span className="text-xs text-slate-400">{selectedProduct.reviewCount} ta sharh</span>
+              </div>
+            )}
+
             {/* Quick stats */}
             <div className="flex flex-wrap items-center gap-2 mb-3">
               {selectedProduct.category && (
@@ -1361,6 +1399,58 @@ function StoreInner({ slug }: { slug: string }) {
                 <div className="text-sm font-medium text-white">Yetkazib berish: {deliveryStr}</div>
                 <div className="text-xs text-slate-400 mt-0.5">Toshkent bo'ylab kuryer · viloyatlarga pochta</div>
               </div>
+            </div>
+
+            {/* Sharhlar — Uzum/WB uslubida ✓ purchase qilgan mijoz yozadi */}
+            <div className="mt-5 pt-5 border-t border-slate-800">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  Sharhlar
+                  {(selectedProduct.reviewCount ?? 0) > 0 && (
+                    <span className="text-slate-500">({selectedProduct.reviewCount})</span>
+                  )}
+                </h3>
+                {telegramUser?.userId && (
+                  <button
+                    type="button"
+                    onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
+                    className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                  >
+                    + Sharh yozish
+                  </button>
+                )}
+              </div>
+              {productReviews.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">
+                  Hali sharhlar yo'q. {telegramUser?.userId ? "Birinchi bo'lib yozing!" : ""}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {productReviews.slice(0, 5).map((rv) => (
+                    <div key={rv.id} className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3.5 h-3.5 ${i < rv.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-slate-400 font-medium">{rv.customerName}</span>
+                        <span className="text-[10px] text-slate-600 ml-auto">
+                          {new Date(rv.createdAt).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-300 whitespace-pre-wrap">{rv.text}</p>
+                    </div>
+                  ))}
+                  {productReviews.length > 5 && (
+                    <p className="text-xs text-slate-500 text-center">Va yana {productReviews.length - 5} ta</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Combo / qo'shimcha mahsulotlar */}
@@ -1613,6 +1703,94 @@ function StoreInner({ slug }: { slug: string }) {
                   className="mt-2 w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium text-white active:scale-[0.98] transition-transform"
                 >
                   Xo'p
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sharh yozish modal */}
+        {reviewForm.open && (
+          <div
+            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-150"
+            onClick={() => setReviewForm((f) => ({ ...f, open: false }))}
+          >
+            <div
+              className="w-full sm:max-w-sm bg-slate-900 sm:rounded-2xl rounded-t-3xl border-t sm:border border-slate-800 shadow-2xl animate-in slide-in-from-bottom duration-200"
+              onClick={(e) => e.stopPropagation()}
+              style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            >
+              <div className="flex justify-between items-center p-4 border-b border-slate-800">
+                <h3 className="text-base font-semibold text-white">Sharh yozish</h3>
+                <button
+                  onClick={() => setReviewForm((f) => ({ ...f, open: false }))}
+                  className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 active:scale-90"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-4">
+                {/* Star picker */}
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Bahoyingiz</p>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, rating: n })); }}
+                        className="active:scale-90 transition-transform"
+                      >
+                        <Star
+                          className={`w-9 h-9 ${n <= reviewForm.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"}`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">Fikringizni yozing</p>
+                  <textarea
+                    value={reviewForm.text}
+                    onChange={(e) => setReviewForm((f) => ({ ...f, text: e.target.value }))}
+                    rows={4}
+                    placeholder="Mahsulot sifati, yetkazib berish va boshqalar haqida..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Sharh admin tomonidan ko'rib chiqilgandan keyin chop etiladi.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!telegramUser?.userId || !selectedProduct || reviewForm.text.trim().length < 5) return;
+                    setReviewForm((f) => ({ ...f, busy: true }));
+                    try {
+                      const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}/reviews`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          tgUserId: telegramUser.userId,
+                          productId: selectedProduct.id,
+                          rating: reviewForm.rating,
+                          text: reviewForm.text.trim(),
+                        }),
+                      });
+                      const body = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error((body as { error?: string }).error || "Sharh yuborilmadi");
+                      haptic.success();
+                      setReviewForm({ open: false, rating: 5, text: "", busy: false });
+                      alert("✅ Sharhingiz qabul qilindi. Tasdiqlangandan keyin sahifada ko'rinadi.");
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Sharh yuborilmadi");
+                      setReviewForm((f) => ({ ...f, busy: false }));
+                    }
+                  }}
+                  disabled={reviewForm.busy || reviewForm.text.trim().length < 5}
+                  className="w-full py-3 rounded-2xl font-semibold text-white text-base bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  {reviewForm.busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Yuborish
                 </button>
               </div>
             </div>

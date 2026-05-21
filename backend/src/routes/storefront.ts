@@ -18,7 +18,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    const [storefront, products, categories, weeklyOrderItems] = await Promise.all([
+    const [storefront, products, categories, weeklyOrderItems, ratingAggregates] = await Promise.all([
       app.prisma.storefront.findUnique({
         where: { tenantId: tenant.id },
       }),
@@ -60,6 +60,13 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         },
         _count: { _all: true },
       }),
+      // Rating aggregate — har mahsulot uchun avg + count (faqat APPROVED)
+      app.prisma.review.groupBy({
+        by: ["productId"],
+        where: { tenantId: tenant.id, status: "APPROVED" },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
     ]);
 
     if (storefront && !storefront.published) {
@@ -70,6 +77,13 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     for (const item of weeklyOrderItems) {
       weeklyBuyersMap.set(item.productId, item._count._all);
     }
+    const ratingMap = new Map<string, { avg: number; count: number }>();
+    for (const r of ratingAggregates) {
+      ratingMap.set(r.productId, {
+        avg: r._avg.rating ?? 0,
+        count: r._count._all,
+      });
+    }
 
     // Cache-Control — storefront ma'lumotlari sekundlar miqyosida o'zgarmaydi.
     // 30 soniya client-side + 60 soniya stale-while-revalidate Caddy/CDN uchun.
@@ -79,7 +93,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       tenant,
       layout: storefront?.blocks ?? [],
       brand: storefront?.brand ?? {},
-      products: products.map((p) => ({ ...p, weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0 })),
+      products: products.map((p) => ({
+        ...p,
+        weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0,
+        avgRating: ratingMap.get(p.id)?.avg ?? 0,
+        reviewCount: ratingMap.get(p.id)?.count ?? 0,
+      })),
       categories,
     };
   });
@@ -756,6 +775,113 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       where: { customerId: customer.id, productId: params.productId },
     });
     return { ok: true };
+  });
+
+  // ─── PRODUCT REVIEWS ──────────────────────────────────────────────
+  // GET /:slug/products/:productId/reviews — public approved list + avg
+  app.get("/:tenantSlug/products/:productId/reviews", async (req, reply) => {
+    const params = z.object({ tenantSlug: z.string(), productId: z.string() }).parse(req.params);
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: params.tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const [items, agg] = await Promise.all([
+      app.prisma.review.findMany({
+        where: { tenantId: tenant.id, productId: params.productId, status: "APPROVED" },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          customerName: true,
+          rating: true,
+          text: true,
+          photos: true,
+          createdAt: true,
+        },
+      }),
+      app.prisma.review.aggregate({
+        where: { tenantId: tenant.id, productId: params.productId, status: "APPROVED" },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+    ]);
+    return {
+      avg: agg._avg.rating ?? 0,
+      count: agg._count._all,
+      items: items.map((r) => ({
+        ...r,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  });
+
+  // POST /:slug/reviews — mijoz yangi sharh yuboradi (PENDING — admin moderatsiyasi)
+  const reviewSubmitSchema = z.object({
+    tgUserId: z.coerce.number().int().positive(),
+    productId: z.string(),
+    rating: z.number().int().min(1).max(5),
+    text: z.string().min(5).max(2000),
+    photos: z.array(z.string().max(500)).max(6).optional(),
+  });
+  app.post("/:tenantSlug/reviews", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const data = reviewSubmitSchema.parse(req.body);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const customer = await app.prisma.customer.findFirst({
+      where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
+      select: { id: true, name: true },
+    });
+    if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
+
+    // Mijoz shu mahsulotni xarid qilganini tekshirish — spam reviewlardan himoya
+    const purchased = await app.prisma.orderItem.findFirst({
+      where: {
+        productId: data.productId,
+        order: { tenantId: tenant.id, customerId: customer.id },
+      },
+      select: { id: true },
+    });
+    if (!purchased) {
+      return reply.code(403).send({ error: "Sharh yozish uchun bu mahsulotni xarid qilgan bo'lishingiz kerak" });
+    }
+
+    // Bir mahsulotga bir mijoz bitta sharh
+    const existing = await app.prisma.review.findFirst({
+      where: { tenantId: tenant.id, productId: data.productId, customerId: customer.id },
+      select: { id: true },
+    });
+    if (existing) {
+      return reply.code(409).send({ error: "Bu mahsulot uchun allaqachon sharh yozgansiz" });
+    }
+
+    const product = await app.prisma.product.findFirst({
+      where: { id: data.productId, tenantId: tenant.id },
+      select: { id: true },
+    });
+    if (!product) return reply.code(404).send({ error: "Mahsulot topilmadi" });
+
+    const review = await app.prisma.review.create({
+      data: {
+        tenantId: tenant.id,
+        productId: data.productId,
+        customerId: customer.id,
+        customerName: customer.name,
+        rating: data.rating,
+        text: data.text,
+        photos: data.photos ?? [],
+        status: "PENDING",
+      },
+      select: { id: true },
+    });
+    return reply.code(201).send({ id: review.id, status: "PENDING" });
   });
 
   /**
