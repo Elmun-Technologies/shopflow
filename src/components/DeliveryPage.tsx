@@ -216,14 +216,18 @@ export default function DeliveryPage() {
     setRegionList((prev) => prev.map((r, i) => i === index ? { ...r, active: !r.active } : r));
   };
 
-  const totalPickupOrders = methodList.find((m) => m.code === "pickup")?.stats.totalOrders || 0;
-  const totalCourierOrders = methodList.filter((m) => m.type === "courier" && m.status === "active").reduce((s, m) => s + m.stats.totalOrders, 0);
-  const totalDeliveryCost = methodList.reduce((s, m) => s + m.stats.totalCost, 0);
+  // Stats — bo'sh massiv yoki stats yo'q usulda crash bo'lmasligi uchun ?. va ?? 0
+  const pickupMethod = methodList.find((m) => m.code === "pickup");
+  const totalPickupOrders = pickupMethod?.stats?.totalOrders ?? 0;
+  const totalCourierOrders = methodList
+    .filter((m) => m.type === "courier" && m.status === "active")
+    .reduce((s, m) => s + (m.stats?.totalOrders ?? 0), 0);
+  const totalDeliveryCost = methodList.reduce((s, m) => s + (m.stats?.totalCost ?? 0), 0);
   const activePharmacies = pharmacyList.filter((p) => p.status === "active").length;
 
   const pieData = methodList
-    .filter((m) => m.stats.totalOrders > 0)
-    .map((m) => ({ name: m.nameUz, value: m.stats.totalOrders, color: methodDeliveryColors[m.nameUz] || "#64748b" }));
+    .filter((m) => (m.stats?.totalOrders ?? 0) > 0)
+    .map((m) => ({ name: m.nameUz, value: m.stats?.totalOrders ?? 0, color: methodDeliveryColors[m.nameUz] || "#64748b" }));
 
   return (
     <div>
@@ -362,9 +366,9 @@ export default function DeliveryPage() {
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800">
-                <div><p className="text-[10px] text-slate-500">Buyurtmalar</p><p className="text-sm font-bold text-white">{methodList[0].stats.totalOrders.toLocaleString()}</p></div>
-                <div><p className="text-[10px] text-slate-500">Muvaffaqiyat</p><p className="text-sm font-bold text-emerald-400">{methodList[0].stats.onTimeRate}%</p></div>
-                <div><p className="text-[10px] text-slate-500">O'rtacha vaqt</p><p className="text-sm font-bold text-white">{methodList[0].stats.avgTime} soat</p></div>
+                <div><p className="text-[10px] text-slate-500">Buyurtmalar</p><p className="text-sm font-bold text-white">{(pickupMethod?.stats?.totalOrders ?? 0).toLocaleString()}</p></div>
+                <div><p className="text-[10px] text-slate-500">Muvaffaqiyat</p><p className="text-sm font-bold text-emerald-400">{pickupMethod?.stats?.onTimeRate ?? 0}%</p></div>
+                <div><p className="text-[10px] text-slate-500">O'rtacha vaqt</p><p className="text-sm font-bold text-white">{pickupMethod?.stats?.avgTime ?? 0} soat</p></div>
                 <div><p className="text-[10px] text-slate-500">Xarajat</p><p className="text-sm font-bold text-white">Bepul</p></div>
               </div>
             </div>
@@ -409,12 +413,12 @@ export default function DeliveryPage() {
                         </button>
                       </div>
                     </div>
-                    {method.stats.totalOrders > 0 && (
+                    {(method.stats?.totalOrders ?? 0) > 0 && (
                       <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800">
-                        <div><p className="text-[10px] text-slate-500">Buyurtmalar</p><p className="text-sm font-bold text-white">{method.stats.totalOrders.toLocaleString()}</p></div>
-                        <div><p className="text-[10px] text-slate-500">Xarajat</p><p className="text-sm font-bold text-emerald-400">{(method.stats.totalCost / 1000000).toFixed(1)}M</p></div>
-                        <div><p className="text-[10px] text-slate-500">O'rtacha vaqt</p><p className="text-sm font-bold text-white">{method.stats.avgTime} soat</p></div>
-                        <div><p className="text-[10px] text-slate-500">Vaqtida</p><p className="text-sm font-bold text-blue-400">{method.stats.onTimeRate}%</p></div>
+                        <div><p className="text-[10px] text-slate-500">Buyurtmalar</p><p className="text-sm font-bold text-white">{(method.stats?.totalOrders ?? 0).toLocaleString()}</p></div>
+                        <div><p className="text-[10px] text-slate-500">Xarajat</p><p className="text-sm font-bold text-emerald-400">{((method.stats?.totalCost ?? 0) / 1000000).toFixed(1)}M</p></div>
+                        <div><p className="text-[10px] text-slate-500">O'rtacha vaqt</p><p className="text-sm font-bold text-white">{method.stats?.avgTime ?? 0} soat</p></div>
+                        <div><p className="text-[10px] text-slate-500">Vaqtida</p><p className="text-sm font-bold text-blue-400">{method.stats?.onTimeRate ?? 0}%</p></div>
                       </div>
                     )}
                   </motion.div>
