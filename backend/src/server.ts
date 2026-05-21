@@ -27,6 +27,7 @@ import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
 import { productAddonRoutes } from "./routes/product-addons.js";
 import { auditRoutes } from "./routes/audit.js";
 import { paymentRoutes } from "./routes/payments.js";
+import { chatRoutes } from "./routes/chat.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
 
 const app = Fastify({
@@ -84,6 +85,7 @@ await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
 await app.register(productAddonRoutes, { prefix: "/api/products" });
 await app.register(auditRoutes, { prefix: "/api/audit" });
 await app.register(paymentRoutes, { prefix: "/api/payments" });
+await app.register(chatRoutes, { prefix: "/api/chats" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

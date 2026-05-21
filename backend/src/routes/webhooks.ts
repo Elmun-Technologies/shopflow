@@ -90,6 +90,66 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     const token = config.botToken as string | undefined;
     const chatId = msg.chat?.id ?? msg.from?.id;
     const firstName = msg.from?.first_name || "Do'stim";
+
+    // ─── Konversatsiya yozuvi (admin Chat sahifasi uchun) ─────────────
+    // Mijoz qaytarilgan mavjudligini telegramUserId bo'yicha aniqlaymiz.
+    if (msg.from?.id && msg.text && msg.text !== "/start") {
+      const tgUidBig = BigInt(msg.from.id);
+      const existingCustomer = await app.prisma.customer.findFirst({
+        where: { tenantId: channel.tenant.id, telegramUserId: tgUidBig },
+        select: { id: true, name: true },
+      });
+      const externalId = String(msg.from.id);
+      const displayName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi";
+
+      // Konversatsiyani upsert (externalUserId + channelId bo'yicha)
+      let conv = await app.prisma.conversation.findFirst({
+        where: {
+          tenantId: channel.tenant.id,
+          channelId: channel.id,
+          externalUserId: externalId,
+        },
+        select: { id: true, status: true },
+      });
+      if (!conv) {
+        conv = await app.prisma.conversation.create({
+          data: {
+            tenantId: channel.tenant.id,
+            channelId: channel.id,
+            customerId: existingCustomer?.id ?? null,
+            externalUserId: externalId,
+            customerName: existingCustomer?.name ?? displayName,
+            status: "ACTIVE",
+            lastMessageAt: new Date(),
+            lastMessagePreview: msg.text.slice(0, 120),
+            unreadCount: 1,
+          },
+          select: { id: true, status: true },
+        });
+      } else {
+        await app.prisma.conversation.update({
+          where: { id: conv.id },
+          data: {
+            lastMessageAt: new Date(),
+            lastMessagePreview: msg.text.slice(0, 120),
+            unreadCount: { increment: 1 },
+            // Yopiq konversatsiya yangi xabar bilan qayta ochiladi
+            status: conv.status === "RESOLVED" || conv.status === "ARCHIVED" ? "ACTIVE" : conv.status,
+            // Customer keyinroq ro'yxatdan o'tsa, bog'lab qo'yamiz
+            ...(existingCustomer?.id && { customerId: existingCustomer.id }),
+          },
+        });
+      }
+      await app.prisma.conversationMessage.create({
+        data: {
+          conversationId: conv.id,
+          direction: "INBOUND",
+          content: msg.text,
+          authorName: displayName,
+        },
+      });
+    }
+    // ──────────────────────────────────────────────────────────────────
     const name = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi";
 
     // /start — Mini App tugmasi bilan javob
