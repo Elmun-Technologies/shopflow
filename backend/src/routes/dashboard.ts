@@ -196,4 +196,28 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
       take: 10,
     });
   });
+
+  // Sidebar badge'lari — operator nimani ko'rishi kerakligini bir qarashda biladi
+  // Bitta endpoint, hammasi parallel — bir nechta query'ni bittaga jamlaymiz
+  app.get("/sidebar-counts", async (req) => {
+    const tenantId = req.session.tenantId;
+    const [pendingOrders, newLeads, activeChats, unreadMessages, abandonedCarts] = await Promise.all([
+      app.prisma.order.count({ where: { tenantId, status: "PENDING" } }),
+      app.prisma.lead.count({ where: { tenantId, status: "NEW" } }),
+      app.prisma.conversation.count({ where: { tenantId, status: "ACTIVE" } }),
+      app.prisma.conversationMessage.count({
+        where: { conversation: { tenantId }, direction: "INBOUND", read: false },
+      }),
+      app.prisma.abandonedCart.count({
+        where: { tenantId, remindersSent: { lt: 1 } },
+      }),
+    ]);
+    return {
+      orders: pendingOrders,     // PENDING — admin javob kutmoqda
+      leads: newLeads,           // NEW — yangi mijozlar
+      chat: unreadMessages,      // o'qilmagan xabarlar
+      conversationsActive: activeChats,
+      abandonedCarts,
+    };
+  });
 };

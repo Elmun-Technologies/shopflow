@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -19,12 +19,16 @@ import {
   Paintbrush,
   GitBranch,
   LogOut,
+  Search as SearchIcon,
+  Command as CommandIcon,
+  X as XIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
 import { marketingSubOrder, marketingSubLabels } from "../data/marketingData";
 import { useAuth } from "../contexts/AuthContext";
 import { useConfirm } from "./ui/ConfirmDialog";
+import { api } from "../api/client";
 
 type Page =
   | "dashboard"
@@ -51,10 +55,21 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
+type BadgeKey = "orders" | "leads" | "chat" | "abandonedCarts";
+
 interface NavItem {
   icon: React.ElementType;
   label: string;
   page: Page;
+  badgeKey?: BadgeKey;
+}
+
+interface SidebarCounts {
+  orders: number;
+  leads: number;
+  chat: number;
+  conversationsActive: number;
+  abandonedCarts: number;
 }
 
 interface NavGroup {
@@ -77,7 +92,7 @@ const navGroups: NavGroup[] = [
     id: "sales",
     label: "Savdo",
     items: [
-      { icon: ShoppingBag, label: "Buyurtmalar", page: "orders" },
+      { icon: ShoppingBag, label: "Buyurtmalar", page: "orders", badgeKey: "orders" },
       { icon: Package, label: "Mahsulotlar", page: "products" },
       { icon: CreditCard, label: "To'lovlar", page: "payments" },
       { icon: Truck, label: "Yetkazib berish", page: "delivery" },
@@ -87,10 +102,10 @@ const navGroups: NavGroup[] = [
     id: "crm",
     label: "CRM",
     items: [
-      { icon: Radio, label: "Lidlar", page: "leads" },
+      { icon: Radio, label: "Lidlar", page: "leads", badgeKey: "leads" },
       { icon: Users, label: "Mijozlar", page: "customers" },
       { icon: GitBranch, label: "Segmentlar", page: "segments" },
-      { icon: MessageSquare, label: "Chat", page: "chat" },
+      { icon: MessageSquare, label: "Chat", page: "chat", badgeKey: "chat" },
     ],
   },
   {
@@ -163,6 +178,53 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
     .join("")
     .toUpperCase();
 
+  // Sidebar badge'lari — auth bo'lsa har 30s yangilanadi
+  const [counts, setCounts] = useState<SidebarCounts | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = () => {
+      api<SidebarCounts>("/dashboard/sidebar-counts")
+        .then((res) => { if (!cancelled) setCounts(res); })
+        .catch(() => null);
+    };
+    load();
+    const id = setInterval(load, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [user]);
+
+  // Cmd+K — barcha sahifalar bo'yicha qidiruv
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      } else if (e.key === "Escape") {
+        setPaletteOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const allPages = useMemo(() => {
+    const list: Array<{ page: Page | "marketing-sub"; label: string; icon: React.ElementType; section: string; sub?: MarketingSub }> = [];
+    for (const g of navGroups) for (const it of g.items) list.push({ page: it.page, label: it.label, icon: it.icon, section: g.label });
+    list.push({ page: "marketing", label: "Marketing", icon: Megaphone, section: "Marketing" });
+    for (const sub of marketingSubOrder) {
+      list.push({ page: "marketing-sub", label: marketingSubLabels[sub], icon: Megaphone, section: "Marketing", sub });
+    }
+    list.push({ page: settingsItem.page, label: settingsItem.label, icon: settingsItem.icon, section: "Sozlamalar" });
+    return list;
+  }, []);
+  const filteredPalette = useMemo(() => {
+    const q = paletteQuery.trim().toLowerCase();
+    if (!q) return allPages.slice(0, 8);
+    return allPages.filter((p) => p.label.toLowerCase().includes(q)).slice(0, 12);
+  }, [paletteQuery, allPages]);
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -210,6 +272,19 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
         </div>
       </div>
 
+      {/* Search trigger — Cmd+K to'liq qidirish */}
+      {!collapsed && (
+        <button
+          onClick={() => setPaletteOpen(true)}
+          className="mx-2 mt-2 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-800 text-xs text-slate-400 transition-colors"
+          title="Tezkor navigatsiya (⌘K)"
+        >
+          <SearchIcon className="w-3.5 h-3.5" />
+          <span className="flex-1 text-left">Qidirish…</span>
+          <kbd className="text-[10px] bg-slate-700/60 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+        </button>
+      )}
+
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto overflow-x-hidden">
         {navGroups.map((group) => (
@@ -219,6 +294,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
             open={state.openGroups[group.id] ?? true}
             collapsed={collapsed}
             currentPage={currentPage}
+            counts={counts}
             onToggle={() => toggleGroup(group.id)}
             onPageChange={onPageChange}
           />
@@ -289,6 +365,79 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
         </button>
       </div>
       </motion.aside>
+
+      {/* Cmd+K command palette */}
+      <AnimatePresence>
+        {paletteOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh] px-4"
+            onClick={() => setPaletteOpen(false)}
+          >
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
+                <CommandIcon className="w-4 h-4 text-slate-500" />
+                <input
+                  autoFocus
+                  value={paletteQuery}
+                  onChange={(e) => setPaletteQuery(e.target.value)}
+                  placeholder="Sahifani qidiring…"
+                  className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && filteredPalette[0]) {
+                      const sel = filteredPalette[0];
+                      if (sel.page === "marketing-sub" && sel.sub) onMarketingNavigate(sel.sub);
+                      else if (sel.page !== "marketing-sub") onPageChange(sel.page);
+                      setPaletteOpen(false);
+                      setPaletteQuery("");
+                    }
+                  }}
+                />
+                <button onClick={() => setPaletteOpen(false)} className="p-1 text-slate-500 hover:text-white">
+                  <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto py-1">
+                {filteredPalette.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-slate-500">Topilmadi</div>
+                ) : (
+                  filteredPalette.map((p, i) => {
+                    const PIcon = p.icon;
+                    return (
+                      <button
+                        key={`${p.page}-${p.sub ?? i}`}
+                        onClick={() => {
+                          if (p.page === "marketing-sub" && p.sub) onMarketingNavigate(p.sub);
+                          else if (p.page !== "marketing-sub") onPageChange(p.page);
+                          setPaletteOpen(false);
+                          setPaletteQuery("");
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                      >
+                        <PIcon className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                        <span className="flex-1 text-left">{p.label}</span>
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">{p.section}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
+                <span>↵ ochish</span>
+                <span><kbd className="bg-slate-800 px-1 py-0.5 rounded">Esc</kbd> yopish</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -298,6 +447,7 @@ function NavGroupBlock({
   open,
   collapsed,
   currentPage,
+  counts,
   onToggle,
   onPageChange,
 }: {
@@ -305,9 +455,13 @@ function NavGroupBlock({
   open: boolean;
   collapsed: boolean;
   currentPage: Page;
+  counts: SidebarCounts | null;
   onToggle: () => void;
   onPageChange: (p: Page) => void;
 }) {
+  // Group jami badge — yopilgan bo'lsa ham diqqatga olib boradi
+  const groupBadge = group.items.reduce((s, it) => s + (it.badgeKey && counts ? counts[it.badgeKey] : 0), 0);
+
   if (collapsed) {
     return (
       <div className="space-y-0.5">
@@ -318,6 +472,7 @@ function NavGroupBlock({
             label={item.label}
             active={currentPage === item.page}
             collapsed
+            badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
             onClick={() => onPageChange(item.page)}
           />
         ))}
@@ -333,7 +488,14 @@ function NavGroupBlock({
         className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
         aria-expanded={open}
       >
-        <span>{group.label}</span>
+        <span className="flex items-center gap-1.5">
+          {group.label}
+          {!open && groupBadge > 0 && (
+            <span className="bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full normal-case tracking-normal">
+              {groupBadge > 99 ? "99+" : groupBadge}
+            </span>
+          )}
+        </span>
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "" : "-rotate-90"}`} />
       </button>
       <AnimatePresence initial={false}>
@@ -352,6 +514,7 @@ function NavGroupBlock({
                 label={item.label}
                 active={currentPage === item.page}
                 collapsed={false}
+                badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
                 onClick={() => onPageChange(item.page)}
               />
             ))}
@@ -449,26 +612,37 @@ function SidebarItem({
   label,
   active,
   collapsed,
+  badge = 0,
   onClick,
 }: {
   icon: React.ElementType;
   label: string;
   active: boolean;
   collapsed: boolean;
+  badge?: number;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title={collapsed ? label : undefined}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 ${
+      title={collapsed ? (badge > 0 ? `${label} (${badge})` : label) : undefined}
+      className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 ${
         active ? "bg-emerald-500/10 text-emerald-400" : "text-slate-400 hover:text-white hover:bg-slate-800"
       } ${collapsed ? "justify-center" : ""}`}
     >
       <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? "text-emerald-400" : ""}`} />
-      {!collapsed && <span className="text-sm font-medium truncate">{label}</span>}
-      {active && !collapsed && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+      {!collapsed && <span className="text-sm font-medium truncate flex-1 text-left">{label}</span>}
+      {badge > 0 && (collapsed ? (
+        <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      ) : (
+        <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ))}
+      {active && !collapsed && badge === 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
     </button>
   );
 }
