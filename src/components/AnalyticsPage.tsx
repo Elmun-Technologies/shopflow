@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -7,15 +7,19 @@ import {
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users,
   Target, RotateCcw, ArrowUpRight, ArrowDownRight, ChevronRight,
-  Download, Receipt,
+  Download, Receipt, Loader2,
 } from "lucide-react";
-import {
-  analyticsKPIs, monthlyRevenue, topProducts, trafficSources,
-  categorySales, geographyData, conversionFunnel, customerSegments,
-  dailySales, timeRangeLabels,
-} from "../data/analyticsData";
+import { timeRangeLabels } from "../data/analyticsData";
 import type { AnalyticsTimeRange } from "../data/analyticsData";
 import type { ChartTooltipProps } from "../utils/chart";
+import { dashboardApi } from "../api/endpoints";
+
+interface KpiData {
+  revenue: { value: number; change: number };
+  orders: { value: number; change: number };
+  customers: { value: number; change: number };
+  conversion: { value: number; change: number };
+}
 
 const iconMap: Record<string, React.ElementType> = {
   DollarSign, ShoppingCart, Users, Target, RotateCcw, Receipt,
@@ -55,6 +59,100 @@ const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>("month");
+  const [loading, setLoading] = useState(true);
+  const [kpis, setKpis] = useState<KpiData | null>(null);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<Array<{ month: string; revenue: number; orders: number }>>([]);
+  const [dailySales, setDailySales] = useState<Array<{ day: string; date: string; sales: number; orders: number }>>([]);
+  const [topProducts, setTopProducts] = useState<Array<{ id: string | undefined; name: string; category: string | null; price: number; sold: number; stock: number; growth: number; rank: number; revenue: number }>>([]);
+  const [trafficSources, setTrafficSources] = useState<Array<{ source: string; name: string; visitors: number; percentage: number; color: string }>>([]);
+  const [categorySales, setCategorySales] = useState<Array<{ name: string; category: string; sales: number; value: number; color: string }>>([]);
+  const [geographyData, setGeographyData] = useState<Array<{ name: string; city: string; orders: number; revenue: number; percentage: number }>>([]);
+  const [conversionFunnel, setConversionFunnel] = useState<Array<{ stage: string; count: number; dropOff: number; percentage: number; color: string }>>([]);
+  const [customerSegments, setCustomerSegments] = useState<Array<{ name: string; count: number; color: string; percentage: number; avgOrders: number }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      dashboardApi.kpis(),
+      dashboardApi.revenueTrend(),
+      dashboardApi.dailySales(30),
+      dashboardApi.topProducts(),
+      dashboardApi.trafficSources(),
+      dashboardApi.salesByCategory(),
+      dashboardApi.geography(),
+      dashboardApi.funnel(),
+      dashboardApi.customerSegments(),
+    ])
+      .then(([k, mr, ds, tp, ts, cs, gd, fn, cseg]) => {
+        if (cancelled) return;
+        setKpis(k as unknown as KpiData);
+        setMonthlyRevenue(mr);
+        setDailySales(ds);
+        setTopProducts(tp.map((p, i) => ({ ...p, growth: 0, rank: i + 1, revenue: p.price * p.sold })));
+        const sourceColors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"];
+        setTrafficSources(ts.map((s, i) => ({
+          source: s.source,
+          name: s.source,
+          visitors: s.visitors,
+          percentage: s.percentage,
+          color: sourceColors[i % sourceColors.length],
+        })));
+        const catColors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"];
+        setCategorySales(cs.map((c, i) => ({
+          ...c,
+          category: c.name,
+          color: catColors[i % catColors.length],
+        })));
+        const geoTotal = gd.reduce((a, g) => a + g.revenue, 0);
+        setGeographyData(gd.map((g) => ({
+          name: g.name,
+          city: g.name,
+          orders: g.orders,
+          revenue: g.revenue,
+          percentage: geoTotal > 0 ? Math.round((g.revenue / geoTotal) * 100) : 0,
+        })));
+        const funnelMax = fn[0]?.count ?? 1;
+        const funnelColors = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6"];
+        setConversionFunnel(fn.map((s, i) => ({
+          ...s,
+          percentage: funnelMax > 0 ? Math.round((s.count / funnelMax) * 100) : 0,
+          color: funnelColors[i] ?? "#64748b",
+        })));
+        const segTotal = cseg.reduce((a, s) => a + s.count, 0);
+        setCustomerSegments(cseg.map((s) => ({
+          ...s,
+          percentage: segTotal > 0 ? Math.round((s.count / segTotal) * 100) : 0,
+          avgOrders: 0,
+        })));
+      })
+      .catch(() => null)
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [timeRange]);
+
+  // Backend KPI'larni 6-kartochka shapega adapt qilamiz
+  type AdaptedKpi = { id: string; label: string; value: string; change: number; trend: "up" | "down"; icon: string; color: string };
+  const analyticsKPIs = useMemo<AdaptedKpi[]>(() => {
+    if (!kpis) return [];
+    const fmt = (n: number) => n >= 1e9 ? (n / 1e9).toFixed(1) + " mlrd" : n >= 1e6 ? (n / 1e6).toFixed(1) + " mln" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toLocaleString();
+    const avgOrder = kpis.orders.value > 0 ? kpis.revenue.value / kpis.orders.value : 0;
+    return [
+      { id: "revenue", label: "Daromad", value: fmt(kpis.revenue.value) + " so'm", change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
+      { id: "orders", label: "Buyurtmalar", value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", icon: "ShoppingCart", color: "#3b82f6" },
+      { id: "customers", label: "Mijozlar", value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", icon: "Users", color: "#8b5cf6" },
+      { id: "conversion", label: "Konversiya", value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", icon: "Target", color: "#f59e0b" },
+      { id: "avg", label: "O'rtacha chek", value: fmt(avgOrder) + " so'm", change: 0, trend: "up", icon: "Receipt", color: "#06b6d4" },
+      { id: "returns", label: "Qaytarish", value: "0%", change: 0, trend: "down", icon: "RotateCcw", color: "#94a3b8" },
+    ];
+  }, [kpis]);
+
+  if (loading && !kpis) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
