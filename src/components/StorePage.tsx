@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react
 import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
-  Tag, Heart,
+  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -68,6 +68,8 @@ declare global {
           onClick: (fn: () => void) => void;
           offClick: (fn: () => void) => void;
         };
+        openTelegramLink?: (url: string) => void;
+        openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
       };
     };
   }
@@ -116,7 +118,20 @@ type StoreProduct = {
   category: { id: string; name: string; slug: string } | null;
   saleCampaign?: StoreSaleCampaign | null;
   comboAddons?: StoreAddon[];
+  weeklyBuyers?: number;
 };
+
+// Uzbek oylar — yetkazib berish sanasi va shu kabi formatlash uchun
+const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
+function formatUzDate(d: Date): string {
+  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()]}`;
+}
+// Standart yetkazib berish — 2 kundan keyin
+function estimatedDeliveryDate(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  return d;
+}
 
 const SALE_BADGE_STYLES: Record<SaleBadgeColor, string> = {
   RED: "bg-rose-500 text-white",
@@ -361,6 +376,10 @@ function StoreInner({ slug }: { slug: string }) {
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites(slug));
   const [savedAddresses] = useState<StoredAddress[]>(() => loadStoredAddresses(slug));
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
+  // Mahsulot detali — sticky header (scroll'da), trust badge modal, description toggle
+  const [pdpScrolled, setPdpScrolled] = useState(false);
+  const [trustSheet, setTrustSheet] = useState<"original" | "warranty" | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
   const toast = useToast();
 
   const toggleFavorite = useCallback((productId: string) => {
@@ -421,7 +440,11 @@ function StoreInner({ slug }: { slug: string }) {
   }, [cart, slug]);
 
   // Quick view ochilganida default-selected combo addons'larni belgilab qo'yamiz
+  // + PDP state (scroll, sheet, description) reset
   useEffect(() => {
+    setPdpScrolled(false);
+    setTrustSheet(null);
+    setDescExpanded(false);
     if (!selectedProduct) {
       setSelectedAddons(new Set());
       return;
@@ -914,12 +937,80 @@ function StoreInner({ slug }: { slug: string }) {
     const savings = oldPrice && oldPrice > price ? oldPrice - price : 0;
     const liveCampaign = isCampaignLive(selectedProduct.saleCampaign);
     const isFav = favorites.has(selectedProduct.id);
+    const weeklyBuyers = selectedProduct.weeklyBuyers ?? 0;
+    const desc = selectedProduct.description ?? "";
+    const descIsLong = desc.length > 220 || (desc.match(/\n/g) ?? []).length > 3;
+    const deliveryStr = formatUzDate(estimatedDeliveryDate());
+    const currencyStr = data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency;
+
+    // Share — Telegram Web App API yoki clipboard fallback
+    const handleShare = async () => {
+      haptic.light();
+      const url = `https://${window.location.host}/store/${data.tenant.slug}?product=${selectedProduct.id}`;
+      const text = `${selectedProduct.name} — ${price.toLocaleString("uz-UZ")} ${currencyStr}`;
+      // Telegram Mini App
+      if (twa?.openTelegramLink) {
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        twa.openTelegramLink(shareUrl);
+        return;
+      }
+      // Brauzer share API
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: selectedProduct.name, text, url });
+          return;
+        }
+      } catch {
+        // Foydalanuvchi bekor qildi
+      }
+      // Fallback — clipboard
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        // ignore
+      }
+    };
 
     return (
       <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col animate-in fade-in duration-150">
-        {/* Top bar */}
+        {/* Compact sticky header — scroll'da paydo bo'ladi (Uzum uslubi) */}
         <div
-          className="px-4 pb-2 flex items-center justify-between bg-slate-950"
+          className={`absolute top-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 transition-opacity duration-200 ${
+            pdpScrolled ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+        >
+          <div className="px-3 pb-2 flex items-center gap-2">
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+              aria-label="Yopish"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="flex-1 text-sm font-semibold text-white truncate">{selectedProduct.name}</h2>
+            <button
+              onClick={() => toggleFavorite(selectedProduct.id)}
+              className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+              aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+            >
+              <Heart className={`w-5 h-5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
+            </button>
+            <button
+              onClick={handleShare}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+              aria-label="Ulashish"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Overlay top bar (rasm ustida — pdpScrolled bo'lmaganda ko'rinadi) */}
+        <div
+          className={`absolute top-0 left-0 right-0 z-20 px-4 pb-2 flex items-center justify-between transition-opacity duration-200 ${
+            pdpScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
           style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
         >
           <button
@@ -929,16 +1020,32 @@ function StoreInner({ slug }: { slug: string }) {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => toggleFavorite(selectedProduct.id)}
-            className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
-            aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
-          >
-            <Heart className={`w-4.5 h-4.5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => toggleFavorite(selectedProduct.id)}
+              className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+              aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+            >
+              <Heart className={`w-4.5 h-4.5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
+            </button>
+            <button
+              onClick={handleShare}
+              className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center text-white active:scale-90 transition-transform"
+              aria-label="Ulashish"
+            >
+              <Share2 className="w-4.5 h-4.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div
+          className="flex-1 overflow-y-auto"
+          onScroll={(e) => {
+            const top = (e.target as HTMLDivElement).scrollTop;
+            const next = top > 180;
+            if (next !== pdpScrolled) setPdpScrolled(next);
+          }}
+        >
           {/* Image carousel + badges */}
           <ProductImageCarousel
             imageUrl={selectedProduct.imageUrl}
@@ -977,15 +1084,37 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
             {savings > 0 && (
               <div className="inline-block bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-1 rounded-md mb-3">
-                Tejovingiz: {savings.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                Tejovingiz: {savings.toLocaleString("uz-UZ")} {currencyStr}
               </div>
             )}
+
+            {/* Trust badges — Uzum uslubidagi tappable rivojlangan kafolat belgilari */}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => { haptic.light(); setTrustSheet("original"); }}
+                className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
+              >
+                <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span className="text-xs font-medium text-white">ORIGINAL</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+              </button>
+              <button
+                type="button"
+                onClick={() => { haptic.light(); setTrustSheet("warranty"); }}
+                className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
+              >
+                <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                <span className="text-xs font-medium text-white">KAFOLAT 6 OY</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+              </button>
+            </div>
 
             {/* Title */}
             <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
 
             {/* Quick stats */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               {selectedProduct.category && (
                 <span className="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-1 rounded-md">
                   {selectedProduct.category.name}
@@ -1005,9 +1134,46 @@ function StoreInner({ slug }: { slug: string }) {
               )}
             </div>
 
-            {selectedProduct.description && (
-              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedProduct.description}</p>
+            {/* Social proof — haftalik xaridorlar soni */}
+            {weeklyBuyers > 0 && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-300 mb-4">
+                <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Bu haftada <span className="font-semibold text-white">{weeklyBuyers}</span> kishi sotib oldi</span>
+              </div>
             )}
+
+            {/* Description — Uzum uslubidagi expand/collapse */}
+            {desc && (
+              <div className="relative">
+                <p
+                  className={`text-sm text-slate-300 leading-relaxed whitespace-pre-wrap ${
+                    !descExpanded && descIsLong ? "line-clamp-4" : ""
+                  }`}
+                >
+                  {desc}
+                </p>
+                {descIsLong && (
+                  <button
+                    type="button"
+                    onClick={() => { haptic.light(); setDescExpanded((v) => !v); }}
+                    className="mt-2 text-sm font-medium text-sky-400 active:opacity-70"
+                  >
+                    {descExpanded ? "Yopish ↑" : "Batafsil ↓"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Yetkazib berish ma'lumotlari */}
+            <div className="mt-5 pt-5 border-t border-slate-800 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
+                <Truck className="w-5 h-5 text-sky-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white">Yetkazib berish: {deliveryStr}</div>
+                <div className="text-xs text-slate-400 mt-0.5">Toshkent bo'ylab kuryer · viloyatlarga pochta</div>
+              </div>
+            </div>
 
             {/* Combo / qo'shimcha mahsulotlar */}
             {selectedProduct.comboAddons && selectedProduct.comboAddons.length > 0 && (
@@ -1152,14 +1318,14 @@ function StoreInner({ slug }: { slug: string }) {
                     for (const item of selectedComboItems) addToCart(item.product);
                     setSelectedProduct(null);
                   }}
-                  className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
+                  className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                   style={{ backgroundColor: primaryColor }}
                 >
                   <span className="flex items-center gap-2">
                     <Plus className="w-5 h-5" />
-                    Combo savatga qo'shish ({1 + selectedComboItems.length})
+                    Combo savatga · {comboTotal.toLocaleString("uz-UZ")} {currencyStr}
                   </span>
-                  <span className="text-xs opacity-90">{comboTotal.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
+                  <span className="text-xs opacity-90">{1 + selectedComboItems.length} ta mahsulot · yetkazib berish {deliveryStr}</span>
                 </button>
               );
             }
@@ -1168,11 +1334,14 @@ function StoreInner({ slug }: { slug: string }) {
               return (
                 <button
                   onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
-                  className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  <Plus className="w-5 h-5" />
-                  Savatga qo'shish · {price.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                  <span className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    Savatga
+                  </span>
+                  <span className="text-xs opacity-90">{deliveryStr} · yetkazib berish</span>
                 </button>
               );
             }
@@ -1208,6 +1377,59 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
           )}
         </div>
+
+        {/* Trust badge bottom sheet — Uzum uslubidagi tushuntirish modal */}
+        {trustSheet && (
+          <div
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-150"
+            onClick={() => setTrustSheet(null)}
+          >
+            <div
+              className="w-full sm:max-w-sm bg-slate-900 sm:rounded-2xl rounded-t-3xl border-t sm:border border-slate-800 shadow-2xl animate-in slide-in-from-bottom duration-200"
+              onClick={(e) => e.stopPropagation()}
+              style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            >
+              <div className="flex justify-end p-3">
+                <button
+                  onClick={() => setTrustSheet(null)}
+                  className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 active:scale-90"
+                  aria-label="Yopish"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="px-6 pb-6 flex flex-col items-center gap-3 text-center">
+                {trustSheet === "original" ? (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                      <BadgeCheck className="w-9 h-9 text-emerald-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Original brend</h3>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      Bu belgi faqat original tovarlarda bor. Sotuvchi ularning asilligini hujjatlar bilan tasdiqlagan.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-sky-500/15 flex items-center justify-center">
+                      <ShieldCheck className="w-9 h-9 text-sky-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">6 oylik kafolat</h3>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      Kafolat muddati davomida tovar buzilsa, pulni qaytaramiz yoki almashtirib beramiz.
+                    </p>
+                  </>
+                )}
+                <button
+                  onClick={() => setTrustSheet(null)}
+                  className="mt-2 w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium text-white active:scale-[0.98] transition-transform"
+                >
+                  Xo'p
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
