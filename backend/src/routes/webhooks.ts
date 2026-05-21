@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { nextLeadCode } from "../lib/codes.js";
+import { aiReplyToMessage } from "../lib/ai-assistant.js";
 
 // Channel webhook — har bir kanal `webhookKey` ga ega.
 // URL: POST /api/webhooks/lead/:webhookKey
@@ -121,7 +122,72 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       return { ok: true, action: "start_sent" };
     }
 
-    // Boshqa xabarlar — lid sifatida saqlash
+    // AI yordamchi — agar ANTHROPIC_API_KEY sozlangan bo'lsa, mijozga to'g'ridan-to'g'ri
+    // javob qaytaradi. Bo'lmasa fallback (lead yaratish) ishlaydi.
+    const aiResult = await aiReplyToMessage(app.prisma, channel.tenantId, msg.text).catch(
+      (err): Awaited<ReturnType<typeof aiReplyToMessage>> => {
+        app.log.warn({ err }, "AI assistant failed, falling back to lead");
+        return { used: false, reason: "exception" };
+      },
+    );
+
+    if (aiResult.used && aiResult.text && !aiResult.handoffToOperator) {
+      // AI muvaffaqiyatli javob berdi — mijozga yuboramiz, interaction sifatida saqlaymiz
+      if (token && chatId) {
+        const replyMarkup = aiResult.productIds?.length
+          ? {
+              inline_keyboard: [[
+                {
+                  text: `🛒 ${channel.tenant.name} do'koniga kirish`,
+                  web_app: { url: `https://${process.env.DOMAIN || "shop-flow.uz"}/store/${channel.tenant.slug}` },
+                },
+              ]],
+            }
+          : undefined;
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: aiResult.text,
+            ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+          }),
+        }).catch(() => null);
+      }
+      // AI suhbatini ham lead/interaction sifatida saqlaymiz (tarix uchun)
+      const code = await nextLeadCode(app.prisma, channel.tenantId);
+      await app.prisma.lead.create({
+        data: {
+          tenantId: channel.tenantId,
+          channelId: channel.id,
+          code,
+          name,
+          notes: `[AI replied] ${msg.text.slice(0, 200)}`,
+          status: "CONTACTED",
+          interactions: {
+            create: [
+              {
+                tenantId: channel.tenantId,
+                type: "TELEGRAM",
+                direction: "INBOUND",
+                content: msg.text,
+                createdBy: name,
+              },
+              {
+                tenantId: channel.tenantId,
+                type: "TELEGRAM",
+                direction: "OUTBOUND",
+                content: aiResult.text,
+                createdBy: "AI Assistant",
+              },
+            ],
+          },
+        },
+      });
+      return { ok: true, action: "ai_replied" };
+    }
+
+    // Boshqa xabarlar (yoki AI handoff so'ragan) — lid sifatida saqlash
     const code = await nextLeadCode(app.prisma, channel.tenantId);
     const lead = await app.prisma.lead.create({
       data: {
@@ -150,7 +216,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: "✅ Xabaringiz qabul qilindi. Tez orada siz bilan bog'lanamiz!",
+          text: "✅ Xabaringiz qabul qilindi. Tez orada operatorimiz siz bilan bog'lanadi!",
         }),
       }).catch(() => null);
     }
