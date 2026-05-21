@@ -168,6 +168,18 @@ export const dashboardApi = {
   salesByCategory: () =>
     api<{ name: string; sales: number; value: number }[]>("/dashboard/sales-by-category"),
   recentOrders: () => api<Order[]>("/dashboard/recent-orders"),
+  // Analytics sahifasi uchun
+  dailySales: (days = 30) =>
+    api<{ day: string; date: string; sales: number; orders: number }[]>(
+      "/dashboard/daily-sales",
+      { query: { days } },
+    ),
+  geography: () =>
+    api<{ name: string; orders: number; revenue: number }[]>("/dashboard/geography"),
+  funnel: () =>
+    api<{ stage: string; count: number; dropOff: number }[]>("/dashboard/funnel"),
+  customerSegments: () =>
+    api<{ name: string; count: number; color: string }[]>("/dashboard/customer-segments"),
 };
 
 // ===== MoySklad Integration =====
