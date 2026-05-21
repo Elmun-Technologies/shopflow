@@ -401,6 +401,33 @@ function StoreInner({ slug }: { slug: string }) {
     saveCart(slug, cart);
   }, [cart, slug]);
 
+  // Savatni server'ga sinxronlash — cart abandonment scheduler uchun.
+  // Faqat Telegram user mavjud bo'lganda. Debounce 1.5s — har keypress uchun emas.
+  useEffect(() => {
+    const tgUser = twa?.initDataUnsafe?.user;
+    if (!tgUser) return;
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const timer = setTimeout(() => {
+      fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}/cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegram: {
+            userId: tgUser.id,
+            firstName: tgUser.first_name,
+            lastName: tgUser.last_name,
+          },
+          items: cart,
+          total,
+          currency: data?.tenant?.currency ?? "UZS",
+        }),
+      }).catch(() => {
+        // failsoft — abandonment server-side faqat qulay bonus
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [cart, slug, twa, data?.tenant?.currency]);
+
   // Cart abandonment reminder — agar mijozning savati 1 soatdan ortiq bo'lsa,
   // do'kon ochilganida bir martalik reminder ko'rsatamiz.
   useEffect(() => {

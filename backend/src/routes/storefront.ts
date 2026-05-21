@@ -335,4 +335,79 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       return { ok: true };
     },
   );
+
+  /**
+   * Mijoz savatini saqlash (cart abandonment uchun).
+   * POST /api/storefront/:tenantSlug/cart
+   * Body: { telegram: { userId, firstName?, lastName? }, items: [...], total, currency }
+   *
+   * Mijoz Mini App ichida cart'ga mahsulot qo'shgan har safari upsert qilamiz.
+   * Backend scheduler 1 soatdan ortiq tinch turgan savatlarga Telegram'dan eslatma yuboradi.
+   */
+  const cartUpsertSchema = z.object({
+    telegram: z.object({
+      userId: z.union([z.number(), z.string()]),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+    }),
+    items: z
+      .array(
+        z.object({
+          productId: z.string(),
+          qty: z.number().int().positive(),
+          name: z.string(),
+          price: z.number().nonnegative(),
+          imageUrl: z.string().nullable().optional(),
+        }),
+      )
+      .min(0),
+    total: z.number().nonnegative(),
+    currency: z.string().optional(),
+  });
+
+  app.post("/:tenantSlug/cart", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const data = cartUpsertSchema.parse(req.body);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true, currency: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const tgUserId = BigInt(data.telegram.userId);
+    const customerName = [data.telegram.firstName, data.telegram.lastName].filter(Boolean).join(" ").trim() || null;
+
+    if (data.items.length === 0) {
+      // Bo'sh cart — yozuvni o'chiramiz (checkout muvaffaqiyatli yoki mijoz tozalagan)
+      await app.prisma.abandonedCart.deleteMany({
+        where: { tenantId: tenant.id, telegramUserId: tgUserId },
+      });
+      return { ok: true, cleared: true };
+    }
+
+    await app.prisma.abandonedCart.upsert({
+      where: { tenantId_telegramUserId: { tenantId: tenant.id, telegramUserId: tgUserId } },
+      create: {
+        tenantId: tenant.id,
+        telegramUserId: tgUserId,
+        customerName,
+        items: data.items as never,
+        total: data.total,
+        currency: data.currency ?? tenant.currency,
+        lastActiveAt: new Date(),
+      },
+      update: {
+        items: data.items as never,
+        total: data.total,
+        currency: data.currency ?? tenant.currency,
+        lastActiveAt: new Date(),
+        customerName: customerName ?? undefined,
+        // Mijoz qaytib kelib o'zgartirdi — reminder hisoblagichini saqlaymiz
+        // (toki bir martalik yuborilgan reminder qayta yuborilmasin)
+      },
+    });
+
+    return { ok: true };
+  });
 };
