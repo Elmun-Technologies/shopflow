@@ -39,6 +39,7 @@ model Tenant {
   saleCampaigns   SaleCampaign[]
   abandonedCarts  AbandonedCart[]
   auditLogs       AuditLog[]
+  paymentMethods  PaymentMethod[]
 }
 
 enum UserRole {
@@ -488,6 +489,87 @@ model AuditLog {
 
   @@index([tenantId, resourceType, resourceId, createdAt])
   @@index([tenantId, createdAt])
+}
+
+// ============== PAYMENTS ==============
+
+enum PaymentMethodStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  ERROR
+}
+
+model PaymentMethod {
+  id       String              @id @default(cuid())
+  tenantId String
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  code     String // "click" | "payme" | "uzum" | "alif" | "cash" | ...
+  name     String // "Click", "Payme", "Naqd to'lov"
+  status   PaymentMethodStatus @default(INACTIVE)
+  type     String              @default("instant") // "instant" | "installment" | "cash"
+
+  // Provider config — merchant id, api key, etc.
+  // Maxfiy ma'lumotlar — frontend ko'rmaydi (faqat boolean "configured")
+  config Json @default("{}")
+
+  // Limitlar va komissiya
+  minAmount         Decimal? @db.Decimal(14, 2)
+  maxAmount         Decimal? @db.Decimal(14, 2)
+  commissionPercent Decimal? @db.Decimal(5, 2)
+
+  testMode    Boolean @default(true)
+  autoConfirm Boolean @default(false)
+
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions PaymentTransaction[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+}
+
+enum PaymentTxStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model PaymentTransaction {
+  id       String @id @default(cuid())
+  tenantId String
+
+  methodId String
+  method   PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
+
+  // Bog'liq buyurtma (ixtiyoriy — boshqa to'lov turlari ham bo'lishi mumkin)
+  orderId String?
+
+  // Provider tomondan kelgan tashqi transaction id (idempotency)
+  externalId String?
+
+  amount     Decimal         @db.Decimal(14, 2)
+  currency   String          @default("UZS")
+  status     PaymentTxStatus @default(PENDING)
+  commission Decimal?        @db.Decimal(14, 2)
+
+  // Provider'dan qaytgan xom payload
+  payload Json?
+
+  // Xato xabari (status=FAILED bo'lganda)
+  errorMessage String?
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@unique([tenantId, methodId, externalId])
+  @@index([tenantId, status, createdAt])
+  @@index([orderId])
 }
 
 // ============== MoySklad Integration ==============

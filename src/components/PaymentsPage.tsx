@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Settings, Eye, CheckCircle2, XCircle, Clock,
@@ -6,12 +6,85 @@ import {
   TrendingUp, ChevronLeft, ChevronRight,
   Copy, ExternalLink, BookOpen, Save, X,
   AlertTriangle, Check, DollarSign,
-  Activity, ShieldCheck, Download,
+  Activity, ShieldCheck, Download, Loader2, Plus,
 } from "lucide-react";
 import {
-  paymentMethods, transactions, dailyPaymentStats, methodColors,
+  dailyPaymentStats, methodColors,
 } from "../data/paymentsData";
 import type { PaymentMethod, PaymentConfig } from "../data/paymentsData";
+import { api } from "../api/client";
+
+// Backend'dan keladigan format (frontend'da redacted config bilan)
+interface ApiMethod {
+  id: string;
+  code: string;
+  name: string;
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR";
+  type: string;
+  configured: boolean;
+  configPreview: Record<string, unknown>;
+  minAmount: number | null;
+  maxAmount: number | null;
+  commissionPercent: number | null;
+  testMode: boolean;
+  autoConfirm: boolean;
+  position: number;
+  transactionsCount: number;
+}
+
+interface ApiTransaction {
+  id: string;
+  methodId: string;
+  method: { id: string; code: string; name: string };
+  orderId: string | null;
+  externalId: string | null;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED" | "CANCELLED";
+  commission: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+// Backend status'ini eski demo formatga moslashtirish (UI changini kamaytirish uchun)
+function backendToUiStatus(s: ApiMethod["status"]): "active" | "inactive" | "pending" | "error" {
+  switch (s) {
+    case "ACTIVE": return "active";
+    case "INACTIVE": return "inactive";
+    case "PENDING": return "pending";
+    case "ERROR": return "error";
+  }
+}
+
+// UI eski PaymentMethod shape'iga moslashtirish (transactions'dan stats'ni hisoblaymiz)
+function adapt(m: ApiMethod, txns: ApiTransaction[]): PaymentMethod {
+  const own = txns.filter((t) => t.methodId === m.id);
+  const success = own.filter((t) => t.status === "SUCCESS");
+  const today = own.filter((t) => Date.now() - new Date(t.createdAt).getTime() < 24 * 60 * 60 * 1000);
+  return {
+    id: m.id,
+    code: m.code,
+    name: m.name,
+    nameUz: m.name,
+    description: "",
+    icon: "Wallet",
+    status: backendToUiStatus(m.status),
+    type: (m.type as "instant" | "installment" | "cash") ?? "instant",
+    config: m.configPreview as PaymentConfig,
+    stats: {
+      totalTransactions: own.length,
+      totalAmount: success.reduce((s, t) => s + t.amount, 0),
+      successRate: own.length > 0 ? Math.round((success.length / own.length) * 100) : 0,
+      avgAmount: success.length > 0 ? Math.round(success.reduce((s, t) => s + t.amount, 0) / success.length) : 0,
+      todayTransactions: today.length,
+      todayAmount: today.filter((t) => t.status === "SUCCESS").reduce((s, t) => s + t.amount, 0),
+      failedTransactions: own.filter((t) => t.status === "FAILED").length,
+      refundedAmount: own.filter((t) => t.status === "REFUNDED").reduce((s, t) => s + t.amount, 0),
+    },
+    lastUpdated: new Date().toISOString(),
+  };
+}
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -54,7 +127,10 @@ function CustomTooltip({ active, payload }: ChartTooltipProps) {
 }
 
 export default function PaymentsPage() {
-  const [methods, setMethods] = useState<PaymentMethod[]>(paymentMethods);
+  const [apiMethods, setApiMethods] = useState<ApiMethod[]>([]);
+  const [txns, setTxns] = useState<ApiTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,7 +138,30 @@ export default function PaymentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [savedMessage, setSavedMessage] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [testMode, setTestMode] = useState<Record<string, boolean>>({});
+
+  // Backend'dan methods + transactions yuklash
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      api<{ items: ApiMethod[] }>("/payments/methods"),
+      api<{ items: ApiTransaction[] }>("/payments/transactions?pageSize=100"),
+    ])
+      .then(([m, t]) => {
+        if (cancelled) return;
+        setApiMethods(m.items);
+        setTxns(t.items);
+        setError(null);
+      })
+      .catch((e: Error) => !cancelled && setError(e.message))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, []);
+
+  // Backend ma'lumotlarini UI'ning eski shape'iga moslashtirish
+  const methods = useMemo(() => apiMethods.map((m) => adapt(m, txns)), [apiMethods, txns]);
 
   const filteredMethods = useMemo(() => {
     let result = [...methods];
@@ -73,29 +172,81 @@ export default function PaymentsPage() {
     return result;
   }, [searchQuery, methods]);
 
+  // Transactions endi backend'dan keladi
   const filteredTxns = useMemo(() => {
-    let result = [...transactions];
-    if (txnFilter !== "all") result = result.filter((t) => t.status === txnFilter);
+    let result = [...txns];
+    if (txnFilter !== "all") {
+      const wanted = txnFilter.toUpperCase();
+      result = result.filter((t) => t.status === wanted);
+    }
     return result;
-  }, [txnFilter]);
+  }, [txnFilter, txns]);
 
   const totalPages = Math.ceil(filteredTxns.length / itemsPerPage);
   const paginatedTxns = filteredTxns.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const toggleMethod = (id: string) => {
-    setMethods((prev) => prev.map((m) => {
-      if (m.id !== id) return m;
-      const newStatus: PaymentMethodStatus = m.status === "active" ? "inactive" : "active";
-      return { ...m, status: newStatus, lastUpdated: new Date().toISOString() };
-    }));
+  const reload = async () => {
+    const [m, t] = await Promise.all([
+      api<{ items: ApiMethod[] }>("/payments/methods"),
+      api<{ items: ApiTransaction[] }>("/payments/transactions?pageSize=100"),
+    ]);
+    setApiMethods(m.items);
+    setTxns(t.items);
   };
 
-  const saveConfig = (id: string, config: PaymentConfig) => {
-    setMethods((prev) => prev.map((m) => m.id === id ? { ...m, config, lastUpdated: new Date().toISOString() } : m));
-    setSavedMessage("Sozlamalar saqlandi!");
+  const flashSaved = (msg = "Saqlandi!") => {
+    setSavedMessage(msg);
     setTimeout(() => setSavedMessage(""), 2000);
-    setShowConfig(false);
-    setSelectedMethod(null);
+  };
+
+  const toggleMethod = async (id: string) => {
+    const m = apiMethods.find((x) => x.id === id);
+    if (!m) return;
+    setBusyId(id);
+    try {
+      const next = m.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+      await api(`/payments/methods/${id}`, { method: "PATCH", body: { status: next } });
+      await reload();
+      flashSaved(next === "ACTIVE" ? "Yoqildi" : "O'chirildi");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xato");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveConfig = async (id: string, config: PaymentConfig) => {
+    setBusyId(id);
+    try {
+      // Bo'sh stringlarni jo'natmaymiz — ular yashirin maydonlarning ko'rinishi (•••••)
+      const clean: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(config)) {
+        if (typeof v === "string" && v.startsWith("•")) continue;
+        clean[k] = v;
+      }
+      await api(`/payments/methods/${id}`, {
+        method: "PATCH",
+        body: { config: clean },
+      });
+      await reload();
+      flashSaved("Sozlamalar saqlandi");
+      setShowConfig(false);
+      setSelectedMethod(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xato");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const addMethod = async (code: string, name: string) => {
+    try {
+      await api("/payments/methods", { method: "POST", body: { code, name } });
+      await reload();
+      flashSaved(`${name} qo'shildi`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xato");
+    }
   };
 
   const totalRevenue = methods.reduce((s, m) => s + m.stats.totalAmount, 0);
@@ -105,20 +256,72 @@ export default function PaymentsPage() {
 
   const pieData = methods.map((m) => ({ name: m.nameUz, value: m.stats.totalTransactions, color: methodColors[m.nameUz] || "#64748b" }));
 
+  // Yangi method qo'shish — dropdown'dan tanlash uchun standart ro'yxat
+  const KNOWN_METHODS: Array<{ code: string; name: string }> = [
+    { code: "click", name: "Click" },
+    { code: "payme", name: "Payme" },
+    { code: "uzum", name: "Uzum Bank" },
+    { code: "alif", name: "Alif" },
+    { code: "cash", name: "Naqd to'lov" },
+  ];
+  const availableToAdd = KNOWN_METHODS.filter((k) => !apiMethods.some((m) => m.code === k.code));
+  const [showAddMenu, setShowAddMenu] = useState(false);
+
   return (
     <div>
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Способы оплаты</h1>
+          <h1 className="text-2xl font-bold text-white">To'lov usullari</h1>
           <p className="text-sm text-slate-500 mt-1">To'lov usullarini sozlash va monitoring</p>
         </div>
-        {savedMessage && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-            <Check className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm text-emerald-400">{savedMessage}</span>
-          </motion.div>
-        )}
+        <div className="flex items-center gap-2">
+          {loading && (
+            <span className="flex items-center gap-1.5 text-xs text-slate-400">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Yuklanmoqda
+            </span>
+          )}
+          {error && (
+            <span className="flex items-center gap-1.5 text-xs text-rose-400">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {error}
+            </span>
+          )}
+          {savedMessage && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <Check className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm text-emerald-400">{savedMessage}</span>
+            </motion.div>
+          )}
+          {availableToAdd.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+              >
+                <Plus className="w-4 h-4" />
+                Usul qo'shish
+              </button>
+              {showAddMenu && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setShowAddMenu(false)} />
+                  <div className="absolute top-full right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px]">
+                    {availableToAdd.map((k) => (
+                      <button
+                        key={k.code}
+                        onClick={() => { addMethod(k.code, k.name); setShowAddMenu(false); }}
+                        className="w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700"
+                      >
+                        {k.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* Stats */}
@@ -266,9 +469,14 @@ export default function PaymentsPage() {
                     </button>
                     <button
                       onClick={() => toggleMethod(method.id)}
-                      className={`relative w-11 h-6 rounded-full transition-all ${method.status === "active" ? "bg-emerald-500" : "bg-slate-700"}`}
+                      disabled={busyId === method.id}
+                      className={`relative w-11 h-6 rounded-full transition-all disabled:opacity-50 ${method.status === "active" ? "bg-emerald-500" : "bg-slate-700"}`}
                     >
-                      <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${method.status === "active" ? "left-5" : "left-0.5"}`} />
+                      {busyId === method.id ? (
+                        <Loader2 className="absolute top-1 left-1/2 -translate-x-1/2 w-4 h-4 text-white animate-spin" />
+                      ) : (
+                        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${method.status === "active" ? "left-5" : "left-0.5"}`} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -335,25 +543,26 @@ export default function PaymentsPage() {
             </thead>
             <tbody>
               {paginatedTxns.map((txn, i) => {
-                const ts = txnStatusConfig[txn.status];
+                const tsKey = txn.status.toLowerCase();
+                const ts = txnStatusConfig[tsKey] ?? { color: "text-slate-400", label: txn.status };
+                const methodName = txn.method?.name ?? "—";
                 return (
                   <motion.tr key={txn.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-5 text-sm text-slate-400">{txn.id}</td>
-                    <td className="py-3 px-5 text-sm text-white">{txn.orderId}</td>
+                    <td className="py-3 px-5 text-sm text-slate-400 font-mono">{txn.id.slice(0, 8)}</td>
+                    <td className="py-3 px-5 text-sm text-white">{txn.orderId ?? "—"}</td>
                     <td className="py-3 px-5">
-                      <p className="text-sm text-white">{txn.customer}</p>
-                      <p className="text-xs text-slate-500">{txn.phone}</p>
+                      <p className="text-sm text-white">{txn.externalId ?? "—"}</p>
+                      <p className="text-xs text-slate-500">{txn.currency}</p>
                     </td>
                     <td className="py-3 px-5">
-                      <span className="text-xs font-medium" style={{ color: methodColors[txn.method] || "#94a3b8" }}>{txn.method}</span>
-                      {txn.installmentMonths && <p className="text-[10px] text-slate-500">{txn.installmentMonths} oy</p>}
+                      <span className="text-xs font-medium" style={{ color: methodColors[methodName] || "#94a3b8" }}>{methodName}</span>
                     </td>
                     <td className="py-3 px-5 text-sm font-semibold text-white text-right">{txn.amount.toLocaleString()}</td>
                     <td className="py-3 px-5">
                       <span className={`text-xs font-medium ${ts.color}`}>{ts.label}</span>
                       {txn.errorMessage && <p className="text-[10px] text-red-400 mt-0.5">{txn.errorMessage}</p>}
                     </td>
-                    <td className="py-3 px-5 text-sm text-slate-400">{txn.createdAt}</td>
+                    <td className="py-3 px-5 text-sm text-slate-400">{new Date(txn.createdAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</td>
                   </motion.tr>
                 );
               })}
