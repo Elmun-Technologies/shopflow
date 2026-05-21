@@ -10,7 +10,10 @@ import {
   Trash2,
   X,
   Star,
+  ImagePlus,
 } from "lucide-react";
+
+const MAX_IMAGES = 10;
 import { useAsync } from "../hooks/useAsync";
 import { productsApi, categoriesApi } from "../api/endpoints";
 import { api } from "../api/client";
@@ -299,8 +302,15 @@ function ProductFormModal({
   const [oldPrice, setOldPrice] = useState(product?.oldPrice ? String(product.oldPrice) : "");
   const [stock, setStock] = useState(String(product?.stock ?? "0"));
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
-  const [extraImages, setExtraImages] = useState<string[]>(product?.images ?? []);
+  // Bitta galereya — birinchi rasm avtomatik asosiy (cover). Edit rejimida
+  // mavjud imageUrl va images[] birlashtirilib, takrorlanishlar olib tashlanadi.
+  const [images, setImages] = useState<string[]>(() => {
+    if (!product) return [];
+    const combined = [product.imageUrl, ...(product.images ?? [])].filter(Boolean) as string[];
+    return Array.from(new Set(combined)).slice(0, MAX_IMAGES);
+  });
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [comboAddons, setComboAddons] = useState<Array<{ addonProductId: string; discountPct: number; defaultSelected: boolean; position: number; productName?: string; productImage?: string | null; productPrice?: string | number }>>([]);
   const [comboPickerOpen, setComboPickerOpen] = useState(false);
   const [productsCatalog, setProductsCatalog] = useState<Array<{ id: string; name: string; sku: string; price: string | number; imageUrl: string | null }>>([]);
@@ -343,7 +353,6 @@ function ProductFormModal({
       .catch(() => undefined);
   }, [comboPickerOpen, productsCatalog.length]);
   const [uploading, setUploading] = useState(false);
-  const [extraUploading, setExtraUploading] = useState(false);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [saving, setSaving] = useState(false);
@@ -366,46 +375,46 @@ function ProductFormModal({
     return url;
   };
 
-  const handleImageUpload = async (file: File) => {
+  const addImages = async (files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
     setUploading(true);
     setError(null);
     try {
-      const url = await uploadSingle(file);
-      setImageUrl(url);
-    } catch (e: unknown) {
+      const remaining = MAX_IMAGES - images.length;
+      const toUpload = fileArr.slice(0, remaining);
+      const urls: string[] = [];
+      for (const file of toUpload) {
+        urls.push(await uploadSingle(file));
+      }
+      setImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+    } catch (e) {
       setError(e instanceof Error ? e.message : "Rasm yuklanmadi");
     } finally {
       setUploading(false);
     }
   };
 
-  const handleExtraUpload = async (files: FileList) => {
-    setExtraUploading(true);
-    setError(null);
-    try {
-      const urls: string[] = [];
-      for (const file of Array.from(files)) {
-        const url = await uploadSingle(file);
-        urls.push(url);
-      }
-      setExtraImages((prev) => [...prev, ...urls].slice(0, 9));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Rasmlar yuklanmadi");
-    } finally {
-      setExtraUploading(false);
-    }
+  const removeImage = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const removeExtraImage = (idx: number) => {
-    setExtraImages((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const moveExtraImage = (idx: number, dir: -1 | 1) => {
-    setExtraImages((prev) => {
+  const makeCover = (idx: number) => {
+    if (idx === 0) return;
+    setImages((prev) => {
       const next = prev.slice();
-      const target = idx + dir;
-      if (target < 0 || target >= next.length) return prev;
-      [next[idx], next[target]] = [next[target], next[idx]];
+      const [picked] = next.splice(idx, 1);
+      next.unshift(picked);
+      return next;
+    });
+  };
+
+  const reorderImage = (from: number, to: number) => {
+    if (from === to) return;
+    setImages((prev) => {
+      const next = prev.slice();
+      const [picked] = next.splice(from, 1);
+      next.splice(to, 0, picked);
       return next;
     });
   };
@@ -424,8 +433,9 @@ function ProductFormModal({
         stock: Number(stock) || 0,
         currency,
         categoryId: categoryId || null,
-        imageUrl: imageUrl || null,
-        images: extraImages,
+        // Birinchi rasm — asosiy (cover), qolganlari galereya
+        imageUrl: images[0] ?? null,
+        images: images.slice(1),
         featured,
         active,
       };
@@ -566,118 +576,22 @@ function ProductFormModal({
             </Field>
           </div>
 
-          <Field label="Rasm">
-            <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${uploading ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-slate-500 bg-slate-800/50"}`}>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload(file);
-                  e.target.value = "";
-                }}
-              />
-              {uploading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs text-emerald-400">Yuklanmoqda...</span>
-                </div>
-              ) : imageUrl ? (
-                <div className="relative w-full h-full">
-                  <img src={imageUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                    <span className="text-xs text-white">Rasmni o'zgartirish</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-xs text-slate-400">Rasm yuklash uchun bosing</span>
-                  <span className="text-[10px] text-slate-600">JPEG, PNG, WebP · max 8MB</span>
-                </div>
-              )}
-            </label>
-            {imageUrl && (
-              <button
-                type="button"
-                onClick={() => setImageUrl("")}
-                className="mt-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
-              >
-                Rasmni olib tashlash
-              </button>
-            )}
-          </Field>
-
-          {/* Qo'shimcha rasmlar (carousel uchun) */}
-          <Field label={`Qo'shimcha rasmlar (${extraImages.length}/9 — Mini App'da swipe karusel)`}>
-            <div className="grid grid-cols-4 gap-2">
-              {extraImages.map((url, i) => (
-                <div key={`${url}-${i}`} className="relative group aspect-square bg-slate-800 rounded-lg overflow-hidden">
-                  <img src={url} alt={`extra ${i + 1}`} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveExtraImage(i, -1)}
-                        disabled={i === 0}
-                        className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 text-white text-xs disabled:opacity-30"
-                        aria-label="Chapga"
-                      >‹</button>
-                      <button
-                        type="button"
-                        onClick={() => moveExtraImage(i, 1)}
-                        disabled={i === extraImages.length - 1}
-                        className="w-6 h-6 rounded bg-white/20 hover:bg-white/30 text-white text-xs disabled:opacity-30"
-                        aria-label="O'ngga"
-                      >›</button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeExtraImage(i)}
-                      className="text-[10px] text-rose-300 hover:text-rose-200"
-                    >
-                      O'chirish
-                    </button>
-                  </div>
-                  <div className="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1 rounded">
-                    {i + 1}
-                  </div>
-                </div>
-              ))}
-              {extraImages.length < 9 && (
-                <label className={`aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                  extraUploading ? "border-emerald-500/50 bg-emerald-500/5" : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
-                }`}>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    multiple
-                    className="hidden"
-                    disabled={extraUploading}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) handleExtraUpload(e.target.files);
-                      e.target.value = "";
-                    }}
-                  />
-                  {extraUploading ? (
-                    <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span className="text-xl text-slate-500 leading-none">+</span>
-                      <span className="text-[10px] text-slate-500 mt-1">Qo'shish</span>
-                    </>
-                  )}
-                </label>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-2">
-              Bir necha rasmni bir vaqtda tanlashingiz mumkin. Hover qilib tartibni o'zgartiring yoki o'chiring.
-            </p>
-          </Field>
+          <ImageGallery
+            images={images}
+            uploading={uploading}
+            dragIdx={dragIdx}
+            dragOverIdx={dragOverIdx}
+            onAdd={addImages}
+            onRemove={removeImage}
+            onMakeCover={makeCover}
+            onReorder={reorderImage}
+            onDragStart={setDragIdx}
+            onDragOver={setDragOverIdx}
+            onDragEnd={() => {
+              setDragIdx(null);
+              setDragOverIdx(null);
+            }}
+          />
 
           {/* Combo / qo'shimcha mahsulotlar (Amazon-style) */}
           <Field label={`🎁 Combo qo'shimchalari (${comboAddons.length}) — Mini App'da "Bularni ham qo'shing"`}>
@@ -877,7 +791,35 @@ function CategoriesModal({
 }) {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const token = localStorage.getItem("shopflow.token");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error || "Yuklash xatosi");
+      }
+      const { url } = (await res.json()) as { url: string };
+      setNewImageUrl(url);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Rasm yuklanmadi");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -889,9 +831,12 @@ function CategoriesModal({
         slug:
           newSlug.trim() ||
           newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+        imageUrl: newImageUrl || null,
       });
       setNewName("");
       setNewSlug("");
+      setNewImageUrl("");
+      setUploadError(null);
       onChanged();
     } catch {
       // ignore
@@ -941,9 +886,53 @@ function CategoriesModal({
             placeholder="slug (ixtiyoriy) — telefonlar"
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
+          <label
+            className={`flex items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+              uploading
+                ? "border-emerald-500/50 bg-emerald-500/5"
+                : newImageUrl
+                  ? "border-slate-700"
+                  : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+            }`}
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file);
+                e.target.value = "";
+              }}
+            />
+            {uploading ? (
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Yuklanmoqda...
+              </div>
+            ) : newImageUrl ? (
+              <div className="flex items-center gap-2">
+                <img src={newImageUrl} alt="preview" className="w-12 h-12 rounded object-cover" />
+                <span className="text-xs text-slate-400">Rasmni o'zgartirish</span>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-500">Rasm yuklash (ixtiyoriy)</span>
+            )}
+          </label>
+          {newImageUrl && !uploading && (
+            <button
+              type="button"
+              onClick={() => setNewImageUrl("")}
+              className="text-[11px] text-red-400 hover:text-red-300"
+            >
+              Rasmni olib tashlash
+            </button>
+          )}
+          {uploadError && <p className="text-[11px] text-red-400">{uploadError}</p>}
           <button
             type="submit"
-            disabled={saving || !newName.trim()}
+            disabled={saving || uploading || !newName.trim()}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -959,15 +948,26 @@ function CategoriesModal({
             categories.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between px-3 py-2 hover:bg-slate-800 rounded-lg"
+                className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 rounded-lg"
               >
-                <div>
-                  <p className="text-sm text-white">{c.name}</p>
-                  <p className="text-xs text-slate-500">{c.slug}</p>
+                {c.imageUrl ? (
+                  <img
+                    src={c.imageUrl}
+                    alt={c.name}
+                    className="w-10 h-10 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-4 h-4 text-slate-600" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{c.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{c.slug}</p>
                 </div>
                 <button
                   onClick={() => handleDelete(c)}
-                  className="p-1.5 rounded text-slate-500 hover:text-red-400"
+                  className="p-1.5 rounded text-slate-500 hover:text-red-400 flex-shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -986,5 +986,226 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>
       {children}
     </div>
+  );
+}
+
+interface ImageGalleryProps {
+  images: string[];
+  uploading: boolean;
+  dragIdx: number | null;
+  dragOverIdx: number | null;
+  onAdd: (files: FileList | File[]) => void;
+  onRemove: (idx: number) => void;
+  onMakeCover: (idx: number) => void;
+  onReorder: (from: number, to: number) => void;
+  onDragStart: (idx: number | null) => void;
+  onDragOver: (idx: number | null) => void;
+  onDragEnd: () => void;
+}
+
+function ImageGallery({
+  images,
+  uploading,
+  dragIdx,
+  dragOverIdx,
+  onAdd,
+  onRemove,
+  onMakeCover,
+  onReorder,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+}: ImageGalleryProps) {
+  const [dropZoneActive, setDropZoneActive] = useState(false);
+  const slotsLeft = MAX_IMAGES - images.length;
+  const canAdd = slotsLeft > 0 && !uploading;
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDropZoneActive(false);
+    // Faqat fayllar bo'lsa (ichki drag-reorder emas)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onAdd(e.dataTransfer.files);
+    }
+  };
+
+  // Bo'sh holat — katta drop zone
+  if (images.length === 0) {
+    return (
+      <Field label="Mahsulot rasmlari">
+        <label
+          onDragEnter={(e) => {
+            e.preventDefault();
+            if (canAdd) setDropZoneActive(true);
+          }}
+          onDragOver={(e) => e.preventDefault()}
+          onDragLeave={() => setDropZoneActive(false)}
+          onDrop={handleFileDrop}
+          className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+            uploading
+              ? "border-emerald-500/50 bg-emerald-500/5"
+              : dropZoneActive
+                ? "border-emerald-500 bg-emerald-500/10"
+                : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+          }`}
+        >
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) onAdd(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+              <span className="text-xs text-emerald-400">Yuklanmoqda...</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <ImagePlus className="w-10 h-10 text-slate-500" />
+              <span className="text-sm font-medium text-slate-300">
+                Rasmlarni bu yerga sudrab tashlang yoki tanlang
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Birinchi rasm — asosiy · 10 tagacha · JPEG, PNG, WebP, GIF · 8MB gacha
+              </span>
+            </div>
+          )}
+        </label>
+      </Field>
+    );
+  }
+
+  // Rasmlar bor — galereya
+  return (
+    <Field label={`Mahsulot rasmlari (${images.length}/${MAX_IMAGES})`}>
+      <div className="grid grid-cols-4 gap-2">
+        {images.map((url, i) => {
+          const isCover = i === 0;
+          const isDragSource = dragIdx === i;
+          const isDragTarget = dragOverIdx === i && dragIdx !== i;
+          return (
+            <div
+              key={`${url}-${i}`}
+              draggable={!uploading}
+              onDragStart={() => onDragStart(i)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragIdx !== null) onDragOver(i);
+              }}
+              onDragLeave={() => {
+                if (dragOverIdx === i) onDragOver(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Ichki drag-reorder
+                if (dragIdx !== null) {
+                  onReorder(dragIdx, i);
+                  onDragEnd();
+                  return;
+                }
+                // Tashqi fayl
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  onAdd(e.dataTransfer.files);
+                }
+              }}
+              onDragEnd={onDragEnd}
+              className={`relative group ${isCover ? "col-span-2 row-span-2 aspect-[4/3]" : "aspect-square"} bg-slate-800 rounded-lg overflow-hidden cursor-move transition-all ${
+                isDragSource ? "opacity-40" : ""
+              } ${isDragTarget ? "ring-2 ring-emerald-500" : ""}`}
+            >
+              <img src={url} alt={isCover ? "Asosiy rasm" : `${i + 1}-rasm`} className="w-full h-full object-cover pointer-events-none" />
+
+              {/* Asosiy belgisi */}
+              {isCover && (
+                <div className="absolute top-2 left-2 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded shadow-lg">
+                  ASOSIY
+                </div>
+              )}
+
+              {/* Tartib raqami (cover'dan tashqari) */}
+              {!isCover && (
+                <div className="absolute top-1 left-1 w-5 h-5 bg-black/70 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+                  {i + 1}
+                </div>
+              )}
+
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 pointer-events-none">
+                <div className="flex gap-1.5 pointer-events-auto">
+                  {!isCover && (
+                    <button
+                      type="button"
+                      onClick={() => onMakeCover(i)}
+                      className="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 rounded text-[10px] font-medium text-white shadow"
+                      title="Asosiy qilish"
+                    >
+                      <Star className="w-3 h-3 inline mr-0.5" />
+                      Asosiy
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onRemove(i)}
+                    className="w-7 h-7 bg-rose-500 hover:bg-rose-600 rounded flex items-center justify-center text-white shadow"
+                    title="O'chirish"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Yana qo'shish kartochkasi */}
+        {canAdd && (
+          <label
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDropZoneActive(true);
+            }}
+            onDragOver={(e) => e.preventDefault()}
+            onDragLeave={() => setDropZoneActive(false)}
+            onDrop={handleFileDrop}
+            className={`aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+              dropZoneActive
+                ? "border-emerald-500 bg-emerald-500/10"
+                : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+            }`}
+          >
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) onAdd(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <ImagePlus className="w-5 h-5 text-slate-500 mb-1" />
+            <span className="text-[10px] text-slate-500">Yana {slotsLeft} ta</span>
+          </label>
+        )}
+
+        {/* Yuklash holatida overlay */}
+        {uploading && (
+          <div className="aspect-square flex items-center justify-center border-2 border-dashed border-emerald-500/50 rounded-lg bg-emerald-500/5">
+            <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
+          </div>
+        )}
+      </div>
+
+      <p className="text-[11px] text-slate-500 mt-2">
+        💡 <span className="text-slate-400">Birinchi rasm — asosiy</span> · rasmni sudrab tartibini o'zgartiring · hover qilib ⭐ "Asosiy" yoki 🗑 "O'chirish" tanlang
+      </p>
+    </Field>
   );
 }

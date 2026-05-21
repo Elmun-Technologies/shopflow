@@ -201,6 +201,7 @@ model Category {
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name      String
   slug      String
+  imageUrl  String?
   parentId  String?
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children  Category[] @relation("CategoryTree")
