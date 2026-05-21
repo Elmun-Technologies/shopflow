@@ -84,6 +84,22 @@ type StoreSaleCampaign = {
   endsAt: string | null;
 };
 
+type StoreAddon = {
+  id: string;
+  position: number;
+  discountPct: number;
+  defaultSelected: boolean;
+  addonProduct: {
+    id: string;
+    name: string;
+    sku: string;
+    price: string | number;
+    imageUrl: string | null;
+    stock: number;
+    active: boolean;
+  };
+};
+
 type StoreProduct = {
   id: string;
   sku: string;
@@ -99,6 +115,7 @@ type StoreProduct = {
   categoryId: string | null;
   category: { id: string; name: string; slug: string } | null;
   saleCampaign?: StoreSaleCampaign | null;
+  comboAddons?: StoreAddon[];
 };
 
 const SALE_BADGE_STYLES: Record<SaleBadgeColor, string> = {
@@ -343,6 +360,7 @@ function StoreInner({ slug }: { slug: string }) {
   const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites(slug));
   const [savedAddresses] = useState<StoredAddress[]>(() => loadStoredAddresses(slug));
+  const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
   const toast = useToast();
 
   const toggleFavorite = useCallback((productId: string) => {
@@ -401,6 +419,21 @@ function StoreInner({ slug }: { slug: string }) {
   useEffect(() => {
     saveCart(slug, cart);
   }, [cart, slug]);
+
+  // Quick view ochilganida default-selected combo addons'larni belgilab qo'yamiz
+  useEffect(() => {
+    if (!selectedProduct) {
+      setSelectedAddons(new Set());
+      return;
+    }
+    const defaults = new Set<string>();
+    for (const a of selectedProduct.comboAddons ?? []) {
+      if (a.defaultSelected && a.addonProduct.active && a.addonProduct.stock > 0) {
+        defaults.add(a.addonProduct.id);
+      }
+    }
+    setSelectedAddons(defaults);
+  }, [selectedProduct]);
 
   // Savatni server'ga sinxronlash — cart abandonment scheduler uchun.
   // Faqat Telegram user mavjud bo'lganda. Debounce 1.5s — har keypress uchun emas.
@@ -975,6 +1008,92 @@ function StoreInner({ slug }: { slug: string }) {
             {selectedProduct.description && (
               <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedProduct.description}</p>
             )}
+
+            {/* Combo / qo'shimcha mahsulotlar */}
+            {selectedProduct.comboAddons && selectedProduct.comboAddons.length > 0 && (
+              <div className="mt-5 pt-5 border-t border-slate-800">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                    🎁 Bularni ham qo'shing
+                  </h3>
+                  <span className="text-[10px] text-slate-500">
+                    {selectedAddons.size} / {selectedProduct.comboAddons.length}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {selectedProduct.comboAddons.map((addon) => {
+                    const ap = addon.addonProduct;
+                    if (!ap.active) return null;
+                    const isSelected = selectedAddons.has(ap.id);
+                    const origPrice = Number(ap.price);
+                    const finalPrice = addon.discountPct > 0
+                      ? Math.round(origPrice * (1 - addon.discountPct / 100))
+                      : origPrice;
+                    const isOut = ap.stock <= 0;
+                    return (
+                      <button
+                        key={addon.id}
+                        onClick={() => {
+                          if (isOut) return;
+                          haptic.light();
+                          setSelectedAddons((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(ap.id)) next.delete(ap.id);
+                            else next.add(ap.id);
+                            return next;
+                          });
+                        }}
+                        disabled={isOut}
+                        className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left ${
+                          isSelected
+                            ? "bg-emerald-500/10 border-emerald-500/40"
+                            : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                        } ${isOut ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        {/* Checkbox */}
+                        <div
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                            isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-600"
+                          }`}
+                        >
+                          {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                        </div>
+                        {/* Image */}
+                        {ap.imageUrl ? (
+                          <img src={ap.imageUrl} alt={ap.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                            <Package className="w-5 h-5 text-slate-600" />
+                          </div>
+                        )}
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-white font-medium line-clamp-2">{ap.name}</div>
+                          {isOut ? (
+                            <div className="text-[10px] text-rose-400 mt-0.5">Tugagan</div>
+                          ) : (
+                            <div className="flex items-baseline gap-1.5 mt-1">
+                              <span className="text-sm font-bold text-white">
+                                {finalPrice.toLocaleString("uz-UZ")}
+                                <span className="text-[10px] font-normal text-slate-400 ml-0.5">
+                                  {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                                </span>
+                              </span>
+                              {addon.discountPct > 0 && (
+                                <>
+                                  <span className="text-[10px] text-slate-500 line-through">{origPrice.toLocaleString("uz-UZ")}</span>
+                                  <span className="text-[10px] font-bold text-rose-300">−{addon.discountPct}%</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -983,23 +1102,85 @@ function StoreInner({ slug }: { slug: string }) {
           className="border-t border-slate-800 bg-slate-950 p-4"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          {selectedProduct.stock <= 0 ? (
-            <button
-              disabled
-              className="w-full py-4 rounded-2xl font-semibold text-slate-400 text-base bg-slate-800 cursor-not-allowed"
-            >
-              Hozircha tugagan
-            </button>
-          ) : qty === 0 ? (
-            <button
-              onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
-              className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <Plus className="w-5 h-5" />
-              Savatga qo'shish · {price.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
-            </button>
-          ) : (
+          {(() => {
+            // Combo total = main + selected addons (discount qo'llanadi)
+            let comboTotal = price;
+            const selectedComboItems: Array<{ product: StoreProduct; finalPrice: number }> = [];
+            for (const addon of selectedProduct.comboAddons ?? []) {
+              if (!selectedAddons.has(addon.addonProduct.id)) continue;
+              const ap = addon.addonProduct;
+              const orig = Number(ap.price);
+              const fp = addon.discountPct > 0
+                ? Math.round(orig * (1 - addon.discountPct / 100))
+                : orig;
+              comboTotal += fp;
+              // Pseudo-StoreProduct for addToCart
+              selectedComboItems.push({
+                product: {
+                  id: ap.id,
+                  sku: ap.sku,
+                  name: ap.name,
+                  description: null,
+                  price: fp,
+                  oldPrice: null,
+                  currency: data.tenant.currency,
+                  stock: ap.stock,
+                  imageUrl: ap.imageUrl,
+                  images: [],
+                  featured: false,
+                  categoryId: null,
+                  category: null,
+                } as StoreProduct,
+                finalPrice: fp,
+              });
+            }
+            const hasCombo = selectedComboItems.length > 0;
+
+            if (selectedProduct.stock <= 0) {
+              return (
+                <button disabled className="w-full py-4 rounded-2xl font-semibold text-slate-400 text-base bg-slate-800 cursor-not-allowed">
+                  Hozircha tugagan
+                </button>
+              );
+            }
+
+            if (hasCombo) {
+              return (
+                <button
+                  onClick={() => {
+                    addToCart(selectedProduct);
+                    for (const item of selectedComboItems) addToCart(item.product);
+                    setSelectedProduct(null);
+                  }}
+                  className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    Combo savatga qo'shish ({1 + selectedComboItems.length})
+                  </span>
+                  <span className="text-xs opacity-90">{comboTotal.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
+                </button>
+              );
+            }
+
+            if (qty === 0) {
+              return (
+                <button
+                  onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
+                  className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Plus className="w-5 h-5" />
+                  Savatga qo'shish · {price.toLocaleString("uz-UZ")} {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                </button>
+              );
+            }
+
+            return null;
+          })()}
+
+          {qty > 0 && selectedAddons.size === 0 && selectedProduct.stock > 0 && (
             <div className="flex items-center gap-3">
               <div className="flex items-center bg-slate-800 rounded-2xl">
                 <button
