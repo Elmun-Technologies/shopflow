@@ -108,6 +108,84 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     return updated;
   });
 
+  // Bulk operations — admin tomondan ko'p mahsulotni bir vaqtda boshqarish
+  // Hozir qo'llab-quvvatlangan: delete | setCategory | toggleActive | toggleFeatured
+  const bulkSchema = z.object({
+    ids: z.array(z.string()).min(1).max(500),
+    action: z.enum(["delete", "setCategory", "setActive", "setFeatured"]),
+    categoryId: z.string().nullable().optional(),
+    value: z.boolean().optional(),
+  });
+  app.post(
+    "/bulk",
+    { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
+    async (req, reply) => {
+      const data = bulkSchema.parse(req.body);
+      // tenant scope tekshiruvi — boshqa tenant mahsulotlariga ta'sir qilmaslik
+      const owned = await app.prisma.product.findMany({
+        where: { id: { in: data.ids }, tenantId: req.session.tenantId },
+        select: { id: true, name: true },
+      });
+      const ownedIds = owned.map((p) => p.id);
+      if (ownedIds.length === 0) return { affected: 0 };
+
+      const actor = await app.prisma.user.findUnique({
+        where: { id: req.session.userId },
+        select: { name: true },
+      });
+
+      let affected = 0;
+      let summary = "";
+
+      if (data.action === "delete") {
+        const res = await app.prisma.product.deleteMany({
+          where: { id: { in: ownedIds }, tenantId: req.session.tenantId },
+        });
+        affected = res.count;
+        summary = `${affected} ta mahsulot o'chirildi`;
+      } else if (data.action === "setCategory") {
+        const res = await app.prisma.product.updateMany({
+          where: { id: { in: ownedIds }, tenantId: req.session.tenantId },
+          data: { categoryId: data.categoryId || null },
+        });
+        affected = res.count;
+        const catName = data.categoryId
+          ? (await app.prisma.category.findUnique({ where: { id: data.categoryId }, select: { name: true } }))?.name ?? "?"
+          : "Kategoriyasiz";
+        summary = `${affected} ta mahsulot kategoriyasi → ${catName}`;
+      } else if (data.action === "setActive") {
+        const res = await app.prisma.product.updateMany({
+          where: { id: { in: ownedIds }, tenantId: req.session.tenantId },
+          data: { active: data.value ?? false },
+        });
+        affected = res.count;
+        summary = `${affected} ta mahsulot ${data.value ? "yoqildi" : "o'chirildi (active)"}`;
+      } else if (data.action === "setFeatured") {
+        const res = await app.prisma.product.updateMany({
+          where: { id: { in: ownedIds }, tenantId: req.session.tenantId },
+          data: { featured: data.value ?? false },
+        });
+        affected = res.count;
+        summary = `${affected} ta mahsulot ${data.value ? "Vitrina'ga" : "Vitrina'dan"} qo'yildi/olindi`;
+      }
+
+      // Audit yozuvi — bitta umumiy bulk yozuv (har bir mahsulot uchun emas, log spam'ga aylanmasin)
+      await logAudit({
+        prisma: app.prisma,
+        tenantId: req.session.tenantId,
+        actorId: req.session.userId,
+        actorName: actor?.name ?? null,
+        action: "BULK_" + data.action.toUpperCase(),
+        resourceType: "product",
+        resourceId: ownedIds[0],
+        summary,
+        changes: { ids: ownedIds, action: data.action, value: data.value, categoryId: data.categoryId },
+      });
+
+      return reply.send({ affected, summary });
+    },
+  );
+
   app.delete("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN")] }, async (req, reply) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
     const product = await app.prisma.product.findFirst({

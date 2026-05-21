@@ -12,6 +12,11 @@ import {
   Star,
   ImagePlus,
   CheckCircle2,
+  Check,
+  CheckSquare,
+  Tag,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const MAX_IMAGES = 10;
@@ -44,6 +49,9 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -69,6 +77,69 @@ export default function ProductsPage() {
     if (!confirm(`"${p.name}" mahsulotini o'chirish?`)) return;
     await productsApi.delete(p.id);
     refetch();
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllOnPage = () => {
+    setSelected((prev) => {
+      const allOnPage = products.every((p) => prev.has(p.id));
+      if (allOnPage) {
+        const next = new Set(prev);
+        for (const p of products) next.delete(p.id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const p of products) next.add(p.id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  type BulkAction = "delete" | "setCategory" | "setActive" | "setFeatured";
+  interface BulkBody {
+    ids: string[];
+    action: BulkAction;
+    value?: boolean;
+    categoryId?: string | null;
+  }
+  const runBulk = async (body: BulkBody) => {
+    setBulkBusy(true);
+    try {
+      const res = await api<{ affected: number; summary: string }>("/products/bulk", {
+        method: "POST",
+        body,
+      });
+      clearSelection();
+      refetch();
+      alert(res.summary || `${res.affected} ta yangilandi`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Bulk operatsiya muvaffaqiyatsiz");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selected.size === 0) return;
+    if (!confirm(`${selected.size} ta mahsulotni butunlay o'chirish?`)) return;
+    runBulk({ ids: Array.from(selected), action: "delete" });
+  };
+  const handleBulkActive = (value: boolean) =>
+    runBulk({ ids: Array.from(selected), action: "setActive", value });
+  const handleBulkFeatured = (value: boolean) =>
+    runBulk({ ids: Array.from(selected), action: "setFeatured", value });
+  const handleBulkCategory = (categoryId: string | null) => {
+    setBulkCategoryOpen(false);
+    runBulk({ ids: Array.from(selected), action: "setCategory", categoryId });
   };
 
   return (
@@ -159,17 +230,108 @@ export default function ProductsPage() {
           </p>
         </div>
       ) : (
+        <>
+        {/* Bulk action toolbar — tanlangan mahsulotlar bo'lsa ko'rinadi */}
+        {selected.size > 0 && (
+          <div className="sticky top-0 z-30 mb-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap backdrop-blur">
+            <span className="text-sm font-medium text-emerald-300">
+              {selected.size} ta tanlangan
+            </span>
+            <button
+              onClick={selectAllOnPage}
+              className="text-xs text-emerald-400 hover:text-emerald-300 underline"
+            >
+              {products.every((p) => selected.has(p.id)) ? "Sahifadagilarni olib tashlash" : "Sahifadagi hammasini tanlash"}
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={() => handleBulkFeatured(true)}
+              disabled={bulkBusy}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+              title="Vitrina'ga qo'yish"
+            >
+              <Star className="w-3 h-3" />
+              Vitrina
+            </button>
+            <button
+              onClick={() => handleBulkActive(true)}
+              disabled={bulkBusy}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+            >
+              <Eye className="w-3 h-3" />
+              Yoqish
+            </button>
+            <button
+              onClick={() => handleBulkActive(false)}
+              disabled={bulkBusy}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+            >
+              <EyeOff className="w-3 h-3" />
+              O'chirish
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setBulkCategoryOpen(!bulkCategoryOpen)}
+                disabled={bulkBusy}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+              >
+                <Tag className="w-3 h-3" />
+                Kategoriya
+              </button>
+              {bulkCategoryOpen && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setBulkCategoryOpen(false)} />
+                  <div className="absolute top-full right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px] max-h-60 overflow-y-auto">
+                    <button
+                      onClick={() => handleBulkCategory(null)}
+                      className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700"
+                    >
+                      — Kategoriyasiz —
+                    </button>
+                    {cats.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => handleBulkCategory(c.id)}
+                        className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-slate-700"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkBusy}
+              className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
+            >
+              {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+              O'chirish
+            </button>
+            <button
+              onClick={clearSelection}
+              className="ml-1 p-1 text-emerald-400 hover:text-emerald-300"
+              aria-label="Tanlovni bekor qilish"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((p) => (
             <ProductCard
               key={p.id}
               product={p}
               currency={currency}
+              selected={selected.has(p.id)}
+              onToggleSelect={() => toggleSelected(p.id)}
               onEdit={() => setEditing(p)}
               onDelete={() => handleDelete(p)}
             />
           ))}
         </div>
+        </>
       )}
 
       {total > pageSize && (
@@ -230,24 +392,42 @@ export default function ProductsPage() {
 function ProductCard({
   product,
   currency,
+  selected,
+  onToggleSelect,
   onEdit,
   onDelete,
 }: {
   product: Product;
   currency: string;
+  selected: boolean;
+  onToggleSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors group">
+    <div className={`bg-slate-900 border rounded-xl p-4 transition-colors group ${
+      selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-slate-800 hover:border-slate-700"
+    }`}>
       <div className="w-full aspect-video bg-slate-800 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
         {product.imageUrl ? (
           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         ) : (
           <Package className="w-8 h-8 text-slate-600" />
         )}
+        {/* Tanlash chexbox — hover'da yoki tanlangan bo'lsa ko'rinadi */}
+        <button
+          onClick={onToggleSelect}
+          className={`absolute top-2 left-2 w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+            selected
+              ? "bg-emerald-500 text-white"
+              : "bg-slate-900/80 backdrop-blur text-slate-400 opacity-0 group-hover:opacity-100"
+          }`}
+          aria-label={selected ? "Tanlovni olib tashlash" : "Tanlash"}
+        >
+          {selected ? <Check className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
+        </button>
         {product.featured && (
-          <span className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur text-amber-300 text-[10px] font-medium">
+          <span className="absolute top-2 left-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur text-amber-300 text-[10px] font-medium">
             <Star className="w-3 h-3 fill-amber-300" />
             Vitrina
           </span>

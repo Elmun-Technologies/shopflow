@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User, Store, Bell, Shield, Key, Puzzle, Save, Eye, EyeOff,
   Send, CreditCard, Wallet, BarChart3, ShoppingBag, Calculator,
   Globe, CheckCircle2, XCircle, AlertCircle, Copy, Plus,
-  Trash2, RefreshCw, Clock, Monitor, Smartphone, ChevronRight,
+  Trash2, RefreshCw, Clock, Monitor, Smartphone, ChevronRight, Loader2,
 } from "lucide-react";
 import {
   settingsTabOrder, settingsTabLabels,
@@ -16,6 +16,9 @@ import type {
   Integration, SecuritySettings, ApiKey,
 } from "../data/settingsData";
 import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
+import { api } from "../api/client";
+import { useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
 
 const integrationIconMap: Record<string, React.ElementType> = {
   Send, CreditCard, Wallet, BarChart3, Instagram: Globe, ShoppingBag, Calculator,
@@ -48,6 +51,11 @@ function InputField({ label, value, onChange, type = "text" }: {
 }
 
 export default function SettingsPage() {
+  // useAuth() throw qiladi agar provider yo'q bo'lsa (test muhitida muammo).
+  // useContext'ni to'g'ridan-to'g'ri ishlatib graceful fallback qilamiz.
+  const authCtx = useContext(AuthContext);
+  const user = authCtx?.user ?? null;
+  const tenant = authCtx?.tenant ?? null;
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [profile, setProfile] = useState<ProfileSettings>({ ...initialProfile });
   const [store, setStore] = useState<StoreSettings>({ ...initialStore });
@@ -59,11 +67,88 @@ export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>(JSON.parse(JSON.stringify(initialApiKeys)));
   const [showPassword, setShowPassword] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const handleSave = () => {
-    setSavedMsg("Saqlandi!");
-    setTimeout(() => setSavedMsg(""), 2000);
+  // Profile va tenant ma'lumotlarini auth context'dan to'ldiramiz
+  useEffect(() => {
+    if (user) {
+      const parts = user.name.trim().split(/\s+/);
+      setProfile((prev) => ({
+        ...prev,
+        firstName: parts[0] ?? "",
+        lastName: parts.slice(1).join(" ") || "",
+        email: user.email,
+        role: user.role,
+        avatar: (parts[0]?.[0] ?? "") + (parts.slice(1).join(" ")[0] ?? ""),
+      }));
+    }
+    if (tenant) {
+      setStore((prev) => ({
+        ...prev,
+        name: tenant.name,
+        currency: tenant.currency,
+        logo: tenant.name.slice(0, 2).toUpperCase(),
+      }));
+    }
+  }, [user, tenant]);
+
+  const flashSaved = (msg = "Saqlandi!") => {
+    setSavedMsg(msg);
+    setErrorMsg("");
+    setTimeout(() => setSavedMsg(""), 2500);
+  };
+  const flashError = (msg: string) => {
+    setErrorMsg(msg);
+    setSavedMsg("");
+    setTimeout(() => setErrorMsg(""), 4000);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (activeTab === "profile") {
+        const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+        const body: Record<string, unknown> = {};
+        if (fullName && fullName !== user?.name) body.name = fullName;
+        if (profile.email && profile.email !== user?.email) body.email = profile.email;
+        if (newPassword) {
+          if (!currentPassword) {
+            flashError("Joriy parolni kiriting");
+            return;
+          }
+          body.currentPassword = currentPassword;
+          body.newPassword = newPassword;
+        }
+        if (Object.keys(body).length === 0) {
+          flashSaved("O'zgarishlar yo'q");
+          return;
+        }
+        await api("/auth/me", { method: "PATCH", body });
+        setCurrentPassword("");
+        setNewPassword("");
+        flashSaved("Profil saqlandi");
+      } else if (activeTab === "store") {
+        const body: Record<string, unknown> = {};
+        if (store.name && store.name !== tenant?.name) body.name = store.name;
+        if (store.currency && store.currency !== tenant?.currency) body.currency = store.currency;
+        if (Object.keys(body).length === 0) {
+          flashSaved("O'zgarishlar yo'q");
+          return;
+        }
+        await api("/tenant", { method: "PATCH", body });
+        flashSaved("Do'kon saqlandi");
+      } else {
+        flashSaved();
+      }
+    } catch (e) {
+      flashError(e instanceof Error ? e.message : "Saqlanmadi");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copyKey = (key: string, id: string) => {
@@ -98,6 +183,47 @@ export default function SettingsPage() {
         <InputField label="Telefon" value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: v })} />
         <InputField label="Vaqt mintaqasi" value={profile.timezone} onChange={(v) => setProfile({ ...profile, timezone: v })} />
         <InputField label="Til" value={profile.language} onChange={(v) => setProfile({ ...profile, language: v })} />
+      </div>
+
+      {/* Parolni o'zgartirish — Saqlash bosilganda yangi parol bo'lsa serverga jo'natiladi */}
+      <div className="border-t border-slate-800 pt-6">
+        <h4 className="text-sm font-semibold text-white mb-1">Parolni o'zgartirish</h4>
+        <p className="text-xs text-slate-500 mb-3">Ixtiyoriy — bo'sh qoldiring agar o'zgartirmaslikni xohlasangiz</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1.5 block">Joriy parol</span>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 pr-10 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+                aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1.5 block">Yangi parol (kamida 8 belgi)</span>
+            <input
+              type={showPassword ? "text" : "password"}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              minLength={8}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -421,11 +547,22 @@ export default function SettingsPage() {
               {savedMsg}
             </motion.span>
           )}
+          {errorMsg && (
+            <motion.span
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-xs text-rose-400 flex items-center gap-1"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              {errorMsg}
+            </motion.span>
+          )}
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-emerald-500/20"
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-emerald-500/20"
           >
-            <Save className="w-4 h-4" />
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Saqlash
           </button>
         </div>

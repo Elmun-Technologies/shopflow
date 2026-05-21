@@ -121,4 +121,59 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       },
     };
   });
+
+  // O'z profilingizni yangilash (ism, email, parol)
+  const meUpdateSchema = z.object({
+    name: z.string().min(1).max(80).optional(),
+    email: z.string().email().optional(),
+    currentPassword: z.string().min(1).optional(),
+    newPassword: z.string().min(8).max(200).optional(),
+  });
+  app.patch("/me", { preHandler: [app.authenticate] }, async (req, reply) => {
+    const data = meUpdateSchema.parse(req.body);
+    const user = await app.prisma.user.findUnique({
+      where: { id: req.session.userId },
+    });
+    if (!user) return reply.code(404).send({ error: "Foydalanuvchi topilmadi" });
+
+    // Parol o'zgartirish — joriy parolni tekshiramiz
+    let passwordHash: string | undefined;
+    if (data.newPassword) {
+      if (!data.currentPassword) {
+        return reply.code(400).send({ error: "Joriy parol kiritilishi shart" });
+      }
+      const valid = await argon2.verify(user.passwordHash, data.currentPassword);
+      if (!valid) return reply.code(401).send({ error: "Joriy parol noto'g'ri" });
+      passwordHash = await argon2.hash(data.newPassword);
+    }
+
+    // Email noyobligi tenant ichida tekshirish
+    if (data.email && data.email !== user.email) {
+      const dup = await app.prisma.user.findFirst({
+        where: { tenantId: user.tenantId, email: data.email, id: { not: user.id } },
+        select: { id: true },
+      });
+      if (dup) return reply.code(409).send({ error: "Bu email allaqachon ishlatilgan" });
+    }
+
+    const updated = await app.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        ...(data.name && { name: data.name }),
+        ...(data.email && { email: data.email }),
+        ...(passwordHash && { passwordHash }),
+      },
+      include: { tenant: true },
+    });
+
+    return {
+      user: { id: updated.id, email: updated.email, name: updated.name, role: updated.role },
+      tenant: {
+        id: updated.tenant.id,
+        slug: updated.tenant.slug,
+        name: updated.tenant.name,
+        currency: updated.tenant.currency,
+      },
+    };
+  });
 };
