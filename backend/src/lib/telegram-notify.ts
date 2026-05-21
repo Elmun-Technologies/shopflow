@@ -9,7 +9,20 @@ interface BotConfig {
   botToken?: string;
 }
 
-async function sendTelegramMessage(token: string, chatId: number | string, text: string, options?: Record<string, unknown>): Promise<boolean> {
+// Telegram API javobini parse qilib batafsil natijani qaytaramiz —
+// shu orqali admin diagnostika ko'rinishida nima xato bo'lganini aniq aytadi.
+export interface TelegramSendResult {
+  ok: boolean;
+  errorCode?: number; // Telegram bot API'ning error code (400, 403, ...)
+  description?: string;
+}
+
+async function sendTelegramMessage(
+  token: string,
+  chatId: number | string,
+  text: string,
+  options?: Record<string, unknown>,
+): Promise<TelegramSendResult> {
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
@@ -22,16 +35,51 @@ async function sendTelegramMessage(token: string, chatId: number | string, text:
         ...options,
       }),
     });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.warn("[tg-notify] sendMessage failed", res.status, body.slice(0, 200));
-      return false;
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error_code?: number;
+      description?: string;
+    };
+    if (!res.ok || body.ok === false) {
+      console.warn("[tg-notify] sendMessage failed", res.status, body.description?.slice(0, 200));
+      return { ok: false, errorCode: body.error_code ?? res.status, description: body.description };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
+    const description = err instanceof Error ? err.message : String(err);
     console.warn("[tg-notify] network error", err);
-    return false;
+    return { ok: false, description };
   }
+}
+
+// Sanity test — bot tokeni haqiqatdan ishlayotganini tekshirish (getMe).
+export async function pingBotToken(
+  token: string,
+): Promise<{ ok: boolean; username?: string; description?: string }> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      result?: { username?: string; first_name?: string };
+      description?: string;
+    };
+    if (!res.ok || body.ok === false) {
+      return { ok: false, description: body.description ?? `HTTP ${res.status}` };
+    }
+    return { ok: true, username: body.result?.username };
+  } catch (err) {
+    return { ok: false, description: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// Tashqi chaqiruvchilar uchun — boshqa moduldan ishlatamiz (test endpoint va h.k.)
+export async function sendTelegramRaw(
+  token: string,
+  chatId: number | string,
+  text: string,
+  options?: Record<string, unknown>,
+): Promise<TelegramSendResult> {
+  return sendTelegramMessage(token, chatId, text, options);
 }
 
 interface NotifyResult {
@@ -73,8 +121,15 @@ export async function notifyCustomer(
   const token = await getTenantBotToken(prisma, tenantId);
   if (!token) return { sent: false, reason: "Tenant has no Telegram bot token" };
 
-  const ok = await sendTelegramMessage(token, tgId.toString(), text, options);
-  return { sent: ok, reason: ok ? undefined : "sendMessage rejected" };
+  const result = await sendTelegramMessage(token, tgId.toString(), text, options);
+  if (result.ok) return { sent: true };
+  // Telegram'ning aniq xatoligini reason'ga uzatamiz (403 = forbidden / start qilmagan)
+  return {
+    sent: false,
+    reason: result.errorCode === 403
+      ? "Mijoz bot bilan suhbatni boshlamagan (/start bosmagan)"
+      : result.description ?? "sendMessage rejected",
+  };
 }
 
 /**
@@ -91,8 +146,14 @@ export async function notifyCustomerByTelegramId(
   const token = await getTenantBotToken(prisma, tenantId);
   if (!token) return { sent: false, reason: "Tenant has no Telegram bot token" };
 
-  const ok = await sendTelegramMessage(token, telegramUserId.toString(), text, options);
-  return { sent: ok, reason: ok ? undefined : "sendMessage rejected" };
+  const result = await sendTelegramMessage(token, telegramUserId.toString(), text, options);
+  if (result.ok) return { sent: true };
+  return {
+    sent: false,
+    reason: result.errorCode === 403
+      ? "Foydalanuvchi bot bilan suhbatni boshlamagan"
+      : result.description ?? "sendMessage rejected",
+  };
 }
 
 /** Buyurtma status'i o'zgarganda standart xabar formatlash + yuborish. */

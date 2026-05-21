@@ -23,6 +23,9 @@ interface OrderDetailResponse {
   currency: string;
   notes: string | null;
   assigneeId: string | null;
+  shippingAddress: string | null;
+  shippingLat: string | number | null;
+  shippingLng: string | number | null;
   createdAt: string;
   updatedAt: string;
   customer: {
@@ -431,6 +434,46 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   </div>
                 </div>
               </Section>
+
+              {/* Yetkazib berish manzili (GPS koordinatalari mavjud bo'lsa) */}
+              {(order.shippingAddress || order.shippingLat) && (
+                <Section title="Yetkazib berish manzili" icon={MapPin}>
+                  {order.shippingAddress && (
+                    <p className="text-sm text-white mb-1.5">{order.shippingAddress}</p>
+                  )}
+                  {order.shippingLat != null && order.shippingLng != null && (() => {
+                    const lat = Number(order.shippingLat);
+                    const lng = Number(order.shippingLng);
+                    const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+                    const yandexUrl = `https://yandex.com/maps/?pt=${lng},${lat}&z=16&l=map`;
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-slate-500 font-mono">
+                          📍 {lat.toFixed(6)}, {lng.toFixed(6)}
+                        </p>
+                        <div className="flex gap-2">
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 px-2.5 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-md text-xs text-sky-300 text-center transition-colors"
+                          >
+                            Google Maps
+                          </a>
+                          <a
+                            href={yandexUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-md text-xs text-amber-300 text-center transition-colors"
+                          >
+                            Yandex Maps
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </Section>
+              )}
 
               {/* Mas'ul (assignee) */}
               <Section title="Mas'ul" icon={UserIcon}>

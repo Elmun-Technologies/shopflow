@@ -410,6 +410,11 @@ model Order {
   currency String      @default("UZS")
   notes    String?
 
+  // Yetkazib berish manzili (mijoz GPS orqali yuborishi mumkin)
+  shippingAddress String?
+  shippingLat     Decimal? @db.Decimal(10, 7)
+  shippingLng     Decimal? @db.Decimal(10, 7)
+
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
