@@ -22,10 +22,43 @@ import {
   Search as SearchIcon,
   Command as CommandIcon,
   X as XIcon,
+  LayoutGrid,
+  Tag,
+  Gift,
+  ImageIcon,
+  TicketPercent,
+  PartyPopper,
+  PanelTop,
+  Mail,
+  Send,
+  Hash,
+  ShoppingCart,
+  Star,
+  Award,
+  Wallet,
+  Link2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
-import { marketingSubOrder, marketingSubLabels } from "../data/marketingData";
+import { marketingSubOrder, marketingSubLabels, marketingSubGroups } from "../data/marketingData";
+
+// Marketing sub-itemlar uchun ikonkalar — vizual aniqlik
+const marketingSubIcons: Record<MarketingSub, React.ElementType> = {
+  aksiyalar: Tag,
+  promokod: TicketPercent,
+  sovgalar: Gift,
+  giveaway: PartyPopper,
+  popups: PanelTop,
+  banner: ImageIcon,
+  rassilka: Mail,
+  sms: Send,
+  kanal: Hash,
+  abandoned: ShoppingCart,
+  sharhlar: Star,
+  sodiqlik: Award,
+  tranzaksiyalar: Wallet,
+  manbalar: Link2,
+};
 import { useAuth } from "../contexts/AuthContext";
 import { useConfirm } from "./ui/ConfirmDialog";
 import { api } from "../api/client";
@@ -212,9 +245,15 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
   const allPages = useMemo(() => {
     const list: Array<{ page: Page | "marketing-sub"; label: string; icon: React.ElementType; section: string; sub?: MarketingSub }> = [];
     for (const g of navGroups) for (const it of g.items) list.push({ page: it.page, label: it.label, icon: it.icon, section: g.label });
-    list.push({ page: "marketing", label: "Marketing", icon: Megaphone, section: "Marketing" });
+    list.push({ page: "marketing", label: "Marketing paneli", icon: LayoutGrid, section: "Marketing" });
     for (const sub of marketingSubOrder) {
-      list.push({ page: "marketing-sub", label: marketingSubLabels[sub], icon: Megaphone, section: "Marketing", sub });
+      list.push({
+        page: "marketing-sub",
+        label: marketingSubLabels[sub],
+        icon: marketingSubIcons[sub],
+        section: "Marketing",
+        sub,
+      });
     }
     list.push({ page: settingsItem.page, label: settingsItem.label, icon: settingsItem.icon, section: "Sozlamalar" });
     return list;
@@ -569,37 +608,49 @@ function MarketingBlock({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="overflow-hidden space-y-0.5"
+            className="overflow-hidden"
           >
+            {/* Asosiy dashboard — eski "Umumiy" o'rniga aniq nom */}
             <button
               type="button"
               onClick={() => onNavigate(marketingSub)}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all mb-2 ${
                 active
                   ? "bg-emerald-500/10 text-emerald-400 font-medium"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  : "text-slate-300 hover:text-white hover:bg-slate-800"
               }`}
             >
-              <Megaphone className="w-4 h-4" />
-              <span>Umumiy</span>
+              <LayoutGrid className="w-4 h-4" />
+              <span>Marketing paneli</span>
             </button>
-            {marketingSubOrder.map((sub) => {
-              const subActive = active && marketingSub === sub;
-              return (
-                <button
-                  key={sub}
-                  type="button"
-                  onClick={() => onNavigate(sub)}
-                  className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-left text-xs transition-all ${
-                    subActive
-                      ? "bg-emerald-500/10 text-emerald-400 font-medium"
-                      : "text-slate-500 hover:text-slate-200 hover:bg-slate-800/80"
-                  }`}
-                >
-                  <span className="truncate">{marketingSubLabels[sub]}</span>
-                </button>
-              );
-            })}
+
+            {/* Mantiqiy mini-guruhlar — vizual aniqlik */}
+            {marketingSubGroups.map((g) => (
+              <div key={g.id} className="mb-2">
+                <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-slate-600">
+                  {g.label}
+                </div>
+                {g.items.map((sub) => {
+                  const subActive = active && marketingSub === sub;
+                  const SubIcon = marketingSubIcons[sub];
+                  return (
+                    <button
+                      key={sub}
+                      type="button"
+                      onClick={() => onNavigate(sub)}
+                      className={`w-full flex items-center gap-2.5 pl-3 pr-3 py-1.5 rounded-lg text-left text-xs transition-all ${
+                        subActive
+                          ? "bg-emerald-500/10 text-emerald-400 font-medium"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      }`}
+                    >
+                      <SubIcon className={`w-3.5 h-3.5 flex-shrink-0 ${subActive ? "text-emerald-400" : "text-slate-500"}`} />
+                      <span className="truncate">{marketingSubLabels[sub]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

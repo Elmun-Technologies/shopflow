@@ -50,6 +50,36 @@ export const marketingSubOrder: MarketingSub[] = [
   "tranzaksiyalar",
 ];
 
+// Sidebar uchun mantiqiy guruhlash — chalkashlikni kamaytirish uchun
+export interface MarketingSubGroup {
+  id: string;
+  label: string;
+  items: MarketingSub[];
+}
+
+export const marketingSubGroups: MarketingSubGroup[] = [
+  {
+    id: "campaigns",
+    label: "Aksiyalar va promo",
+    items: ["aksiyalar", "promokod", "sovgalar", "giveaway", "popups", "banner"],
+  },
+  {
+    id: "outreach",
+    label: "Aloqa",
+    items: ["rassilka", "sms", "kanal"],
+  },
+  {
+    id: "engagement",
+    label: "Mijoz faolligi",
+    items: ["abandoned", "sharhlar", "sodiqlik", "tranzaksiyalar"],
+  },
+  {
+    id: "analytics",
+    label: "Boshqa",
+    items: ["manbalar"],
+  },
+];
+
 // ─── Email rassilka ───────────────────────────────────────────────────────────
 export type EmailCampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "paused";
 
