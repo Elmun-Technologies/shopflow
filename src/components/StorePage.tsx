@@ -13,6 +13,7 @@ import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
 import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
+import { formatUzPhone, isValidUzPhone } from "../utils/phone";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -700,10 +701,19 @@ function StoreInner({ slug }: { slug: string }) {
                   type="tel"
                   placeholder="+998 90 123 45 67"
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  onChange={(e) => setForm((f) => ({ ...f, phone: formatUzPhone(e.target.value) }))}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className={`w-full bg-slate-800 border rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none ${
+                    form.phone && !isValidUzPhone(form.phone)
+                      ? "border-rose-500/40 focus:border-rose-500/60"
+                      : "border-slate-700 focus:border-emerald-500/50"
+                  }`}
                 />
               </div>
+              {form.phone && !isValidUzPhone(form.phone) && (
+                <p className="text-[11px] text-rose-300 mt-1">To'liq raqam: +998 90 123 45 67</p>
+              )}
             </div>
 
             <div>
@@ -765,7 +775,7 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="p-4 border-t border-slate-800 bg-slate-950">
           <button
             onClick={handleCheckout}
-            disabled={submitting || !form.name.trim() || !form.phone.trim()}
+            disabled={submitting || !form.name.trim() || !isValidUzPhone(form.phone)}
             className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ backgroundColor: primaryColor }}
           >

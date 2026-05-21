@@ -3,6 +3,7 @@ import {
   ChevronRight, ArrowLeft, User as UserIcon, ShoppingBag, Star, Ticket, Users,
   Globe, MapPin, MessageCircle, Phone, Calendar, Plus, Trash2,
 } from "lucide-react";
+import { formatUzPhone } from "../../utils/phone";
 
 type ProfileView =
   | "menu"
@@ -324,7 +325,7 @@ function InfoForm({ profile, onSave }: { profile: ProfileData; onSave: (p: Profi
       <Field
         label="Telefon raqam"
         value={draft.phone}
-        onChange={(v) => setDraft({ ...draft, phone: v })}
+        onChange={(v) => setDraft({ ...draft, phone: formatUzPhone(v) })}
         type="tel"
         icon={Phone}
       />
