@@ -228,10 +228,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         ? `${total.toLocaleString("uz-UZ")} so'm`
         : `${total} ${tenant.currency}`;
       const text =
-        `🆕 <b>Buyurtmangiz qabul qilindi!</b>\n\n` +
+        `✅ <b>Buyurtma yaratildi!</b>\n\n` +
         `Buyurtma: <b>#${order.code}</b>\n` +
         `Summa: ${totalStr}\n\n` +
-        `Tez orada operatorimiz siz bilan bog'lanadi.`;
+        `Mahsulotlar tayyorlanmoqda. Holat o'zgarganda shu yerda xabar yuboramiz — buyurtmangizni "Buyurtmalarim" bo'limidan kuzating.`;
       notifyCustomer(app.prisma, tenant.id, customer.id, text)
         .catch((err) => app.log.warn({ err, orderId: order.id }, "Checkout TG notify failed"));
     }

@@ -82,6 +82,8 @@ interface ProfilePageProps {
   telegramUser?: { userId?: number; username?: string; firstName?: string; lastName?: string };
   operatorTelegram?: string; // bot username for contact
   apiBase: string;
+  // Tashqi ko'rsatuv — masalan, success screen'dan to'g'ridan-to'g'ri buyurtmalarga
+  initialView?: ProfileView;
 }
 
 function lsKey(slug: string, key: string): string {
@@ -125,8 +127,8 @@ function loadAddresses(slug: string): Address[] {
   return [];
 }
 
-export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTelegram, apiBase }: ProfilePageProps) {
-  const [view, setView] = useState<ProfileView>("menu");
+export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTelegram, apiBase, initialView }: ProfilePageProps) {
+  const [view, setView] = useState<ProfileView>(initialView ?? "menu");
   const [profile, setProfile] = useState<ProfileData>(() => loadProfile(storeSlug, telegramUser));
   const [lang, setLang] = useState<Lang>(() => loadLang(storeSlug));
   const [addresses, setAddresses] = useState<Address[]>(() => loadAddresses(storeSlug));

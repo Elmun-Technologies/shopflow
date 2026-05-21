@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react
 import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
-  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck,
+  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck, Bell,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -376,6 +376,9 @@ function StoreInner({ slug }: { slug: string }) {
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites(slug));
   const [savedAddresses] = useState<StoredAddress[]>(() => loadStoredAddresses(slug));
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
+  // Profile sahifasi tashqi nuqtadan ochilganda boshlang'ich subview
+  // (masalan, success screen'dan "Buyurtmalarim" tugmasi)
+  const [profileInitialView, setProfileInitialView] = useState<"menu" | "orders" | undefined>(undefined);
   // Mahsulot detali — sticky header (scroll'da), trust badge modal, description toggle
   const [pdpScrolled, setPdpScrolled] = useState(false);
   const [trustSheet, setTrustSheet] = useState<"original" | "warranty" | null>(null);
@@ -724,31 +727,114 @@ function StoreInner({ slug }: { slug: string }) {
 
   // ---- SUCCESS ----
   if (view === "success" && orderResult) {
+    const deliveryDate = estimatedDeliveryDate();
+    const deliveryStr = formatUzDate(deliveryDate);
+    const hasTg = !!telegramUser?.userId;
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-        <div className="text-center max-w-xs w-full">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: primaryColor + "20" }}>
-            <CheckCircle2 className="w-10 h-10" style={{ color: primaryColor }} />
-          </div>
-          <h2 className="text-xl font-bold text-white mb-2">Buyurtma qabul qilindi!</h2>
-          <div className="bg-slate-900 rounded-2xl p-4 mb-6">
-            <p className="text-xs text-slate-400 mb-1">Buyurtma raqami</p>
-            <p className="text-lg font-bold text-white">{orderResult.code}</p>
-            <div className="mt-3 pt-3 border-t border-slate-800">
-              <p className="text-xs text-slate-400 mb-0.5">Jami summa</p>
-              <p className="text-base font-semibold" style={{ color: primaryColor }}>
-                {formatPrice(orderResult.total, orderResult.currency)}
-              </p>
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
+          <div className="max-w-md mx-auto">
+            {/* Hero — yashil belgi + sarlavha */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300" style={{ backgroundColor: primaryColor + "20" }}>
+                <CheckCircle2 className="w-11 h-11" style={{ color: primaryColor }} strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-1">Buyurtma yaratildi</h2>
+              <p className="text-sm text-slate-400">Hammasi avtomatik — to'lov va yetkazib berish tayyorlanmoqda</p>
+            </div>
+
+            {/* Buyurtma kartochkasi */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wider">Buyurtma</p>
+                  <p className="text-lg font-bold text-white">#{orderResult.code}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wider">Jami</p>
+                  <p className="text-lg font-bold" style={{ color: primaryColor }}>
+                    {formatPrice(orderResult.total, orderResult.currency)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300">Yetkazib berish: <span className="font-medium text-white">{deliveryStr}</span></span>
+              </div>
+            </div>
+
+            {/* Status taymlayni — keyingi qadamlar */}
+            <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 mb-4">
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-3">Keyingi qadamlar</p>
+              <div className="space-y-3">
+                {[
+                  { label: "Qabul qilindi", desc: "Buyurtmangiz tizimga kirdi", done: true },
+                  { label: "Tayyorlanmoqda", desc: "Mahsulotlar yig'ilmoqda", done: false, active: true },
+                  { label: "Yo'lda", desc: "Yetkazib berishga yuborildi", done: false },
+                  { label: "Yetkazildi", desc: deliveryStr + " gacha", done: false },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      s.done
+                        ? "bg-emerald-500 text-white"
+                        : s.active
+                          ? "bg-amber-500/20 text-amber-300 ring-2 ring-amber-500/40"
+                          : "bg-slate-800 text-slate-600"
+                    }`}>
+                      {s.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                    </div>
+                    <div className="flex-1 min-w-0 pb-0.5">
+                      <p className={`text-sm font-medium ${s.done || s.active ? "text-white" : "text-slate-500"}`}>{s.label}</p>
+                      <p className="text-[11px] text-slate-500">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bildirishnoma haqida eslatma */}
+            {hasTg ? (
+              <div className="flex items-start gap-2.5 p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-6">
+                <Bell className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-sky-200 leading-relaxed">
+                  Holat o'zgarganda Telegram'da xabar olasiz. Buyurtmani istalgan paytda <span className="font-semibold">Profile → Buyurtmalarim</span> dan kuzating.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2.5 p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl mb-6">
+                <Bell className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Buyurtma raqamingizni <span className="font-semibold">#{orderResult.code}</span> saqlab qo'ying — kerak bo'lsa shu raqam orqali tekshiring.
+                </p>
+              </div>
+            )}
+
+            {/* Action tugmalari */}
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setProfileInitialView("orders");
+                  setView("profile");
+                  setOrderResult(null);
+                }}
+                className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <ShoppingBag className="w-5 h-5" />
+                Buyurtmamni ko'rish
+              </button>
+              <button
+                onClick={() => {
+                  setProfileInitialView(undefined);
+                  setView("home");
+                  setOrderResult(null);
+                }}
+                className="w-full py-3 rounded-2xl font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-all"
+              >
+                Yana xarid qilish
+              </button>
             </div>
           </div>
-          <p className="text-sm text-slate-400 mb-6">Tez orada operatorimiz siz bilan bog'lanadi.</p>
-          <button
-            onClick={() => { setView("home"); setOrderResult(null); }}
-            className="w-full py-3 rounded-2xl font-semibold text-white transition-all active:scale-[0.98]"
-            style={{ backgroundColor: primaryColor }}
-          >
-            Bosh sahifaga
-          </button>
         </div>
       </div>
     );
@@ -1624,6 +1710,7 @@ function StoreInner({ slug }: { slug: string }) {
               telegramUser={telegramUser}
               operatorTelegram={brand?.phone || undefined}
               apiBase={API_BASE}
+              initialView={profileInitialView}
             />
           </Suspense>
         </div>
