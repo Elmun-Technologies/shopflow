@@ -84,16 +84,17 @@ await app.register(productAddonRoutes, { prefix: "/api/products" });
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
 
+// Cart abandonment scheduler — 1 soatdan ortiq tinch turgan savatlarga
+// Telegram orqali "savatingiz kutmoqda" eslatma yuboradi. Har 5 daqiqada skanlaydi.
+// addHook listen'dan oldin ro'yxatdan o'tishi shart (Fastify cheklovi).
+const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
+app.addHook("onClose", async () => {
+  stopScheduler();
+});
+
 try {
   await app.listen({ port, host });
   app.log.info(`ShopFlow backend ${host}:${port} da ishlamoqda`);
-
-  // Cart abandonment scheduler — 1 soatdan ortiq tinch turgan savatlarga
-  // Telegram orqali "savatingiz kutmoqda" eslatma yuboradi. Har 5 daqiqada skanlaydi.
-  const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
-  app.addHook("onClose", async () => {
-    stopScheduler();
-  });
 } catch (err) {
   app.log.error(err);
   process.exit(1);
