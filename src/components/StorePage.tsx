@@ -983,7 +983,14 @@ function StoreInner({ slug }: { slug: string }) {
           className="border-t border-slate-800 bg-slate-950 p-4"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          {qty === 0 ? (
+          {selectedProduct.stock <= 0 ? (
+            <button
+              disabled
+              className="w-full py-4 rounded-2xl font-semibold text-slate-400 text-base bg-slate-800 cursor-not-allowed"
+            >
+              Hozircha tugagan
+            </button>
+          ) : qty === 0 ? (
             <button
               onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
               className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
@@ -1032,11 +1039,15 @@ function StoreInner({ slug }: { slug: string }) {
     const discountPct = calcDiscountPct(price, oldPrice);
     const liveCampaign = isCampaignLive(product.saleCampaign);
     const isFav = favorites.has(product.id);
+    const outOfStock = product.stock <= 0;
+    const lowStock = !outOfStock && product.stock > 0 && product.stock <= 5;
 
     return (
       <div
         key={product.id}
-        className="bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group"
+        className={`bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group ${
+          outOfStock ? "opacity-70" : ""
+        }`}
         onClick={() => setSelectedProduct(product)}
       >
         {/* Top-left badges (discount + campaign) */}
@@ -1066,11 +1077,18 @@ function StoreInner({ slug }: { slug: string }) {
         </button>
 
         {/* Image */}
-        <div className="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden">
+        <div className="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden relative">
           {product.imageUrl ? (
             <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
           ) : (
             <Package className="w-10 h-10 text-slate-600" />
+          )}
+          {outOfStock && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="text-white text-xs font-bold px-3 py-1 bg-slate-800/80 rounded-md border border-slate-700">
+                Tugagan
+              </span>
+            </div>
           )}
         </div>
 
@@ -1092,13 +1110,28 @@ function StoreInner({ slug }: { slug: string }) {
           {/* Name */}
           <p className="text-[11px] text-slate-300 line-clamp-2 leading-tight mb-2 min-h-[28px]">{product.name}</p>
 
+          {/* Low stock indicator */}
+          {lowStock && (
+            <p className="text-[10px] text-amber-300 mb-1 leading-tight">
+              ⚡ Faqat {product.stock} ta qoldi
+            </p>
+          )}
+
           {/* Add to cart */}
           <button
-            onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-            className="w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all"
-            style={{ backgroundColor: qty > 0 ? "#10b981" : primaryColor }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!outOfStock) addToCart(product);
+            }}
+            disabled={outOfStock}
+            className="w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+            style={{
+              backgroundColor: outOfStock ? "#475569" : qty > 0 ? "#10b981" : primaryColor,
+            }}
           >
-            {qty > 0 ? (
+            {outOfStock ? (
+              "Tugagan"
+            ) : qty > 0 ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Savatda · {qty} dona
