@@ -24,7 +24,6 @@ import {
   Headphones,
 } from "lucide-react";
 import {
-  conversations,
   agents,
   quickReplies,
   funnelStats,
@@ -34,6 +33,79 @@ import {
   funnelStageConfig,
 } from "../data/chatData";
 import type { ChatConversation, FunnelStage, ChatMessage } from "../data/chatData";
+import { api } from "../api/client";
+
+// Backend'dan keladigan format
+interface ApiConvListItem {
+  id: string;
+  status: "ACTIVE" | "WAITING" | "RESOLVED" | "ARCHIVED" | "SPAM";
+  customerId: string | null;
+  customerName: string;
+  customerAvatar: string | null;
+  customerPhone: string | null;
+  externalUserId: string | null;
+  channel: { id: string; name: string; type: string } | null;
+  assignee: { id: string; name: string } | null;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  unreadCount: number;
+  createdAt: string;
+}
+
+interface ApiConvDetail extends ApiConvListItem {
+  messages: Array<{
+    id: string;
+    direction: "INBOUND" | "OUTBOUND";
+    content: string;
+    authorId: string | null;
+    authorName: string | null;
+    sentAt: string;
+    read: boolean;
+  }>;
+}
+
+// Backend status -> demo ChatStatus
+function adaptStatus(s: ApiConvListItem["status"]): "active" | "waiting" | "resolved" | "archived" | "spam" {
+  return s.toLowerCase() as "active" | "waiting" | "resolved" | "archived" | "spam";
+}
+
+function adaptListItem(c: ApiConvListItem): ChatConversation {
+  return {
+    id: c.id,
+    customerId: c.customerId ?? c.externalUserId ?? c.id,
+    customerName: c.customerName,
+    customerAvatar: c.customerAvatar ?? c.customerName.slice(0, 2).toUpperCase(),
+    customerPhone: c.customerPhone ?? "",
+    channel: (c.channel?.type?.toLowerCase() as ChatConversation["channel"]) ?? "telegram",
+    status: adaptStatus(c.status),
+    funnelStage: "new",
+    assignedAgent: c.assignee?.name ?? "—",
+    agentAvatar: c.assignee?.name?.slice(0, 2).toUpperCase() ?? "—",
+    lastMessage: c.lastMessagePreview ?? "",
+    lastMessageTime: c.lastMessageAt
+      ? new Date(c.lastMessageAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+      : "",
+    unreadCount: c.unreadCount,
+    messages: [],
+    tags: [],
+    priority: "medium",
+    estimatedValue: 0,
+    createdAt: c.createdAt,
+  };
+}
+
+function adaptDetail(c: ApiConvDetail): ChatConversation {
+  return {
+    ...adaptListItem(c),
+    messages: c.messages.map<ChatMessage>((m) => ({
+      id: m.id,
+      sender: m.direction === "INBOUND" ? "customer" : "agent",
+      text: m.content,
+      timestamp: new Date(m.sentAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
+      read: m.read,
+    })),
+  };
+}
 import {
   XAxis,
   YAxis,
@@ -68,9 +140,42 @@ export default function ChatPage() {
   const [messageText, setMessageText] = useState("");
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [chatList, setChatList] = useState<ChatConversation[]>(conversations);
+  const [chatList, setChatList] = useState<ChatConversation[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sendBusy, setSendBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Konversatsiyalar ro'yxatini yuklash + har 10s yangilash
+  useEffect(() => {
+    let stopped = false;
+    const load = async () => {
+      try {
+        const res = await api<{ items: ApiConvListItem[] }>("/chats");
+        if (stopped) return;
+        setChatList(res.items.map(adaptListItem));
+      } catch { /* offline / hatolik */ } finally {
+        if (!stopped) setLoading(false);
+      }
+    };
+    load();
+    const id = setInterval(load, 10000);
+    return () => { stopped = true; clearInterval(id); };
+  }, []);
+
+  // Active chat tanlanganda — to'liq detalini yuklash + read deb belgilash
+  useEffect(() => {
+    if (!activeChat || activeChat.messages.length > 0) return;
+    const id = activeChat.id;
+    api<ApiConvDetail>(`/chats/${id}`)
+      .then((c) => {
+        setActiveChat((prev) => (prev?.id === id ? adaptDetail(c) : prev));
+        // Mark as read
+        api(`/chats/${id}/mark-read`, { method: "POST" }).catch(() => null);
+        setChatList((prev) => prev.map((cv) => (cv.id === id ? { ...cv, unreadCount: 0 } : cv)));
+      })
+      .catch(() => null);
+  }, [activeChat]);
 
   const filteredChats = useMemo(() => {
     let result = [...chatList];
@@ -103,24 +208,61 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages]);
 
-  const handleSendMessage = () => {
-    if (!messageText.trim() || !activeChat) return;
-    const newMsg: ChatMessage = {
-      id: `M-${Date.now()}`,
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !activeChat || sendBusy) return;
+    const content = messageText.trim();
+    setMessageText("");
+    setSendBusy(true);
+    // Optimistic — darhol ko'rinadi
+    const tempId = `M-${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
       sender: "agent",
-      text: messageText,
+      text: content,
       timestamp: new Date().toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
       read: true,
     };
-    setChatList((prev) =>
-      prev.map((c) =>
-        c.id === activeChat.id
-          ? { ...c, messages: [...c.messages, newMsg], lastMessage: messageText, lastMessageTime: newMsg.timestamp }
-          : c
-      )
+    setActiveChat((prev) =>
+      prev ? { ...prev, messages: [...prev.messages, optimistic], lastMessage: content } : null,
     );
-    setActiveChat((prev) => (prev ? { ...prev, messages: [...prev.messages, newMsg], lastMessage: messageText } : null));
-    setMessageText("");
+    try {
+      const res = await api<{
+        message: { id: string; direction: string; content: string; authorName: string | null; sentAt: string; read: boolean };
+        deliveryReason: string | null;
+      }>(`/chats/${activeChat.id}/messages`, { method: "POST", body: { content } });
+      const real: ChatMessage = {
+        id: res.message.id,
+        sender: "agent",
+        text: res.message.content,
+        timestamp: new Date(res.message.sentAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
+        read: res.message.read,
+      };
+      setActiveChat((prev) =>
+        prev
+          ? { ...prev, messages: prev.messages.map((m) => (m.id === tempId ? real : m)), lastMessage: content }
+          : null,
+      );
+      setChatList((prev) =>
+        prev.map((c) =>
+          c.id === activeChat.id
+            ? { ...c, lastMessage: content, lastMessageTime: real.timestamp }
+            : c,
+        ),
+      );
+      if (res.deliveryReason) {
+        // Yuborildi (DB'da), lekin mijozga yetib bormadi — diagnostika xabari
+        alert(`Saqlandi, lekin mijozga yetib bormadi: ${res.deliveryReason}`);
+      }
+    } catch (err) {
+      // Optimistic xabarni qaytarish
+      setActiveChat((prev) =>
+        prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) } : null,
+      );
+      setMessageText(content);
+      alert(err instanceof Error ? err.message : "Xabar yuborilmadi");
+    } finally {
+      setSendBusy(false);
+    }
   };
 
   const handleStageChange = (chatId: string, stage: FunnelStage) => {
@@ -416,7 +558,9 @@ export default function ChatPage() {
             {filteredChats.length === 0 && (
               <div className="py-8 text-center">
                 <MessageSquare className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-                <p className="text-xs text-slate-500">Chatlar topilmadi</p>
+                <p className="text-xs text-slate-500">
+                  {loading ? "Yuklanmoqda…" : "Chatlar topilmadi"}
+                </p>
               </div>
             )}
           </div>
