@@ -12,6 +12,7 @@ import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
 import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
+import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -797,26 +798,26 @@ function StoreInner({ slug }: { slug: string }) {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {/* Image + badges */}
-          <div className="w-full aspect-square bg-slate-900 flex items-center justify-center overflow-hidden relative">
-            {selectedProduct.imageUrl ? (
-              <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover" />
-            ) : (
-              <Package className="w-20 h-20 text-slate-600" />
-            )}
-            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-              {discountPct > 0 && (
-                <span className="bg-rose-500 text-white text-sm font-bold px-2 py-1 rounded-lg shadow-lg">
-                  −{discountPct}%
-                </span>
-              )}
-              {liveCampaign && selectedProduct.saleCampaign && (
-                <span className={`text-xs font-bold px-2 py-1 rounded-lg shadow-lg ${SALE_BADGE_STYLES[selectedProduct.saleCampaign.badgeColor]}`}>
-                  {selectedProduct.saleCampaign.label}
-                </span>
-              )}
-            </div>
-          </div>
+          {/* Image carousel + badges */}
+          <ProductImageCarousel
+            imageUrl={selectedProduct.imageUrl}
+            images={selectedProduct.images}
+            alt={selectedProduct.name}
+            badges={
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                {discountPct > 0 && (
+                  <span className="bg-rose-500 text-white text-sm font-bold px-2 py-1 rounded-lg shadow-lg">
+                    −{discountPct}%
+                  </span>
+                )}
+                {liveCampaign && selectedProduct.saleCampaign && (
+                  <span className={`text-xs font-bold px-2 py-1 rounded-lg shadow-lg ${SALE_BADGE_STYLES[selectedProduct.saleCampaign.badgeColor]}`}>
+                    {selectedProduct.saleCampaign.label}
+                  </span>
+                )}
+              </div>
+            }
+          />
 
           <div className="p-5">
             {/* Price block — WB style */}
