@@ -64,7 +64,7 @@ export const dictionary: Record<string, Entry> = {
   "checkout.phone": { uz: "Telefon raqami", ru: "Номер телефона" },
   "checkout.email": { uz: "Email (ixtiyoriy)", ru: "Email (необязательно)" },
   "checkout.address": { uz: "Yetkazib berish manzili", ru: "Адрес доставки" },
-  "checkout.gps": { uz: "📍 Joriy joylashuvni olish", ru: "📍 Использовать текущее местоположение" },
+  "checkout.gps": { uz: "Joriy joylashuvni olish", ru: "Использовать текущее местоположение" },
   "checkout.gpsDetected": { uz: "GPS aniqlandi: {coords}", ru: "GPS определён: {coords}" },
   "checkout.note": { uz: "Izoh (ixtiyoriy)", ru: "Комментарий (необязательно)" },
   "checkout.submit": { uz: "Buyurtma berish", ru: "Оформить заказ" },

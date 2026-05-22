@@ -1,14 +1,15 @@
 import { Home, LayoutGrid, ShoppingBag, Tag, User } from "lucide-react";
 import { haptic } from "./storefront-theme";
+import { useT } from "../../i18n";
 
 export type StoreTab = "home" | "catalog" | "cart" | "promotions" | "profile";
 
-const TABS: Array<{ id: StoreTab; label: string; Icon: typeof Home }> = [
-  { id: "home", label: "Bosh sahifa", Icon: Home },
-  { id: "catalog", label: "Katalog", Icon: LayoutGrid },
-  { id: "cart", label: "Savat", Icon: ShoppingBag },
-  { id: "promotions", label: "Takliflar", Icon: Tag },
-  { id: "profile", label: "Profile", Icon: User },
+const TABS: Array<{ id: StoreTab; labelKey: string; Icon: typeof Home }> = [
+  { id: "home", labelKey: "store.tab.home", Icon: Home },
+  { id: "catalog", labelKey: "store.tab.catalog", Icon: LayoutGrid },
+  { id: "cart", labelKey: "store.tab.cart", Icon: ShoppingBag },
+  { id: "promotions", labelKey: "store.tab.promo", Icon: Tag },
+  { id: "profile", labelKey: "store.tab.profile", Icon: User },
 ];
 
 export function BottomNav({
@@ -23,6 +24,7 @@ export function BottomNav({
   onChange: (tab: StoreTab) => void;
 }) {
   const accent = primaryColor || "#10b981";
+  const { t } = useT();
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur border-t bg-slate-900/95 dark:bg-slate-900/95 border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.35)]"
@@ -31,9 +33,10 @@ export function BottomNav({
       }}
     >
       <div className="grid grid-cols-5">
-        {TABS.map(({ id, label, Icon }) => {
+        {TABS.map(({ id, labelKey, Icon }) => {
           const isActive = active === id;
           const showBadge = id === "cart" && cartCount > 0;
+          const label = t(labelKey);
           return (
             <button
               key={id}
