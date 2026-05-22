@@ -487,6 +487,7 @@ function Field({
 }
 
 function InfoForm({ profile, onSave, isOnline }: { profile: ProfileData; onSave: (p: ProfileData) => void | Promise<void>; isOnline: boolean }) {
+  const { t } = useT();
   const [draft, setDraft] = useState<ProfileData>(profile);
   const [savedFlash, setSavedFlash] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -532,12 +533,12 @@ function InfoForm({ profile, onSave, isOnline }: { profile: ProfileData; onSave:
         }
       }}
     >
-      <Field label="Ism" value={draft.firstName} onChange={(v) => setDraft({ ...draft, firstName: v })} />
-      <Field label="Familiya" value={draft.lastName} onChange={(v) => setDraft({ ...draft, lastName: v })} />
-      <Field label="Otasining ismi" value={draft.patronymic} onChange={(v) => setDraft({ ...draft, patronymic: v })} />
+      <Field label={t("profile.info.firstName")} value={draft.firstName} onChange={(v) => setDraft({ ...draft, firstName: v })} />
+      <Field label={t("profile.info.lastName")} value={draft.lastName} onChange={(v) => setDraft({ ...draft, lastName: v })} />
+      <Field label={t("profile.info.patronymic")} value={draft.patronymic} onChange={(v) => setDraft({ ...draft, patronymic: v })} />
       <div className="space-y-1.5">
         <Field
-          label="Telefon raqam"
+          label={t("profile.info.phone")}
           value={draft.phone}
           onChange={(v) => setDraft({ ...draft, phone: formatUzPhone(v) })}
           type="tel"
@@ -550,18 +551,18 @@ function InfoForm({ profile, onSave, isOnline }: { profile: ProfileData; onSave:
           className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/15 rounded-lg disabled:opacity-50 transition-colors"
         >
           {contactBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          Telefonni Telegram'dan olish
+          {t("profile.info.fetchPhone")}
         </button>
       </div>
       <Field
-        label="Tug'ilgan kun"
+        label={t("profile.info.birthDate")}
         value={draft.birthDate}
         onChange={(v) => setDraft({ ...draft, birthDate: v })}
         type="date"
         icon={Calendar}
       />
       <div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Jins</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t("profile.info.gender")}</div>
         <div className="grid grid-cols-2 gap-2">
           {(["male", "female"] as const).map((g) => (
             <button
@@ -574,14 +575,14 @@ function InfoForm({ profile, onSave, isOnline }: { profile: ProfileData; onSave:
                   : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700"
               }`}
             >
-              {g === "male" ? "Erkak" : "Ayol"}
+              {g === "male" ? t("profile.info.male") : t("profile.info.female")}
             </button>
           ))}
         </div>
       </div>
       {!isOnline && (
         <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">
-          ⓘ Telegram bot ichida ochilmagan — ma'lumotlar faqat shu qurilmada saqlanadi
+          {t("profile.info.offlineNote")}
         </p>
       )}
       <button
@@ -589,19 +590,20 @@ function InfoForm({ profile, onSave, isOnline }: { profile: ProfileData; onSave:
         disabled={saving}
         className="w-full py-3 mt-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
       >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : savedFlash ? "✓ Saqlandi" : "Saqlash"}
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : savedFlash ? t("profile.info.saved") : t("common.save")}
       </button>
     </form>
   );
 }
 
 function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loading: boolean }) {
+  const { t } = useT();
   const [tab, setTab] = useState<"active" | "all">("active");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Yuklanmoqda…</div>
+      <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">{t("common.loading")}</div>
     );
   }
   if (!orders) return null;
@@ -628,7 +630,7 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
               : "text-slate-500 dark:text-slate-400"
           }`}
         >
-          Active ({orders.filter(isActive).length})
+          {t("profile.orders.tab.active")} ({orders.filter(isActive).length})
         </button>
         <button
           onClick={() => setTab("all")}
@@ -638,14 +640,14 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
               : "text-slate-500 dark:text-slate-400"
           }`}
         >
-          Barchasi ({orders.length})
+          {t("profile.orders.tab.all")} ({orders.length})
         </button>
       </div>
       {filtered.length === 0 ? (
         <div className="py-12 text-center">
           <ShoppingBag className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
           <div className="text-sm text-slate-500 dark:text-slate-400">
-            {tab === "active" ? "Aktiv buyurtmalar yo'q" : "Hali buyurtma yo'q"}
+            {tab === "active" ? t("profile.orders.empty.active") : t("profile.orders.empty.all")}
           </div>
         </div>
       ) : (
@@ -676,7 +678,7 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
                     {new Date(o.createdAt).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
                   </div>
                   <div className="mt-2 flex items-center justify-between text-sm">
-                    <span className="text-slate-500 dark:text-slate-400">{o.items.length} mahsulot</span>
+                    <span className="text-slate-500 dark:text-slate-400">{t("profile.orders.itemCount", { n: o.items.length })}</span>
                     <span className="font-semibold text-slate-900 dark:text-white">
                       {Number(o.total).toLocaleString("uz-UZ")} {currencyStr}
                     </span>
@@ -713,7 +715,7 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
                     </div>
                     {o.notes && (
                       <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
-                        <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Eslatma</div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">{t("profile.orders.note")}</div>
                         <div className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{o.notes}</div>
                       </div>
                     )}
@@ -746,17 +748,18 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function PromocodeForm({ storeSlug }: { storeSlug: string }) {
+  const { t } = useT();
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   return (
     <div>
       <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 mb-3">
-        <label className="text-xs text-slate-500 dark:text-slate-400">Promokod</label>
+        <label className="text-xs text-slate-500 dark:text-slate-400">{t("promo.label")}</label>
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="MASALAN: SALE2026"
+          placeholder={t("promo.placeholder")}
           className="w-full mt-1 bg-transparent border-0 border-b border-slate-200 dark:border-slate-700 py-2 text-base text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
         />
         <button
@@ -769,18 +772,18 @@ function PromocodeForm({ storeSlug }: { storeSlug: string }) {
               if (!list.includes(code.trim())) {
                 list.push(code.trim());
                 localStorage.setItem(key, JSON.stringify(list));
-                setMsg({ kind: "ok", text: "Promokod saqlandi (checkout vaqtida qo'llaniladi)" });
+                setMsg({ kind: "ok", text: t("promo.savedOk") });
               } else {
-                setMsg({ kind: "err", text: "Bu promokod allaqachon kiritilgan" });
+                setMsg({ kind: "err", text: t("promo.alreadyAdded") });
               }
             } catch {
-              setMsg({ kind: "err", text: "Saqlashda xato" });
+              setMsg({ kind: "err", text: t("promo.saveError") });
             }
             setCode("");
           }}
           className="w-full mt-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg"
         >
-          Qo'llash
+          {t("promo.applyBtn")}
         </button>
         {msg && (
           <div className={`mt-3 text-xs ${msg.kind === "ok" ? "text-emerald-600" : "text-rose-600"}`}>
@@ -790,13 +793,14 @@ function PromocodeForm({ storeSlug }: { storeSlug: string }) {
       </div>
       <div className="py-8 text-center">
         <Ticket className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-        <div className="text-sm text-slate-500 dark:text-slate-400">Hali faol promokod yo'q</div>
+        <div className="text-sm text-slate-500 dark:text-slate-400">{t("promo.emptyList")}</div>
       </div>
     </div>
   );
 }
 
 function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProps["telegramUser"]; stats: ReferralStats | null }) {
+  const { t } = useT();
   const refLink = telegramUser?.userId
     ? `${typeof window !== "undefined" ? window.location.origin : ""}${window.location.pathname}?ref=${telegramUser.userId}`
     : "";
@@ -814,10 +818,10 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
     <div>
       <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-4 mb-3">
         <div className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 mb-1">
-          Do'stlaringizni taklif qiling
+          {t("ref.heroTitle")}
         </div>
         <div className="text-xs text-emerald-700 dark:text-emerald-300">
-          Havolani ulashing — do'stingiz Mini App'ni ochganida ro'yxat sizga bog'lanadi
+          {t("ref.heroHint")}
         </div>
       </div>
 
@@ -826,18 +830,18 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center">
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.invitedCount}</div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Taklif qilingan</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{t("ref.statsInvited")}</div>
           </div>
           <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center">
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.withOrdersCount}</div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Buyurtma qildi</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{t("ref.statsOrdered")}</div>
           </div>
         </div>
       )}
 
       {refLink && (
         <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 mb-3">
-          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sizning referal havolangiz</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t("ref.yourLink")}</div>
           <div className="flex items-center gap-2">
             <input
               readOnly
@@ -848,7 +852,7 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
               onClick={copyRef}
               className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap"
             >
-              {copied ? "✓ Nusxa olindi" : "Nusxa"}
+              {copied ? t("ref.copiedShort") : t("ref.copyShort")}
             </button>
           </div>
         </div>
@@ -857,7 +861,7 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
       {/* Taklif qilinganlar ro'yxati */}
       {stats && stats.invited.length > 0 ? (
         <div className="space-y-1.5">
-          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 px-1 mb-1.5">Taklif qilinganlar</div>
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 px-1 mb-1.5">{t("ref.invitedList")}</div>
           {stats.invited.map((r) => (
             <div key={r.id} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl">
               <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-semibold text-slate-600 dark:text-slate-300">
@@ -871,10 +875,10 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
               </div>
               {r.ordersCount > 0 ? (
                 <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-full">
-                  {r.ordersCount} buyurtma
+                  {t("ref.ordersCount", { n: r.ordersCount })}
                 </span>
               ) : (
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">Yangi</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">{t("ref.newBadge")}</span>
               )}
             </div>
           ))}
@@ -882,7 +886,7 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
       ) : (
         <div className="py-6 text-center">
           <Users className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-          <div className="text-sm text-slate-500 dark:text-slate-400">Hali taklif qilingan do'stlar yo'q</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">{t("ref.emptyList")}</div>
         </div>
       )}
     </div>
@@ -898,17 +902,18 @@ function NotificationsView({
   onChange: (key: keyof NotificationPrefs, value: boolean) => void;
   isOnline: boolean;
 }) {
+  const { t } = useT();
   const items: Array<{ key: keyof NotificationPrefs; label: string; desc: string; emoji: string }> = [
-    { key: "orderUpdates", label: "Buyurtma yangiliklari", desc: "Buyurtmangiz statusi o'zgarganda xabar", emoji: "📦" },
-    { key: "cartAbandonment", label: "Savat eslatmalari", desc: "Savatingizda mahsulot qolsa, bir soatdan keyin eslatma", emoji: "🛒" },
-    { key: "promotions", label: "Aksiyalar va chegirmalar", desc: "Yangi aksiyalar va maxsus takliflar", emoji: "🎁" },
+    { key: "orderUpdates", label: t("notify.orderUpdates"), desc: t("notify.orderUpdatesHint"), emoji: "📦" },
+    { key: "cartAbandonment", label: t("notify.cartAbandon"), desc: t("notify.cartAbandonHint"), emoji: "🛒" },
+    { key: "promotions", label: t("notify.promotions"), desc: t("notify.promotionsHint"), emoji: "🎁" },
   ];
 
   return (
     <div className="space-y-2">
       {!isOnline && (
         <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center mb-2">
-          ⓘ Telegram bot ichida ochilmagan — bildirishnoma sozlamalari faqat shu qurilmada saqlanadi
+          {t("notify.offlineNote")}
         </p>
       )}
       {items.map(({ key, label, desc, emoji }) => (
@@ -980,6 +985,7 @@ function LanguagePicker({ lang, onChange }: { lang: Lang; onChange: (l: Lang) =>
 }
 
 function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; onAdd: (a: Omit<Address, "id">) => Promise<void> | void; onRemove: (id: string) => Promise<void> | void }) {
+  const { t } = useT();
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Omit<Address, "id">>({ label: "", city: "", street: "", apartment: "", notes: "" });
@@ -1000,25 +1006,25 @@ function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; o
           }
         }}
       >
-        <Field label="Nomi (uy / ish / ...)" value={draft.label} onChange={(v) => setDraft({ ...draft, label: v })} />
-        <Field label="Shahar" value={draft.city} onChange={(v) => setDraft({ ...draft, city: v })} />
-        <Field label="Ko'cha va uy raqami" value={draft.street} onChange={(v) => setDraft({ ...draft, street: v })} />
-        <Field label="Kvartira / qavat" value={draft.apartment ?? ""} onChange={(v) => setDraft({ ...draft, apartment: v })} />
-        <Field label="Eslatma (qo'shimcha)" value={draft.notes ?? ""} onChange={(v) => setDraft({ ...draft, notes: v })} />
+        <Field label={t("addr.name")} value={draft.label} onChange={(v) => setDraft({ ...draft, label: v })} />
+        <Field label={t("addr.city")} value={draft.city} onChange={(v) => setDraft({ ...draft, city: v })} />
+        <Field label={t("addr.street")} value={draft.street} onChange={(v) => setDraft({ ...draft, street: v })} />
+        <Field label={t("addr.apartment")} value={draft.apartment ?? ""} onChange={(v) => setDraft({ ...draft, apartment: v })} />
+        <Field label={t("addr.note")} value={draft.notes ?? ""} onChange={(v) => setDraft({ ...draft, notes: v })} />
         <div className="flex gap-2 pt-2">
           <button
             type="button"
             onClick={() => setAdding(false)}
             className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg"
           >
-            Bekor
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={busy || !draft.label.trim() || !draft.street.trim()}
             className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2"
           >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Saqlash"}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t("common.save")}
           </button>
         </div>
       </form>
@@ -1032,12 +1038,12 @@ function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; o
         className="w-full mb-3 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600"
       >
         <Plus className="w-4 h-4" />
-        Manzil qo'shish
+        {t("addr.add")}
       </button>
       {addresses.length === 0 ? (
         <div className="py-8 text-center">
           <MapPin className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-          <div className="text-sm text-slate-500 dark:text-slate-400">Saqlangan manzillar yo'q</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">{t("addr.emptyShort")}</div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -1049,7 +1055,7 @@ function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; o
                     <div className="text-sm font-semibold text-slate-900 dark:text-white">{a.label}</div>
                     {a.isDefault && (
                       <span className="text-[10px] font-medium text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded">
-                        ASOSIY
+                        {t("addr.default")}
                       </span>
                     )}
                   </div>
@@ -1062,7 +1068,7 @@ function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; o
                 <button
                   onClick={() => onRemove(a.id)}
                   className="p-1.5 -mr-1 text-slate-400 hover:text-rose-500 rounded"
-                  aria-label="O'chirish"
+                  aria-label={t("common.delete")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
