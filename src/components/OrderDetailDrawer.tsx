@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import {
   X, Phone, Mail, MapPin, Package as PackageIcon, ChevronDown, Loader2,
   AlertCircle, User as UserIcon, Calendar, MessageSquare, Check, Send,
-  Clock, Trash2,
+  Clock, Trash2, Printer,
 } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
 import { useT } from "../i18n";
+import { openOrderPrint } from "../utils/printOrder";
+import { useAuth } from "../contexts/AuthContext";
 
 interface TeamMember { id: string; name: string; role: string; active: boolean }
 interface OrderNote { id: string; content: string; authorId: string | null; authorName: string | null; createdAt: string }
@@ -81,6 +83,7 @@ export interface OrderDetailDrawerProps {
 
 export default function OrderDetailDrawer({ orderId, onClose, onChanged }: OrderDetailDrawerProps) {
   const { t } = useT();
+  const { tenant } = useAuth();
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -233,6 +236,45 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
   const subtotal = order?.items.reduce((s, i) => s + Number(i.price) * i.qty, 0) ?? 0;
   const itemCount = order?.items.reduce((s, i) => s + i.qty, 0) ?? 0;
 
+  const handlePrint = () => {
+    if (!order) return;
+    openOrderPrint({
+      code: order.code,
+      status: t(`order.adminStatus.${order.status}`),
+      createdAt: order.createdAt,
+      currency: order.currency,
+      total: Number(order.total),
+      notes: order.notes,
+      customer: order.customer
+        ? { name: order.customer.name, phone: order.customer.phone, email: order.customer.email }
+        : null,
+      shippingAddress: order.shippingAddress,
+      items: order.items.map((it) => ({
+        name: it.product.name,
+        sku: it.product.sku,
+        qty: it.qty,
+        price: Number(it.price),
+      })),
+      tenant: tenant ? { name: tenant.name, phone: null, address: null } : null,
+      labels: {
+        title: t("invoice.title"),
+        code: t("invoice.code"),
+        date: t("invoice.date"),
+        status: t("invoice.status"),
+        customer: t("invoice.customer"),
+        address: t("invoice.address"),
+        sku: t("invoice.sku"),
+        item: t("invoice.item"),
+        qty: t("invoice.qty"),
+        price: t("invoice.price"),
+        sum: t("invoice.sum"),
+        total: t("invoice.total"),
+        notes: t("invoice.notes"),
+        footer: t("invoice.footer"),
+      },
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex justify-end" role="dialog" aria-modal="true">
       <button
@@ -258,12 +300,22 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
             {/* Header */}
             <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between z-10">
               <div>
-                <div className="text-[11px] text-slate-500">Buyurtma</div>
+                <div className="text-[11px] text-slate-500">{t("invoice.code")}</div>
                 <h2 className="text-lg font-bold text-white">#{order.code}</h2>
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handlePrint}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  title={t("orderDetail.print")}
+                  aria-label={t("orderDetail.print")}
+                >
+                  <Printer className="w-5 h-5" />
+                </button>
+                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 p-5 space-y-5">

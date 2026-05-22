@@ -17,7 +17,9 @@ import {
   Tag,
   Eye,
   EyeOff,
+  Upload,
 } from "lucide-react";
+import ProductImportModal from "./ProductImportModal";
 
 const MAX_IMAGES = 10;
 import { useAsync } from "../hooks/useAsync";
@@ -51,6 +53,7 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
@@ -158,6 +161,14 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white whitespace-nowrap"
+            title={t("products.import")}
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("products.import")}</span>
+          </button>
           <button
             onClick={() => setShowCategories(true)}
             className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white whitespace-nowrap"
@@ -384,6 +395,14 @@ export default function ProductsPage() {
             refetchCategories();
             refetch();
           }}
+        />
+      )}
+
+      {showImport && (
+        <ProductImportModal
+          categories={cats}
+          onClose={() => setShowImport(false)}
+          onDone={() => refetch()}
         />
       )}
     </>
