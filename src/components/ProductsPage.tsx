@@ -490,6 +490,7 @@ function ProductFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useT();
   const [sku, setSku] = useState(product?.sku ?? "");
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -692,7 +693,7 @@ function ProductFormModal({
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
           <h2 className="text-lg font-bold text-white">
-            {product ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}
+            {product ? t("productForm.edit") : t("productForm.new")}
           </h2>
           <button
             type="button"
@@ -705,23 +706,23 @@ function ProductFormModal({
 
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Field label="SKU (kod) *">
+            <Field label={`${t("productForm.sku")} *`}>
               <input
                 type="text"
                 required
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                placeholder="IPH-15-PRO"
+                placeholder={t("productForm.skuPlaceholder")}
                 className="input"
               />
             </Field>
-            <Field label="Kategoriya">
+            <Field label={t("productForm.category")}>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 className="input"
               >
-                <option value="">— tanlanmagan —</option>
+                <option value="">{t("productForm.noCategory")}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -731,29 +732,29 @@ function ProductFormModal({
             </Field>
           </div>
 
-          <Field label="Mahsulot nomi *">
+          <Field label={`${t("productForm.name")} *`}>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="iPhone 15 Pro Max 256GB"
+              placeholder={t("productForm.namePlaceholder")}
               className="input"
             />
           </Field>
 
-          <Field label="Tavsif">
+          <Field label={t("productForm.description")}>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Mahsulot haqida qisqacha..."
+              placeholder={t("productForm.descriptionPlaceholder")}
               className="input resize-none"
             />
           </Field>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Field label={`Narx (${currency}) *`}>
+            <Field label={`${t("productForm.price", { currency })} *`}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -764,7 +765,7 @@ function ProductFormModal({
                 className="input"
               />
             </Field>
-            <Field label="Eski narx (chegirma uchun)">
+            <Field label={t("productForm.oldPrice")}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -774,7 +775,7 @@ function ProductFormModal({
                 className="input"
               />
             </Field>
-            <Field label="Omborda">
+            <Field label={t("productForm.stock")}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -959,7 +960,7 @@ function ProductFormModal({
                 className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
               />
               <span className="text-sm text-slate-300">
-                ⭐ Vitrina'da ko'rsatish (asosiy sahifada)
+                {t("productForm.featured")}
               </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -969,7 +970,7 @@ function ProductFormModal({
                 onChange={(e) => setActive(e.target.checked)}
                 className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
               />
-              <span className="text-sm text-slate-300">Sotuvda</span>
+              <span className="text-sm text-slate-300">{t("productForm.active")}</span>
             </label>
           </div>
 
@@ -1008,7 +1009,7 @@ function ProductFormModal({
             onClick={onClose}
             className="px-4 py-2 text-sm text-slate-400 hover:text-white"
           >
-            Bekor qilish
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -1016,7 +1017,7 @@ function ProductFormModal({
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {product ? "Saqlash" : "Yaratish"}
+            {product ? t("common.save") : t("productForm.create")}
           </button>
         </div>
 
@@ -1050,6 +1051,7 @@ function CategoriesModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useT();
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
@@ -1122,7 +1124,7 @@ function CategoriesModal({
         className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-800">
-          <h2 className="text-lg font-bold text-white">Kategoriyalar</h2>
+          <h2 className="text-lg font-bold text-white">{t("categoriesModal.title")}</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
@@ -1137,14 +1139,14 @@ function CategoriesModal({
             required
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Yangi kategoriya nomi"
+            placeholder={t("categoriesModal.newName")}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
           <input
             type="text"
             value={newSlug}
             onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-            placeholder="slug (ixtiyoriy) — telefonlar"
+            placeholder={t("categoriesModal.slug")}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
           <label

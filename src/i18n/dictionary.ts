@@ -387,6 +387,29 @@ export const dictionary: Record<string, Entry> = {
   "products.card.edit": { uz: "Tahrirlash", ru: "Редактировать" },
   "products.card.delete": { uz: "O'chirish", ru: "Удалить" },
 
+  // ─── Admin: ProductFormModal ──────────────────────────
+  "productForm.edit": { uz: "Mahsulotni tahrirlash", ru: "Редактировать товар" },
+  "productForm.new": { uz: "Yangi mahsulot", ru: "Новый товар" },
+  "productForm.sku": { uz: "SKU (kod)", ru: "SKU (код)" },
+  "productForm.skuPlaceholder": { uz: "IPH-15-PRO", ru: "IPH-15-PRO" },
+  "productForm.category": { uz: "Kategoriya", ru: "Категория" },
+  "productForm.noCategory": { uz: "— tanlanmagan —", ru: "— не выбрано —" },
+  "productForm.name": { uz: "Mahsulot nomi", ru: "Название товара" },
+  "productForm.namePlaceholder": { uz: "iPhone 15 Pro Max 256GB", ru: "iPhone 15 Pro Max 256GB" },
+  "productForm.description": { uz: "Tavsif", ru: "Описание" },
+  "productForm.descriptionPlaceholder": { uz: "Mahsulot haqida qisqacha…", ru: "Кратко о товаре…" },
+  "productForm.price": { uz: "Narx ({currency})", ru: "Цена ({currency})" },
+  "productForm.oldPrice": { uz: "Eski narx (chegirma uchun)", ru: "Старая цена (для скидки)" },
+  "productForm.stock": { uz: "Omborda", ru: "На складе" },
+
+  // Categories modal
+  "categoriesModal.title": { uz: "Kategoriyalar", ru: "Категории" },
+  "categoriesModal.newName": { uz: "Yangi kategoriya nomi", ru: "Название новой категории" },
+  "categoriesModal.slug": { uz: "slug (ixtiyoriy) — telefonlar", ru: "slug (необязательно) — telefonlar" },
+  "productForm.featured": { uz: "⭐ Vitrina'da ko'rsatish (asosiy sahifada)", ru: "⭐ Показать в Витрине (на главной)" },
+  "productForm.active": { uz: "Sotuvda", ru: "В продаже" },
+  "productForm.create": { uz: "Yaratish", ru: "Создать" },
+
   // ─── Admin: Dashboard KPI cards ───────────────────────
   "kpi.revenue": { uz: "Daromad (oy)", ru: "Выручка (мес)" },
   "kpi.orders": { uz: "Buyurtmalar (oy)", ru: "Заказы (мес)" },
