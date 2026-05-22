@@ -26,7 +26,7 @@ export default function CustomersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-bold text-white">{t("customers.title")}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">{t("customers.title")}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("customers.subtitle")}</p>
       </motion.div>
 
@@ -46,10 +46,10 @@ export default function CustomersPage() {
         </label>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          {t("customers.newCustomer")}
+          <span className="hidden sm:inline">{t("customers.newCustomer")}</span>
         </button>
       </div>
 
@@ -77,25 +77,79 @@ export default function CustomersPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-800">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.customer")}</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.contact")}</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.location")}</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.date")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
-                    onClick={() => setOpenCustomerId(c.id)}
-                  >
-                    <td className="py-3 px-4">
-                      <p className="text-sm font-medium text-white">{c.name}</p>
+          <>
+            {/* Desktop — jadval */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.customer")}</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.contact")}</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.location")}</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.date")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((c) => (
+                    <tr
+                      key={c.id}
+                      className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                      onClick={() => setOpenCustomerId(c.id)}
+                    >
+                      <td className="py-3 px-4">
+                        <p className="text-sm font-medium text-white">{c.name}</p>
+                        {c.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {c.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col gap-0.5">
+                          {c.email && (
+                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                              <Mail className="w-3 h-3" /> {c.email}
+                            </span>
+                          )}
+                          {c.phone && (
+                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                              <Phone className="w-3 h-3" /> {c.phone}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {c.location && (
+                          <span className="flex items-center gap-1 text-xs text-slate-400">
+                            <MapPin className="w-3 h-3" /> {c.location}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-xs text-slate-500">{formatDate(c.createdAt)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile — card */}
+            <div className="md:hidden divide-y divide-slate-800/50">
+              {customers.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setOpenCustomerId(c.id)}
+                  className="w-full text-left p-4 hover:bg-slate-800/30 active:bg-slate-800/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-white truncate">{c.name}</p>
                       {c.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {c.tags.slice(0, 3).map((tag) => (
@@ -105,36 +159,19 @@ export default function CustomersPage() {
                           ))}
                         </div>
                       )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col gap-0.5">
-                        {c.email && (
-                          <span className="flex items-center gap-1 text-xs text-slate-400">
-                            <Mail className="w-3 h-3" /> {c.email}
-                          </span>
-                        )}
-                        {c.phone && (
-                          <span className="flex items-center gap-1 text-xs text-slate-400">
-                            <Phone className="w-3 h-3" /> {c.phone}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {c.location && (
-                        <span className="flex items-center gap-1 text-xs text-slate-400">
-                          <MapPin className="w-3 h-3" /> {c.location}
-                        </span>
+                      {(c.phone || c.email) && (
+                        <p className="text-xs text-slate-400 mt-1 truncate">{c.phone ?? c.email}</p>
                       )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-xs text-slate-500">{formatDate(c.createdAt)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {c.location && (
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{c.location}</p>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-500 flex-shrink-0">{formatDate(c.createdAt)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
         {total > pageSize && (

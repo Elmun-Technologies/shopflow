@@ -288,7 +288,7 @@ export default function ChatPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-4 flex-shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t("chat.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">{t("chat.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("chat.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">

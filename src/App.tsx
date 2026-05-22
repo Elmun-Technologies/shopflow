@@ -96,7 +96,7 @@ function DashboardPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Dashboard</h1>
           <div className="flex items-center gap-2 mt-1">
             <Calendar className="w-4 h-4 text-slate-500" />
             <p className="text-sm text-slate-500">{currentDate}</p>

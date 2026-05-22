@@ -540,7 +540,7 @@ export default function SettingsPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">{t("settings.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">{t("settings.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("settings.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
