@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Package, Loader2 } from "lucide-react";
+import { Package, Loader2, TrendingUp } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,22 +13,27 @@ export default function TopProducts() {
   const { data, loading } = useAsync(() => dashboardApi.topProducts(), []);
   const products = data ?? [];
 
+  const maxSold = products.length > 0 ? Math.max(...products.map((p) => p.sold)) : 1;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.8 }}
-      className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+      transition={{ duration: 0.4, delay: 0.6 }}
+      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
     >
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-base font-semibold text-white">{t("widget.topProducts")}</h3>
-          <p className="text-sm text-slate-500 mt-0.5">{t("widget.topProducts.subtitle")}</p>
+          <h3 className="text-base font-semibold text-white flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            {t("widget.topProducts")}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">{t("widget.topProducts.subtitle")}</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex items-center justify-center py-10">
           <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
         </div>
       ) : products.length === 0 ? (
@@ -38,31 +43,43 @@ export default function TopProducts() {
         </div>
       ) : (
         <div className="space-y-3">
-          {products.map((product, index) => (
-            <motion.div
-              key={product.id ?? index}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group"
-            >
-              <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-slate-600 transition-colors">
-                <Package className="w-5 h-5 text-slate-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{product.name}</p>
-                <p className="text-xs text-slate-500">{product.category ?? "—"}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-semibold text-white">{formatCurrency(product.price, currency)}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Ombor: {product.stock}</p>
-              </div>
-              <div className="text-right flex-shrink-0 w-16">
-                <p className="text-xs text-slate-400">Sotildi</p>
-                <p className="text-sm font-medium text-emerald-400">{product.sold}</p>
-              </div>
-            </motion.div>
-          ))}
+          {products.map((product, index) => {
+            const pct = (product.sold / maxSold) * 100;
+            return (
+              <motion.div
+                key={product.id ?? index}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="space-y-1.5 group"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-slate-600 w-4 text-center">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white truncate">{product.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{product.category ?? "—"}</p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-emerald-400">{product.sold}</p>
+                    <p className="text-[11px] text-slate-500">{formatCurrency(product.price, currency)}</p>
+                  </div>
+                </div>
+                {/* Progress bar — sotuv miqdoriga proportsional */}
+                <div className="h-1 bg-slate-800/60 rounded-full overflow-hidden ml-7">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.6, delay: 0.6 + index * 0.05, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                  />
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </motion.div>

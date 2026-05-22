@@ -8,7 +8,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingUp } from "lucide-react";
+import { useMemo } from "react";
 import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
@@ -23,15 +24,24 @@ export default function RevenueChart() {
   const { data, loading } = useAsync(() => dashboardApi.revenueTrend(), []);
   const series = data ?? [];
 
+  // Hero statistika — joriy oy va o'zgarish
+  const stats = useMemo(() => {
+    if (series.length < 2) return { current: 0, change: 0 };
+    const last = series[series.length - 1].revenue;
+    const prev = series[series.length - 2].revenue;
+    const change = prev > 0 ? ((last - prev) / prev) * 100 : 0;
+    return { current: last, change };
+  }, [series]);
+
   const Tip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 shadow-xl">
-          <p className="text-sm font-medium text-slate-300 mb-1">{label}</p>
-          <p className="text-lg font-bold text-white">
+        <div className="bg-slate-800/95 backdrop-blur border border-slate-700 rounded-xl px-3.5 py-2.5 shadow-2xl">
+          <p className="text-xs text-slate-400 mb-1">{label}</p>
+          <p className="text-base font-bold text-white">
             {formatCompactCurrency(payload[0].value as number, currency)}
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-[11px] text-slate-500 mt-0.5">
             {String((payload[0].payload as { orders?: number } | undefined)?.orders ?? 0)} buyurtma
           </p>
         </div>
@@ -44,17 +54,30 @@ export default function RevenueChart() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.4 }}
-      className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+      transition={{ duration: 0.4, delay: 0.3 }}
+      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
     >
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-5">
         <div>
           <h3 className="text-base font-semibold text-white">{t("widget.revenue")}</h3>
-          <p className="text-sm text-slate-500 mt-0.5">Oxirgi 12 oy</p>
+          <div className="flex items-baseline gap-2 mt-2">
+            <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+              {formatCompactCurrency(stats.current, currency)}
+            </p>
+            {stats.change !== 0 && (
+              <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
+                stats.change >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+              }`}>
+                <TrendingUp className={`w-3 h-3 ${stats.change < 0 ? "rotate-180" : ""}`} />
+                {Math.abs(stats.change).toFixed(1)}%
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-1">Oxirgi 12 oy</p>
         </div>
       </div>
 
-      <div className="h-72">
+      <div className="h-64">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
@@ -68,32 +91,34 @@ export default function RevenueChart() {
             <AreaChart data={series} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="2 6" stroke="#1e293b" vertical={false} />
               <XAxis
                 dataKey="month"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
+                tick={{ fill: "#64748b", fontSize: 11 }}
+                dy={5}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
+                tick={{ fill: "#64748b", fontSize: 11 }}
                 tickFormatter={(value) => formatCompactCurrency(Number(value), currency)}
+                width={50}
               />
-              <Tooltip content={<Tip />} />
+              <Tooltip content={<Tip />} cursor={{ stroke: "#334155", strokeDasharray: "3 3" }} />
               <Area
                 type="monotone"
                 dataKey="revenue"
                 stroke="#10b981"
-                strokeWidth={2}
+                strokeWidth={2.5}
                 fill="url(#revenueGradient)"
                 dot={false}
-                activeDot={{ r: 5, fill: "#10b981", stroke: "#0f172a", strokeWidth: 2 }}
+                activeDot={{ r: 5, fill: "#10b981", stroke: "#0f172a", strokeWidth: 3 }}
               />
             </AreaChart>
           </ResponsiveContainer>
