@@ -26,6 +26,7 @@ import { api } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import type { Product, Category } from "../types/api";
+import { useT } from "../i18n";
 
 // "50000" → "50,000". Bo'sh / noto'g'ri input → "".
 function formatGrouped(raw: string): string {
@@ -41,6 +42,7 @@ function unformatGrouped(formatted: string): string {
 
 export default function ProductsPage() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -74,7 +76,7 @@ export default function ProductsPage() {
   const cats = categories ?? [];
 
   const handleDelete = async (p: Product) => {
-    if (!confirm(`"${p.name}" mahsulotini o'chirish?`)) return;
+    if (!confirm(t("products.deleteConfirm", { name: p.name }))) return;
     await productsApi.delete(p.id);
     refetch();
   };
@@ -150,9 +152,9 @@ export default function ProductsPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Mahsulotlar</h1>
+          <h1 className="text-2xl font-bold text-white">{t("products.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {total > 0 ? `${total} ta mahsulot` : "Katalog va omborlar"}
+            {total > 0 ? t("products.count", { count: total }) : t("products.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -160,14 +162,14 @@ export default function ProductsPage() {
             onClick={() => setShowCategories(true)}
             className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white"
           >
-            Kategoriyalar ({cats.length})
+            {t("products.categories")} ({cats.length})
           </button>
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
           >
             <Plus className="w-4 h-4" />
-            Yangi mahsulot
+            {t("products.newProduct")}
           </button>
         </div>
       </motion.div>
@@ -182,7 +184,7 @@ export default function ProductsPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Mahsulot nomi yoki SKU..."
+            placeholder={t("products.searchPlaceholder")}
             className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
           />
         </label>
@@ -194,7 +196,7 @@ export default function ProductsPage() {
           }}
           className="px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500/50 min-w-[180px]"
         >
-          <option value="all">Barcha kategoriyalar</option>
+          <option value="all">{t("products.allCategories")}</option>
           {cats.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -215,18 +217,17 @@ export default function ProductsPage() {
             onClick={refetch}
             className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300"
           >
-            Qaytadan urinish
+            {t("orders.retry")}
           </button>
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
           <Package className="w-12 h-12 text-slate-700 mb-3" />
           <p className="text-base font-semibold text-white">
-            {search ? "Mahsulot topilmadi" : "Hozircha mahsulotlar yo'q"}
+            {search ? t("products.empty.search") : t("products.empty.none")}
           </p>
           <p className="text-sm text-slate-500 mt-1 max-w-md">
-            "Yangi mahsulot" tugmasi orqali birinchi mahsulotingizni qo'shing. Mahsulot Vitrina'da
-            ko'rinishi uchun "featured" bayrog'ini yoqing.
+            {t("products.empty.hint")}
           </p>
         </div>
       ) : (
@@ -235,23 +236,23 @@ export default function ProductsPage() {
         {selected.size > 0 && (
           <div className="sticky top-0 z-30 mb-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap backdrop-blur">
             <span className="text-sm font-medium text-emerald-300">
-              {selected.size} ta tanlangan
+              {t("products.bulk.selected", { count: selected.size })}
             </span>
             <button
               onClick={selectAllOnPage}
               className="text-xs text-emerald-400 hover:text-emerald-300 underline"
             >
-              {products.every((p) => selected.has(p.id)) ? "Sahifadagilarni olib tashlash" : "Sahifadagi hammasini tanlash"}
+              {products.every((p) => selected.has(p.id)) ? t("products.bulk.deselectPage") : t("products.bulk.selectAllPage")}
             </button>
             <div className="flex-1" />
             <button
               onClick={() => handleBulkFeatured(true)}
               disabled={bulkBusy}
               className="px-2.5 py-1 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
-              title="Vitrina'ga qo'yish"
+              title={t("products.bulk.showcaseTitle")}
             >
               <Star className="w-3 h-3" />
-              Vitrina
+              {t("products.bulk.showcase")}
             </button>
             <button
               onClick={() => handleBulkActive(true)}
@@ -259,7 +260,7 @@ export default function ProductsPage() {
               className="px-2.5 py-1 bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
             >
               <Eye className="w-3 h-3" />
-              Yoqish
+              {t("products.bulk.enable")}
             </button>
             <button
               onClick={() => handleBulkActive(false)}
@@ -267,7 +268,7 @@ export default function ProductsPage() {
               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
             >
               <EyeOff className="w-3 h-3" />
-              O'chirish
+              {t("products.bulk.disable")}
             </button>
             <div className="relative">
               <button
@@ -276,7 +277,7 @@ export default function ProductsPage() {
                 className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
               >
                 <Tag className="w-3 h-3" />
-                Kategoriya
+                {t("products.bulk.category")}
               </button>
               {bulkCategoryOpen && (
                 <>
@@ -286,7 +287,7 @@ export default function ProductsPage() {
                       onClick={() => handleBulkCategory(null)}
                       className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700"
                     >
-                      — Kategoriyasiz —
+                      {t("products.bulk.noCategory")}
                     </button>
                     {cats.map((c) => (
                       <button
@@ -307,12 +308,12 @@ export default function ProductsPage() {
               className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-              O'chirish
+              {t("products.bulk.delete")}
             </button>
             <button
               onClick={clearSelection}
               className="ml-1 p-1 text-emerald-400 hover:text-emerald-300"
-              aria-label="Tanlovni bekor qilish"
+              aria-label={t("products.bulk.clearSelection")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -345,14 +346,14 @@ export default function ProductsPage() {
               disabled={page === 1}
               className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
             >
-              Oldingi
+              {t("orders.prev")}
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page * pageSize >= total}
               className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
             >
-              Keyingi
+              {t("orders.next")}
             </button>
           </div>
         </div>
@@ -404,6 +405,7 @@ function ProductCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className={`bg-slate-900 border rounded-xl p-4 transition-colors group ${
       selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-slate-800 hover:border-slate-700"
@@ -422,28 +424,28 @@ function ProductCard({
               ? "bg-emerald-500 text-white"
               : "bg-slate-900/80 backdrop-blur text-slate-400 opacity-0 group-hover:opacity-100"
           }`}
-          aria-label={selected ? "Tanlovni olib tashlash" : "Tanlash"}
+          aria-label={selected ? t("products.card.deselect") : t("products.card.select")}
         >
           {selected ? <Check className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
         </button>
         {product.featured && (
           <span className="absolute top-2 left-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur text-amber-300 text-[10px] font-medium">
             <Star className="w-3 h-3 fill-amber-300" />
-            Vitrina
+            {t("products.card.featured")}
           </span>
         )}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
             className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-white"
-            title="Tahrirlash"
+            title={t("products.card.edit")}
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onDelete}
             className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-red-400"
-            title="O'chirish"
+            title={t("products.card.delete")}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -451,7 +453,7 @@ function ProductCard({
       </div>
       <p className="text-xs text-slate-500 uppercase tracking-wider">{product.sku}</p>
       <p className="text-sm font-semibold text-white truncate mt-0.5">{product.name}</p>
-      <p className="text-xs text-slate-500 mt-1">{product.category?.name ?? "Kategoriyasiz"}</p>
+      <p className="text-xs text-slate-500 mt-1">{product.category?.name ?? t("products.card.uncategorized")}</p>
       <div className="flex items-center justify-between mt-3">
         <div>
           <span className="text-base font-bold text-white">
@@ -468,7 +470,7 @@ function ProductCard({
             product.stock > 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
           }`}
         >
-          Ombor: {product.stock}
+          {t("products.card.stock", { n: product.stock })}
         </span>
       </div>
     </div>

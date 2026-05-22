@@ -185,4 +185,39 @@ export const dictionary: Record<string, Entry> = {
   "orders.action.delivered": { uz: "Yetkazildi", ru: "Доставлен" },
   "orders.action.hint": { uz: "{action} → mijozga Telegram xabar yuboriladi", ru: "{action} → клиенту отправится Telegram уведомление" },
   "orders.viewDetails": { uz: "Batafsil ko'rish", ru: "Подробнее" },
+
+  // ─── Admin: Products page ─────────────────────────────
+  "products.title": { uz: "Mahsulotlar", ru: "Товары" },
+  "products.count": { uz: "{count} ta mahsulot", ru: "{count} товаров" },
+  "products.subtitle": { uz: "Katalog va omborlar", ru: "Каталог и склады" },
+  "products.categories": { uz: "Kategoriyalar", ru: "Категории" },
+  "products.newProduct": { uz: "Yangi mahsulot", ru: "Новый товар" },
+  "products.searchPlaceholder": { uz: "Mahsulot nomi yoki SKU…", ru: "Название или SKU…" },
+  "products.allCategories": { uz: "Barcha kategoriyalar", ru: "Все категории" },
+  "products.empty.search": { uz: "Mahsulot topilmadi", ru: "Товар не найден" },
+  "products.empty.none": { uz: "Hozircha mahsulotlar yo'q", ru: "Пока нет товаров" },
+  "products.empty.hint": { uz: "\"Yangi mahsulot\" tugmasi orqali birinchi mahsulotingizni qo'shing. Mahsulot Vitrina'da ko'rinishi uchun \"featured\" bayrog'ini yoqing.", ru: "Добавьте первый товар через кнопку \"Новый товар\". Чтобы товар появился в Витрине, включите флаг \"featured\"." },
+  "products.deleteConfirm": { uz: "\"{name}\" mahsulotini o'chirish?", ru: "Удалить товар \"{name}\"?" },
+
+  // Bulk action toolbar
+  "products.bulk.selected": { uz: "{count} ta tanlangan", ru: "Выбрано: {count}" },
+  "products.bulk.selectAllPage": { uz: "Sahifadagi hammasini tanlash", ru: "Выбрать всю страницу" },
+  "products.bulk.deselectPage": { uz: "Sahifadagilarni olib tashlash", ru: "Снять выбор страницы" },
+  "products.bulk.showcase": { uz: "Vitrina", ru: "Витрина" },
+  "products.bulk.showcaseTitle": { uz: "Vitrina'ga qo'yish", ru: "Добавить в Витрину" },
+  "products.bulk.enable": { uz: "Yoqish", ru: "Включить" },
+  "products.bulk.disable": { uz: "O'chirish", ru: "Отключить" },
+  "products.bulk.category": { uz: "Kategoriya", ru: "Категория" },
+  "products.bulk.noCategory": { uz: "— Kategoriyasiz —", ru: "— Без категории —" },
+  "products.bulk.delete": { uz: "O'chirish", ru: "Удалить" },
+  "products.bulk.clearSelection": { uz: "Tanlovni bekor qilish", ru: "Отменить выбор" },
+
+  // Product card
+  "products.card.uncategorized": { uz: "Kategoriyasiz", ru: "Без категории" },
+  "products.card.stock": { uz: "Ombor: {n}", ru: "Склад: {n}" },
+  "products.card.featured": { uz: "Vitrina", ru: "Витрина" },
+  "products.card.select": { uz: "Tanlash", ru: "Выбрать" },
+  "products.card.deselect": { uz: "Tanlovni olib tashlash", ru: "Снять выбор" },
+  "products.card.edit": { uz: "Tahrirlash", ru: "Редактировать" },
+  "products.card.delete": { uz: "O'chirish", ru: "Удалить" },
 };
