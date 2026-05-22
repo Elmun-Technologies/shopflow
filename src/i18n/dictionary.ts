@@ -50,6 +50,21 @@ export const dictionary: Record<string, Entry> = {
   "pdp.beFirst": { uz: "Birinchi bo'lib yozing!", ru: "Будьте первым!" },
   "pdp.totalReviews": { uz: "{count} ta sharh", ru: "{count} отзывов" },
   "pdp.comboTitle": { uz: "🎁 Bularni ham qo'shing", ru: "🎁 Добавьте к заказу" },
+
+  // ─── Storefront: Catalog (home + filters) ────────────
+  "catalog.searchPlaceholder": { uz: "Mahsulot qidirish…", ru: "Поиск товара…" },
+  "catalog.allCategories": { uz: "Barchasi", ru: "Все" },
+  "catalog.allProducts": { uz: "Barcha mahsulotlar", ru: "Все товары" },
+  "catalog.productCount": { uz: "{n} ta mahsulot", ru: "{n} товаров" },
+  "catalog.sort.popular": { uz: "Mashhur", ru: "Популярные" },
+  "catalog.sort.priceAsc": { uz: "Narx: arzondan", ru: "Цена: дешевле" },
+  "catalog.sort.priceDesc": { uz: "Narx: qimmatdan", ru: "Цена: дороже" },
+  "catalog.sort.newest": { uz: "Yangi", ru: "Новинки" },
+  "catalog.empty.search": { uz: "\"{q}\" bo'yicha topilmadi", ru: "По запросу \"{q}\" ничего не найдено" },
+  "catalog.empty.category": { uz: "Bu bo'limda mahsulot yo'q", ru: "В этом разделе нет товаров" },
+  "catalog.clearSearch": { uz: "Qidiruvni tozalash", ru: "Очистить поиск" },
+  "promo.tabTitle": { uz: "Maxsus takliflar", ru: "Спецпредложения" },
+  "promo.empty": { uz: "Hozircha takliflar yo'q", ru: "Пока нет предложений" },
   "pdp.trust.original.title": { uz: "Original brend", ru: "Оригинальный бренд" },
   "pdp.trust.original.text": { uz: "Bu belgi faqat original tovarlarda bor. Sotuvchi ularning asilligini hujjatlar bilan tasdiqlagan.", ru: "Этот знак есть только у оригинальных товаров. Продавец подтвердил подлинность документами." },
   "pdp.trust.warranty.title": { uz: "6 oylik kafolat", ru: "Гарантия 6 месяцев" },
@@ -285,6 +300,40 @@ export const dictionary: Record<string, Entry> = {
   "orders.action.delivered": { uz: "Yetkazildi", ru: "Доставлен" },
   "orders.action.hint": { uz: "{action} → mijozga Telegram xabar yuboriladi", ru: "{action} → клиенту отправится Telegram уведомление" },
   "orders.viewDetails": { uz: "Batafsil ko'rish", ru: "Подробнее" },
+
+  // ─── Admin: OrderDetailDrawer ─────────────────────────
+  "orderDetail.customer": { uz: "Mijoz", ru: "Клиент" },
+  "orderDetail.noCustomer": { uz: "Mijoz ma'lumoti yo'q", ru: "Нет данных о клиенте" },
+  "orderDetail.products": { uz: "Mahsulotlar ({n})", ru: "Товары ({n})" },
+  "orderDetail.summary": { uz: "Hisob", ru: "Расчёт" },
+  "orderDetail.source": { uz: "Manba", ru: "Источник" },
+  "orderDetail.address": { uz: "Yetkazib berish manzili", ru: "Адрес доставки" },
+  "orderDetail.assignee": { uz: "Mas'ul", ru: "Ответственный" },
+  "orderDetail.notes": { uz: "Ichki izohlar ({n})", ru: "Внутренние заметки ({n})" },
+  "orderDetail.history": { uz: "Tarix", ru: "История" },
+  "orderDetail.customerNote": { uz: "Buyurtma izohi", ru: "Комментарий к заказу" },
+  "orderDetail.customerNotePlaceholder": { uz: "Mijoz buyurtma vaqtida yozgan izoh…", ru: "Комментарий, оставленный клиентом при оформлении…" },
+
+  // ─── Admin: CustomerDetailDrawer ─────────────────────
+  "customerDetail.label": { uz: "Mijoz · {date} dan", ru: "Клиент · с {date}" },
+  "customerDetail.totalSpent": { uz: "Jami xarid", ru: "Общая сумма покупок" },
+  "customerDetail.orders": { uz: "Buyurtmalar", ru: "Заказы" },
+  "customerDetail.contact": { uz: "Kontakt", ru: "Контакт" },
+  "customerDetail.edit": { uz: "Tahrirlash", ru: "Редактировать" },
+  "customerDetail.name": { uz: "Ism", ru: "Имя" },
+  "customerDetail.phone": { uz: "Telefon", ru: "Телефон" },
+  "customerDetail.email": { uz: "Email", ru: "Email" },
+  "customerDetail.location": { uz: "Manzil", ru: "Адрес" },
+  "customerDetail.tags": { uz: "Teg'lar (vergul bilan)", ru: "Теги (через запятую)" },
+  "customerDetail.tagsPlaceholder": { uz: "vip, doimiy", ru: "vip, постоянный" },
+  "customerDetail.note": { uz: "Izoh", ru: "Заметка" },
+  "customerDetail.tgId": { uz: "Telegram ID: {id}", ru: "Telegram ID: {id}" },
+  "customerDetail.ordersHistory": { uz: "Buyurtmalar tarixi ({n})", ru: "История заказов ({n})" },
+  "customerDetail.noOrders": { uz: "Hali buyurtma yo'q", ru: "Пока нет заказов" },
+
+  // ─── Admin: LeadDetailModal ───────────────────────────
+  "leadDetail.interactions": { uz: "Aloqalar tarixi", ru: "История взаимодействий" },
+  "leadDetail.addNote": { uz: "Eslatma qo'shish", ru: "Добавить заметку" },
 
   // ─── Admin: Products page ─────────────────────────────
   "products.title": { uz: "Mahsulotlar", ru: "Товары" },

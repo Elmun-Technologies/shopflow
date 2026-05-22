@@ -1954,14 +1954,14 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Tag className="w-5 h-5" style={{ color: primaryColor }} />
-            Maxsus takliflar
+            {t("promo.tabTitle")}
           </h2>
         </div>
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {promotionProducts.length === 0 ? (
             <div className="py-16 text-center">
               <Tag className="w-12 h-12 mx-auto text-slate-700 mb-3" />
-              <p className="text-sm text-slate-400">Hozircha takliflar yo'q</p>
+              <p className="text-sm text-slate-400">{t("promo.empty")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -1988,7 +1988,7 @@ function StoreInner({ slug }: { slug: string }) {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Mahsulot qidirish..."
+              placeholder={t("catalog.searchPlaceholder")}
               className="w-full bg-slate-800 rounded-xl pl-9 pr-9 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
             {searchQuery && (
@@ -2007,7 +2007,7 @@ function StoreInner({ slug }: { slug: string }) {
               }`}
               style={!selectedCategoryId ? { backgroundColor: primaryColor } : {}}
             >
-              Barchasi
+              {t("catalog.allCategories")}
             </button>
             {categories.map((cat) => (
               <button
@@ -2025,17 +2025,17 @@ function StoreInner({ slug }: { slug: string }) {
         )}
         {/* Sort + result count bar */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/50">
-          <span className="text-[11px] text-slate-500">{filteredProducts.length} ta mahsulot</span>
+          <span className="text-[11px] text-slate-500">{t("catalog.productCount", { n: filteredProducts.length })}</span>
           <div className="relative">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="appearance-none bg-slate-800 border border-slate-700 text-xs text-white pl-3 pr-8 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             >
-              <option value="popular">Mashhur</option>
-              <option value="price_asc">Narx: arzondan</option>
-              <option value="price_desc">Narx: qimmatdan</option>
-              <option value="newest">Yangi</option>
+              <option value="popular">{t("catalog.sort.popular")}</option>
+              <option value="price_asc">{t("catalog.sort.priceAsc")}</option>
+              <option value="price_desc">{t("catalog.sort.priceDesc")}</option>
+              <option value="newest">{t("catalog.sort.newest")}</option>
             </select>
             <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 rotate-90 pointer-events-none" />
           </div>
@@ -2045,14 +2045,14 @@ function StoreInner({ slug }: { slug: string }) {
             <div className="py-16 text-center">
               <Package className="w-12 h-12 mx-auto text-slate-700 mb-3" />
               <p className="text-sm text-slate-400">
-                {searchQuery ? `"${searchQuery}" bo'yicha topilmadi` : "Bu bo'limda mahsulot yo'q"}
+                {searchQuery ? t("catalog.empty.search", { q: searchQuery }) : t("catalog.empty.category")}
               </p>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
                   className="mt-3 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
                 >
-                  Qidiruvni tozalash
+                  {t("catalog.clearSearch")}
                 </button>
               )}
             </div>
@@ -2074,7 +2074,7 @@ function StoreInner({ slug }: { slug: string }) {
       return (
         <div className="p-4">
           {selectedCategoryId === null && categories.length > 0 && (
-            <h2 className="text-sm font-semibold text-white mb-3">Barcha mahsulotlar</h2>
+            <h2 className="text-sm font-semibold text-white mb-3">{t("catalog.allProducts")}</h2>
           )}
           <div className="grid grid-cols-2 gap-3">
             {filteredProducts.map(renderProductCard)}
@@ -2275,7 +2275,7 @@ function StoreInner({ slug }: { slug: string }) {
             <input
               autoFocus
               type="text"
-              placeholder="Mahsulot qidirish..."
+              placeholder={t("catalog.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-800 rounded-2xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none"
