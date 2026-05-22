@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
+import { useT } from "../i18n";
 import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
@@ -441,6 +442,7 @@ function StoreInner({ slug }: { slug: string }) {
 
   // Telegram WebApp — darhol ready() chaqirish (yuklanish ekranini yashirish uchun)
   const twa = window.Telegram?.WebApp;
+  const { t } = useT();
   useEffect(() => {
     try {
       twa?.ready();
@@ -770,8 +772,8 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300" style={{ backgroundColor: primaryColor + "20" }}>
                 <CheckCircle2 className="w-11 h-11" style={{ color: primaryColor }} strokeWidth={2.5} />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-1">Buyurtma yaratildi</h2>
-              <p className="text-sm text-slate-400">Hammasi avtomatik — to'lov va yetkazib berish tayyorlanmoqda</p>
+              <h2 className="text-2xl font-bold text-white mb-1">{t("success.title")}</h2>
+              <p className="text-sm text-slate-400">{t("success.subtitle")}</p>
             </div>
 
             {/* Buyurtma kartochkasi */}
@@ -799,10 +801,10 @@ function StoreInner({ slug }: { slug: string }) {
               <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-3">Keyingi qadamlar</p>
               <div className="space-y-3">
                 {[
-                  { label: "Qabul qilindi", desc: "Buyurtmangiz tizimga kirdi", done: true },
-                  { label: "Tayyorlanmoqda", desc: "Mahsulotlar yig'ilmoqda", done: false, active: true },
-                  { label: "Yo'lda", desc: "Yetkazib berishga yuborildi", done: false },
-                  { label: "Yetkazildi", desc: deliveryStr + " gacha", done: false },
+                  { label: t("success.step.received"), desc: t("success.step.receivedDesc"), done: true },
+                  { label: t("success.step.processing"), desc: t("success.step.processingDesc"), done: false, active: true },
+                  { label: t("success.step.shipping"), desc: t("success.step.shippingDesc"), done: false },
+                  { label: t("success.step.delivered"), desc: deliveryStr, done: false },
                 ].map((s, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
@@ -828,7 +830,7 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="flex items-start gap-2.5 p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-6">
                 <Bell className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-sky-200 leading-relaxed">
-                  Holat o'zgarganda Telegram'da xabar olasiz. Buyurtmani istalgan paytda <span className="font-semibold">Profile → Buyurtmalarim</span> dan kuzating.
+                  {t("success.notify.tg")}
                 </p>
               </div>
             ) : (
@@ -852,7 +854,7 @@ function StoreInner({ slug }: { slug: string }) {
                 style={{ backgroundColor: primaryColor }}
               >
                 <ShoppingBag className="w-5 h-5" />
-                Buyurtmamni ko'rish
+                {t("success.viewOrder")}
               </button>
               <button
                 onClick={() => {
@@ -862,7 +864,7 @@ function StoreInner({ slug }: { slug: string }) {
                 }}
                 className="w-full py-3 rounded-2xl font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-all"
               >
-                Yana xarid qilish
+                {t("success.continueShopping")}
               </button>
             </div>
           </div>
@@ -879,13 +881,13 @@ function StoreInner({ slug }: { slug: string }) {
           <button onClick={() => setView("cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-semibold text-white">Buyurtma rasmiylashtirish</h2>
+          <h2 className="text-base font-semibold text-white">{t("checkout.title")}</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Order summary */}
           <div className="bg-slate-900 rounded-2xl p-4">
-            <h3 className="text-xs font-medium text-slate-400 mb-3">Buyurtma tarkibi</h3>
+            <h3 className="text-xs font-medium text-slate-400 mb-3">{t("checkout.orderSummary")}</h3>
             {cart.map((item) => (
               <div key={item.productId} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
                 <span className="text-sm text-white">{item.name} <span className="text-slate-500">×{item.qty}</span></span>
@@ -895,7 +897,7 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             ))}
             <div className="flex items-center justify-between pt-3 mt-1">
-              <span className="text-sm font-semibold text-white">Jami</span>
+              <span className="text-sm font-semibold text-white">{t("checkout.total")}</span>
               <span className="text-base font-bold" style={{ color: primaryColor }}>
                 {formatPrice(cartTotal, data.tenant.currency)}
               </span>
@@ -904,15 +906,15 @@ function StoreInner({ slug }: { slug: string }) {
 
           {/* Customer form */}
           <div className="bg-slate-900 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-medium text-slate-400 mb-1">Ma'lumotlaringiz</h3>
+            <h3 className="text-xs font-medium text-slate-400 mb-1">{t("checkout.yourInfo")}</h3>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Ism *</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.name")} *</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="To'liq ismingiz"
+                  placeholder={t("checkout.namePlaceholder")}
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -921,7 +923,7 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Telefon *</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.phone")} *</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
@@ -939,12 +941,12 @@ function StoreInner({ slug }: { slug: string }) {
                 />
               </div>
               {form.phone && !isValidUzPhone(form.phone) && (
-                <p className="text-[11px] text-rose-300 mt-1">To'liq raqam: +998 90 123 45 67</p>
+                <p className="text-[11px] text-rose-300 mt-1">{t("checkout.phoneInvalid")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Manzil</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.addressLabel")}</label>
               {savedAddresses.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
                   {savedAddresses.map((a) => {
@@ -972,7 +974,7 @@ function StoreInner({ slug }: { slug: string }) {
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Yetkazib berish manzili"
+                  placeholder={t("checkout.address")}
                   value={form.address}
                   onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -983,7 +985,7 @@ function StoreInner({ slug }: { slug: string }) {
                 type="button"
                 onClick={() => {
                   if (!navigator.geolocation) {
-                    alert("Bu brauzerda GPS qo'llab-quvvatlanmaydi");
+                    alert(t("checkout.gpsUnsupported"));
                     return;
                   }
                   setGpsBusy(true);
@@ -1005,8 +1007,8 @@ function StoreInner({ slug }: { slug: string }) {
                     (err) => {
                       setGpsBusy(false);
                       alert(err.code === err.PERMISSION_DENIED
-                        ? "GPS ruxsati berilmagan — sozlamalardan ruxsat bering"
-                        : "Joriy joylashuvni aniqlab bo'lmadi");
+                        ? t("checkout.gpsDenied")
+                        : t("checkout.gpsError"));
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
                   );
@@ -1015,20 +1017,20 @@ function StoreInner({ slug }: { slug: string }) {
                 className="mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/15 disabled:opacity-50 rounded-xl text-sm text-sky-300 transition-colors"
               >
                 {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="text-base leading-none">📍</span>}
-                Joriy joylashuvni olish
+                {t("checkout.gps")}
               </button>
               {form.lat != null && form.lng != null && (
                 <p className="text-[11px] text-emerald-300 mt-1.5 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3 h-3" />
-                  GPS aniqlandi: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
+                  {t("checkout.gpsDetected")}: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
                 </p>
               )}
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Izoh</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.note")}</label>
               <textarea
-                placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                placeholder={t("checkout.notePlaceholder")}
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
@@ -1052,7 +1054,7 @@ function StoreInner({ slug }: { slug: string }) {
             style={{ backgroundColor: primaryColor }}
           >
             {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {submitting ? "Yuborilmoqda..." : `Buyurtma berish · ${formatPrice(cartTotal, data.tenant.currency)}`}
+            {submitting ? t("checkout.sending") : `${t("checkout.submit")} · ${formatPrice(cartTotal, data.tenant.currency)}`}
           </button>
         </div>
       </div>
@@ -1067,8 +1069,8 @@ function StoreInner({ slug }: { slug: string }) {
           <button onClick={() => setView("home")} className="p-2 rounded-xl text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-semibold text-white">Savat</h2>
-          <span className="ml-1 text-xs text-slate-400">{cartCount} ta</span>
+          <h2 className="text-base font-semibold text-white">{t("cart.title")}</h2>
+          <span className="ml-1 text-xs text-slate-400">{t("cart.items", { count: cartCount })}</span>
         </div>
 
         {cart.length === 0 ? (
@@ -1076,14 +1078,14 @@ function StoreInner({ slug }: { slug: string }) {
             <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mb-4">
               <ShoppingCart className="w-8 h-8 text-slate-600" />
             </div>
-            <p className="text-white font-medium mb-1">Savat bo'sh</p>
-            <p className="text-sm text-slate-400">Mahsulot qo'shing</p>
+            <p className="text-white font-medium mb-1">{t("cart.empty.title")}</p>
+            <p className="text-sm text-slate-400">{t("cart.addMore")}</p>
             <button
               onClick={() => setView("home")}
               className="mt-4 px-6 py-2.5 rounded-2xl text-sm font-medium text-white"
               style={{ backgroundColor: primaryColor }}
             >
-              Xarid qilish
+              {t("cart.shopNow")}
             </button>
           </div>
         ) : (
@@ -1126,7 +1128,7 @@ function StoreInner({ slug }: { slug: string }) {
 
             <div className="p-4 border-t border-slate-800 bg-slate-950">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-slate-400">Jami ({cartCount} mahsulot)</span>
+                <span className="text-sm text-slate-400">{t("cart.totalItems", { count: cartCount })}</span>
                 <span className="text-lg font-bold text-white">{formatPrice(cartTotal, data.tenant.currency)}</span>
               </div>
               <button
@@ -1134,7 +1136,7 @@ function StoreInner({ slug }: { slug: string }) {
                 className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98]"
                 style={{ backgroundColor: primaryColor }}
               >
-                Buyurtma berish
+                {t("cart.placeOrder")}
               </button>
             </div>
           </>
@@ -1300,7 +1302,7 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
             {savings > 0 && (
               <div className="inline-block bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-1 rounded-md mb-3">
-                Tejovingiz: {savings.toLocaleString("uz-UZ")} {currencyStr}
+                {t("pdp.savings", { value: `${savings.toLocaleString("uz-UZ")} ${currencyStr}` })}
               </div>
             )}
 
@@ -1312,7 +1314,7 @@ function StoreInner({ slug }: { slug: string }) {
                 className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
               >
                 <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span className="text-xs font-medium text-white">ORIGINAL</span>
+                <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
               </button>
               <button
@@ -1321,7 +1323,7 @@ function StoreInner({ slug }: { slug: string }) {
                 className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
               >
                 <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
-                <span className="text-xs font-medium text-white">KAFOLAT 6 OY</span>
+                <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
               </button>
             </div>
@@ -1335,7 +1337,7 @@ function StoreInner({ slug }: { slug: string }) {
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                 <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
                 <span className="text-xs text-slate-500">·</span>
-                <span className="text-xs text-slate-400">{selectedProduct.reviewCount} ta sharh</span>
+                <span className="text-xs text-slate-400">{t("pdp.totalReviews", { count: selectedProduct.reviewCount ?? 0 })}</span>
               </div>
             )}
 
@@ -1348,15 +1350,15 @@ function StoreInner({ slug }: { slug: string }) {
               )}
               {selectedProduct.stock > 0 ? (
                 <span className="text-[11px] text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded-md">
-                  ✓ Mavjud
+                  {t("pdp.available")}
                 </span>
               ) : (
                 <span className="text-[11px] text-rose-300 bg-rose-500/10 px-2 py-1 rounded-md">
-                  Tugagan
+                  {t("pdp.outOfStock")}
                 </span>
               )}
               {selectedProduct.featured && (
-                <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md">⭐ Bestseller</span>
+                <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md">{t("pdp.bestseller")}</span>
               )}
             </div>
 
@@ -1364,7 +1366,7 @@ function StoreInner({ slug }: { slug: string }) {
             {weeklyBuyers > 0 && (
               <div className="flex items-center gap-1.5 text-xs text-slate-300 mb-4">
                 <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Bu haftada <span className="font-semibold text-white">{weeklyBuyers}</span> kishi sotib oldi</span>
+                <span>{t("pdp.weeklyBuyers", { count: weeklyBuyers })}</span>
               </div>
             )}
 
@@ -1384,7 +1386,7 @@ function StoreInner({ slug }: { slug: string }) {
                     onClick={() => { haptic.light(); setDescExpanded((v) => !v); }}
                     className="mt-2 text-sm font-medium text-sky-400 active:opacity-70"
                   >
-                    {descExpanded ? "Yopish ↑" : "Batafsil ↓"}
+                    {descExpanded ? t("pdp.readLess") : t("pdp.readMore")}
                   </button>
                 )}
               </div>
@@ -1396,8 +1398,8 @@ function StoreInner({ slug }: { slug: string }) {
                 <Truck className="w-5 h-5 text-sky-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white">Yetkazib berish: {deliveryStr}</div>
-                <div className="text-xs text-slate-400 mt-0.5">Toshkent bo'ylab kuryer · viloyatlarga pochta</div>
+                <div className="text-sm font-medium text-white">{t("pdp.delivery", { date: deliveryStr })}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{t("pdp.deliveryNote")}</div>
               </div>
             </div>
 
@@ -1406,7 +1408,7 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
                   <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  Sharhlar
+                  {t("pdp.reviews")}
                   {(selectedProduct.reviewCount ?? 0) > 0 && (
                     <span className="text-slate-500">({selectedProduct.reviewCount})</span>
                   )}
@@ -1417,13 +1419,13 @@ function StoreInner({ slug }: { slug: string }) {
                     onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
                     className="text-xs font-medium text-sky-400 hover:text-sky-300"
                   >
-                    + Sharh yozish
+                    {t("pdp.writeReview")}
                   </button>
                 )}
               </div>
               {productReviews.length === 0 ? (
                 <p className="text-xs text-slate-500 italic">
-                  Hali sharhlar yo'q. {telegramUser?.userId ? "Birinchi bo'lib yozing!" : ""}
+                  {t("pdp.noReviews")} {telegramUser?.userId ? t("pdp.beFirst") : ""}
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -1458,7 +1460,7 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="mt-5 pt-5 border-t border-slate-800">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                    🎁 Bularni ham qo'shing
+                    {t("pdp.comboTitle")}
                   </h3>
                   <span className="text-[10px] text-slate-500">
                     {selectedAddons.size} / {selectedProduct.comboAddons.length}
