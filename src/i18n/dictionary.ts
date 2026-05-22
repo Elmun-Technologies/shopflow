@@ -594,6 +594,24 @@ export const dictionary: Record<string, Entry> = {
   "chat.messagePlaceholder": { uz: "Xabar yozing…", ru: "Напишите сообщение…" },
   "chat.funnelTitle": { uz: "Savdo varonkasi (Chat funnel)", ru: "Воронка продаж (Chat funnel)" },
 
+  // Funnel stages (used in ChatPage)
+  "funnel.new": { uz: "Yangi", ru: "Новый" },
+  "funnel.greeting": { uz: "Salomlashish", ru: "Приветствие" },
+  "funnel.needs_clarification": { uz: "Ehtiyoj aniqlash", ru: "Выяснение потребности" },
+  "funnel.offer_sent": { uz: "Taklif yuborildi", ru: "Предложение отправлено" },
+  "funnel.objection_handling": { uz: "Itirozlarni hal qilish", ru: "Работа с возражениями" },
+  "funnel.closing": { uz: "Yopish", ru: "Закрытие" },
+  "funnel.won": { uz: "Sotildi", ru: "Продано" },
+  "funnel.lost": { uz: "Yoqotildi", ru: "Проиграно" },
+  "funnel.follow_up": { uz: "Qayta aloqa", ru: "Повторный контакт" },
+
+  // Chat conversation statuses
+  "chatStatus.active": { uz: "Faol", ru: "Активен" },
+  "chatStatus.waiting": { uz: "Kutilmoqda", ru: "Ожидает" },
+  "chatStatus.resolved": { uz: "Yakunlandi", ru: "Закрыт" },
+  "chatStatus.archived": { uz: "Arxiv", ru: "Архив" },
+  "chatStatus.spam": { uz: "Spam", ru: "Спам" },
+
   // ─── Admin: Delivery page ────────────────────────────
   "delivery.title": { uz: "Yetkazib berish", ru: "Доставка" },
   "delivery.subtitle": { uz: "Yetkazib berish usullarini va aptekalarni boshqarish", ru: "Управление способами доставки и аптеками" },
@@ -649,6 +667,15 @@ export const dictionary: Record<string, Entry> = {
   "platforms.newChannel": { uz: "Yangi kanal", ru: "Новый канал" },
   "platforms.empty.title": { uz: "Hali kanal yo'q", ru: "Пока нет каналов" },
   "platforms.empty.hint": { uz: "Birinchi kanalingizni qo'shing (masalan, Instagram yoki Telegram bot), keyin uning webhook URL'ini tegishli platforma sozlamalariga joylashtiring.", ru: "Добавьте первый канал (например, Instagram или Telegram bot), затем вставьте его webhook URL в настройки соответствующей платформы." },
+  "platforms.add.title": { uz: "Yangi kanal", ru: "Новый канал" },
+  "platforms.add.type": { uz: "Kanal turi", ru: "Тип канала" },
+  "platforms.add.name": { uz: "Nom", ru: "Название" },
+  "platforms.add.namePh.telegram": { uz: "Mening Telegram botim", ru: "Мой Telegram бот" },
+  "platforms.add.namePh.generic": { uz: "Kanal nomi", ru: "Название канала" },
+  "platforms.add.botToken": { uz: "Bot token", ru: "Bot token" },
+  "platforms.add.botFather": { uz: "(@BotFather'dan oling)", ru: "(получите у @BotFather)" },
+  "platforms.add.tokenNote": { uz: "Token xavfsiz saqlanadi va GET so'rovlarida yashiringan ko'rsatiladi.", ru: "Токен хранится в безопасности и маскируется в GET-запросах." },
+  "platforms.add.create": { uz: "Yaratish", ru: "Создать" },
 
   // ─── Admin: Marketing — SaleCampaigns ─────────────────
   "campaigns.title": { uz: "Aksiyalar", ru: "Акции" },

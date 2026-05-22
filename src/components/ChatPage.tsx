@@ -29,7 +29,6 @@ import {
   funnelStats,
   hourlyChatVolume,
   channelLabels,
-  funnelStageLabels,
   funnelStageConfig,
 } from "../data/chatData";
 import type { ChatConversation, FunnelStage, ChatMessage } from "../data/chatData";
@@ -348,7 +347,7 @@ export default function ChatPage() {
                     return (
                       <div key={fs.stage}>
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[11px] text-slate-400">{funnelStageLabels[fs.stage]}</span>
+                          <span className="text-[11px] text-slate-400">{t(`funnel.${fs.stage}`)}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] text-white font-medium">{fs.count}</span>
                             {fs.value > 0 && <span className="text-[10px] text-emerald-400">{(fs.value / 1000000).toFixed(1)}M</span>}
@@ -545,7 +544,7 @@ export default function ChatPage() {
                       <p className="text-[11px] text-slate-400 truncate mt-0.5">{chat.lastMessage}</p>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className={`text-[9px] px-1 py-0.5 rounded border ${cfg.bg} ${cfg.color}`}>
-                          {funnelStageLabels[chat.funnelStage]}
+                          {t(`funnel.${chat.funnelStage}`)}
                         </span>
                         <span className="text-[9px] text-slate-500">{channelLabels[chat.channel]}</span>
                         {chat.estimatedValue > 0 && (
@@ -620,7 +619,7 @@ export default function ChatPage() {
                         }`}
                       >
                         {isPast && !isCurrent ? <CheckCheck className="w-3 h-3" /> : null}
-                        {funnelStageLabels[stage]}
+                        {t(`funnel.${stage}`)}
                       </button>
                     );
                   })}

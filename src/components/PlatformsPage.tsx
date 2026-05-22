@@ -452,6 +452,7 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
 }
 
 function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useT();
   const [type, setType] = useState<ChannelType>("TELEGRAM");
   const [name, setName] = useState("");
   const [botToken, setBotToken] = useState("");
@@ -486,10 +487,10 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
         onClick={(e) => e.stopPropagation()}
         className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
       >
-        <h2 className="text-lg font-bold text-white">Yangi kanal</h2>
+        <h2 className="text-lg font-bold text-white">{t("platforms.add.title")}</h2>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Kanal turi</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("platforms.add.type")}</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as ChannelType)}
@@ -504,13 +505,13 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Nom</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("platforms.add.name")}</label>
           <input
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={type === "TELEGRAM" ? "Mening Telegram botim" : "Kanal nomi"}
+            placeholder={type === "TELEGRAM" ? t("platforms.add.namePh.telegram") : t("platforms.add.namePh.generic")}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -518,14 +519,14 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
         {type === "TELEGRAM" && (
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1.5">
-              Bot token{" "}
+              {t("platforms.add.botToken")}{" "}
               <a
                 href="https://t.me/BotFather"
                 target="_blank"
                 rel="noreferrer"
                 className="text-emerald-400 hover:underline"
               >
-                (@BotFather'dan oling)
+                {t("platforms.add.botFather")}
               </a>
             </label>
             <input
@@ -536,7 +537,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
             />
             <p className="text-[10px] text-slate-500 mt-1">
-              Token xavfsiz saqlanadi va GET so'rovlarida yashiringan ko'rsatiladi.
+              {t("platforms.add.tokenNote")}
             </p>
           </div>
         )}
@@ -545,7 +546,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
         <div className="flex items-center gap-2 justify-end">
           <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-400 hover:text-white">
-            Bekor qilish
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -553,7 +554,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Yaratish
+            {t("platforms.add.create")}
           </button>
         </div>
       </form>
