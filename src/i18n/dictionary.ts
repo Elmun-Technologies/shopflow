@@ -146,9 +146,43 @@ export const dictionary: Record<string, Entry> = {
   "nav.settings": { uz: "Sozlamalar", ru: "Настройки" },
 
   // ─── Order statuses ──────────────────────────────────
+  // Customer (storefront) view — buyurtma "yangi" his qilinadi
   "order.status.PENDING": { uz: "Yangi", ru: "Новый" },
   "order.status.PROCESSING": { uz: "Tayyorlanmoqda", ru: "Готовится" },
   "order.status.COMPLETED": { uz: "Yetkazildi", ru: "Доставлен" },
   "order.status.CANCELLED": { uz: "Bekor qilindi", ru: "Отменён" },
   "order.status.REFUNDED": { uz: "Qaytarildi", ru: "Возвращён" },
+
+  // Admin view — operator perspektivasi (Kutilmoqda = waiting action)
+  "order.adminStatus.PENDING": { uz: "Kutilmoqda", ru: "Ожидает" },
+  "order.adminStatus.PROCESSING": { uz: "Jarayonda", ru: "В обработке" },
+  "order.adminStatus.COMPLETED": { uz: "Bajarildi", ru: "Выполнен" },
+  "order.adminStatus.CANCELLED": { uz: "Bekor qilindi", ru: "Отменён" },
+  "order.adminStatus.REFUNDED": { uz: "Qaytarildi", ru: "Возвращён" },
+
+  // ─── Admin: Orders page ──────────────────────────────
+  "orders.title": { uz: "Buyurtmalar", ru: "Заказы" },
+  "orders.subtitle": { uz: "Barcha kanallardan kelgan zakazlar", ru: "Заказы со всех каналов" },
+  "orders.searchPlaceholder": { uz: "Buyurtma kodi, mijoz…", ru: "Номер заказа, клиент…" },
+  "orders.newOrder": { uz: "Yangi buyurtma", ru: "Новый заказ" },
+  "orders.tab.all": { uz: "Hammasi", ru: "Все" },
+  "orders.tab.cancelled": { uz: "Bekor", ru: "Отмена" },
+  "orders.empty.search": { uz: "Buyurtma topilmadi", ru: "Заказ не найден" },
+  "orders.empty.none": { uz: "Hozircha buyurtmalar yo'q", ru: "Пока нет заказов" },
+  "orders.empty.hint": { uz: "Kanallardan kelgan zakazlar va qo'lda kiritilgan buyurtmalar shu yerda paydo bo'ladi.", ru: "Заказы со всех каналов и созданные вручную будут отображаться здесь." },
+  "orders.retry": { uz: "Qaytadan urinish", ru: "Попробовать снова" },
+  "orders.updateFailed": { uz: "Status yangilanmadi", ru: "Не удалось обновить статус" },
+  "orders.notified": { uz: "Mijoz xabardor qilindi", ru: "Клиент уведомлён" },
+  "orders.prev": { uz: "Oldingi", ru: "Назад" },
+  "orders.next": { uz: "Keyingi", ru: "Вперёд" },
+  "orders.col.code": { uz: "Kod", ru: "Код" },
+  "orders.col.customer": { uz: "Mijoz", ru: "Клиент" },
+  "orders.col.channel": { uz: "Kanal", ru: "Канал" },
+  "orders.col.amount": { uz: "Summa", ru: "Сумма" },
+  "orders.col.status": { uz: "Status", ru: "Статус" },
+  "orders.col.date": { uz: "Sana", ru: "Дата" },
+  "orders.action.accept": { uz: "Qabul qilish", ru: "Принять" },
+  "orders.action.delivered": { uz: "Yetkazildi", ru: "Доставлен" },
+  "orders.action.hint": { uz: "{action} → mijozga Telegram xabar yuboriladi", ru: "{action} → клиенту отправится Telegram уведомление" },
+  "orders.viewDetails": { uz: "Batafsil ko'rish", ru: "Подробнее" },
 };
