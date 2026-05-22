@@ -4,9 +4,11 @@ import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle } from "
 import { useAsync } from "../hooks/useAsync";
 import { customersApi } from "../api/endpoints";
 import { formatDate } from "../utils/format";
+import { useT } from "../i18n";
 import CustomerDetailDrawer from "./CustomerDetailDrawer";
 
 export default function CustomersPage() {
+  const { t } = useT();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 30;
@@ -24,8 +26,8 @@ export default function CustomersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Mijozlar</h1>
-        <p className="text-sm text-slate-500 mt-1">Mijozlar bazasi</p>
+        <h1 className="text-2xl font-bold text-white">{t("customers.title")}</h1>
+        <p className="text-sm text-slate-500 mt-1">{t("customers.subtitle")}</p>
       </motion.div>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
@@ -38,7 +40,7 @@ export default function CustomersPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Ism, email, telefon..."
+            placeholder={t("customers.searchPlaceholder")}
             className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
           />
         </label>
@@ -47,7 +49,7 @@ export default function CustomersPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all"
         >
           <Plus className="w-4 h-4" />
-          Yangi mijoz
+          {t("customers.newCustomer")}
         </button>
       </div>
 
@@ -61,17 +63,17 @@ export default function CustomersPage() {
             <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
             <p className="text-sm text-slate-300">{error.message}</p>
             <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300">
-              Qaytadan urinish
+              {t("orders.retry")}
             </button>
           </div>
         ) : customers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <Users className="w-12 h-12 text-slate-700 mb-3" />
             <p className="text-base font-semibold text-white">
-              {search ? "Mijoz topilmadi" : "Hozircha mijozlar yo'q"}
+              {search ? t("customers.empty.search") : t("customers.empty.none")}
             </p>
             <p className="text-sm text-slate-500 mt-1 max-w-md">
-              Buyurtmalar va lidlardan mijozlar avtomatik ravishda yaratiladi.
+              {t("customers.empty.hint")}
             </p>
           </div>
         ) : (
@@ -79,10 +81,10 @@ export default function CustomersPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Mijoz</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Aloqa</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Manzil</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Sana</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.customer")}</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.contact")}</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.location")}</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,9 +98,9 @@ export default function CustomersPage() {
                       <p className="text-sm font-medium text-white">{c.name}</p>
                       {c.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {c.tags.slice(0, 3).map((t) => (
-                            <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
-                              {t}
+                          {c.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                              {tag}
                             </span>
                           ))}
                         </div>
@@ -146,14 +148,14 @@ export default function CustomersPage() {
                 disabled={page === 1}
                 className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
               >
-                Oldingi
+                {t("orders.prev")}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * pageSize >= total}
                 className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
               >
-                Keyingi
+                {t("orders.next")}
               </button>
             </div>
           </div>

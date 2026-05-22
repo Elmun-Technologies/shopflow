@@ -220,4 +220,157 @@ export const dictionary: Record<string, Entry> = {
   "products.card.deselect": { uz: "Tanlovni olib tashlash", ru: "Снять выбор" },
   "products.card.edit": { uz: "Tahrirlash", ru: "Редактировать" },
   "products.card.delete": { uz: "O'chirish", ru: "Удалить" },
+
+  // ─── Admin: Dashboard KPI cards ───────────────────────
+  "kpi.revenue": { uz: "Daromad (oy)", ru: "Выручка (мес)" },
+  "kpi.orders": { uz: "Buyurtmalar (oy)", ru: "Заказы (мес)" },
+  "kpi.customers": { uz: "Mijozlar (jami)", ru: "Клиенты (всего)" },
+  "kpi.conversion": { uz: "Konversiya", ru: "Конверсия" },
+  "kpi.vsLastMonth": { uz: "o'tgan oyga", ru: "к прошлому мес." },
+  "kpi.noData": { uz: "ma'lumot yo'q", ru: "нет данных" },
+
+  // ─── Admin: Header ───────────────────────────────────
+  "header.menu": { uz: "Menyu", ru: "Меню" },
+  "header.search": { uz: "Qidirish", ru: "Поиск" },
+  "header.searchPlaceholder": { uz: "Buyurtma, mahsulot, mijoz…", ru: "Заказ, товар, клиент…" },
+  "header.notifications": { uz: "Bildirishnomalar", ru: "Уведомления" },
+  "header.profileMenu": { uz: "Profil menyusi", ru: "Меню профиля" },
+
+  // ─── Admin: Customers page ───────────────────────────
+  "customers.title": { uz: "Mijozlar", ru: "Клиенты" },
+  "customers.subtitle": { uz: "Mijozlar bazasi", ru: "База клиентов" },
+  "customers.searchPlaceholder": { uz: "Ism, email, telefon…", ru: "Имя, email, телефон…" },
+  "customers.newCustomer": { uz: "Yangi mijoz", ru: "Новый клиент" },
+  "customers.empty.search": { uz: "Mijoz topilmadi", ru: "Клиент не найден" },
+  "customers.empty.none": { uz: "Hozircha mijozlar yo'q", ru: "Пока нет клиентов" },
+  "customers.empty.hint": { uz: "Buyurtmalar va lidlardan mijozlar avtomatik ravishda yaratiladi.", ru: "Клиенты создаются автоматически из заказов и лидов." },
+  "customers.col.customer": { uz: "Mijoz", ru: "Клиент" },
+  "customers.col.contact": { uz: "Aloqa", ru: "Контакт" },
+  "customers.col.location": { uz: "Manzil", ru: "Адрес" },
+  "customers.col.date": { uz: "Sana", ru: "Дата" },
+
+  // ─── Admin: Leads page ───────────────────────────────
+  "leads.title": { uz: "Lidlar", ru: "Лиды" },
+  "leads.subtitle": { uz: "Barcha kanallardan kelgan lidlar va ularning holati", ru: "Лиды со всех каналов и их статусы" },
+  "leads.searchPlaceholder": { uz: "Ism, telefon, email, kompaniya…", ru: "Имя, телефон, email, компания…" },
+  "leads.newLead": { uz: "Yangi lid", ru: "Новый лид" },
+  "leads.empty.search": { uz: "Lid topilmadi", ru: "Лид не найден" },
+  "leads.empty.none": { uz: "Hozircha lidlar yo'q", ru: "Пока нет лидов" },
+  "leads.empty.searchHint": { uz: "Boshqa qidiruv so'rovini kiriting yoki filtrni tozalang.", ru: "Попробуйте другой запрос или сбросьте фильтр." },
+  "leads.empty.noneHint": { uz: "Kanallar (Instagram, Telegram, veb-sayt va h.k.) webhook orqali ulangach, yangi lidlar shu yerda paydo bo'ladi.", ru: "После подключения каналов (Instagram, Telegram, сайт и т.д.) через webhook новые лиды появятся здесь." },
+
+  // KPI cards
+  "leads.kpi.total": { uz: "Jami lidlar", ru: "Всего лидов" },
+  "leads.kpi.new": { uz: "Yangi", ru: "Новые" },
+  "leads.kpi.won": { uz: "Yutuq", ru: "Выиграно" },
+  "leads.kpi.wonValue": { uz: "Yutuq qiymati", ru: "Сумма выигрышей" },
+  "leads.kpi.otherChannel": { uz: "Boshqa", ru: "Другое" },
+
+  // Status labels
+  "leads.status.NEW": { uz: "Yangi", ru: "Новый" },
+  "leads.status.CONTACTED": { uz: "Bog'lanildi", ru: "Связались" },
+  "leads.status.QUALIFIED": { uz: "Saralangan", ru: "Квалифицирован" },
+  "leads.status.PROPOSAL": { uz: "Taklif", ru: "Предложение" },
+  "leads.status.NEGOTIATION": { uz: "Muzokara", ru: "Переговоры" },
+  "leads.status.WON": { uz: "Yutuq", ru: "Выиграно" },
+  "leads.status.LOST": { uz: "Yoqotildi", ru: "Проиграно" },
+  "leads.tab.all": { uz: "Hammasi", ru: "Все" },
+
+  // Channel types
+  "leads.channel.WEBSITE": { uz: "Veb-sayt", ru: "Сайт" },
+  "leads.channel.LANDING_PAGE": { uz: "Landing", ru: "Landing" },
+  "leads.channel.INSTAGRAM": { uz: "Instagram", ru: "Instagram" },
+  "leads.channel.TELEGRAM": { uz: "Telegram", ru: "Telegram" },
+  "leads.channel.FACEBOOK": { uz: "Facebook", ru: "Facebook" },
+  "leads.channel.WHATSAPP": { uz: "WhatsApp", ru: "WhatsApp" },
+  "leads.channel.EMAIL": { uz: "Email", ru: "Email" },
+  "leads.channel.PHONE": { uz: "Telefon", ru: "Телефон" },
+  "leads.channel.REFERRAL": { uz: "Referral", ru: "Реферал" },
+  "leads.channel.GOOGLE_ADS": { uz: "Google Ads", ru: "Google Ads" },
+  "leads.channel.YANDEX_DIRECT": { uz: "Yandex Direct", ru: "Яндекс.Директ" },
+  "leads.channel.MARKETPLACE": { uz: "Marketplace", ru: "Маркетплейс" },
+  "leads.channel.OFFLINE": { uz: "Offline", ru: "Оффлайн" },
+
+  // Table columns
+  "leads.col.lead": { uz: "Lid", ru: "Лид" },
+  "leads.col.contact": { uz: "Aloqa", ru: "Контакт" },
+  "leads.col.channel": { uz: "Kanal", ru: "Канал" },
+  "leads.col.status": { uz: "Status", ru: "Статус" },
+  "leads.col.value": { uz: "Qiymat", ru: "Сумма" },
+  "leads.col.date": { uz: "Sana", ru: "Дата" },
+  "leads.details": { uz: "Tafsilotlar", ru: "Подробности" },
+
+  // ─── Admin: Settings page ────────────────────────────
+  "settings.title": { uz: "Sozlamalar", ru: "Настройки" },
+  "settings.subtitle": { uz: "Profilingiz va do'kon sozlamalari", ru: "Профиль и настройки магазина" },
+  "settings.save": { uz: "Saqlash", ru: "Сохранить" },
+
+  // Tabs
+  "settings.tab.profile": { uz: "Profil", ru: "Профиль" },
+  "settings.tab.store": { uz: "Do'kon", ru: "Магазин" },
+  "settings.tab.notifications": { uz: "Bildirishnomalar", ru: "Уведомления" },
+  "settings.tab.integrations": { uz: "Integratsiyalar", ru: "Интеграции" },
+  "settings.tab.security": { uz: "Xavfsizlik", ru: "Безопасность" },
+  "settings.tab.api": { uz: "API", ru: "API" },
+
+  // Profile section
+  "settings.profile.firstName": { uz: "Ism", ru: "Имя" },
+  "settings.profile.lastName": { uz: "Familiya", ru: "Фамилия" },
+  "settings.profile.email": { uz: "Email", ru: "Email" },
+  "settings.profile.phone": { uz: "Telefon", ru: "Телефон" },
+  "settings.profile.timezone": { uz: "Vaqt mintaqasi", ru: "Часовой пояс" },
+  "settings.profile.language": { uz: "Til", ru: "Язык" },
+  "settings.profile.changePassword": { uz: "Parolni o'zgartirish", ru: "Сменить пароль" },
+  "settings.profile.changePasswordHint": { uz: "Ixtiyoriy — bo'sh qoldiring agar o'zgartirmaslikni xohlasangiz", ru: "Необязательно — оставьте пустым, если не хотите менять" },
+  "settings.profile.currentPassword": { uz: "Joriy parol", ru: "Текущий пароль" },
+  "settings.profile.newPassword": { uz: "Yangi parol (kamida 8 belgi)", ru: "Новый пароль (минимум 8 символов)" },
+  "settings.profile.hide": { uz: "Yashirish", ru: "Скрыть" },
+  "settings.profile.show": { uz: "Ko'rsatish", ru: "Показать" },
+
+  // Store section
+  "settings.store.name": { uz: "Do'kon nomi", ru: "Название магазина" },
+  "settings.store.city": { uz: "Shahar", ru: "Город" },
+  "settings.store.description": { uz: "Tavsif", ru: "Описание" },
+  "settings.store.address": { uz: "Manzil", ru: "Адрес" },
+  "settings.store.workingHours": { uz: "Ish vaqti", ru: "Часы работы" },
+  "settings.store.currency": { uz: "Valyuta", ru: "Валюта" },
+  "settings.store.delivery": { uz: "Yetkazib berish", ru: "Доставка" },
+  "settings.store.minOrder": { uz: "Min. buyurtma (so'm)", ru: "Мин. заказ (сум)" },
+  "settings.store.deliveryFee": { uz: "Yetkazish narxi (so'm)", ru: "Стоимость доставки (сум)" },
+  "settings.store.freeDeliveryFrom": { uz: "Bepul yetkazish (dan)", ru: "Бесплатная доставка (от)" },
+
+  // Notifications section
+  "settings.notify.type": { uz: "Tur", ru: "Тип" },
+  "settings.notify.email": { uz: "Email", ru: "Email" },
+  "settings.notify.push": { uz: "Push", ru: "Push" },
+  "settings.notify.sms": { uz: "SMS", ru: "SMS" },
+
+  // Integrations section
+  "settings.int.status.connected": { uz: "Ulangan", ru: "Подключено" },
+  "settings.int.status.disconnected": { uz: "Ulanmagan", ru: "Не подключено" },
+  "settings.int.status.error": { uz: "Xato", ru: "Ошибка" },
+  "settings.int.action.setup": { uz: "Sozlash", ru: "Настроить" },
+  "settings.int.action.fix": { uz: "Tuzatish", ru: "Исправить" },
+  "settings.int.action.connect": { uz: "Ulash", ru: "Подключить" },
+
+  // Security section
+  "settings.sec.2fa.title": { uz: "Ikki bosqichli tasdiqlash (2FA)", ru: "Двухфакторная аутентификация (2FA)" },
+  "settings.sec.2fa.hint": { uz: "Qo'shimcha xavfsizlik darajasi", ru: "Дополнительный уровень безопасности" },
+  "settings.sec.2fa.method": { uz: "Usul:", ru: "Способ:" },
+  "settings.sec.password": { uz: "Parol", ru: "Пароль" },
+  "settings.sec.lastChanged": { uz: "Oxirgi o'zgartirilgan: {date}", ru: "Изменён: {date}" },
+  "settings.sec.newPassword": { uz: "Yangi parol", ru: "Новый пароль" },
+  "settings.sec.confirmPassword": { uz: "Tasdiqlash", ru: "Подтвердите" },
+  "settings.sec.session.title": { uz: "Sessiya muddati", ru: "Длительность сессии" },
+  "settings.sec.session.hint": { uz: "Faoliyatsiz bo'lganda avtomatik chiqish", ru: "Автоматический выход при бездействии" },
+  "settings.sec.loginHistory": { uz: "Kirish tarixi", ru: "История входов" },
+  "settings.sec.loginSuccess": { uz: "Muvaffaqiyatli", ru: "Успешно" },
+  "settings.sec.loginFailed": { uz: "Rad etildi", ru: "Отклонено" },
+
+  // API section
+  "settings.api.title": { uz: "API kalitlari", ru: "API ключи" },
+  "settings.api.hint": { uz: "Tashqi xizmatlar uchun API kalitlar", ru: "API-ключи для внешних сервисов" },
+  "settings.api.newKey": { uz: "Yangi kalit", ru: "Новый ключ" },
+  "settings.api.disabled": { uz: "O'chirilgan", ru: "Отключён" },
+  "settings.api.copy": { uz: "Nusxa olish", ru: "Копировать" },
 };
