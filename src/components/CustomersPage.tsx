@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle } from "lucide-react";
+import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle, Download } from "lucide-react";
+import { exportToCsv } from "../utils/exportCsv";
 import { useAsync } from "../hooks/useAsync";
 import { customersApi } from "../api/endpoints";
 import { formatDate } from "../utils/format";
@@ -22,6 +23,35 @@ export default function CustomersPage() {
 
   const customers = data?.items ?? [];
   const total = data?.total ?? 0;
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await customersApi.list({ search: search || undefined, page: 1, pageSize: 500 });
+      exportToCsv({
+        filename: `customers-${new Date().toISOString().slice(0, 10)}`,
+        columns: [
+          { key: "name", label: t("customers.col.customer") },
+          { key: "phone", label: "Phone" },
+          { key: "email", label: "Email" },
+          { key: "location", label: t("customers.col.location") },
+          { key: "tags", label: "Tags" },
+          { key: "createdAt", label: t("customers.col.date") },
+        ],
+        rows: res.items.map((c) => ({
+          name: c.name,
+          phone: c.phone ?? "",
+          email: c.email ?? "",
+          location: c.location ?? "",
+          tags: c.tags.join("; "),
+          createdAt: c.createdAt,
+        })),
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <>
@@ -44,6 +74,16 @@ export default function CustomersPage() {
             className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
           />
         </label>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all flex-shrink-0 disabled:opacity-50"
+          title={t("orders.export")}
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          <span className="hidden sm:inline">{t("orders.export")}</span>
+        </button>
         <button
           type="button"
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
