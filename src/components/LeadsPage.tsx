@@ -67,9 +67,10 @@ export default function LeadsPage() {
     setExporting(true);
     try {
       const res = await leadsApi.list({
-        ...listParams,
         page: 1,
         pageSize: 500,
+        search: search || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
       });
       exportToCsv({
         filename: `leads-${new Date().toISOString().slice(0, 10)}`,

@@ -24,8 +24,9 @@ export function exportToCsv({ filename, columns, rows }: ExportOptions): void {
     .map((row) => columns.map((c) => csvEscape(row[c.key])).join(","))
     .join("\r\n");
 
-  // BOM (﻿) qo'shilsa Excel UTF-8 ni to'g'ri o'qiydi
-  const content = "﻿" + header + "\r\n" + body;
+  // BOM qo'shilsa Excel UTF-8 ni to'g'ri o'qiydi —
+  // kirillcha va boshqa non-ASCII belgilar to'g'ri ko'rinadi.
+  const content = "\uFEFF" + header + "\r\n" + body;
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

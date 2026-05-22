@@ -36,9 +36,10 @@ export default function OrdersPage() {
     try {
       // To'liq joriy filter natijasini yuklash (limit 500 — Excel uchun yetarli)
       const res = await ordersApi.list({
-        ...params,
         page: 1,
         pageSize: 500,
+        search: search || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
       });
       exportToCsv({
         filename: `orders-${new Date().toISOString().slice(0, 10)}`,
