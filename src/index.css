@@ -58,3 +58,12 @@ body {
   background-color: rgba(16, 185, 129, 0.3);
   color: #f8fafc;
 }
+
+/* Hide scrollbar for elements with .scrollbar-hide (mobile horizontal pill rows) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

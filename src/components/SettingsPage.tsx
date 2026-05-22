@@ -537,13 +537,13 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex items-start justify-between mb-6"
+        className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6"
       >
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white">{t("settings.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("settings.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {savedMsg && (
             <motion.span
               initial={{ opacity: 0, x: 10 }}
@@ -575,15 +575,37 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
-      <div className="flex gap-6">
-        {/* Tabs Sidebar */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+        {/* Tabs — vertical on desktop, horizontal scroll on mobile */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
-          className="w-56 flex-shrink-0"
+          className="md:w-56 md:flex-shrink-0"
         >
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 space-y-0.5 sticky top-20">
+          {/* Mobile — gorizontal pill row */}
+          <div className="md:hidden flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-1 scrollbar-hide">
+            {settingsTabOrder.map((tab) => {
+              const Icon = tabIcons[tab];
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap text-xs font-medium transition-all flex-shrink-0 ${
+                    isActive
+                      ? "bg-emerald-500 text-white"
+                      : "bg-slate-900 border border-slate-800 text-slate-400"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {t(`settings.tab.${tab}`)}
+                </button>
+              );
+            })}
+          </div>
+          {/* Desktop — vertical sidebar */}
+          <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-xl p-2 space-y-0.5 sticky top-20">
             {settingsTabOrder.map((tab) => {
               const Icon = tabIcons[tab];
               const isActive = activeTab === tab;

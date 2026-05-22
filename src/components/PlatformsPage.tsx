@@ -67,7 +67,7 @@ export default function PlatformsPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between mb-6"
+        className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6"
       >
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white">{t("platforms.title")}</h1>
@@ -77,10 +77,10 @@ export default function PlatformsPage() {
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          {t("platforms.newChannel")}
+          <span className="hidden sm:inline">{t("platforms.newChannel")}</span>
         </button>
       </motion.div>
 

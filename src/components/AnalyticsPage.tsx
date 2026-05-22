@@ -163,13 +163,13 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex items-start justify-between mb-6"
+        className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-6"
       >
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white">{t("analytics.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("analytics.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Time Range Selector */}
           <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5">
             {(Object.keys(timeRangeLabels) as AnalyticsTimeRange[]).map((range) => (
