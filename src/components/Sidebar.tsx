@@ -64,6 +64,7 @@ const marketingSubIcons: Record<MarketingSub, React.ElementType> = {
 import { useAuth } from "../contexts/AuthContext";
 import { useConfirm } from "./ui/ConfirmDialog";
 import { api } from "../api/client";
+import { useT, type Lang } from "../i18n";
 
 type Page =
   | "dashboard"
@@ -95,6 +96,7 @@ type BadgeKey = "orders" | "leads" | "chat" | "abandonedCarts";
 interface NavItem {
   icon: React.ElementType;
   label: string;
+  labelKey?: string; // i18n key — agar berilgan bo'lsa, t() orqali tarjima qilinadi
   page: Page;
   badgeKey?: BadgeKey;
 }
@@ -110,6 +112,7 @@ interface SidebarCounts {
 interface NavGroup {
   id: string;
   label: string;
+  labelKey?: string;
   items: NavItem[];
 }
 
@@ -118,42 +121,46 @@ const navGroups: NavGroup[] = [
   {
     id: "main",
     label: "Asosiy",
+    labelKey: "sidebar.group.main",
     items: [
-      { icon: LayoutDashboard, label: "Dashboard", page: "dashboard" },
-      { icon: BarChart3, label: "Tahlil", page: "analytics" },
+      { icon: LayoutDashboard, label: "Dashboard", labelKey: "nav.dashboard", page: "dashboard" },
+      { icon: BarChart3, label: "Tahlil", labelKey: "nav.analytics", page: "analytics" },
     ],
   },
   {
     id: "sales",
     label: "Savdo",
+    labelKey: "sidebar.group.sales",
     items: [
-      { icon: ShoppingBag, label: "Buyurtmalar", page: "orders", badgeKey: "orders" },
-      { icon: Package, label: "Mahsulotlar", page: "products" },
-      { icon: CreditCard, label: "To'lovlar", page: "payments" },
-      { icon: Truck, label: "Yetkazib berish", page: "delivery" },
+      { icon: ShoppingBag, label: "Buyurtmalar", labelKey: "nav.orders", page: "orders", badgeKey: "orders" },
+      { icon: Package, label: "Mahsulotlar", labelKey: "nav.products", page: "products" },
+      { icon: CreditCard, label: "To'lovlar", labelKey: "nav.payments", page: "payments" },
+      { icon: Truck, label: "Yetkazib berish", labelKey: "nav.delivery", page: "delivery" },
     ],
   },
   {
     id: "crm",
     label: "CRM",
+    labelKey: "sidebar.group.crm",
     items: [
-      { icon: Radio, label: "Lidlar", page: "leads", badgeKey: "leads" },
-      { icon: Users, label: "Mijozlar", page: "customers" },
-      { icon: GitBranch, label: "Segmentlar", page: "segments" },
-      { icon: MessageSquare, label: "Chat", page: "chat", badgeKey: "chat" },
+      { icon: Radio, label: "Lidlar", labelKey: "nav.leads", page: "leads", badgeKey: "leads" },
+      { icon: Users, label: "Mijozlar", labelKey: "nav.customers", page: "customers" },
+      { icon: GitBranch, label: "Segmentlar", labelKey: "nav.segments", page: "segments" },
+      { icon: MessageSquare, label: "Chat", labelKey: "nav.chat", page: "chat", badgeKey: "chat" },
     ],
   },
   {
     id: "channels",
     label: "Kanallar",
+    labelKey: "sidebar.group.channels",
     items: [
-      { icon: Layers, label: "Platformalar", page: "platforms" },
-      { icon: Paintbrush, label: "Vitrina", page: "uibuilder" },
+      { icon: Layers, label: "Platformalar", labelKey: "nav.platforms", page: "platforms" },
+      { icon: Paintbrush, label: "Vitrina", labelKey: "nav.uibuilder", page: "uibuilder" },
     ],
   },
 ];
 
-const settingsItem: NavItem = { icon: Settings, label: "Sozlamalar", page: "settings" };
+const settingsItem: NavItem = { icon: Settings, label: "Sozlamalar", labelKey: "nav.settings", page: "settings" };
 
 const LS_KEY = "shopflow.sidebar.state";
 const LS_RECENT_KEY = "shopflow.sidebar.recent";
@@ -219,6 +226,10 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
   const [pinned, setPinned] = useState<Page[]>(() => loadPinned());
   const { user, tenant, logout } = useAuth();
   const confirmDialog = useConfirm();
+  const { lang, setLang, t } = useT();
+
+  // Helper — NavItem'ni tarjima qilingan label bilan render qilish uchun
+  const itemLabel = (it: NavItem) => (it.labelKey ? t(it.labelKey) : it.label);
 
   // Sahifa o'zgarganda Yaqinda ro'yxatini yangilaymiz (eng so'nggi birinchi, 5 ta max)
   useEffect(() => {
@@ -302,20 +313,25 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
 
   const allPages = useMemo(() => {
     const list: Array<{ page: Page | "marketing-sub"; label: string; icon: React.ElementType; section: string; sub?: MarketingSub }> = [];
-    for (const g of navGroups) for (const it of g.items) list.push({ page: it.page, label: it.label, icon: it.icon, section: g.label });
-    list.push({ page: "marketing", label: "Marketing paneli", icon: LayoutGrid, section: "Marketing" });
+    for (const g of navGroups) for (const it of g.items) list.push({
+      page: it.page,
+      label: it.labelKey ? t(it.labelKey) : it.label,
+      icon: it.icon,
+      section: g.labelKey ? t(g.labelKey) : g.label,
+    });
+    list.push({ page: "marketing", label: t("nav.marketingPanel"), icon: LayoutGrid, section: t("nav.marketing") });
     for (const sub of marketingSubOrder) {
       list.push({
         page: "marketing-sub",
         label: marketingSubLabels[sub],
         icon: marketingSubIcons[sub],
-        section: "Marketing",
+        section: t("nav.marketing"),
         sub,
       });
     }
-    list.push({ page: settingsItem.page, label: settingsItem.label, icon: settingsItem.icon, section: "Sozlamalar" });
+    list.push({ page: settingsItem.page, label: t("nav.settings"), icon: settingsItem.icon, section: t("nav.settings") });
     return list;
-  }, []);
+  }, [t]);
   const filteredPalette = useMemo(() => {
     const q = paletteQuery.trim().toLowerCase();
     if (!q) return allPages.slice(0, 8);
@@ -377,7 +393,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           title="Tezkor navigatsiya (⌘K)"
         >
           <SearchIcon className="w-3.5 h-3.5" />
-          <span className="flex-1 text-left">Qidirish…</span>
+          <span className="flex-1 text-left">{t("sidebar.search")}</span>
           <kbd className="text-[10px] bg-slate-700/60 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
         </button>
       )}
@@ -389,7 +405,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           <div className="pt-1 mb-1">
             <div className="px-2 py-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">
               <Pin className="w-3 h-3" />
-              <span>Tezkor</span>
+              <span>{t("sidebar.pinned")}</span>
             </div>
             <div className="space-y-0.5">
               {pinned.map((page) => {
@@ -399,7 +415,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                   <SidebarItem
                     key={`pin-${page}`}
                     icon={item.icon}
-                    label={item.label}
+                    label={itemLabel(item)}
                     active={currentPage === page}
                     collapsed={false}
                     badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
@@ -415,7 +431,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
         {!collapsed && recent.length > 1 && (
           <div className="pt-1 mb-1">
             <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Yaqinda
+              {t("sidebar.recent")}
             </div>
             <div className="space-y-0.5">
               {recent.filter((p) => p !== currentPage && !pinned.includes(p)).slice(0, 3).map((page) => {
@@ -425,7 +441,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                   <SidebarItem
                     key={`recent-${page}`}
                     icon={item.icon}
-                    label={item.label}
+                    label={itemLabel(item)}
                     active={false}
                     collapsed={false}
                     badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
@@ -467,7 +483,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
       <div className="border-t border-slate-800 px-2 py-2 space-y-1">
         <SidebarItem
           icon={settingsItem.icon}
-          label={settingsItem.label}
+          label={itemLabel(settingsItem)}
           active={currentPage === settingsItem.page}
           collapsed={collapsed}
           onClick={() => onPageChange(settingsItem.page)}
@@ -494,12 +510,31 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           <button
             onClick={handleLogout}
             className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-all flex-shrink-0"
-            title="Chiqish"
-            aria-label="Chiqish"
+            title={t("sidebar.logout")}
+            aria-label={t("sidebar.logout")}
           >
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Til o'zgartirish — kompakt segmented */}
+        {!collapsed && (
+          <div className="flex items-center gap-1 p-1 mb-1 bg-slate-800/40 rounded-lg">
+            {(["uz", "ru"] as Lang[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={`flex-1 py-1 text-[11px] font-semibold rounded transition-all ${
+                  lang === l
+                    ? "bg-slate-700 text-white"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
 
         <button
           onClick={() => setState((s) => ({ ...s, collapsed: !s.collapsed }))}
@@ -511,7 +546,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           ) : (
             <>
               <ChevronLeft className="w-4 h-4" />
-              <span className="text-xs font-medium">Yig'ish</span>
+              <span className="text-xs font-medium">{t("sidebar.collapse")}</span>
             </>
           )}
         </button>
@@ -615,6 +650,8 @@ function NavGroupBlock({
   onToggle: () => void;
   onPageChange: (p: Page) => void;
 }) {
+  const { t } = useT();
+  const itemLabel = (it: NavItem) => (it.labelKey ? t(it.labelKey) : it.label);
   // Group jami badge — yopilgan bo'lsa ham diqqatga olib boradi
   const groupBadge = group.items.reduce((s, it) => s + (it.badgeKey && counts ? counts[it.badgeKey] : 0), 0);
 
@@ -625,7 +662,7 @@ function NavGroupBlock({
           <SidebarItem
             key={item.page}
             icon={item.icon}
-            label={item.label}
+            label={itemLabel(item)}
             active={currentPage === item.page}
             collapsed
             badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
@@ -645,7 +682,7 @@ function NavGroupBlock({
         aria-expanded={open}
       >
         <span className="flex items-center gap-1.5">
-          {group.label}
+          {group.labelKey ? t(group.labelKey) : group.label}
           {!open && groupBadge > 0 && (
             <span className="bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full normal-case tracking-normal">
               {groupBadge > 99 ? "99+" : groupBadge}
@@ -667,7 +704,7 @@ function NavGroupBlock({
               <SidebarItem
                 key={item.page}
                 icon={item.icon}
-                label={item.label}
+                label={itemLabel(item)}
                 active={currentPage === item.page}
                 collapsed={false}
                 badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
@@ -698,11 +735,12 @@ function MarketingBlock({
   onToggle: () => void;
   onNavigate: (sub: MarketingSub) => void;
 }) {
+  const { t } = useT();
   if (collapsed) {
     return (
       <SidebarItem
         icon={Megaphone}
-        label="Marketing"
+        label={t("nav.marketing")}
         active={active}
         collapsed
         onClick={() => onNavigate(marketingSub)}
