@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
 import { AppToastProvider } from "./components/ui/Toast";
 import { ConfirmProvider } from "./components/ui/ConfirmDialog";
+import { LangProvider } from "./i18n";
 import { PageSkeleton } from "./components/ui/Skeleton";
 import type { MarketingSub } from "./data/marketingData";
 
@@ -293,13 +294,15 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AppToastProvider>
-          <ConfirmProvider>
-            <AppShell />
-          </ConfirmProvider>
-        </AppToastProvider>
-      </AuthProvider>
+      <LangProvider>
+        <AuthProvider>
+          <AppToastProvider>
+            <ConfirmProvider>
+              <AppShell />
+            </ConfirmProvider>
+          </AppToastProvider>
+        </AuthProvider>
+      </LangProvider>
     </ErrorBoundary>
   );
 }
