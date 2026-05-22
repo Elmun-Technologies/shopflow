@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check } from "lucide-react";
+import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check, Download } from "lucide-react";
+import { exportToCsv } from "../utils/exportCsv";
 import { useAsync } from "../hooks/useAsync";
 import { ordersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Order, OrderStatus } from "../types/api";
 import { useAppToast } from "./ui/Toast";
+import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useT } from "../i18n";
 import OrderDetailDrawer from "./OrderDetailDrawer";
 
@@ -28,6 +30,45 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      // To'liq joriy filter natijasini yuklash (limit 500 — Excel uchun yetarli)
+      const res = await ordersApi.list({
+        page: 1,
+        pageSize: 500,
+        search: search || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+      });
+      exportToCsv({
+        filename: `orders-${new Date().toISOString().slice(0, 10)}`,
+        columns: [
+          { key: "code", label: t("orders.col.code") },
+          { key: "customerName", label: t("orders.col.customer") },
+          { key: "phone", label: t("orders.col.customer") + " phone" },
+          { key: "channel", label: t("orders.col.channel") },
+          { key: "total", label: t("orders.col.amount") },
+          { key: "currency", label: "Currency" },
+          { key: "status", label: t("orders.col.status") },
+          { key: "createdAt", label: t("orders.col.date") },
+        ],
+        rows: res.items.map((o) => ({
+          code: `#${o.code}`,
+          customerName: o.customer?.name ?? "",
+          phone: o.customer?.phone ?? o.customer?.email ?? "",
+          channel: o.channel?.name ?? "",
+          total: Number(o.total),
+          currency: o.currency || currency,
+          status: t(`order.adminStatus.${o.status}`),
+          createdAt: o.createdAt,
+        })),
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const params = useMemo(
     () => ({
@@ -80,6 +121,16 @@ export default function OrdersPage() {
         </label>
         <button
           type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all flex-shrink-0 disabled:opacity-50"
+          title={t("orders.export")}
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          <span className="hidden sm:inline">{t("orders.export")}</span>
+        </button>
+        <button
+          type="button"
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -109,9 +160,7 @@ export default function OrdersPage() {
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
-          </div>
+          <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mb-2" />

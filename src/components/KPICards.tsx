@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { DollarSign, ShoppingBag, Users, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { DollarSign, ShoppingBag, Users, TrendingUp, TrendingDown } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import { useT } from "../i18n";
+import { KPICardsSkeleton } from "./ui/Skeleton";
 
 interface CardConfig {
   titleKey: string;
@@ -26,18 +27,7 @@ export default function KPICards() {
   const currency = tenant?.currency ?? "UZS";
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((c) => (
-          <div
-            key={c.key}
-            className="bg-slate-900 border border-slate-800 rounded-xl p-5 h-[120px] flex items-center justify-center"
-          >
-            <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
-          </div>
-        ))}
-      </div>
-    );
+    return <KPICardsSkeleton />;
   }
 
   return (

@@ -10,9 +10,12 @@ import {
   MessageSquare,
   Eye,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { leadsApi } from "../api/endpoints";
+import { exportToCsv } from "../utils/exportCsv";
+import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency, formatRelative } from "../utils/format";
 import type { Lead, LeadStatus, ChannelType } from "../types/api";
@@ -59,6 +62,44 @@ export default function LeadsPage() {
 
   const leads = data?.items ?? [];
   const total = data?.total ?? 0;
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await leadsApi.list({
+        page: 1,
+        pageSize: 500,
+        search: search || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+      });
+      exportToCsv({
+        filename: `leads-${new Date().toISOString().slice(0, 10)}`,
+        columns: [
+          { key: "code", label: "Code" },
+          { key: "name", label: t("leads.col.lead") },
+          { key: "phone", label: "Phone" },
+          { key: "email", label: "Email" },
+          { key: "channel", label: t("leads.col.channel") },
+          { key: "status", label: t("leads.col.status") },
+          { key: "value", label: t("leads.col.value") },
+          { key: "createdAt", label: t("leads.col.date") },
+        ],
+        rows: res.items.map((l) => ({
+          code: l.code,
+          name: l.name,
+          phone: l.phone ?? "",
+          email: l.email ?? "",
+          channel: l.channel?.name ?? "",
+          status: t(`leads.status.${l.status}`),
+          value: Number(l.value),
+          createdAt: l.createdAt,
+        })),
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const statusButtons: ({ key: LeadStatus | "all"; label: string })[] = [
     { key: "all", label: t("leads.tab.all") },
@@ -139,6 +180,16 @@ export default function LeadsPage() {
         </label>
         <button
           type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all flex-shrink-0 disabled:opacity-50"
+          title={t("orders.export")}
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          <span className="hidden sm:inline">{t("orders.export")}</span>
+        </button>
+        <button
+          type="button"
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -173,9 +224,7 @@ export default function LeadsPage() {
       {/* List */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
-          </div>
+          <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mb-2" />

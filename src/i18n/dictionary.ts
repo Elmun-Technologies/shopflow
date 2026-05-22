@@ -301,6 +301,7 @@ export const dictionary: Record<string, Entry> = {
   "orders.action.delivered": { uz: "Yetkazildi", ru: "Доставлен" },
   "orders.action.hint": { uz: "{action} → mijozga Telegram xabar yuboriladi", ru: "{action} → клиенту отправится Telegram уведомление" },
   "orders.viewDetails": { uz: "Batafsil ko'rish", ru: "Подробнее" },
+  "orders.export": { uz: "Eksport", ru: "Экспорт" },
 
   // ─── Admin: OrderDetailDrawer ─────────────────────────
   "orderDetail.customer": { uz: "Mijoz", ru: "Клиент" },

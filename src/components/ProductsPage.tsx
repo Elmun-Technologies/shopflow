@@ -20,6 +20,7 @@ import {
   Upload,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
+import { Skeleton } from "./ui/Skeleton";
 
 const MAX_IMAGES = 10;
 import { useAsync } from "../hooks/useAsync";
@@ -217,8 +218,19 @@ export default function ProductsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <Skeleton className="w-full aspect-video mb-3" />
+              <Skeleton className="h-2.5 w-16 mb-2" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-3 w-24 mb-3" />
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-16 rounded-md" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
