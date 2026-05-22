@@ -60,7 +60,7 @@ export default function OrdersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-bold text-white">{t("orders.title")}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">{t("orders.title")}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("orders.subtitle")}</p>
       </motion.div>
 
@@ -80,14 +80,14 @@ export default function OrdersPage() {
         </label>
         <button
           type="button"
-          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          {t("orders.newOrder")}
+          <span className="hidden sm:inline">{t("orders.newOrder")}</span>
         </button>
       </div>
 
-      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
+      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -193,115 +193,167 @@ function OrderTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-slate-800">
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.code")}</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.customer")}</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.channel")}</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.amount")}</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.status")}</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.date")}</th>
-            <th className="py-3 px-4"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => {
-            const style = statusStyle[order.status];
-            // PENDING — "Qabul qilish" (PROCESSING); PROCESSING — "Yetkazildi" (COMPLETED)
-            const quickAction: { next: OrderStatus; label: string } | null =
-              order.status === "PENDING" ? { next: "PROCESSING", label: t("orders.action.accept") }
-              : order.status === "PROCESSING" ? { next: "COMPLETED", label: t("orders.action.delivered") }
-              : null;
-            return (
-              <tr
-                key={order.id}
-                onClick={() => onOpen(order.id)}
-                className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
-              >
-                <td className="py-3 px-4">
-                  <span className="text-sm font-medium text-white">#{order.code}</span>
-                </td>
-                <td className="py-3 px-4">
-                  <div>
-                    <p className="text-sm text-white">{order.customer?.name ?? "—"}</p>
-                    <p className="text-xs text-slate-500">{order.customer?.email ?? order.customer?.phone ?? ""}</p>
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="text-sm text-slate-300">{order.channel?.name ?? "—"}</span>
-                </td>
-                <td className="py-3 px-4">
-                  <span className="text-sm font-medium text-white">
-                    {formatCurrency(Number(order.total), order.currency || currency)}
-                  </span>
-                </td>
-                <td className="py-3 px-4 relative" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
-                    disabled={updatingId === order.id}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${style.bg} ${style.color} hover:brightness-110 transition-all disabled:opacity-50`}
-                  >
-                    {updatingId === order.id && <Loader2 className="w-3 h-3 animate-spin" />}
-                    {t(`order.adminStatus.${order.status}`)}
-                    <ChevronDown className="w-3 h-3 opacity-60" />
-                  </button>
-                  {openMenuId === order.id && (
-                    <>
-                      <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
-                      <div className="absolute top-full left-4 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[160px]">
-                        {(Object.keys(statusStyle) as OrderStatus[]).map((s) => {
-                          const sc = statusStyle[s];
-                          const isCurrent = s === order.status;
-                          return (
-                            <button
-                              key={s}
-                              onClick={() => !isCurrent && handleChangeStatus(order.id, s, order.code)}
-                              disabled={isCurrent}
-                              className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-700 transition-colors ${
-                                isCurrent ? "opacity-60 cursor-default" : ""
-                              }`}
-                            >
-                              <span className={sc.color}>{t(`order.adminStatus.${s}`)}</span>
-                              {isCurrent && <span className="text-emerald-400">✓</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </td>
-                <td className="py-3 px-4">
-                  <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
-                </td>
-                <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                  <div className="inline-flex items-center gap-1.5">
-                    {quickAction && (
-                      <button
-                        onClick={() => handleChangeStatus(order.id, quickAction.next, order.code)}
-                        disabled={updatingId === order.id}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
-                        title={t("orders.action.hint", { action: quickAction.label })}
-                      >
-                        {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                        {quickAction.label}
-                      </button>
-                    )}
+    <>
+      {/* Desktop — jadval ko'rinishi */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-800">
+              <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.code")}</th>
+              <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.customer")}</th>
+              <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.channel")}</th>
+              <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.amount")}</th>
+              <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.status")}</th>
+              <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.date")}</th>
+              <th className="py-3 px-4"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => {
+              const style = statusStyle[order.status];
+              // PENDING — "Qabul qilish" (PROCESSING); PROCESSING — "Yetkazildi" (COMPLETED)
+              const quickAction: { next: OrderStatus; label: string } | null =
+                order.status === "PENDING" ? { next: "PROCESSING", label: t("orders.action.accept") }
+                : order.status === "PROCESSING" ? { next: "COMPLETED", label: t("orders.action.delivered") }
+                : null;
+              return (
+                <tr
+                  key={order.id}
+                  onClick={() => onOpen(order.id)}
+                  className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                >
+                  <td className="py-3 px-4">
+                    <span className="text-sm font-medium text-white">#{order.code}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div>
+                      <p className="text-sm text-white">{order.customer?.name ?? "—"}</p>
+                      <p className="text-xs text-slate-500">{order.customer?.email ?? order.customer?.phone ?? ""}</p>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="text-sm text-slate-300">{order.channel?.name ?? "—"}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="text-sm font-medium text-white">
+                      {formatCurrency(Number(order.total), order.currency || currency)}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 relative" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => onOpen(order.id)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
-                      aria-label={t("orders.viewDetails")}
+                      onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
+                      disabled={updatingId === order.id}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${style.bg} ${style.color} hover:brightness-110 transition-all disabled:opacity-50`}
                     >
-                      <Eye className="w-4 h-4" />
+                      {updatingId === order.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {t(`order.adminStatus.${order.status}`)}
+                      <ChevronDown className="w-3 h-3 opacity-60" />
                     </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                    {openMenuId === order.id && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
+                        <div className="absolute top-full left-4 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[160px]">
+                          {(Object.keys(statusStyle) as OrderStatus[]).map((s) => {
+                            const sc = statusStyle[s];
+                            const isCurrent = s === order.status;
+                            return (
+                              <button
+                                key={s}
+                                onClick={() => !isCurrent && handleChangeStatus(order.id, s, order.code)}
+                                disabled={isCurrent}
+                                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-700 transition-colors ${
+                                  isCurrent ? "opacity-60 cursor-default" : ""
+                                }`}
+                              >
+                                <span className={sc.color}>{t(`order.adminStatus.${s}`)}</span>
+                                {isCurrent && <span className="text-emerald-400">✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="text-xs text-slate-500">{formatDate(order.createdAt)}</span>
+                  </td>
+                  <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex items-center gap-1.5">
+                      {quickAction && (
+                        <button
+                          onClick={() => handleChangeStatus(order.id, quickAction.next, order.code)}
+                          disabled={updatingId === order.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
+                          title={t("orders.action.hint", { action: quickAction.label })}
+                        >
+                          {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          {quickAction.label}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onOpen(order.id)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                        aria-label={t("orders.viewDetails")}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile — card ko'rinishi */}
+      <div className="md:hidden divide-y divide-slate-800/50">
+        {orders.map((order) => {
+          const style = statusStyle[order.status];
+          const quickAction: { next: OrderStatus; label: string } | null =
+            order.status === "PENDING" ? { next: "PROCESSING", label: t("orders.action.accept") }
+            : order.status === "PROCESSING" ? { next: "COMPLETED", label: t("orders.action.delivered") }
+            : null;
+          return (
+            <button
+              key={order.id}
+              type="button"
+              onClick={() => onOpen(order.id)}
+              className="w-full text-left p-4 hover:bg-slate-800/30 active:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white">#{order.code}</p>
+                  <p className="text-sm text-slate-300 truncate mt-0.5">{order.customer?.name ?? "—"}</p>
+                  <p className="text-xs text-slate-500 truncate">{order.customer?.phone ?? order.customer?.email ?? ""}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold text-white whitespace-nowrap">
+                    {formatCurrency(Number(order.total), order.currency || currency)}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{formatDate(order.createdAt)}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${style.bg} ${style.color}`}>
+                  {updatingId === order.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {t(`order.adminStatus.${order.status}`)}
+                </span>
+                {quickAction && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleChangeStatus(order.id, quickAction.next, order.code); }}
+                    disabled={updatingId === order.id}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
+                  >
+                    {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    {quickAction.label}
+                  </button>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
 }

@@ -96,7 +96,7 @@ function DashboardPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">Dashboard</h1>
           <div className="flex items-center gap-2 mt-1">
             <Calendar className="w-4 h-4 text-slate-500" />
             <p className="text-sm text-slate-500">{currentDate}</p>
@@ -110,7 +110,7 @@ function DashboardPage() {
         <div className="lg:col-span-2">
           <RevenueChart />
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           <SalesByCategory />
           <WeeklySales />
         </div>
@@ -120,7 +120,7 @@ function DashboardPage() {
         <div className="lg:col-span-2">
           <RecentOrders />
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           <TopProducts />
           <TrafficSources />
         </div>

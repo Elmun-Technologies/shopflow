@@ -149,27 +149,27 @@ export default function ProductsPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between mb-6"
+        className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">{t("products.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">{t("products.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
             {total > 0 ? t("products.count", { count: total }) : t("products.subtitle")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowCategories(true)}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white whitespace-nowrap"
           >
-            {t("products.categories")} ({cats.length})
+            <span className="hidden sm:inline">{t("products.categories")} </span>({cats.length})
           </button>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
-            {t("products.newProduct")}
+            <span className="hidden sm:inline">{t("products.newProduct")}</span>
           </button>
         </div>
       </motion.div>

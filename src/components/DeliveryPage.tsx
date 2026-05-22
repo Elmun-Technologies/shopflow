@@ -234,9 +234,9 @@ export default function DeliveryPage() {
   return (
     <div>
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t("delivery.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">{t("delivery.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("delivery.subtitle")}</p>
         </div>
         {savedMessage && (
@@ -321,7 +321,7 @@ export default function DeliveryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-800 mb-6">
+      <div className="flex items-center gap-1 border-b border-slate-800 mb-6 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
         {[
           { key: "methods" as Tab, label: t("delivery.tab.methods"), icon: Truck },
           { key: "pharmacies" as Tab, label: t("delivery.tab.pharmacies"), icon: Store },
