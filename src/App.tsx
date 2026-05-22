@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Loader2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import KPICards from "./components/KPICards";
 import RevenueChart from "./components/RevenueChart";
 import SalesByCategory from "./components/SalesByCategory";
@@ -136,6 +138,13 @@ function AppShell() {
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useGlobalShortcuts({
+    onNavigate: (page) => setCurrentPage(page),
+    onShowHelp: () => setShortcutsOpen(true),
+    onCloseHelp: () => setShortcutsOpen(false),
+  });
 
   const goToMarketing = (sub: MarketingSub) => {
     setMarketingSub(sub);
@@ -272,6 +281,8 @@ function AppShell() {
           </AnimatePresence>
         </main>
       </div>
+
+      <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }
