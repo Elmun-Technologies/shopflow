@@ -34,6 +34,7 @@ import {
 } from "../data/chatData";
 import type { ChatConversation, FunnelStage, ChatMessage } from "../data/chatData";
 import { api } from "../api/client";
+import { useT } from "../i18n";
 
 // Backend'dan keladigan format
 interface ApiConvListItem {
@@ -131,6 +132,7 @@ function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 export default function ChatPage() {
+  const { t } = useT();
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -287,8 +289,8 @@ export default function ChatPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-4 flex-shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-white">Chat Markazi</h1>
-          <p className="text-sm text-slate-500 mt-1">Barcha kanallar orqali mijozlar bilan muloqot</p>
+          <h1 className="text-2xl font-bold text-white">{t("chat.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("chat.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -298,7 +300,7 @@ export default function ChatPage() {
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            Analytics
+            {t("chat.analytics")}
           </button>
         </div>
       </motion.div>
@@ -306,11 +308,11 @@ export default function ChatPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 flex-shrink-0">
         {[
-          { label: "Faol chatlar", value: activeCount, icon: MessageSquare, color: "text-emerald-400", alert: false },
-          { label: "Kutilmoqda", value: waitingCount, icon: Clock, color: "text-amber-400", alert: waitingCount > 0 },
-          { label: "Bugun yakunlandi", value: resolvedToday, icon: CheckCheck, color: "text-blue-400", alert: false },
-          { label: "Potensial savdo", value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-violet-400", alert: false },
-          { label: "O'rtacha javob", value: "42s", icon: Zap, color: "text-cyan-400", alert: false },
+          { label: t("chat.stats.active"), value: activeCount, icon: MessageSquare, color: "text-emerald-400", alert: false },
+          { label: t("chat.stats.waiting"), value: waitingCount, icon: Clock, color: "text-amber-400", alert: waitingCount > 0 },
+          { label: t("chat.stats.resolvedToday"), value: resolvedToday, icon: CheckCheck, color: "text-blue-400", alert: false },
+          { label: t("chat.stats.potential"), value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-violet-400", alert: false },
+          { label: t("chat.stats.avgResponse"), value: "42s", icon: Zap, color: "text-cyan-400", alert: false },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -337,7 +339,7 @@ export default function ChatPage() {
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
                   <Target className="w-4 h-4 text-emerald-400" />
-                  Savdo varonkasi (Chat funnel)
+                  {t("chat.funnelTitle")}
                 </h3>
                 <div className="space-y-1.5">
                   {funnelStats.map((fs, i) => {
@@ -453,7 +455,7 @@ export default function ChatPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
                 type="text"
-                placeholder="Qidirish..."
+                placeholder={t("chat.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -461,10 +463,10 @@ export default function ChatPage() {
             </div>
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
               {[
-                { key: "all", label: "Barcha" },
-                { key: "active", label: "Faol" },
-                { key: "waiting", label: "Kutilmoqda" },
-                { key: "resolved", label: "Yakunlandi" },
+                { key: "all", label: t("chat.filter.all") },
+                { key: "active", label: t("chat.filter.active") },
+                { key: "waiting", label: t("chat.filter.waiting") },
+                { key: "resolved", label: t("chat.filter.resolved") },
               ].map((f) => (
                 <button
                   key={f.key}
@@ -689,7 +691,7 @@ export default function ChatPage() {
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                    placeholder="Xabar yozing..."
+                    placeholder={t("chat.messagePlaceholder")}
                     className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
                   />
                   <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">

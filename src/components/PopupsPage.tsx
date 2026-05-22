@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
+import { useT } from "../i18n";
 import { useConfirm } from "./ui/ConfirmDialog";
 
 type PopupKind = "MODAL" | "BANNER" | "TOAST";
@@ -55,6 +56,7 @@ const popupsApi = {
 };
 
 export default function PopupsPage() {
+  const { t } = useT();
   const [popups, setPopups] = useState<Popup[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Popup | null>(null);
@@ -112,10 +114,10 @@ export default function PopupsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Megaphone className="w-6 h-6 text-emerald-400" />
-            Popup'lar
+            {t("popups.title")}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Mini App ochilganda mijozga ko'rsatiladigan taklif/banner'lar
+            {t("popups.subtitle")}
           </p>
         </div>
         <button
@@ -123,7 +125,7 @@ export default function PopupsPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
         >
           <Plus className="w-4 h-4" />
-          Yangi popup
+          {t("popups.newPopup")}
         </button>
       </motion.div>
 

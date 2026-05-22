@@ -8,6 +8,7 @@ import {
   Plus, Tag as TagIcon, Edit2, Trash2, Loader2, Eye, EyeOff, X, Calendar, Package as PackageIcon, Search,
 } from "lucide-react";
 import { api } from "../api/client";
+import { useT } from "../i18n";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
 
@@ -70,6 +71,7 @@ const productsApi = {
 };
 
 export default function SaleCampaignsPage() {
+  const { t } = useT();
   const [list, setList] = useState<SaleCampaignSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -127,10 +129,10 @@ export default function SaleCampaignsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <TagIcon className="w-6 h-6 text-rose-400" />
-            Aksiyalar
+            {t("campaigns.title")}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            "Распродажа" / "Hit" / "Yangi" yorliqlar bilan mahsulotlarni guruhlang
+            {t("campaigns.subtitle")}
           </p>
         </div>
         <button
@@ -138,7 +140,7 @@ export default function SaleCampaignsPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-rose-500 hover:bg-rose-600 rounded-lg text-sm font-medium text-white"
         >
           <Plus className="w-4 h-4" />
-          Yangi aksiya
+          {t("campaigns.newCampaign")}
         </button>
       </motion.div>
 

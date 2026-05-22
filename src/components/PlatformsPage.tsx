@@ -27,6 +27,7 @@ import { useAsync } from "../hooks/useAsync";
 import { channelsApi } from "../api/endpoints";
 import { formatDate } from "../utils/format";
 import type { ChannelType, Channel } from "../types/api";
+import { useT } from "../i18n";
 
 const channelTypeMeta: Record<ChannelType, { label: string; icon: React.ElementType; color: string }> = {
   WEBSITE: { label: "Veb-sayt", icon: Globe, color: "text-blue-400" },
@@ -45,6 +46,7 @@ const channelTypeMeta: Record<ChannelType, { label: string; icon: React.ElementT
 };
 
 export default function PlatformsPage() {
+  const { t } = useT();
   const { data, loading, error, refetch } = useAsync(() => channelsApi.list(), []);
   const [showAdd, setShowAdd] = useState(false);
   const channels = data ?? [];
@@ -68,9 +70,9 @@ export default function PlatformsPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Kanallar</h1>
+          <h1 className="text-2xl font-bold text-white">{t("platforms.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Lid va buyurtma manbalari. Har bir kanal o'z webhook URL'iga ega.
+            {t("platforms.subtitle")}
           </p>
         </div>
         <button
@@ -78,7 +80,7 @@ export default function PlatformsPage() {
           className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
         >
           <Plus className="w-4 h-4" />
-          Yangi kanal
+          {t("platforms.newChannel")}
         </button>
       </motion.div>
 
@@ -94,10 +96,9 @@ export default function PlatformsPage() {
       ) : channels.length === 0 ? (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
           <Layers className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-          <p className="text-base font-semibold text-white">Hali kanal yo'q</p>
+          <p className="text-base font-semibold text-white">{t("platforms.empty.title")}</p>
           <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-            Birinchi kanalingizni qo'shing (masalan, Instagram yoki Telegram bot), keyin
-            uning webhook URL'ini tegishli platforma sozlamalariga joylashtiring.
+            {t("platforms.empty.hint")}
           </p>
         </div>
       ) : (
