@@ -5,6 +5,7 @@ import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { OrderStatus } from "../types/api";
+import { useT } from "../i18n";
 
 const statusStyles: Record<OrderStatus, string> = {
   COMPLETED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -14,16 +15,9 @@ const statusStyles: Record<OrderStatus, string> = {
   REFUNDED: "bg-slate-500/10 text-slate-400 border-slate-500/20",
 };
 
-const statusLabels: Record<OrderStatus, string> = {
-  PENDING: "Kutilmoqda",
-  PROCESSING: "Jarayonda",
-  COMPLETED: "Bajarildi",
-  CANCELLED: "Bekor qilindi",
-  REFUNDED: "Qaytarildi",
-};
-
 export default function RecentOrders() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const { data, loading } = useAsync(() => dashboardApi.recentOrders(), []);
   const orders = data ?? [];
@@ -37,8 +31,8 @@ export default function RecentOrders() {
     >
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-base font-semibold text-white">So'nggi buyurtmalar</h3>
-          <p className="text-sm text-slate-500 mt-0.5">Oxirgi 10 ta zakaz</p>
+          <h3 className="text-base font-semibold text-white">{t("widget.recentOrders")}</h3>
+          <p className="text-sm text-slate-500 mt-0.5">{t("widget.recentOrders.subtitle")}</p>
         </div>
       </div>
 
@@ -96,7 +90,7 @@ export default function RecentOrders() {
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[order.status]}`}
                     >
-                      {statusLabels[order.status]}
+                      {t(`order.adminStatus.${order.status}`)}
                     </span>
                   </td>
                   <td className="py-3.5 pr-4">

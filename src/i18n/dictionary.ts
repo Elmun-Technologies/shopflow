@@ -50,6 +50,18 @@ export const dictionary: Record<string, Entry> = {
   "pdp.beFirst": { uz: "Birinchi bo'lib yozing!", ru: "Будьте первым!" },
   "pdp.totalReviews": { uz: "{count} ta sharh", ru: "{count} отзывов" },
   "pdp.comboTitle": { uz: "🎁 Bularni ham qo'shing", ru: "🎁 Добавьте к заказу" },
+  "pdp.trust.original.title": { uz: "Original brend", ru: "Оригинальный бренд" },
+  "pdp.trust.original.text": { uz: "Bu belgi faqat original tovarlarda bor. Sotuvchi ularning asilligini hujjatlar bilan tasdiqlagan.", ru: "Этот знак есть только у оригинальных товаров. Продавец подтвердил подлинность документами." },
+  "pdp.trust.warranty.title": { uz: "6 oylik kafolat", ru: "Гарантия 6 месяцев" },
+  "pdp.trust.warranty.text": { uz: "Kafolat muddati davomida tovar buzilsa, pulni qaytaramiz yoki almashtirib beramiz.", ru: "Если товар сломается в течение гарантийного срока, мы вернём деньги или заменим его." },
+  "pdp.review.title": { uz: "Sharh yozish", ru: "Написать отзыв" },
+  "pdp.review.rating": { uz: "Bahoyingiz", ru: "Ваша оценка" },
+  "pdp.review.textLabel": { uz: "Fikringizni yozing", ru: "Напишите ваше мнение" },
+  "pdp.review.placeholder": { uz: "Mahsulot sifati, yetkazib berish va boshqalar haqida…", ru: "О качестве товара, доставке и других моментах…" },
+  "pdp.review.moderation": { uz: "Sharh admin tomonidan ko'rib chiqilgandan keyin chop etiladi.", ru: "Отзыв публикуется после проверки администратором." },
+  "pdp.review.submit": { uz: "Yuborish", ru: "Отправить" },
+  "pdp.review.success": { uz: "✅ Sharhingiz qabul qilindi. Tasdiqlangandan keyin sahifada ko'rinadi.", ru: "✅ Ваш отзыв принят. После проверки появится на странице." },
+  "pdp.review.error": { uz: "Sharh yuborilmadi", ru: "Не удалось отправить отзыв" },
 
   // ─── Storefront: Cart ────────────────────────────────
   "cart.title": { uz: "Savat", ru: "Корзина" },
@@ -477,4 +489,15 @@ export const dictionary: Record<string, Entry> = {
   "abandonedCarts.summary.total": { uz: "Jami savatlar", ru: "Всего корзин" },
   "abandonedCarts.summary.atRisk": { uz: "Xavf ostidagi summa", ru: "Сумма под риском" },
   "abandonedCarts.summary.reminded": { uz: "Eslatma yuborilgan", ru: "Напоминаний отправлено" },
+
+  // ─── Admin: Dashboard widgets ────────────────────────
+  "widget.revenue": { uz: "Daromad dinamikasi", ru: "Динамика выручки" },
+  "widget.salesByCategory": { uz: "Kategoriya bo'yicha", ru: "По категориям" },
+  "widget.weeklySales": { uz: "Haftalik savdolar", ru: "Продажи за неделю" },
+  "widget.recentOrders": { uz: "So'nggi buyurtmalar", ru: "Последние заказы" },
+  "widget.topProducts": { uz: "Eng ko'p sotilgan", ru: "Самые продаваемые" },
+  "widget.trafficSources": { uz: "Kanal manbalari", ru: "Источники каналов" },
+  "widget.recentOrders.subtitle": { uz: "Oxirgi 10 ta zakaz", ru: "Последние 10 заказов" },
+  "widget.topProducts.subtitle": { uz: "Top 5 mahsulot", ru: "Топ-5 товаров" },
+  "widget.topProducts.empty": { uz: "Sotilgan mahsulotlar yo'q", ru: "Нет проданных товаров" },
 };

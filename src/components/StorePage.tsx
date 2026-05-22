@@ -1673,7 +1673,7 @@ function StoreInner({ slug }: { slug: string }) {
                 <button
                   onClick={() => setTrustSheet(null)}
                   className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 active:scale-90"
-                  aria-label="Yopish"
+                  aria-label={t("common.close")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1684,9 +1684,9 @@ function StoreInner({ slug }: { slug: string }) {
                     <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
                       <BadgeCheck className="w-9 h-9 text-emerald-400" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">Original brend</h3>
+                    <h3 className="text-lg font-bold text-white">{t("pdp.trust.original.title")}</h3>
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      Bu belgi faqat original tovarlarda bor. Sotuvchi ularning asilligini hujjatlar bilan tasdiqlagan.
+                      {t("pdp.trust.original.text")}
                     </p>
                   </>
                 ) : (
@@ -1694,9 +1694,9 @@ function StoreInner({ slug }: { slug: string }) {
                     <div className="w-16 h-16 rounded-full bg-sky-500/15 flex items-center justify-center">
                       <ShieldCheck className="w-9 h-9 text-sky-400" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">6 oylik kafolat</h3>
+                    <h3 className="text-lg font-bold text-white">{t("pdp.trust.warranty.title")}</h3>
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      Kafolat muddati davomida tovar buzilsa, pulni qaytaramiz yoki almashtirib beramiz.
+                      {t("pdp.trust.warranty.text")}
                     </p>
                   </>
                 )}
@@ -1704,7 +1704,7 @@ function StoreInner({ slug }: { slug: string }) {
                   onClick={() => setTrustSheet(null)}
                   className="mt-2 w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium text-white active:scale-[0.98] transition-transform"
                 >
-                  Xo'p
+                  {t("common.ok")}
                 </button>
               </div>
             </div>
@@ -1723,7 +1723,7 @@ function StoreInner({ slug }: { slug: string }) {
               style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
             >
               <div className="flex justify-between items-center p-4 border-b border-slate-800">
-                <h3 className="text-base font-semibold text-white">Sharh yozish</h3>
+                <h3 className="text-base font-semibold text-white">{t("pdp.review.title")}</h3>
                 <button
                   onClick={() => setReviewForm((f) => ({ ...f, open: false }))}
                   className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 active:scale-90"
@@ -1734,7 +1734,7 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="px-5 py-4 space-y-4">
                 {/* Star picker */}
                 <div>
-                  <p className="text-xs text-slate-400 mb-2">Bahoyingiz</p>
+                  <p className="text-xs text-slate-400 mb-2">{t("pdp.review.rating")}</p>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button
@@ -1751,16 +1751,16 @@ function StoreInner({ slug }: { slug: string }) {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 mb-2">Fikringizni yozing</p>
+                  <p className="text-xs text-slate-400 mb-2">{t("pdp.review.textLabel")}</p>
                   <textarea
                     value={reviewForm.text}
                     onChange={(e) => setReviewForm((f) => ({ ...f, text: e.target.value }))}
                     rows={4}
-                    placeholder="Mahsulot sifati, yetkazib berish va boshqalar haqida..."
+                    placeholder={t("pdp.review.placeholder")}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Sharh admin tomonidan ko'rib chiqilgandan keyin chop etiladi.
+                    {t("pdp.review.moderation")}
                   </p>
                 </div>
                 <button
@@ -1779,12 +1779,12 @@ function StoreInner({ slug }: { slug: string }) {
                         }),
                       });
                       const body = await res.json().catch(() => ({}));
-                      if (!res.ok) throw new Error((body as { error?: string }).error || "Sharh yuborilmadi");
+                      if (!res.ok) throw new Error((body as { error?: string }).error || t("pdp.review.error"));
                       haptic.success();
                       setReviewForm({ open: false, rating: 5, text: "", busy: false });
-                      alert("✅ Sharhingiz qabul qilindi. Tasdiqlangandan keyin sahifada ko'rinadi.");
+                      alert(t("pdp.review.success"));
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : "Sharh yuborilmadi");
+                      alert(err instanceof Error ? err.message : t("pdp.review.error"));
                       setReviewForm((f) => ({ ...f, busy: false }));
                     }
                   }}
@@ -1792,7 +1792,7 @@ function StoreInner({ slug }: { slug: string }) {
                   className="w-full py-3 rounded-2xl font-semibold text-white text-base bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                   {reviewForm.busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  Yuborish
+                  {t("pdp.review.submit")}
                 </button>
               </div>
             </div>

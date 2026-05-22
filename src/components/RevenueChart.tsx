@@ -14,9 +14,11 @@ import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/format";
 import type { ChartTooltipProps } from "../utils/chart";
+import { useT } from "../i18n";
 
 export default function RevenueChart() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const { data, loading } = useAsync(() => dashboardApi.revenueTrend(), []);
   const series = data ?? [];
@@ -47,7 +49,7 @@ export default function RevenueChart() {
     >
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-base font-semibold text-white">Daromad dinamikasi</h3>
+          <h3 className="text-base font-semibold text-white">{t("widget.revenue")}</h3>
           <p className="text-sm text-slate-500 mt-0.5">Oxirgi 12 oy</p>
         </div>
       </div>
