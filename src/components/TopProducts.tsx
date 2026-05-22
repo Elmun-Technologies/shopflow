@@ -4,9 +4,11 @@ import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
+import { useT } from "../i18n";
 
 export default function TopProducts() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const { data, loading } = useAsync(() => dashboardApi.topProducts(), []);
   const products = data ?? [];
@@ -20,8 +22,8 @@ export default function TopProducts() {
     >
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-base font-semibold text-white">Eng ko'p sotilgan</h3>
-          <p className="text-sm text-slate-500 mt-0.5">Top 5 mahsulot</p>
+          <h3 className="text-base font-semibold text-white">{t("widget.topProducts")}</h3>
+          <p className="text-sm text-slate-500 mt-0.5">{t("widget.topProducts.subtitle")}</p>
         </div>
       </div>
 
@@ -32,7 +34,7 @@ export default function TopProducts() {
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <Package className="w-8 h-8 text-slate-700 mb-2" />
-          <p className="text-sm text-slate-500">Sotilgan mahsulotlar yo'q</p>
+          <p className="text-sm text-slate-500">{t("widget.topProducts.empty")}</p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -6,11 +6,13 @@ import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/format";
 import type { ChartTooltipProps } from "../utils/chart";
+import { useT } from "../i18n";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
 
 export default function SalesByCategory() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const { data, loading } = useAsync(() => dashboardApi.salesByCategory(), []);
   const items = data ?? [];
@@ -39,7 +41,7 @@ export default function SalesByCategory() {
       transition={{ duration: 0.4, delay: 0.5 }}
       className="bg-slate-900 border border-slate-800 rounded-xl p-5"
     >
-      <h3 className="text-base font-semibold text-white mb-1">Kategoriya bo'yicha</h3>
+      <h3 className="text-base font-semibold text-white mb-1">{t("widget.salesByCategory")}</h3>
       <p className="text-sm text-slate-500 mb-4">Mahsulot kategoriyalari taqsimoti</p>
 
       <div className="h-52">

@@ -8,6 +8,7 @@ import {
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
+import { useT } from "../i18n";
 
 interface CustomerDetailResponse {
   customer: {
@@ -37,12 +38,13 @@ interface CustomerDetailResponse {
   }>;
 }
 
-const ORDER_STATUS: Record<OrderStatus, { label: string; cls: string }> = {
-  PENDING: { label: "Yangi", cls: "bg-amber-500/15 text-amber-300" },
-  PROCESSING: { label: "Tayyorlanmoqda", cls: "bg-blue-500/15 text-blue-300" },
-  COMPLETED: { label: "Yetkazildi", cls: "bg-emerald-500/15 text-emerald-300" },
-  CANCELLED: { label: "Bekor", cls: "bg-rose-500/15 text-rose-300" },
-  REFUNDED: { label: "Qaytarildi", cls: "bg-slate-700 text-slate-300" },
+// Faqat ranglar — labellar t() orqali
+const ORDER_STATUS_CLS: Record<OrderStatus, string> = {
+  PENDING: "bg-amber-500/15 text-amber-300",
+  PROCESSING: "bg-blue-500/15 text-blue-300",
+  COMPLETED: "bg-emerald-500/15 text-emerald-300",
+  CANCELLED: "bg-rose-500/15 text-rose-300",
+  REFUNDED: "bg-slate-700 text-slate-300",
 };
 
 function formatMoney(n: number, currency: string): string {
@@ -64,6 +66,7 @@ export interface CustomerDetailDrawerProps {
 export default function CustomerDetailDrawer({
   customerId, onClose, onChanged, onOpenOrder,
 }: CustomerDetailDrawerProps) {
+  const { t } = useT();
   const [data, setData] = useState<CustomerDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +165,7 @@ export default function CustomerDetailDrawer({
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-white">{data.customer.name}</h2>
-                  <div className="text-[11px] text-slate-500">Mijoz · {formatDate(data.customer.createdAt)} dan</div>
+                  <div className="text-[11px] text-slate-500">{t("customerDetail.label", { date: formatDate(data.customer.createdAt) })}</div>
                 </div>
               </div>
               <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
@@ -174,36 +177,36 @@ export default function CustomerDetailDrawer({
               {/* Stats */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500 mb-1">Jami xarid</div>
+                  <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.totalSpent")}</div>
                   <div className="text-lg font-bold text-emerald-300">
                     {formatMoney(data.stats.totalSpent, "UZS")}
                   </div>
                 </div>
                 <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500 mb-1">Buyurtmalar</div>
+                  <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.orders")}</div>
                   <div className="text-lg font-bold text-white">{data.stats.orderCount}</div>
                 </div>
               </div>
 
               {/* Contact + edit */}
-              <Section title="Kontakt" icon={UserIcon} action={
+              <Section title={t("customerDetail.contact")} icon={UserIcon} action={
                 <button
                   onClick={() => setEditing((v) => !v)}
                   className="text-xs text-emerald-300 hover:text-emerald-200 flex items-center gap-1"
                 >
                   {editing ? <X className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
-                  {editing ? "Bekor" : "Tahrirlash"}
+                  {editing ? t("common.cancel") : t("customerDetail.edit")}
                 </button>
               }>
                 {editing ? (
                   <div className="space-y-2">
-                    <EditField label="Ism" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-                    <EditField label="Telefon" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-                    <EditField label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-                    <EditField label="Manzil" value={form.location} onChange={(v) => setForm({ ...form, location: v })} />
-                    <EditField label="Teg'lar (vergul bilan)" value={tagsDraft} onChange={setTagsDraft} placeholder="vip, doimiy" />
+                    <EditField label={t("customerDetail.name")} value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+                    <EditField label={t("customerDetail.phone")} value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+                    <EditField label={t("customerDetail.email")} type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+                    <EditField label={t("customerDetail.location")} value={form.location} onChange={(v) => setForm({ ...form, location: v })} />
+                    <EditField label={t("customerDetail.tags")} value={tagsDraft} onChange={setTagsDraft} placeholder={t("customerDetail.tagsPlaceholder")} />
                     <label className="block">
-                      <div className="text-[11px] text-slate-500 mb-1">Izoh</div>
+                      <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.note")}</div>
                       <textarea
                         value={form.notes}
                         onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -217,7 +220,7 @@ export default function CustomerDetailDrawer({
                       className="w-full mt-1 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium flex items-center justify-center gap-1.5"
                     >
                       {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                      Saqlash
+                      {t("common.save")}
                     </button>
                   </div>
                 ) : (
@@ -242,7 +245,7 @@ export default function CustomerDetailDrawer({
                     )}
                     {data.customer.telegramUserId && (
                       <div className="text-[11px] text-slate-500">
-                        Telegram ID: {data.customer.telegramUserId}
+                        {t("customerDetail.tgId", { id: data.customer.telegramUserId })}
                       </div>
                     )}
                     {(data.customer.tags?.length ?? 0) > 0 && (
@@ -264,13 +267,13 @@ export default function CustomerDetailDrawer({
               </Section>
 
               {/* Orders history */}
-              <Section title={`Buyurtmalar tarixi (${data.orders.length})`} icon={ShoppingCart}>
+              <Section title={t("customerDetail.ordersHistory", { n: data.orders.length })} icon={ShoppingCart}>
                 {data.orders.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-3">Hali buyurtma yo'q</p>
+                  <p className="text-xs text-slate-500 text-center py-3">{t("customerDetail.noOrders")}</p>
                 ) : (
                   <div className="divide-y divide-slate-800">
                     {data.orders.map((order) => {
-                      const cfg = ORDER_STATUS[order.status];
+                      const cls = ORDER_STATUS_CLS[order.status];
                       return (
                         <button
                           key={order.id}
@@ -281,8 +284,8 @@ export default function CustomerDetailDrawer({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className="text-sm font-medium text-white">#{order.code}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${cfg.cls}`}>
-                                {cfg.label}
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${cls}`}>
+                                {t(`order.adminStatus.${order.status}`)}
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-500">

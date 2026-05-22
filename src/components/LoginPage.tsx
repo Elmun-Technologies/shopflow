@@ -2,9 +2,11 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Store, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useT } from "../i18n";
 
 export default function LoginPage() {
   const { login, register, error } = useAuth();
+  const { t } = useT();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +44,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-white">ShopFlow</h1>
           <p className="text-sm text-slate-400 mt-1">
-            {mode === "login" ? "Tizimga kirish" : "Yangi tashkilot ro'yxati"}
+            {mode === "login" ? t("login.title.login") : t("login.title.register")}
           </p>
         </div>
 
@@ -54,7 +56,7 @@ export default function LoginPage() {
             <>
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Tashkilot nomi
+                  {t("login.tenantName")}
                 </label>
                 <input
                   type="text"
@@ -62,12 +64,12 @@ export default function LoginPage() {
                   value={tenantName}
                   onChange={(e) => setTenantName(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
-                  placeholder="Mening do'konim"
+                  placeholder={t("login.tenantNamePlaceholder")}
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Sizning ismingiz
+                  {t("login.yourName")}
                 </label>
                 <input
                   type="text"
@@ -82,7 +84,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1.5">
-              Tenant slug {mode === "login" && <span className="text-slate-600">(ixtiyoriy)</span>}
+              {t("login.tenantSlug")} {mode === "login" && <span className="text-slate-600">({t("common.optional")})</span>}
             </label>
             <input
               type="text"
@@ -96,7 +98,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("login.email")}</label>
             <input
               type="email"
               required
@@ -109,7 +111,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Parol</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("login.password")}</label>
             <input
               type="password"
               required
@@ -134,7 +136,7 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-white text-sm font-medium transition-all"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            {mode === "login" ? "Kirish" : "Ro'yxatdan o'tish"}
+            {mode === "login" ? t("login.submit.login") : t("login.submit.register")}
           </button>
 
           <button
@@ -142,9 +144,7 @@ export default function LoginPage() {
             onClick={() => setMode(mode === "login" ? "register" : "login")}
             className="w-full text-center text-sm text-slate-400 hover:text-white transition-colors"
           >
-            {mode === "login"
-              ? "Hisobingiz yo'qmi? Ro'yxatdan o'ting"
-              : "Hisobingiz bormi? Kiring"}
+            {mode === "login" ? t("login.switchToRegister") : t("login.switchToLogin")}
           </button>
         </form>
       </motion.div>

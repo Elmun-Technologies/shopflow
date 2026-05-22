@@ -3,12 +3,13 @@ import { Boxes, CheckCircle2, AlertTriangle, RefreshCw, Loader2, ExternalLink, X
 import { moyskladApi, type MoyskladStatus, type SyncJob } from "../api/endpoints";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
+import { useT } from "../i18n";
 
-const STATUS_BADGE: Record<MoyskladStatus["status"], { label: string; cls: string }> = {
-  CONNECTED: { label: "Ulangan", cls: "bg-emerald-400/15 text-emerald-300" },
-  CONNECTING: { label: "Ulanmoqda", cls: "bg-blue-400/15 text-blue-300" },
-  ERROR: { label: "Xato", cls: "bg-rose-400/15 text-rose-300" },
-  DISCONNECTED: { label: "Ulanmagan", cls: "bg-slate-700 text-slate-300" },
+const STATUS_BADGE_CLS: Record<MoyskladStatus["status"], string> = {
+  CONNECTED: "bg-emerald-400/15 text-emerald-300",
+  CONNECTING: "bg-blue-400/15 text-blue-300",
+  ERROR: "bg-rose-400/15 text-rose-300",
+  DISCONNECTED: "bg-slate-700 text-slate-300",
 };
 
 function formatDate(iso: string | null | undefined): string {
@@ -21,6 +22,7 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 export function MoyskladIntegrationCard() {
+  const { t } = useT();
   const [status, setStatus] = useState<MoyskladStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [showConnect, setShowConnect] = useState(false);
@@ -136,7 +138,7 @@ export function MoyskladIntegrationCard() {
   }
 
   const s = status?.status ?? "DISCONNECTED";
-  const badge = STATUS_BADGE[s];
+  const badgeCls = STATUS_BADGE_CLS[s];
 
   return (
     <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
@@ -148,7 +150,7 @@ export function MoyskladIntegrationCard() {
           <div>
             <h4 className="text-sm text-white font-semibold flex items-center gap-2">
               MoySklad
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>{badge.label}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${badgeCls}`}>{t(`moysklad.status.${s}`)}</span>
             </h4>
             <p className="text-[11px] text-slate-500 mt-0.5">
               Mahsulot katalogi, qoldiq va buyurtmalar yagona manbadan

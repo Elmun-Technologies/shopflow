@@ -90,6 +90,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import type { ChartTooltipProps } from "../utils/chart";
+import { useT } from "../i18n";
 
 type PaymentMethodStatus = "active" | "inactive" | "pending" | "error";
 
@@ -127,6 +128,7 @@ function CustomTooltip({ active, payload }: ChartTooltipProps) {
 }
 
 export default function PaymentsPage() {
+  const { t } = useT();
   const [apiMethods, setApiMethods] = useState<ApiMethod[]>([]);
   const [txns, setTxns] = useState<ApiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -272,14 +274,14 @@ export default function PaymentsPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">To'lov usullari</h1>
-          <p className="text-sm text-slate-500 mt-1">To'lov usullarini sozlash va monitoring</p>
+          <h1 className="text-2xl font-bold text-white">{t("payments.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("payments.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           {loading && (
             <span className="flex items-center gap-1.5 text-xs text-slate-400">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Yuklanmoqda
+              {t("payments.loading")}
             </span>
           )}
           {error && (
@@ -301,7 +303,7 @@ export default function PaymentsPage() {
                 className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
               >
                 <Plus className="w-4 h-4" />
-                Usul qo'shish
+                {t("payments.addMethod")}
               </button>
               {showAddMenu && (
                 <>
@@ -327,10 +329,10 @@ export default function PaymentsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Jami daromad", value: (totalRevenue / 1000000).toFixed(1) + "M so'm", icon: DollarSign, color: "text-emerald-400" },
-          { label: "Jami tranzaksiyalar", value: totalTxns.toLocaleString(), icon: Activity, color: "text-blue-400" },
-          { label: "O'rtacha muvaffaqiyat", value: avgSuccess + "%", icon: ShieldCheck, color: "text-violet-400" },
-          { label: "Bugun", value: (todayRevenue / 1000000).toFixed(1) + "M so'm", icon: TrendingUp, color: "text-amber-400" },
+          { label: t("payments.stats.revenue"), value: (totalRevenue / 1000000).toFixed(1) + "M so'm", icon: DollarSign, color: "text-emerald-400" },
+          { label: t("payments.stats.transactions"), value: totalTxns.toLocaleString(), icon: Activity, color: "text-blue-400" },
+          { label: t("payments.stats.successRate"), value: avgSuccess + "%", icon: ShieldCheck, color: "text-violet-400" },
+          { label: t("payments.stats.today"), value: (todayRevenue / 1000000).toFixed(1) + "M so'm", icon: TrendingUp, color: "text-amber-400" },
         ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
@@ -345,7 +347,7 @@ export default function PaymentsPage() {
       {/* Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Kunlik tranzaksiyalar</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t("payments.chart.daily")}</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dailyPaymentStats} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -363,7 +365,7 @@ export default function PaymentsPage() {
           </div>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Usullar bo'yicha</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t("payments.chart.byMethod")}</h3>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -376,7 +378,7 @@ export default function PaymentsPage() {
                     return (
                       <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
                         <p className="text-xs text-white font-medium">{payload[0].name}</p>
-                        <p className="text-xs text-slate-400">{payload[0].value} ta tranzaksiya</p>
+                        <p className="text-xs text-slate-400">{t("payments.chart.txnsCount", { n: String(payload[0].value ?? 0) })}</p>
                       </div>
                     );
                   }
@@ -402,13 +404,13 @@ export default function PaymentsPage() {
       {/* Payment Methods */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">To'lov usullari</h2>
+          <h2 className="text-lg font-semibold text-white">{t("payments.methods")}</h2>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
                 type="text"
-                placeholder="Qidirish..."
+                placeholder={t("payments.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"

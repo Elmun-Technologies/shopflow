@@ -14,6 +14,7 @@ import {
 import type { UIBlock, BrandSettings } from "../data/uiBuilderData";
 import { vitrinaApi, productsApi, categoriesApi } from "../api/endpoints";
 import type { Product, Category } from "../types/api";
+import { useT } from "../i18n";
 
 const iconMap: Record<string, React.ElementType> = {
   Image, Sparkles, Percent, TrendingUp, Crown, Calendar, Grid3X3, Zap, Sun, Heart,
@@ -41,6 +42,7 @@ function toPreviewProduct(p: Product): PreviewProduct {
 }
 
 export default function UIBuilderPage() {
+  const { t } = useT();
   const [blocks, setBlocks] = useState<UIBlock[]>([]);
   const [brand, setBrand] = useState<BrandSettings>(JSON.parse(JSON.stringify(defaultBrandSettings)));
   const [published, setPublished] = useState(true);
@@ -185,10 +187,10 @@ export default function UIBuilderPage() {
     setSaving(true);
     try {
       await vitrinaApi.saveLayout({ blocks, brand: brand as unknown as Record<string, unknown>, published });
-      setSavedMessage("Saqlandi!");
+      setSavedMessage(t("ui.saved"));
       setTimeout(() => setSavedMessage(""), 2500);
     } catch {
-      setSavedMessage("Xato yuz berdi");
+      setSavedMessage(t("common.error"));
       setTimeout(() => setSavedMessage(""), 2500);
     } finally {
       setSaving(false);
@@ -507,9 +509,9 @@ export default function UIBuilderPage() {
       <div className="w-72 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
         <div className="flex border-b border-slate-800">
           {[
-            { key: "blocks" as const, label: "Bloklar", icon: LayoutGrid },
-            { key: "templates" as const, label: "Shablonlar", icon: LayoutTemplate },
-            { key: "brand" as const, label: "Brend", icon: Palette },
+            { key: "blocks" as const, label: t("ui.tab.blocks"), icon: LayoutGrid },
+            { key: "templates" as const, label: t("ui.tab.templates"), icon: LayoutTemplate },
+            { key: "brand" as const, label: t("ui.tab.brand"), icon: Palette },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -535,7 +537,7 @@ export default function UIBuilderPage() {
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                   <input
                     type="text"
-                    placeholder="Bloklarni qidirish..."
+                    placeholder={t("ui.searchBlocks")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -678,14 +680,14 @@ export default function UIBuilderPage() {
         {/* Toolbar */}
         <div className="h-12 border-b border-slate-800 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-white">Muharrir</span>
-            <span className="text-xs text-slate-500">{blocks.length} blok · {blocks.filter((b) => b.enabled).length} faol</span>
+            <span className="text-sm font-semibold text-white">{t("ui.editor")}</span>
+            <span className="text-xs text-slate-500">{t("ui.blockCount", { n: blocks.length, active: blocks.filter((b) => b.enabled).length })}</span>
             {savedMessage && (
               <motion.span
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
-                className={`text-xs flex items-center gap-1 ${savedMessage === "Saqlandi!" ? "text-emerald-400" : "text-red-400"}`}
+                className={`text-xs flex items-center gap-1 ${savedMessage === t("ui.saved") ? "text-emerald-400" : "text-red-400"}`}
               >
                 <CheckCircle2 className="w-3 h-3" />
                 {savedMessage}
@@ -701,7 +703,7 @@ export default function UIBuilderPage() {
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
-              {published ? "Nashr" : "Yashirin"}
+              {published ? t("ui.published") : t("ui.hidden")}
             </button>
             <div className="flex items-center bg-slate-800 rounded-lg p-0.5">
               <button onClick={() => setPreviewMode("mobile")} className={`p-1.5 rounded-md transition-all ${previewMode === "mobile" ? "bg-slate-700 text-white" : "text-slate-500"}`}>
@@ -720,7 +722,7 @@ export default function UIBuilderPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition-colors"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              Saqlash
+              {t("common.save")}
             </button>
           </div>
         </div>

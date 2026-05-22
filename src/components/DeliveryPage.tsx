@@ -16,6 +16,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import type { ChartTooltipProps } from "../utils/chart";
+import { useT } from "../i18n";
 
 type Tab = "methods" | "pharmacies" | "regions" | "orders";
 type DeliveryStatus = "active" | "inactive" | "pending" | "closed";
@@ -162,6 +163,7 @@ function PharmacyForm({ initial, onSubmit, onClose, title }: PharmacyFormProps) 
 }
 
 export default function DeliveryPage() {
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState<Tab>("methods");
   const [pharmacyList, setPharmacyList] = useState<Pharmacy[]>(pharmacies);
   const [methodList, setMethodList] = useState<DeliveryMethod[]>(deliveryMethods);
@@ -234,8 +236,8 @@ export default function DeliveryPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Доставка</h1>
-          <p className="text-sm text-slate-500 mt-1">Yetkazib berish usullarini va aptekalarni boshqarish</p>
+          <h1 className="text-2xl font-bold text-white">{t("delivery.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("delivery.subtitle")}</p>
         </div>
         {savedMessage && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
@@ -248,10 +250,10 @@ export default function DeliveryPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Olib ketish", value: totalPickupOrders.toLocaleString(), icon: Store, color: "text-emerald-400" },
-          { label: "Kuryer bilan", value: totalCourierOrders.toLocaleString(), icon: Truck, color: "text-blue-400" },
-          { label: "Yetkazib berish xarajati", value: (totalDeliveryCost / 1000000).toFixed(1) + "M", icon: DollarSign, color: "text-amber-400" },
-          { label: "Faol aptekalar", value: activePharmacies.toString(), icon: MapPin, color: "text-violet-400" },
+          { label: t("delivery.stats.pickup"), value: totalPickupOrders.toLocaleString(), icon: Store, color: "text-emerald-400" },
+          { label: t("delivery.stats.courier"), value: totalCourierOrders.toLocaleString(), icon: Truck, color: "text-blue-400" },
+          { label: t("delivery.stats.cost"), value: (totalDeliveryCost / 1000000).toFixed(1) + "M", icon: DollarSign, color: "text-amber-400" },
+          { label: t("delivery.stats.activePharmacies"), value: activePharmacies.toString(), icon: MapPin, color: "text-violet-400" },
         ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
@@ -266,7 +268,7 @@ export default function DeliveryPage() {
       {/* Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Kunlik yetkazib berishlar</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t("delivery.chart.daily")}</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dailyDeliveryStats} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -274,15 +276,15 @@ export default function DeliveryPage() {
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="pickup" name="Olib ketish" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="courier" name="Kuryer" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="post" name="Pochta" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="pickup" name={t("delivery.legend.pickup")} fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="courier" name={t("delivery.legend.courier")} fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="post" name={t("delivery.legend.post")} fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Usullar bo'yicha</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t("delivery.chart.byMethod")}</h3>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -321,10 +323,10 @@ export default function DeliveryPage() {
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-800 mb-6">
         {[
-          { key: "methods" as Tab, label: "Yetkazib berish usullari", icon: Truck },
-          { key: "pharmacies" as Tab, label: "Aptekalar / Filiallar", icon: Store },
-          { key: "regions" as Tab, label: "Hududlar", icon: MapPin },
-          { key: "orders" as Tab, label: "Buyurtmalar", icon: Package },
+          { key: "methods" as Tab, label: t("delivery.tab.methods"), icon: Truck },
+          { key: "pharmacies" as Tab, label: t("delivery.tab.pharmacies"), icon: Store },
+          { key: "regions" as Tab, label: t("delivery.tab.regions"), icon: MapPin },
+          { key: "orders" as Tab, label: t("delivery.tab.orders"), icon: Package },
         ].map((tab) => {
           const Icon = tab.icon;
           return (

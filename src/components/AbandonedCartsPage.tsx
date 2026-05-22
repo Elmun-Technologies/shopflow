@@ -8,6 +8,7 @@ import {
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
+import { useT } from "../i18n";
 
 interface CartItem {
   productId: string;
@@ -64,6 +65,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function AbandonedCartsPage() {
+  const { t } = useT();
   const [data, setData] = useState<CartsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [reminding, setReminding] = useState<string | null>(null);
@@ -122,25 +124,24 @@ export default function AbandonedCartsPage() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <ShoppingCart className="w-6 h-6 text-rose-400" />
-          Tashlab ketilgan savatlar
+          {t("abandonedCarts.title")}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Mijozlar savatga mahsulot qo'shib chiqib ketgan. 1 soatdan ortiq tinch turgan
-          savatlarga avtomatik Telegram eslatma yuboriladi.
+          {t("abandonedCarts.subtitle")}
         </p>
       </motion.div>
 
       {/* Summary cards */}
       {!loading && data && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <SummaryCard label="Jami savatlar" value={data.summary.total.toString()} />
+          <SummaryCard label={t("abandonedCarts.summary.total")} value={data.summary.total.toString()} />
           <SummaryCard
-            label="Xavf ostidagi summa"
+            label={t("abandonedCarts.summary.atRisk")}
             value={formatPrice(data.summary.atRisk, data.summary.currency)}
             accent="rose"
           />
           <SummaryCard
-            label="Eslatma yuborilgan"
+            label={t("abandonedCarts.summary.reminded")}
             value={`${data.summary.remindedCount} / ${data.summary.total}`}
             accent="emerald"
           />

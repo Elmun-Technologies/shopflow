@@ -20,6 +20,7 @@ import { leadsApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency, formatDateTime, formatRelative } from "../utils/format";
 import type { LeadStatus, InteractionType, Interaction } from "../types/api";
+import { useT } from "../i18n";
 
 interface Props {
   leadId: string;
@@ -27,14 +28,15 @@ interface Props {
   onUpdated?: () => void;
 }
 
-const statusConfig: Record<LeadStatus, { label: string; color: string; bg: string }> = {
-  NEW: { label: "Yangi", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-  CONTACTED: { label: "Bog'lanildi", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-  QUALIFIED: { label: "Saralangan", color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
-  PROPOSAL: { label: "Taklif", color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
-  NEGOTIATION: { label: "Muzokara", color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-  WON: { label: "Yutuq", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  LOST: { label: "Yoqotildi", color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+// Faqat ranglar — labellar t() orqali (leads.status.{X})
+const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
+  NEW: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+  CONTACTED: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  QUALIFIED: { color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+  PROPOSAL: { color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+  NEGOTIATION: { color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
+  WON: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+  LOST: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
 };
 
 const allStatuses: LeadStatus[] = [
@@ -60,6 +62,7 @@ const interactionIcons: Record<InteractionType, React.ElementType> = {
 
 export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const { data: lead, loading, error, refetch } = useAsync(() => leadsApi.get(leadId), [leadId]);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -132,9 +135,9 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                     <div className="relative">
                       <button
                         onClick={() => setShowStatusMenu(!showStatusMenu)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusConfig[lead.status].bg} ${statusConfig[lead.status].color}`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyle[lead.status].bg} ${statusStyle[lead.status].color}`}
                       >
-                        {statusConfig[lead.status].label}
+                        {t(`leads.status.${lead.status}`)}
                       </button>
                       {showStatusMenu && (
                         <div className="absolute top-full mt-1 left-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-10 min-w-[150px]">
@@ -142,9 +145,9 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                             <button
                               key={s}
                               onClick={() => handleStatusChange(s)}
-                              className={`w-full px-3 py-1.5 text-left text-xs hover:bg-slate-700 ${statusConfig[s].color}`}
+                              className={`w-full px-3 py-1.5 text-left text-xs hover:bg-slate-700 ${statusStyle[s].color}`}
                             >
-                              {statusConfig[s].label}
+                              {t(`leads.status.${s}`)}
                             </button>
                           ))}
                         </div>
@@ -193,7 +196,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
 
                 {/* Interactions */}
                 <div>
-                  <h3 className="text-sm font-semibold text-white mb-3">Aloqalar tarixi</h3>
+                  <h3 className="text-sm font-semibold text-white mb-3">{t("leadDetail.interactions")}</h3>
                   {lead.interactions.length === 0 ? (
                     <p className="text-xs text-slate-500">Aloqa yo'q</p>
                   ) : (
@@ -207,7 +210,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
 
                 {/* Add note */}
                 <div>
-                  <h3 className="text-sm font-semibold text-white mb-2">Eslatma qo'shish</h3>
+                  <h3 className="text-sm font-semibold text-white mb-2">{t("leadDetail.addNote")}</h3>
                   <textarea
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}

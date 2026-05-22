@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
 import type { ChartTooltipProps } from "../utils/chart";
+import { useT } from "../i18n";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
 
@@ -32,6 +33,7 @@ const Tip = ({ active, payload, label }: ChartTooltipProps) => {
 };
 
 export default function TrafficSources() {
+  const { t } = useT();
   const { data, loading } = useAsync(() => dashboardApi.trafficSources(), []);
   const sources = data ?? [];
 
@@ -42,7 +44,7 @@ export default function TrafficSources() {
       transition={{ duration: 0.4, delay: 0.9 }}
       className="bg-slate-900 border border-slate-800 rounded-xl p-5"
     >
-      <h3 className="text-base font-semibold text-white mb-1">Kanal manbalari</h3>
+      <h3 className="text-base font-semibold text-white mb-1">{t("widget.trafficSources")}</h3>
       <p className="text-sm text-slate-500 mb-4">Buyurtmalar qaysi kanaldan kelmoqda</p>
 
       <div className="h-52">

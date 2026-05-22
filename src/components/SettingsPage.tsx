@@ -7,7 +7,7 @@ import {
   Trash2, RefreshCw, Clock, Monitor, Smartphone, ChevronRight, Loader2,
 } from "lucide-react";
 import {
-  settingsTabOrder, settingsTabLabels,
+  settingsTabOrder,
   initialProfile, initialStore, initialNotifications,
   initialIntegrations, loginHistory, initialSecurity, initialApiKeys,
 } from "../data/settingsData";
@@ -19,15 +19,17 @@ import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
 import { api } from "../api/client";
 import { useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
+import { useT } from "../i18n";
 
 const integrationIconMap: Record<string, React.ElementType> = {
   Send, CreditCard, Wallet, BarChart3, Instagram: Globe, ShoppingBag, Calculator,
 };
 
-const statusConfig = {
-  connected: { icon: CheckCircle2, label: "Ulangan", color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  disconnected: { icon: XCircle, label: "Ulanmagan", color: "text-slate-500", bg: "bg-slate-500/10" },
-  error: { icon: AlertCircle, label: "Xato", color: "text-red-400", bg: "bg-red-400/10" },
+// Faqat icon va stillar — labellar t() orqali
+const statusStyle = {
+  connected: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-400/10" },
+  disconnected: { icon: XCircle, color: "text-slate-500", bg: "bg-slate-500/10" },
+  error: { icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10" },
 };
 
 const deviceIcon: Record<string, React.ElementType> = {
@@ -56,6 +58,7 @@ export default function SettingsPage() {
   const authCtx = useContext(AuthContext);
   const user = authCtx?.user ?? null;
   const tenant = authCtx?.tenant ?? null;
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [profile, setProfile] = useState<ProfileSettings>({ ...initialProfile });
   const [store, setStore] = useState<StoreSettings>({ ...initialStore });
@@ -177,21 +180,21 @@ export default function SettingsPage() {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <InputField label="Ism" value={profile.firstName} onChange={(v) => setProfile({ ...profile, firstName: v })} />
-        <InputField label="Familiya" value={profile.lastName} onChange={(v) => setProfile({ ...profile, lastName: v })} />
-        <InputField label="Email" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} type="email" />
-        <InputField label="Telefon" value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: v })} />
-        <InputField label="Vaqt mintaqasi" value={profile.timezone} onChange={(v) => setProfile({ ...profile, timezone: v })} />
-        <InputField label="Til" value={profile.language} onChange={(v) => setProfile({ ...profile, language: v })} />
+        <InputField label={t("settings.profile.firstName")} value={profile.firstName} onChange={(v) => setProfile({ ...profile, firstName: v })} />
+        <InputField label={t("settings.profile.lastName")} value={profile.lastName} onChange={(v) => setProfile({ ...profile, lastName: v })} />
+        <InputField label={t("settings.profile.email")} value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} type="email" />
+        <InputField label={t("settings.profile.phone")} value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: v })} />
+        <InputField label={t("settings.profile.timezone")} value={profile.timezone} onChange={(v) => setProfile({ ...profile, timezone: v })} />
+        <InputField label={t("settings.profile.language")} value={profile.language} onChange={(v) => setProfile({ ...profile, language: v })} />
       </div>
 
       {/* Parolni o'zgartirish — Saqlash bosilganda yangi parol bo'lsa serverga jo'natiladi */}
       <div className="border-t border-slate-800 pt-6">
-        <h4 className="text-sm font-semibold text-white mb-1">Parolni o'zgartirish</h4>
-        <p className="text-xs text-slate-500 mb-3">Ixtiyoriy — bo'sh qoldiring agar o'zgartirmaslikni xohlasangiz</p>
+        <h4 className="text-sm font-semibold text-white mb-1">{t("settings.profile.changePassword")}</h4>
+        <p className="text-xs text-slate-500 mb-3">{t("settings.profile.changePasswordHint")}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1.5 block">Joriy parol</span>
+            <span className="text-xs text-slate-500 mb-1.5 block">{t("settings.profile.currentPassword")}</span>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -205,14 +208,14 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
-                aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
+                aria-label={showPassword ? t("settings.profile.hide") : t("settings.profile.show")}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1.5 block">Yangi parol (kamida 8 belgi)</span>
+            <span className="text-xs text-slate-500 mb-1.5 block">{t("settings.profile.newPassword")}</span>
             <input
               type={showPassword ? "text" : "password"}
               value={newPassword}
@@ -240,32 +243,32 @@ export default function SettingsPage() {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <InputField label="Do'kon nomi" value={store.name} onChange={(v) => setStore({ ...store, name: v })} />
-        <InputField label="Shahar" value={store.city} onChange={(v) => setStore({ ...store, city: v })} />
+        <InputField label={t("settings.store.name")} value={store.name} onChange={(v) => setStore({ ...store, name: v })} />
+        <InputField label={t("settings.store.city")} value={store.city} onChange={(v) => setStore({ ...store, city: v })} />
         <div className="md:col-span-2">
-          <InputField label="Tavsif" value={store.description} onChange={(v) => setStore({ ...store, description: v })} />
+          <InputField label={t("settings.store.description")} value={store.description} onChange={(v) => setStore({ ...store, description: v })} />
         </div>
         <div className="md:col-span-2">
-          <InputField label="Manzil" value={store.address} onChange={(v) => setStore({ ...store, address: v })} />
+          <InputField label={t("settings.store.address")} value={store.address} onChange={(v) => setStore({ ...store, address: v })} />
         </div>
-        <InputField label="Ish vaqti" value={store.workingHours} onChange={(v) => setStore({ ...store, workingHours: v })} />
-        <InputField label="Valyuta" value={store.currency} onChange={(v) => setStore({ ...store, currency: v })} />
+        <InputField label={t("settings.store.workingHours")} value={store.workingHours} onChange={(v) => setStore({ ...store, workingHours: v })} />
+        <InputField label={t("settings.store.currency")} value={store.currency} onChange={(v) => setStore({ ...store, currency: v })} />
       </div>
       <div className="border-t border-slate-800 pt-4">
-        <h4 className="text-sm font-semibold text-white mb-3">Yetkazib berish</h4>
+        <h4 className="text-sm font-semibold text-white mb-3">{t("settings.store.delivery")}</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">Min. buyurtma (so'm)</label>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.minOrder")}</label>
             <input type="number" value={store.minOrderAmount} onChange={(e) => setStore({ ...store, minOrderAmount: +e.target.value })}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">Yetkazish narxi (so'm)</label>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.deliveryFee")}</label>
             <input type="number" value={store.deliveryFee} onChange={(e) => setStore({ ...store, deliveryFee: +e.target.value })}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">Bepul yetkazish (dan)</label>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.freeDeliveryFrom")}</label>
             <input type="number" value={store.freeDeliveryFrom} onChange={(e) => setStore({ ...store, freeDeliveryFrom: +e.target.value })}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
           </div>
@@ -277,10 +280,10 @@ export default function SettingsPage() {
   const renderNotifications = () => (
     <div className="space-y-1">
       <div className="grid grid-cols-[1fr,60px,60px,60px] gap-2 pb-3 border-b border-slate-800 mb-2">
-        <span className="text-xs text-slate-500 font-medium">Tur</span>
-        <span className="text-xs text-slate-500 font-medium text-center">Email</span>
-        <span className="text-xs text-slate-500 font-medium text-center">Push</span>
-        <span className="text-xs text-slate-500 font-medium text-center">SMS</span>
+        <span className="text-xs text-slate-500 font-medium">{t("settings.notify.type")}</span>
+        <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.email")}</span>
+        <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.push")}</span>
+        <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.sms")}</span>
       </div>
       {notifications.map((n) => (
         <div key={n.id} className="grid grid-cols-[1fr,60px,60px,60px] gap-2 py-3 border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors rounded-lg px-2">
@@ -309,8 +312,12 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {integrations.map((int) => {
         const Icon = integrationIconMap[int.icon] || Puzzle;
-        const st = statusConfig[int.status];
+        const st = statusStyle[int.status];
         const StIcon = st.icon;
+        const statusLabel = t(`settings.int.status.${int.status}`);
+        const actionLabel = int.status === "connected" ? t("settings.int.action.setup")
+          : int.status === "error" ? t("settings.int.action.fix")
+          : t("settings.int.action.connect");
         return (
           <div key={int.id} className="bg-slate-800/50 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all">
             <div className="flex items-start justify-between mb-3">
@@ -327,7 +334,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-1.5 text-xs ${st.color} ${st.bg} px-2.5 py-1 rounded-full`}>
                 <StIcon className="w-3 h-3" />
-                {st.label}
+                {statusLabel}
               </div>
               {int.connectedAt && (
                 <span className="text-[10px] text-slate-600">{int.connectedAt}</span>
@@ -337,7 +344,7 @@ export default function SettingsPage() {
                 int.status === "error" ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20" :
                 "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
               }`}>
-                {int.status === "connected" ? "Sozlash" : int.status === "error" ? "Tuzatish" : "Ulash"}
+                {actionLabel}
               </button>
             </div>
           </div>
@@ -353,8 +360,8 @@ export default function SettingsPage() {
       <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-sm text-white font-semibold">Ikki bosqichli tasdiqlash (2FA)</h4>
-            <p className="text-xs text-slate-500 mt-1">Qo'shimcha xavfsizlik darajasi</p>
+            <h4 className="text-sm text-white font-semibold">{t("settings.sec.2fa.title")}</h4>
+            <p className="text-xs text-slate-500 mt-1">{t("settings.sec.2fa.hint")}</p>
           </div>
           <button
             onClick={() => setSecurity({ ...security, twoFactorEnabled: !security.twoFactorEnabled })}
@@ -365,7 +372,7 @@ export default function SettingsPage() {
         </div>
         {security.twoFactorEnabled && (
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-slate-400">Usul:</span>
+            <span className="text-xs text-slate-400">{t("settings.sec.2fa.method")}</span>
             {(["sms", "app"] as const).map((m) => (
               <button
                 key={m}
@@ -383,11 +390,11 @@ export default function SettingsPage() {
 
       {/* Password */}
       <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
-        <h4 className="text-sm text-white font-semibold mb-1">Parol</h4>
-        <p className="text-xs text-slate-500 mb-4">Oxirgi o'zgartirilgan: {security.lastPasswordChange}</p>
+        <h4 className="text-sm text-white font-semibold mb-1">{t("settings.sec.password")}</h4>
+        <p className="text-xs text-slate-500 mb-4">{t("settings.sec.lastChanged", { date: security.lastPasswordChange })}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="relative">
-            <label className="text-xs text-slate-500 mb-1.5 block">Yangi parol</label>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.sec.newPassword")}</label>
             <input type={showPassword ? "text" : "password"} placeholder="••••••••"
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 pr-10" />
             <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-500 hover:text-white">
@@ -395,7 +402,7 @@ export default function SettingsPage() {
             </button>
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">Tasdiqlash</label>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.sec.confirmPassword")}</label>
             <input type="password" placeholder="••••••••"
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
           </div>
@@ -404,8 +411,8 @@ export default function SettingsPage() {
 
       {/* Session */}
       <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
-        <h4 className="text-sm text-white font-semibold mb-1">Sessiya muddati</h4>
-        <p className="text-xs text-slate-500 mb-3">Faoliyatsiz bo'lganda avtomatik chiqish</p>
+        <h4 className="text-sm text-white font-semibold mb-1">{t("settings.sec.session.title")}</h4>
+        <p className="text-xs text-slate-500 mb-3">{t("settings.sec.session.hint")}</p>
         <div className="flex items-center gap-2">
           {[15, 30, 60, 120].map((m) => (
             <button
@@ -423,7 +430,7 @@ export default function SettingsPage() {
 
       {/* Login History */}
       <div>
-        <h4 className="text-sm text-white font-semibold mb-3">Kirish tarixi</h4>
+        <h4 className="text-sm text-white font-semibold mb-3">{t("settings.sec.loginHistory")}</h4>
         <div className="space-y-2">
           {loginHistory.map((l) => {
             const browser = l.device.split(" — ")[0];
@@ -439,7 +446,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="text-right">
                   <span className={`text-xs font-medium ${l.status === "success" ? "text-emerald-400" : "text-red-400"}`}>
-                    {l.status === "success" ? "Muvaffaqiyatli" : "Rad etildi"}
+                    {l.status === "success" ? t("settings.sec.loginSuccess") : t("settings.sec.loginFailed")}
                   </span>
                   <p className="text-[10px] text-slate-600 mt-0.5">{l.date}</p>
                 </div>
@@ -455,12 +462,12 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h4 className="text-sm text-white font-semibold">API kalitlari</h4>
-          <p className="text-xs text-slate-500 mt-0.5">Tashqi xizmatlar uchun API kalitlar</p>
+          <h4 className="text-sm text-white font-semibold">{t("settings.api.title")}</h4>
+          <p className="text-xs text-slate-500 mt-0.5">{t("settings.api.hint")}</p>
         </div>
         <button className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-colors">
           <Plus className="w-3.5 h-3.5" />
-          Yangi kalit
+          {t("settings.api.newKey")}
         </button>
       </div>
       {apiKeys.map((ak) => (
@@ -469,13 +476,13 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2">
               <Key className="w-4 h-4 text-slate-500" />
               <span className="text-sm text-white font-semibold">{ak.name}</span>
-              {!ak.active && <span className="text-[10px] text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full">O'chirilgan</span>}
+              {!ak.active && <span className="text-[10px] text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full">{t("settings.api.disabled")}</span>}
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => copyKey(ak.key, ak.id)}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"
-                title="Nusxa olish"
+                title={t("settings.api.copy")}
               >
                 {copiedKey === ak.id ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
@@ -533,8 +540,8 @@ export default function SettingsPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Sozlamalar</h1>
-          <p className="text-sm text-slate-500 mt-1">Profilingiz va do'kon sozlamalari</p>
+          <h1 className="text-2xl font-bold text-white">{t("settings.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("settings.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           {savedMsg && (
@@ -563,7 +570,7 @@ export default function SettingsPage() {
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-emerald-500/20"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Saqlash
+            {t("settings.save")}
           </button>
         </div>
       </motion.div>
@@ -591,7 +598,7 @@ export default function SettingsPage() {
                   }`}
                 >
                   <Icon className={`w-4 h-4 ${isActive ? "text-emerald-400" : ""}`} />
-                  <span className="text-sm font-medium">{settingsTabLabels[tab]}</span>
+                  <span className="text-sm font-medium">{t(`settings.tab.${tab}`)}</span>
                   {isActive && (
                     <ChevronRight className="w-3.5 h-3.5 ml-auto" />
                   )}
@@ -613,7 +620,7 @@ export default function SettingsPage() {
               className="bg-slate-900 border border-slate-800 rounded-xl p-6"
             >
               <div className="mb-5 pb-4 border-b border-slate-800">
-                <h2 className="text-lg font-bold text-white">{settingsTabLabels[activeTab]}</h2>
+                <h2 className="text-lg font-bold text-white">{t(`settings.tab.${activeTab}`)}</h2>
               </div>
               {tabRenderers[activeTab]()}
             </motion.div>

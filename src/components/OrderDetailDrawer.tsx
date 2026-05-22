@@ -10,6 +10,7 @@ import {
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
+import { useT } from "../i18n";
 
 interface TeamMember { id: string; name: string; role: string; active: boolean }
 interface OrderNote { id: string; content: string; authorId: string | null; authorName: string | null; createdAt: string }
@@ -53,12 +54,13 @@ interface OrderDetailResponse {
   }>;
 }
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string }> = {
-  PENDING: { label: "Yangi", color: "text-amber-300", bg: "bg-amber-500/15 border-amber-500/30" },
-  PROCESSING: { label: "Tayyorlanmoqda", color: "text-blue-300", bg: "bg-blue-500/15 border-blue-500/30" },
-  COMPLETED: { label: "Yetkazildi", color: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/30" },
-  CANCELLED: { label: "Bekor qilindi", color: "text-rose-300", bg: "bg-rose-500/15 border-rose-500/30" },
-  REFUNDED: { label: "Qaytarildi", color: "text-slate-300", bg: "bg-slate-700 border-slate-600" },
+// Faqat ranglar — labellar t() orqali
+const STATUS_STYLE: Record<OrderStatus, { color: string; bg: string }> = {
+  PENDING: { color: "text-amber-300", bg: "bg-amber-500/15 border-amber-500/30" },
+  PROCESSING: { color: "text-blue-300", bg: "bg-blue-500/15 border-blue-500/30" },
+  COMPLETED: { color: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/30" },
+  CANCELLED: { color: "text-rose-300", bg: "bg-rose-500/15 border-rose-500/30" },
+  REFUNDED: { color: "text-slate-300", bg: "bg-slate-700 border-slate-600" },
 };
 
 function formatMoney(n: string | number, currency: string): string {
@@ -78,6 +80,7 @@ export interface OrderDetailDrawerProps {
 }
 
 export default function OrderDetailDrawer({ orderId, onClose, onChanged }: OrderDetailDrawerProps) {
+  const { t } = useT();
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -152,7 +155,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         body: { status },
       });
       setOrder({ ...order, status: updated.status });
-      toast.success(`${STATUS_CONFIG[status].label} · 📨 Mijoz Telegram'da xabardor qilindi`);
+      toast.success(`${t(`order.adminStatus.${status}`)} · 📨 ${t("orders.notified")}`);
       onChanged();
       await refreshTimeline();
     } catch (err) {
@@ -309,11 +312,11 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                 <button
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
                   disabled={updating}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border ${STATUS_CONFIG[order.status].bg} ${STATUS_CONFIG[order.status].color} hover:brightness-110 transition-all`}
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border ${STATUS_STYLE[order.status].bg} ${STATUS_STYLE[order.status].color} hover:brightness-110 transition-all`}
                 >
                   <span className="text-sm font-semibold">
                     {updating && <Loader2 className="w-4 h-4 animate-spin inline mr-2" />}
-                    Holat: {STATUS_CONFIG[order.status].label}
+                    {t("orders.col.status")}: {t(`order.adminStatus.${order.status}`)}
                   </span>
                   <ChevronDown className="w-4 h-4 opacity-70" />
                 </button>
@@ -321,8 +324,8 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setShowStatusMenu(false)} />
                     <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 overflow-hidden">
-                      {(Object.keys(STATUS_CONFIG) as OrderStatus[]).map((s) => {
-                        const c = STATUS_CONFIG[s];
+                      {(Object.keys(STATUS_STYLE) as OrderStatus[]).map((s) => {
+                        const c = STATUS_STYLE[s];
                         const isCurrent = s === order.status;
                         return (
                           <button
@@ -333,7 +336,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                               isCurrent ? "opacity-60 cursor-default" : ""
                             }`}
                           >
-                            <span className={c.color}>{c.label}</span>
+                            <span className={c.color}>{t(`order.adminStatus.${s}`)}</span>
                             {isCurrent && <span className="text-emerald-400 text-xs">✓</span>}
                           </button>
                         );
@@ -344,7 +347,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </div>
 
               {/* Customer */}
-              <Section title="Mijoz" icon={UserIcon}>
+              <Section title={t("orderDetail.customer")} icon={UserIcon}>
                 {order.customer ? (
                   <div className="space-y-1.5 text-sm">
                     <div className="text-white font-medium">{order.customer.name}</div>
@@ -368,12 +371,12 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">Mijoz ma'lumoti yo'q</p>
+                  <p className="text-xs text-slate-500">{t("orderDetail.noCustomer")}</p>
                 )}
               </Section>
 
               {/* Items */}
-              <Section title={`Mahsulotlar (${itemCount})`} icon={PackageIcon}>
+              <Section title={t("orderDetail.products", { n: itemCount })} icon={PackageIcon}>
                 <div className="divide-y divide-slate-800">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -402,7 +405,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </Section>
 
               {/* Totals */}
-              <Section title="Hisob" icon={Calendar}>
+              <Section title={t("orderDetail.summary")} icon={Calendar}>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between text-slate-400">
                     <span>Mahsulotlar yig'indisi</span>
@@ -416,7 +419,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </Section>
 
               {/* Channel & dates */}
-              <Section title="Manba" icon={Calendar}>
+              <Section title={t("orderDetail.source")} icon={Calendar}>
                 <div className="space-y-1 text-sm">
                   {order.channel && (
                     <div className="flex justify-between text-slate-400">
@@ -437,7 +440,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
 
               {/* Yetkazib berish manzili (GPS koordinatalari mavjud bo'lsa) */}
               {(order.shippingAddress || order.shippingLat) && (
-                <Section title="Yetkazib berish manzili" icon={MapPin}>
+                <Section title={t("orderDetail.address")} icon={MapPin}>
                   {order.shippingAddress && (
                     <p className="text-sm text-white mb-1.5">{order.shippingAddress}</p>
                   )}
@@ -476,7 +479,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               )}
 
               {/* Mas'ul (assignee) */}
-              <Section title="Mas'ul" icon={UserIcon}>
+              <Section title={t("orderDetail.assignee")} icon={UserIcon}>
                 <div className="relative">
                   <button
                     onClick={() => setShowAssigneeMenu(!showAssigneeMenu)}
@@ -518,7 +521,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </Section>
 
               {/* Ichki izohlar / kommentariya thread */}
-              <Section title={`Ichki izohlar (${orderNotes.length})`} icon={MessageSquare}>
+              <Section title={t("orderDetail.notes", { n: orderNotes.length })} icon={MessageSquare}>
                 <div className="space-y-2 mb-2">
                   <textarea
                     value={newNote}
@@ -562,7 +565,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </Section>
 
               {/* Tarix / audit timeline */}
-              <Section title="Tarix" icon={Clock}>
+              <Section title={t("orderDetail.history")} icon={Clock}>
                 {auditLog.length === 0 ? (
                   <p className="text-xs text-slate-500">Hozircha yozuv yo'q</p>
                 ) : (
@@ -583,12 +586,12 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </Section>
 
               {/* Eski erkin notes maydoni (mijoz uchun chiqishi mumkin bo'lgan) */}
-              <Section title="Buyurtma izohi" icon={MessageSquare}>
+              <Section title={t("orderDetail.customerNote")} icon={MessageSquare}>
                 <textarea
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}
                   rows={2}
-                  placeholder="Mijoz buyurtma vaqtida yozgan izoh..."
+                  placeholder={t("orderDetail.customerNotePlaceholder")}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
                 />
                 {notesDraft !== (order.notes ?? "") && (

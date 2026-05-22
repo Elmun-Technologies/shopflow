@@ -7,18 +7,21 @@ import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Order, OrderStatus } from "../types/api";
 import { useAppToast } from "./ui/Toast";
+import { useT } from "../i18n";
 import OrderDetailDrawer from "./OrderDetailDrawer";
 
-const statusConfig: Record<OrderStatus, { label: string; color: string; bg: string }> = {
-  PENDING: { label: "Kutilmoqda", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-  PROCESSING: { label: "Jarayonda", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-  COMPLETED: { label: "Bajarildi", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  CANCELLED: { label: "Bekor qilindi", color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
-  REFUNDED: { label: "Qaytarildi", color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20" },
+// Faqat rangli stillar — labellar t() orqali olinadi
+const statusStyle: Record<OrderStatus, { color: string; bg: string }> = {
+  PENDING: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+  PROCESSING: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+  COMPLETED: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+  CANCELLED: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+  REFUNDED: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20" },
 };
 
 export default function OrdersPage() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
@@ -46,19 +49,19 @@ export default function OrdersPage() {
   const total = data?.total ?? 0;
 
   const tabs: { key: OrderStatus | "all"; label: string }[] = [
-    { key: "all", label: "Hammasi" },
-    { key: "PENDING", label: "Kutilmoqda" },
-    { key: "PROCESSING", label: "Jarayonda" },
-    { key: "COMPLETED", label: "Bajarildi" },
-    { key: "CANCELLED", label: "Bekor" },
-    { key: "REFUNDED", label: "Qaytarildi" },
+    { key: "all", label: t("orders.tab.all") },
+    { key: "PENDING", label: t("order.adminStatus.PENDING") },
+    { key: "PROCESSING", label: t("order.adminStatus.PROCESSING") },
+    { key: "COMPLETED", label: t("order.adminStatus.COMPLETED") },
+    { key: "CANCELLED", label: t("orders.tab.cancelled") },
+    { key: "REFUNDED", label: t("order.adminStatus.REFUNDED") },
   ];
 
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Buyurtmalar</h1>
-        <p className="text-sm text-slate-500 mt-1">Barcha kanallardan kelgan zakazlar</p>
+        <h1 className="text-2xl font-bold text-white">{t("orders.title")}</h1>
+        <p className="text-sm text-slate-500 mt-1">{t("orders.subtitle")}</p>
       </motion.div>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
@@ -71,7 +74,7 @@ export default function OrdersPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Buyurtma kodi, mijoz..."
+            placeholder={t("orders.searchPlaceholder")}
             className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
           />
         </label>
@@ -80,26 +83,26 @@ export default function OrdersPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all"
         >
           <Plus className="w-4 h-4" />
-          Yangi buyurtma
+          {t("orders.newOrder")}
         </button>
       </div>
 
       <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
-        {tabs.map((t) => (
+        {tabs.map((tab) => (
           <button
-            key={t.key}
+            key={tab.key}
             type="button"
             onClick={() => {
-              setStatusFilter(t.key);
+              setStatusFilter(tab.key);
               setPage(1);
             }}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
-              statusFilter === t.key
+              statusFilter === tab.key
                 ? "bg-emerald-500 text-white"
                 : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
             }`}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -114,17 +117,17 @@ export default function OrdersPage() {
             <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
             <p className="text-sm text-slate-300">{error.message}</p>
             <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300">
-              Qaytadan urinish
+              {t("orders.retry")}
             </button>
           </div>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <Inbox className="w-12 h-12 text-slate-700 mb-3" />
             <p className="text-base font-semibold text-white">
-              {search ? "Buyurtma topilmadi" : "Hozircha buyurtmalar yo'q"}
+              {search ? t("orders.empty.search") : t("orders.empty.none")}
             </p>
             <p className="text-sm text-slate-500 mt-1 max-w-md">
-              Kanallardan kelgan zakazlar va qo'lda kiritilgan buyurtmalar shu yerda paydo bo'ladi.
+              {t("orders.empty.hint")}
             </p>
           </div>
         ) : (
@@ -142,14 +145,14 @@ export default function OrdersPage() {
                 disabled={page === 1}
                 className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
               >
-                Oldingi
+                {t("orders.prev")}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * pageSize >= total}
                 className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
               >
-                Keyingi
+                {t("orders.next")}
               </button>
             </div>
           </div>
@@ -173,16 +176,17 @@ function OrderTable({
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const toast = useAppToast();
+  const { t } = useT();
 
   const handleChangeStatus = async (orderId: string, status: OrderStatus, code: string) => {
     setOpenMenuId(null);
     setUpdatingId(orderId);
     try {
       await ordersApi.update(orderId, { status });
-      toast.success(`#${code} — ${statusConfig[status].label} · 📨 Mijoz xabardor qilindi`);
+      toast.success(`#${code} — ${t(`order.adminStatus.${status}`)} · 📨 ${t("orders.notified")}`);
       onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Status yangilanmadi");
+      toast.error(err instanceof Error ? err.message : t("orders.updateFailed"));
     } finally {
       setUpdatingId(null);
     }
@@ -193,22 +197,22 @@ function OrderTable({
       <table className="w-full">
         <thead>
           <tr className="border-b border-slate-800">
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Kod</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Mijoz</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Kanal</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Summa</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Status</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">Sana</th>
+            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.code")}</th>
+            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.customer")}</th>
+            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.channel")}</th>
+            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.amount")}</th>
+            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.status")}</th>
+            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.date")}</th>
             <th className="py-3 px-4"></th>
           </tr>
         </thead>
         <tbody>
           {orders.map((order) => {
-            const cfg = statusConfig[order.status];
+            const style = statusStyle[order.status];
             // PENDING — "Qabul qilish" (PROCESSING); PROCESSING — "Yetkazildi" (COMPLETED)
             const quickAction: { next: OrderStatus; label: string } | null =
-              order.status === "PENDING" ? { next: "PROCESSING", label: "Qabul qilish" }
-              : order.status === "PROCESSING" ? { next: "COMPLETED", label: "Yetkazildi" }
+              order.status === "PENDING" ? { next: "PROCESSING", label: t("orders.action.accept") }
+              : order.status === "PROCESSING" ? { next: "COMPLETED", label: t("orders.action.delivered") }
               : null;
             return (
               <tr
@@ -237,18 +241,18 @@ function OrderTable({
                   <button
                     onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
                     disabled={updatingId === order.id}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.color} hover:brightness-110 transition-all disabled:opacity-50`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${style.bg} ${style.color} hover:brightness-110 transition-all disabled:opacity-50`}
                   >
                     {updatingId === order.id && <Loader2 className="w-3 h-3 animate-spin" />}
-                    {cfg.label}
+                    {t(`order.adminStatus.${order.status}`)}
                     <ChevronDown className="w-3 h-3 opacity-60" />
                   </button>
                   {openMenuId === order.id && (
                     <>
                       <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
                       <div className="absolute top-full left-4 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[160px]">
-                        {(Object.keys(statusConfig) as OrderStatus[]).map((s) => {
-                          const sc = statusConfig[s];
+                        {(Object.keys(statusStyle) as OrderStatus[]).map((s) => {
+                          const sc = statusStyle[s];
                           const isCurrent = s === order.status;
                           return (
                             <button
@@ -259,7 +263,7 @@ function OrderTable({
                                 isCurrent ? "opacity-60 cursor-default" : ""
                               }`}
                             >
-                              <span className={sc.color}>{sc.label}</span>
+                              <span className={sc.color}>{t(`order.adminStatus.${s}`)}</span>
                               {isCurrent && <span className="text-emerald-400">✓</span>}
                             </button>
                           );
@@ -278,7 +282,7 @@ function OrderTable({
                         onClick={() => handleChangeStatus(order.id, quickAction.next, order.code)}
                         disabled={updatingId === order.id}
                         className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
-                        title={`${quickAction.label} → mijozga Telegram xabar yuboriladi`}
+                        title={t("orders.action.hint", { action: quickAction.label })}
                       >
                         {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                         {quickAction.label}
@@ -287,7 +291,7 @@ function OrderTable({
                     <button
                       onClick={() => onOpen(order.id)}
                       className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
-                      aria-label="Batafsil ko'rish"
+                      aria-label={t("orders.viewDetails")}
                     >
                       <Eye className="w-4 h-4" />
                     </button>

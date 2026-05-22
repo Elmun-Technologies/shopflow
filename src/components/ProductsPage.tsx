@@ -26,6 +26,7 @@ import { api } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import type { Product, Category } from "../types/api";
+import { useT } from "../i18n";
 
 // "50000" → "50,000". Bo'sh / noto'g'ri input → "".
 function formatGrouped(raw: string): string {
@@ -41,6 +42,7 @@ function unformatGrouped(formatted: string): string {
 
 export default function ProductsPage() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -74,7 +76,7 @@ export default function ProductsPage() {
   const cats = categories ?? [];
 
   const handleDelete = async (p: Product) => {
-    if (!confirm(`"${p.name}" mahsulotini o'chirish?`)) return;
+    if (!confirm(t("products.deleteConfirm", { name: p.name }))) return;
     await productsApi.delete(p.id);
     refetch();
   };
@@ -150,9 +152,9 @@ export default function ProductsPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Mahsulotlar</h1>
+          <h1 className="text-2xl font-bold text-white">{t("products.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {total > 0 ? `${total} ta mahsulot` : "Katalog va omborlar"}
+            {total > 0 ? t("products.count", { count: total }) : t("products.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -160,14 +162,14 @@ export default function ProductsPage() {
             onClick={() => setShowCategories(true)}
             className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white"
           >
-            Kategoriyalar ({cats.length})
+            {t("products.categories")} ({cats.length})
           </button>
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
           >
             <Plus className="w-4 h-4" />
-            Yangi mahsulot
+            {t("products.newProduct")}
           </button>
         </div>
       </motion.div>
@@ -182,7 +184,7 @@ export default function ProductsPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Mahsulot nomi yoki SKU..."
+            placeholder={t("products.searchPlaceholder")}
             className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
           />
         </label>
@@ -194,7 +196,7 @@ export default function ProductsPage() {
           }}
           className="px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500/50 min-w-[180px]"
         >
-          <option value="all">Barcha kategoriyalar</option>
+          <option value="all">{t("products.allCategories")}</option>
           {cats.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -215,18 +217,17 @@ export default function ProductsPage() {
             onClick={refetch}
             className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300"
           >
-            Qaytadan urinish
+            {t("orders.retry")}
           </button>
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
           <Package className="w-12 h-12 text-slate-700 mb-3" />
           <p className="text-base font-semibold text-white">
-            {search ? "Mahsulot topilmadi" : "Hozircha mahsulotlar yo'q"}
+            {search ? t("products.empty.search") : t("products.empty.none")}
           </p>
           <p className="text-sm text-slate-500 mt-1 max-w-md">
-            "Yangi mahsulot" tugmasi orqali birinchi mahsulotingizni qo'shing. Mahsulot Vitrina'da
-            ko'rinishi uchun "featured" bayrog'ini yoqing.
+            {t("products.empty.hint")}
           </p>
         </div>
       ) : (
@@ -235,23 +236,23 @@ export default function ProductsPage() {
         {selected.size > 0 && (
           <div className="sticky top-0 z-30 mb-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap backdrop-blur">
             <span className="text-sm font-medium text-emerald-300">
-              {selected.size} ta tanlangan
+              {t("products.bulk.selected", { count: selected.size })}
             </span>
             <button
               onClick={selectAllOnPage}
               className="text-xs text-emerald-400 hover:text-emerald-300 underline"
             >
-              {products.every((p) => selected.has(p.id)) ? "Sahifadagilarni olib tashlash" : "Sahifadagi hammasini tanlash"}
+              {products.every((p) => selected.has(p.id)) ? t("products.bulk.deselectPage") : t("products.bulk.selectAllPage")}
             </button>
             <div className="flex-1" />
             <button
               onClick={() => handleBulkFeatured(true)}
               disabled={bulkBusy}
               className="px-2.5 py-1 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
-              title="Vitrina'ga qo'yish"
+              title={t("products.bulk.showcaseTitle")}
             >
               <Star className="w-3 h-3" />
-              Vitrina
+              {t("products.bulk.showcase")}
             </button>
             <button
               onClick={() => handleBulkActive(true)}
@@ -259,7 +260,7 @@ export default function ProductsPage() {
               className="px-2.5 py-1 bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
             >
               <Eye className="w-3 h-3" />
-              Yoqish
+              {t("products.bulk.enable")}
             </button>
             <button
               onClick={() => handleBulkActive(false)}
@@ -267,7 +268,7 @@ export default function ProductsPage() {
               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
             >
               <EyeOff className="w-3 h-3" />
-              O'chirish
+              {t("products.bulk.disable")}
             </button>
             <div className="relative">
               <button
@@ -276,7 +277,7 @@ export default function ProductsPage() {
                 className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
               >
                 <Tag className="w-3 h-3" />
-                Kategoriya
+                {t("products.bulk.category")}
               </button>
               {bulkCategoryOpen && (
                 <>
@@ -286,7 +287,7 @@ export default function ProductsPage() {
                       onClick={() => handleBulkCategory(null)}
                       className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700"
                     >
-                      — Kategoriyasiz —
+                      {t("products.bulk.noCategory")}
                     </button>
                     {cats.map((c) => (
                       <button
@@ -307,12 +308,12 @@ export default function ProductsPage() {
               className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-              O'chirish
+              {t("products.bulk.delete")}
             </button>
             <button
               onClick={clearSelection}
               className="ml-1 p-1 text-emerald-400 hover:text-emerald-300"
-              aria-label="Tanlovni bekor qilish"
+              aria-label={t("products.bulk.clearSelection")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -345,14 +346,14 @@ export default function ProductsPage() {
               disabled={page === 1}
               className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
             >
-              Oldingi
+              {t("orders.prev")}
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page * pageSize >= total}
               className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
             >
-              Keyingi
+              {t("orders.next")}
             </button>
           </div>
         </div>
@@ -404,6 +405,7 @@ function ProductCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className={`bg-slate-900 border rounded-xl p-4 transition-colors group ${
       selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-slate-800 hover:border-slate-700"
@@ -422,28 +424,28 @@ function ProductCard({
               ? "bg-emerald-500 text-white"
               : "bg-slate-900/80 backdrop-blur text-slate-400 opacity-0 group-hover:opacity-100"
           }`}
-          aria-label={selected ? "Tanlovni olib tashlash" : "Tanlash"}
+          aria-label={selected ? t("products.card.deselect") : t("products.card.select")}
         >
           {selected ? <Check className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
         </button>
         {product.featured && (
           <span className="absolute top-2 left-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur text-amber-300 text-[10px] font-medium">
             <Star className="w-3 h-3 fill-amber-300" />
-            Vitrina
+            {t("products.card.featured")}
           </span>
         )}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
             className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-white"
-            title="Tahrirlash"
+            title={t("products.card.edit")}
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onDelete}
             className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-red-400"
-            title="O'chirish"
+            title={t("products.card.delete")}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -451,7 +453,7 @@ function ProductCard({
       </div>
       <p className="text-xs text-slate-500 uppercase tracking-wider">{product.sku}</p>
       <p className="text-sm font-semibold text-white truncate mt-0.5">{product.name}</p>
-      <p className="text-xs text-slate-500 mt-1">{product.category?.name ?? "Kategoriyasiz"}</p>
+      <p className="text-xs text-slate-500 mt-1">{product.category?.name ?? t("products.card.uncategorized")}</p>
       <div className="flex items-center justify-between mt-3">
         <div>
           <span className="text-base font-bold text-white">
@@ -468,7 +470,7 @@ function ProductCard({
             product.stock > 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
           }`}
         >
-          Ombor: {product.stock}
+          {t("products.card.stock", { n: product.stock })}
         </span>
       </div>
     </div>
@@ -488,6 +490,7 @@ function ProductFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useT();
   const [sku, setSku] = useState(product?.sku ?? "");
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -690,7 +693,7 @@ function ProductFormModal({
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
           <h2 className="text-lg font-bold text-white">
-            {product ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}
+            {product ? t("productForm.edit") : t("productForm.new")}
           </h2>
           <button
             type="button"
@@ -703,23 +706,23 @@ function ProductFormModal({
 
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Field label="SKU (kod) *">
+            <Field label={`${t("productForm.sku")} *`}>
               <input
                 type="text"
                 required
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
-                placeholder="IPH-15-PRO"
+                placeholder={t("productForm.skuPlaceholder")}
                 className="input"
               />
             </Field>
-            <Field label="Kategoriya">
+            <Field label={t("productForm.category")}>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 className="input"
               >
-                <option value="">— tanlanmagan —</option>
+                <option value="">{t("productForm.noCategory")}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -729,29 +732,29 @@ function ProductFormModal({
             </Field>
           </div>
 
-          <Field label="Mahsulot nomi *">
+          <Field label={`${t("productForm.name")} *`}>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="iPhone 15 Pro Max 256GB"
+              placeholder={t("productForm.namePlaceholder")}
               className="input"
             />
           </Field>
 
-          <Field label="Tavsif">
+          <Field label={t("productForm.description")}>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Mahsulot haqida qisqacha..."
+              placeholder={t("productForm.descriptionPlaceholder")}
               className="input resize-none"
             />
           </Field>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Field label={`Narx (${currency}) *`}>
+            <Field label={`${t("productForm.price", { currency })} *`}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -762,7 +765,7 @@ function ProductFormModal({
                 className="input"
               />
             </Field>
-            <Field label="Eski narx (chegirma uchun)">
+            <Field label={t("productForm.oldPrice")}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -772,7 +775,7 @@ function ProductFormModal({
                 className="input"
               />
             </Field>
-            <Field label="Omborda">
+            <Field label={t("productForm.stock")}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -957,7 +960,7 @@ function ProductFormModal({
                 className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
               />
               <span className="text-sm text-slate-300">
-                ⭐ Vitrina'da ko'rsatish (asosiy sahifada)
+                {t("productForm.featured")}
               </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -967,7 +970,7 @@ function ProductFormModal({
                 onChange={(e) => setActive(e.target.checked)}
                 className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
               />
-              <span className="text-sm text-slate-300">Sotuvda</span>
+              <span className="text-sm text-slate-300">{t("productForm.active")}</span>
             </label>
           </div>
 
@@ -1006,7 +1009,7 @@ function ProductFormModal({
             onClick={onClose}
             className="px-4 py-2 text-sm text-slate-400 hover:text-white"
           >
-            Bekor qilish
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -1014,7 +1017,7 @@ function ProductFormModal({
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {product ? "Saqlash" : "Yaratish"}
+            {product ? t("common.save") : t("productForm.create")}
           </button>
         </div>
 
@@ -1048,6 +1051,7 @@ function CategoriesModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useT();
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
@@ -1120,7 +1124,7 @@ function CategoriesModal({
         className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between p-5 border-b border-slate-800">
-          <h2 className="text-lg font-bold text-white">Kategoriyalar</h2>
+          <h2 className="text-lg font-bold text-white">{t("categoriesModal.title")}</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
@@ -1135,14 +1139,14 @@ function CategoriesModal({
             required
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Yangi kategoriya nomi"
+            placeholder={t("categoriesModal.newName")}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
           <input
             type="text"
             value={newSlug}
             onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-            placeholder="slug (ixtiyoriy) — telefonlar"
+            placeholder={t("categoriesModal.slug")}
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
           />
           <label

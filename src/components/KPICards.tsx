@@ -4,22 +4,24 @@ import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
+import { useT } from "../i18n";
 
 interface CardConfig {
-  title: string;
+  titleKey: string;
   icon: React.ElementType;
   format: (v: number, currency: string) => string;
 }
 
 const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "conversion" }> = [
-  { key: "revenue", title: "Daromad (oy)", icon: DollarSign, format: (v, c) => formatCurrency(v, c) },
-  { key: "orders", title: "Buyurtmalar (oy)", icon: ShoppingBag, format: (v) => v.toLocaleString() },
-  { key: "customers", title: "Mijozlar (jami)", icon: Users, format: (v) => v.toLocaleString() },
-  { key: "conversion", title: "Konversiya", icon: TrendingUp, format: (v) => `${v.toFixed(2)}%` },
+  { key: "revenue", titleKey: "kpi.revenue", icon: DollarSign, format: (v, c) => formatCurrency(v, c) },
+  { key: "orders", titleKey: "kpi.orders", icon: ShoppingBag, format: (v) => v.toLocaleString() },
+  { key: "customers", titleKey: "kpi.customers", icon: Users, format: (v) => v.toLocaleString() },
+  { key: "conversion", titleKey: "kpi.conversion", icon: TrendingUp, format: (v) => `${v.toFixed(2)}%` },
 ];
 
 export default function KPICards() {
   const { tenant } = useAuth();
+  const { t } = useT();
   const { data, loading } = useAsync(() => dashboardApi.kpis(), []);
   const currency = tenant?.currency ?? "UZS";
 
@@ -54,7 +56,7 @@ export default function KPICards() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-slate-500 font-medium">{cfg.title}</p>
+                <p className="text-sm text-slate-500 font-medium">{t(cfg.titleKey)}</p>
                 <p className="text-2xl font-bold text-white mt-1.5">{cfg.format(stat.value, currency)}</p>
                 <div className="flex items-center gap-1 mt-2">
                   {stat.change !== 0 ? (
@@ -68,10 +70,10 @@ export default function KPICards() {
                         {isPositive ? "+" : ""}
                         {stat.change.toFixed(1)}%
                       </span>
-                      <span className="text-xs text-slate-500">o'tgan oyga</span>
+                      <span className="text-xs text-slate-500">{t("kpi.vsLastMonth")}</span>
                     </>
                   ) : (
-                    <span className="text-xs text-slate-600">ma'lumot yo'q</span>
+                    <span className="text-xs text-slate-600">{t("kpi.noData")}</span>
                   )}
                 </div>
               </div>

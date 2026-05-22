@@ -2,6 +2,7 @@ import { Search, Bell, ChevronDown, Menu } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
+import { useT } from "../i18n";
 
 interface HeaderProps {
   onMobileMenuOpen?: () => void;
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
   const { user, tenant, logout } = useAuth();
+  const { t } = useT();
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const profileRef = useRef<HTMLDivElement | null>(null);
@@ -44,7 +46,7 @@ export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
       {onMobileMenuOpen && (
         <button
           onClick={onMobileMenuOpen}
-          aria-label="Menyu"
+          aria-label={t("header.menu")}
           className="md:hidden mr-2 p-2 -ml-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
         >
           <Menu className="w-5 h-5" />
@@ -52,14 +54,14 @@ export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
       )}
       <div className="flex items-center gap-4 flex-1 max-w-xl">
         <label className="relative flex-1">
-          <span className="sr-only">Qidirish</span>
+          <span className="sr-only">{t("header.search")}</span>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="search"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Buyurtma, mahsulot, mijoz..."
-            aria-label="Qidirish"
+            placeholder={t("header.searchPlaceholder")}
+            aria-label={t("header.search")}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
           />
         </label>
@@ -67,7 +69,7 @@ export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
 
       <div className="flex items-center gap-3">
         <button
-          aria-label="Bildirishnomalar"
+          aria-label={t("header.notifications")}
           className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
         >
           <Bell className="w-5 h-5" />
@@ -76,7 +78,7 @@ export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            aria-label="Profil menyusi"
+            aria-label={t("header.profileMenu")}
             aria-expanded={profileOpen}
             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-lg hover:bg-slate-800 transition-all"
           >
@@ -116,7 +118,7 @@ export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-slate-700/50 transition-colors"
                   >
-                    Chiqish
+                    {t("sidebar.logout")}
                   </button>
                 </div>
               </motion.div>

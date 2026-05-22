@@ -13,6 +13,7 @@ import { timeRangeLabels } from "../data/analyticsData";
 import type { AnalyticsTimeRange } from "../data/analyticsData";
 import type { ChartTooltipProps } from "../utils/chart";
 import { dashboardApi } from "../api/endpoints";
+import { useT } from "../i18n";
 
 interface KpiData {
   revenue: { value: number; change: number };
@@ -58,6 +59,7 @@ const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
 };
 
 export default function AnalyticsPage() {
+  const { t } = useT();
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>("month");
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<KpiData | null>(null);
@@ -164,8 +166,8 @@ export default function AnalyticsPage() {
         className="flex items-start justify-between mb-6"
       >
         <div>
-          <h1 className="text-2xl font-bold text-white">Analitika</h1>
-          <p className="text-sm text-slate-500 mt-1">Savdo va mijozlar statistikasi</p>
+          <h1 className="text-2xl font-bold text-white">{t("analytics.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("analytics.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Time Range Selector */}
@@ -186,7 +188,7 @@ export default function AnalyticsPage() {
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">
             <Download className="w-4 h-4" />
-            Export
+            {t("analytics.export")}
           </button>
         </div>
       </motion.div>
@@ -246,17 +248,17 @@ export default function AnalyticsPage() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-white">Daromad trendi</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Oylik daromad va buyurtmalar</p>
+              <h3 className="text-sm font-semibold text-white">{t("analytics.revenueTrend.title")}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t("analytics.revenueTrend.subtitle")}</p>
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-slate-400">Daromad</span>
+                <span className="text-slate-400">{t("analytics.legend.revenue")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-slate-400">Buyurtmalar</span>
+                <span className="text-slate-400">{t("analytics.legend.orders")}</span>
               </div>
             </div>
           </div>
