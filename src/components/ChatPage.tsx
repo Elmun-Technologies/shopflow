@@ -444,10 +444,10 @@ export default function ChatPage() {
         )}
       </AnimatePresence>
 
-      {/* Main Chat Area */}
+      {/* Main Chat Area — mobile single-pane (list ↔ active), desktop split */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Chat List Sidebar */}
-        <div className="w-80 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-xl flex flex-col overflow-hidden">
+        {/* Chat List Sidebar — hidden on mobile when a chat is active */}
+        <div className={`${activeChat ? "hidden md:flex" : "flex"} w-full md:w-80 md:flex-shrink-0 bg-slate-900 border border-slate-800 rounded-xl flex-col overflow-hidden`}>
           {/* Search & Filters */}
           <div className="p-3 border-b border-slate-800">
             <div className="relative mb-2">
@@ -574,8 +574,16 @@ export default function ChatPage() {
             <div className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               {/* Chat Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold">
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Mobile back — chat list'ga qaytish */}
+                  <button
+                    onClick={() => setActiveChat(null)}
+                    className="md:hidden p-1.5 -ml-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                    aria-label="Orqaga"
+                  >
+                    <CornerDownLeft className="w-4 h-4" />
+                  </button>
+                  <div className="w-9 h-9 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">
                     {activeChat.customerAvatar}
                   </div>
                   <div>
