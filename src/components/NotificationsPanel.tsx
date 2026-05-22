@@ -8,7 +8,8 @@ import { Bell, BellOff, ShoppingBag, Radio, ShoppingCart, ExternalLink, Loader2,
 import { ordersApi, leadsApi } from "../api/endpoints";
 import { formatRelative } from "../utils/format";
 import { useT } from "../i18n";
-import { playNewOrderSound, isNotifMuted, setNotifMuted, showBrowserNotification } from "../utils/notifSound";
+import { playSound, isNotifMuted, setNotifMuted, showBrowserNotification } from "../utils/notifSound";
+import { loadNotifPrefs } from "../utils/notifPrefs";
 
 const LS_KEY = "shopflow.lastSeenNotifications";
 // Polling chastotasi — yangi buyurtma uchun real-timega yaqinroq bo'lishi uchun
@@ -48,9 +49,10 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
   const [muted, setMuted] = useState<boolean>(() => isNotifMuted());
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  // Eng so'nggi ko'rilgan ID'lar — yangi buyurtmani aniqlash uchun.
+  // Eng so'nggi ko'rilgan ID'lar — yangi buyurtma/lidni aniqlash uchun.
   // Birinchi yuklov "yangi" hisoblanmasligi uchun ref'ni state'dan ajratdik.
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const knownLeadIdsRef = useRef<Set<string>>(new Set());
   const firstLoadDoneRef = useRef<boolean>(false);
 
   // Tashqari bossang yopish + Esc
@@ -82,21 +84,37 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
         ]);
         if (cancelled) return;
 
-        // Yangi buyurtmalarni aniqlash — sound + browser notification
+        // Yangi buyurtmalarni aniqlash — preferences asosida sound + browser notification
         const orderIds = new Set(ordersRes.items.map((o) => o.id));
+        const leadIds = new Set(leadsRes.items.map((l) => l.id));
         if (firstLoadDoneRef.current) {
+          const prefs = loadNotifPrefs();
           const newOrders = ordersRes.items.filter((o) => !knownOrderIdsRef.current.has(o.id));
-          if (newOrders.length > 0) {
-            playNewOrderSound();
-            // Eng yangisi uchun browser notification
+          const newLeads = leadsRes.items.filter((l) => !knownLeadIdsRef.current.has(l.id));
+
+          if (newOrders.length > 0 && prefs.orders.sound) {
+            playSound(prefs.soundType);
+          }
+          if (newOrders.length > 0 && prefs.orders.browser) {
             const first = newOrders[0];
             void showBrowserNotification(
               `Yangi buyurtma #${first.code}`,
               `${first.customer?.name ?? "—"} · ${Number(first.total).toLocaleString("uz-UZ")} ${first.currency === "UZS" ? "so'm" : first.currency}`,
             );
           }
+          if (newLeads.length > 0 && prefs.leads.sound) {
+            playSound(prefs.soundType);
+          }
+          if (newLeads.length > 0 && prefs.leads.browser) {
+            const first = newLeads[0];
+            void showBrowserNotification(
+              `Yangi lid: ${first.name}`,
+              first.channel?.name ?? `#${first.code}`,
+            );
+          }
         }
         knownOrderIdsRef.current = orderIds;
+        knownLeadIdsRef.current = leadIds;
         firstLoadDoneRef.current = true;
 
         const orderItems: NotifItem[] = ordersRes.items.map((o) => ({

@@ -16,6 +16,7 @@ import type {
   Integration, SecuritySettings, ApiKey,
 } from "../data/settingsData";
 import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
+import { BrowserNotifSection } from "./BrowserNotifSection";
 import { api } from "../api/client";
 import { useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
@@ -278,31 +279,38 @@ export default function SettingsPage() {
   );
 
   const renderNotifications = () => (
-    <div className="space-y-1">
-      <div className="grid grid-cols-[1fr,60px,60px,60px] gap-2 pb-3 border-b border-slate-800 mb-2">
-        <span className="text-xs text-slate-500 font-medium">{t("settings.notify.type")}</span>
-        <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.email")}</span>
-        <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.push")}</span>
-        <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.sms")}</span>
-      </div>
-      {notifications.map((n) => (
-        <div key={n.id} className="grid grid-cols-[1fr,60px,60px,60px] gap-2 py-3 border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors rounded-lg px-2">
-          <div>
-            <p className="text-sm text-white font-medium">{n.label}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{n.description}</p>
+    <div className="space-y-6">
+      {/* Admin browser notifikatsiyalar — operator paneli uchun */}
+      <BrowserNotifSection />
+
+      {notifications.length > 0 && (
+        <div className="space-y-1">
+          <div className="grid grid-cols-[1fr,60px,60px,60px] gap-2 pb-3 border-b border-slate-800 mb-2">
+            <span className="text-xs text-slate-500 font-medium">{t("settings.notify.type")}</span>
+            <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.email")}</span>
+            <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.push")}</span>
+            <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.sms")}</span>
           </div>
-          {(["email", "push", "sms"] as const).map((ch) => (
-            <div key={ch} className="flex items-center justify-center">
-              <button
-                onClick={() => toggleNotification(n.id, ch)}
-                className={`w-10 h-6 rounded-full transition-all relative ${n[ch] ? "bg-emerald-500" : "bg-slate-700"}`}
-              >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${n[ch] ? "left-5" : "left-1"}`} />
-              </button>
+          {notifications.map((n) => (
+            <div key={n.id} className="grid grid-cols-[1fr,60px,60px,60px] gap-2 py-3 border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors rounded-lg px-2">
+              <div>
+                <p className="text-sm text-white font-medium">{n.label}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{n.description}</p>
+              </div>
+              {(["email", "push", "sms"] as const).map((ch) => (
+                <div key={ch} className="flex items-center justify-center">
+                  <button
+                    onClick={() => toggleNotification(n.id, ch)}
+                    className={`w-10 h-6 rounded-full transition-all relative ${n[ch] ? "bg-emerald-500" : "bg-slate-700"}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${n[ch] ? "left-5" : "left-1"}`} />
+                  </button>
+                </div>
+              ))}
             </div>
           ))}
         </div>
-      ))}
+      )}
     </div>
   );
 
