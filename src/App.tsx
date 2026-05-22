@@ -252,7 +252,10 @@ function AppShell() {
         onMobileClose={() => setMobileSidebarOpen(false)}
       />
       <div className="md:transition-all md:duration-300" style={{ marginLeft: isMobile ? 0 : sidebarWidth }}>
-        <Header onMobileMenuOpen={() => setMobileSidebarOpen(true)} />
+        <Header
+          onMobileMenuOpen={() => setMobileSidebarOpen(true)}
+          onNotifNavigate={(page) => setCurrentPage(page)}
+        />
         <main className="p-4 md:p-6">
           <AnimatePresence mode="wait">
             <motion.div

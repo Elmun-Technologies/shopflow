@@ -466,6 +466,9 @@ export const dictionary: Record<string, Entry> = {
   "header.searchPlaceholder": { uz: "Buyurtma, mahsulot, mijoz…", ru: "Заказ, товар, клиент…" },
   "header.notifications": { uz: "Bildirishnomalar", ru: "Уведомления" },
   "header.profileMenu": { uz: "Profil menyusi", ru: "Меню профиля" },
+  "notif.title": { uz: "Bildirishnomalar", ru: "Уведомления" },
+  "notif.empty": { uz: "Hozircha bildirishnoma yo'q", ru: "Пока нет уведомлений" },
+  "notif.refreshing": { uz: "Har 60 soniyada yangilanadi", ru: "Обновляется каждые 60 секунд" },
 
   // ─── Admin: Customers page ───────────────────────────
   "customers.title": { uz: "Mijozlar", ru: "Клиенты" },
