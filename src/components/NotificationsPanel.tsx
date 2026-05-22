@@ -1,15 +1,19 @@
 // Header'dagi bell ikonkasi ostida ochiluvchi panel.
-// Yangi buyurtmalar, lidlar va tashlab ketilgan savatlarni ko'rsatadi.
-// "Ko'rilgan" holatini localStorage'da saqlaymiz — lastSeenAt ISO timestamp.
+// Yangi buyurtmalar va lidlarni ko'rsatadi + yangi buyurtma kelganda
+// ovozli "ding" eshittiriladi (mute toggle bilan).
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, ShoppingBag, Radio, ShoppingCart, ExternalLink, Loader2 } from "lucide-react";
+import { Bell, BellOff, ShoppingBag, Radio, ShoppingCart, ExternalLink, Loader2, Volume2, VolumeX } from "lucide-react";
 import { ordersApi, leadsApi } from "../api/endpoints";
 import { formatRelative } from "../utils/format";
 import { useT } from "../i18n";
+import { playNewOrderSound, isNotifMuted, setNotifMuted, showBrowserNotification } from "../utils/notifSound";
 
 const LS_KEY = "shopflow.lastSeenNotifications";
+// Polling chastotasi — yangi buyurtma uchun real-timega yaqinroq bo'lishi uchun
+// 60s → 15s ga kamaytirildi
+const POLL_INTERVAL_MS = 15_000;
 
 type NotifKind = "order" | "lead";
 
@@ -20,7 +24,7 @@ interface NotifItem {
   subtitle: string;
   createdAt: string;
   page: "orders" | "leads";
-  refId: string; // order/lead id — keyinchalik to'g'ridan-to'g'ri detailga ochish uchun
+  refId: string;
 }
 
 function loadLastSeen(): string {
@@ -41,7 +45,13 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastSeen, setLastSeen] = useState<string>(() => loadLastSeen());
+  const [muted, setMuted] = useState<boolean>(() => isNotifMuted());
   const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // Eng so'nggi ko'rilgan ID'lar — yangi buyurtmani aniqlash uchun.
+  // Birinchi yuklov "yangi" hisoblanmasligi uchun ref'ni state'dan ajratdik.
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const firstLoadDoneRef = useRef<boolean>(false);
 
   // Tashqari bossang yopish + Esc
   useEffect(() => {
@@ -60,7 +70,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
     };
   }, [open]);
 
-  // Ma'lumotlarni yuklash — har 60s da auto-refresh
+  // Polling
   useEffect(() => {
     let cancelled = false;
     const fetchAll = async () => {
@@ -71,6 +81,24 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
           leadsApi.list({ pageSize: 5 }),
         ]);
         if (cancelled) return;
+
+        // Yangi buyurtmalarni aniqlash — sound + browser notification
+        const orderIds = new Set(ordersRes.items.map((o) => o.id));
+        if (firstLoadDoneRef.current) {
+          const newOrders = ordersRes.items.filter((o) => !knownOrderIdsRef.current.has(o.id));
+          if (newOrders.length > 0) {
+            playNewOrderSound();
+            // Eng yangisi uchun browser notification
+            const first = newOrders[0];
+            void showBrowserNotification(
+              `Yangi buyurtma #${first.code}`,
+              `${first.customer?.name ?? "—"} · ${Number(first.total).toLocaleString("uz-UZ")} ${first.currency === "UZS" ? "so'm" : first.currency}`,
+            );
+          }
+        }
+        knownOrderIdsRef.current = orderIds;
+        firstLoadDoneRef.current = true;
+
         const orderItems: NotifItem[] = ordersRes.items.map((o) => ({
           id: `o-${o.id}`,
           kind: "order",
@@ -94,13 +122,13 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
           .slice(0, 10);
         setItems(merged);
       } catch {
-        // sokin ignore — bell pulsatsiyasi yo'q bo'lsa ham UI'ni buzmaymiz
+        // sokin ignore
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     void fetchAll();
-    const id = setInterval(() => { void fetchAll(); }, 60_000);
+    const id = setInterval(() => { void fetchAll(); }, POLL_INTERVAL_MS);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
@@ -111,7 +139,6 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
 
   const handleOpen = () => {
     setOpen(true);
-    // Ochilganda eng yangi item'ni "ko'rilgan" deb belgilash
     if (items[0]) {
       const next = items[0].createdAt;
       setLastSeen(next);
@@ -124,6 +151,12 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
     onNavigate?.(it.page);
   };
 
+  const toggleMuted = () => {
+    const next = !muted;
+    setMuted(next);
+    setNotifMuted(next);
+  };
+
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -131,7 +164,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
         aria-label={t("header.notifications")}
         className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
       >
-        <Bell className="w-5 h-5" />
+        {muted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
         {unseenCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
             {unseenCount > 9 ? "9+" : unseenCount}
@@ -151,7 +184,17 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
           >
             <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
               <p className="text-sm font-semibold text-white">{t("notif.title")}</p>
-              {loading && <Loader2 className="w-3.5 h-3.5 text-slate-500 animate-spin" />}
+              <div className="flex items-center gap-2">
+                {loading && <Loader2 className="w-3.5 h-3.5 text-slate-500 animate-spin" />}
+                <button
+                  onClick={toggleMuted}
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                  title={muted ? t("notif.unmute") : t("notif.mute")}
+                  aria-label={muted ? t("notif.unmute") : t("notif.mute")}
+                >
+                  {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
