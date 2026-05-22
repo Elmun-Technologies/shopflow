@@ -881,13 +881,13 @@ function StoreInner({ slug }: { slug: string }) {
           <button onClick={() => setView("cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-semibold text-white">Buyurtma rasmiylashtirish</h2>
+          <h2 className="text-base font-semibold text-white">{t("checkout.title")}</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Order summary */}
           <div className="bg-slate-900 rounded-2xl p-4">
-            <h3 className="text-xs font-medium text-slate-400 mb-3">Buyurtma tarkibi</h3>
+            <h3 className="text-xs font-medium text-slate-400 mb-3">{t("checkout.orderSummary")}</h3>
             {cart.map((item) => (
               <div key={item.productId} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
                 <span className="text-sm text-white">{item.name} <span className="text-slate-500">×{item.qty}</span></span>
@@ -897,7 +897,7 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             ))}
             <div className="flex items-center justify-between pt-3 mt-1">
-              <span className="text-sm font-semibold text-white">Jami</span>
+              <span className="text-sm font-semibold text-white">{t("checkout.total")}</span>
               <span className="text-base font-bold" style={{ color: primaryColor }}>
                 {formatPrice(cartTotal, data.tenant.currency)}
               </span>
@@ -906,15 +906,15 @@ function StoreInner({ slug }: { slug: string }) {
 
           {/* Customer form */}
           <div className="bg-slate-900 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-medium text-slate-400 mb-1">Ma'lumotlaringiz</h3>
+            <h3 className="text-xs font-medium text-slate-400 mb-1">{t("checkout.yourInfo")}</h3>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Ism *</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.name")} *</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="To'liq ismingiz"
+                  placeholder={t("checkout.namePlaceholder")}
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -923,7 +923,7 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Telefon *</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.phone")} *</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
@@ -941,12 +941,12 @@ function StoreInner({ slug }: { slug: string }) {
                 />
               </div>
               {form.phone && !isValidUzPhone(form.phone) && (
-                <p className="text-[11px] text-rose-300 mt-1">To'liq raqam: +998 90 123 45 67</p>
+                <p className="text-[11px] text-rose-300 mt-1">{t("checkout.phoneInvalid")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Manzil</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.addressLabel")}</label>
               {savedAddresses.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
                   {savedAddresses.map((a) => {
@@ -974,7 +974,7 @@ function StoreInner({ slug }: { slug: string }) {
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Yetkazib berish manzili"
+                  placeholder={t("checkout.address")}
                   value={form.address}
                   onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -985,7 +985,7 @@ function StoreInner({ slug }: { slug: string }) {
                 type="button"
                 onClick={() => {
                   if (!navigator.geolocation) {
-                    alert("Bu brauzerda GPS qo'llab-quvvatlanmaydi");
+                    alert(t("checkout.gpsUnsupported"));
                     return;
                   }
                   setGpsBusy(true);
@@ -1007,8 +1007,8 @@ function StoreInner({ slug }: { slug: string }) {
                     (err) => {
                       setGpsBusy(false);
                       alert(err.code === err.PERMISSION_DENIED
-                        ? "GPS ruxsati berilmagan — sozlamalardan ruxsat bering"
-                        : "Joriy joylashuvni aniqlab bo'lmadi");
+                        ? t("checkout.gpsDenied")
+                        : t("checkout.gpsError"));
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
                   );
@@ -1022,15 +1022,15 @@ function StoreInner({ slug }: { slug: string }) {
               {form.lat != null && form.lng != null && (
                 <p className="text-[11px] text-emerald-300 mt-1.5 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3 h-3" />
-                  GPS aniqlandi: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
+                  {t("checkout.gpsDetected")}: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
                 </p>
               )}
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Izoh</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.note")}</label>
               <textarea
-                placeholder="Qo'shimcha izoh (ixtiyoriy)"
+                placeholder={t("checkout.notePlaceholder")}
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
@@ -1054,7 +1054,7 @@ function StoreInner({ slug }: { slug: string }) {
             style={{ backgroundColor: primaryColor }}
           >
             {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {submitting ? "Yuborilmoqda..." : `Buyurtma berish · ${formatPrice(cartTotal, data.tenant.currency)}`}
+            {submitting ? t("checkout.sending") : `${t("checkout.submit")} · ${formatPrice(cartTotal, data.tenant.currency)}`}
           </button>
         </div>
       </div>
@@ -1069,8 +1069,8 @@ function StoreInner({ slug }: { slug: string }) {
           <button onClick={() => setView("home")} className="p-2 rounded-xl text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-semibold text-white">Savat</h2>
-          <span className="ml-1 text-xs text-slate-400">{cartCount} ta</span>
+          <h2 className="text-base font-semibold text-white">{t("cart.title")}</h2>
+          <span className="ml-1 text-xs text-slate-400">{t("cart.items", { count: cartCount })}</span>
         </div>
 
         {cart.length === 0 ? (
@@ -1078,14 +1078,14 @@ function StoreInner({ slug }: { slug: string }) {
             <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mb-4">
               <ShoppingCart className="w-8 h-8 text-slate-600" />
             </div>
-            <p className="text-white font-medium mb-1">Savat bo'sh</p>
-            <p className="text-sm text-slate-400">Mahsulot qo'shing</p>
+            <p className="text-white font-medium mb-1">{t("cart.empty.title")}</p>
+            <p className="text-sm text-slate-400">{t("cart.addMore")}</p>
             <button
               onClick={() => setView("home")}
               className="mt-4 px-6 py-2.5 rounded-2xl text-sm font-medium text-white"
               style={{ backgroundColor: primaryColor }}
             >
-              Xarid qilish
+              {t("cart.shopNow")}
             </button>
           </div>
         ) : (
@@ -1128,7 +1128,7 @@ function StoreInner({ slug }: { slug: string }) {
 
             <div className="p-4 border-t border-slate-800 bg-slate-950">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-slate-400">Jami ({cartCount} mahsulot)</span>
+                <span className="text-sm text-slate-400">{t("cart.totalItems", { count: cartCount })}</span>
                 <span className="text-lg font-bold text-white">{formatPrice(cartTotal, data.tenant.currency)}</span>
               </div>
               <button
@@ -1136,7 +1136,7 @@ function StoreInner({ slug }: { slug: string }) {
                 className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98]"
                 style={{ backgroundColor: primaryColor }}
               >
-                Buyurtma berish
+                {t("cart.placeOrder")}
               </button>
             </div>
           </>

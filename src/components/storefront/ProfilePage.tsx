@@ -5,6 +5,7 @@ import {
   Bell as BellIcon,
 } from "lucide-react";
 import { formatUzPhone } from "../../utils/phone";
+import { useT } from "../../i18n";
 
 type ProfileView =
   | "menu"
@@ -131,6 +132,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
   const [view, setView] = useState<ProfileView>(initialView ?? "menu");
   const [profile, setProfile] = useState<ProfileData>(() => loadProfile(storeSlug, telegramUser));
   const [lang, setLang] = useState<Lang>(() => loadLang(storeSlug));
+  const { t, setLang: setGlobalLang } = useT();
   const [addresses, setAddresses] = useState<Address[]>(() => loadAddresses(storeSlug));
   const [orders, setOrders] = useState<CustomerOrder[] | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -234,6 +236,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
 
   const saveLang = useCallback(async (next: Lang) => {
     setLang(next);
+    setGlobalLang(next); // i18n context'ni ham yangilash — butun UI darhol almashadi
     try { localStorage.setItem(lsKey(storeSlug, "lang"), next); } catch { /* ignore */ }
     if (!isOnline) return;
     try {
@@ -243,7 +246,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
         body: JSON.stringify({ tgUserId, language: next }),
       });
     } catch { /* offline cache only */ }
-  }, [storeSlug, isOnline, profileUrl, tgUserId]);
+  }, [storeSlug, isOnline, profileUrl, tgUserId, setGlobalLang]);
 
   // Manzillar — server CRUD bilan
   const addAddress = useCallback(async (draft: Omit<Address, "id">) => {
@@ -333,7 +336,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
 
   return (
     <div className="pb-24">
-      <SubHeader title={titleFor(view)} onBack={() => setView("menu")} />
+      <SubHeader title={titleFor(view, t)} onBack={() => setView("menu")} />
       <div className="px-4 py-4">
         {view === "info" && <InfoForm profile={profile} onSave={saveProfile} isOnline={isOnline} />}
         {view === "orders" && <OrdersList orders={orders} loading={ordersLoading} />}
@@ -348,17 +351,17 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
   );
 }
 
-function titleFor(v: ProfileView): string {
+function titleFor(v: ProfileView, t: (k: string) => string): string {
   switch (v) {
-    case "info": return "Ma'lumotlarim";
-    case "orders": return "Buyurtmalarim";
-    case "reviews": return "Sharhlarim";
-    case "promocodes": return "Promokodlarim";
-    case "referrals": return "Referallarim";
-    case "language": return "Ilova tili";
-    case "addresses": return "Mening manzillarim";
-    case "notifications": return "Bildirishnomalar";
-    default: return "Profile";
+    case "info": return t("profile.info");
+    case "orders": return t("profile.orders");
+    case "reviews": return t("profile.reviews");
+    case "promocodes": return t("profile.promo");
+    case "referrals": return t("profile.referrals");
+    case "language": return t("profile.language");
+    case "addresses": return t("profile.addresses");
+    case "notifications": return t("profile.notifications");
+    default: return t("profile.title");
   }
 }
 
@@ -387,17 +390,18 @@ function ProfileMenu({
   onSelect: (v: ProfileView) => void;
   operatorTelegram?: string;
 }) {
-  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Mehmon";
+  const { t } = useT();
+  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || t("profile.guest");
 
   const items: Array<{ id: ProfileView; label: string; Icon: typeof UserIcon; sub?: string }> = [
-    { id: "info", label: "Ma'lumotlarim", Icon: UserIcon, sub: profile.phone || "To'ldirilmagan" },
-    { id: "orders", label: "Buyurtmalarim", Icon: ShoppingBag },
-    { id: "addresses", label: "Mening manzillarim", Icon: MapPin },
-    { id: "notifications", label: "Bildirishnomalar", Icon: BellIcon },
-    { id: "referrals", label: "Referallarim", Icon: Users },
-    { id: "reviews", label: "Sharhlarim", Icon: Star },
-    { id: "promocodes", label: "Promokodlarim", Icon: Ticket },
-    { id: "language", label: "Ilova tili", Icon: Globe, sub: "uz/ru" },
+    { id: "info", label: t("profile.info"), Icon: UserIcon, sub: profile.phone || t("profile.notFilled") },
+    { id: "orders", label: t("profile.orders"), Icon: ShoppingBag },
+    { id: "addresses", label: t("profile.addresses"), Icon: MapPin },
+    { id: "notifications", label: t("profile.notifications"), Icon: BellIcon },
+    { id: "referrals", label: t("profile.referrals"), Icon: Users },
+    { id: "reviews", label: t("profile.reviews"), Icon: Star },
+    { id: "promocodes", label: t("profile.promo"), Icon: Ticket },
+    { id: "language", label: t("profile.language"), Icon: Globe, sub: "uz/ru" },
   ];
 
   return (
@@ -446,8 +450,8 @@ function ProfileMenu({
               <MessageCircle className="w-4.5 h-4.5" strokeWidth={2} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Operatorga murojaat</div>
-              <div className="text-[11px] text-emerald-700 dark:text-emerald-300 truncate">Telegram orqali yozish</div>
+              <div className="text-sm font-medium text-emerald-900 dark:text-emerald-100">{t("profile.contactOperator")}</div>
+              <div className="text-[11px] text-emerald-700 dark:text-emerald-300 truncate">{t("profile.contactOperatorSub")}</div>
             </div>
             <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           </a>
@@ -725,15 +729,20 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    PENDING: { label: "Yangi", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-    PROCESSING: { label: "Tayyorlanmoqda", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
-    COMPLETED: { label: "Yetkazildi", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" },
-    CANCELLED: { label: "Bekor qilindi", cls: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-    REFUNDED: { label: "Qaytarildi", cls: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" },
+  const { t } = useT();
+  const clsMap: Record<string, string> = {
+    PENDING: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    PROCESSING: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    COMPLETED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    CANCELLED: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    REFUNDED: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
   };
-  const m = map[status] ?? { label: status, cls: "bg-slate-200 text-slate-700" };
-  return <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${m.cls}`}>{m.label}</span>;
+  const label = t(`order.status.${status}`);
+  const cls = clsMap[status] ?? "bg-slate-200 text-slate-700";
+  // Agar kalit dictionary'da topilmasa, t() kalit'ning o'zini qaytaradi —
+  // shu holatda raw status kodi ko'rinmasligi uchun fallback
+  const safeLabel = label.startsWith("order.status.") ? status : label;
+  return <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cls}`}>{safeLabel}</span>;
 }
 
 function PromocodeForm({ storeSlug }: { storeSlug: string }) {
