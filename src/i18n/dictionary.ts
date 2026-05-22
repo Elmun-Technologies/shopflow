@@ -314,6 +314,23 @@ export const dictionary: Record<string, Entry> = {
   "orderDetail.history": { uz: "Tarix", ru: "История" },
   "orderDetail.customerNote": { uz: "Buyurtma izohi", ru: "Комментарий к заказу" },
   "orderDetail.customerNotePlaceholder": { uz: "Mijoz buyurtma vaqtida yozgan izoh…", ru: "Комментарий, оставленный клиентом при оформлении…" },
+  "orderDetail.print": { uz: "Chop etish", ru: "Печать" },
+
+  // Print invoice template
+  "invoice.title": { uz: "Hisob-faktura", ru: "Счёт-фактура" },
+  "invoice.code": { uz: "Buyurtma", ru: "Заказ" },
+  "invoice.date": { uz: "Sana", ru: "Дата" },
+  "invoice.status": { uz: "Holat", ru: "Статус" },
+  "invoice.customer": { uz: "Mijoz", ru: "Клиент" },
+  "invoice.address": { uz: "Yetkazib berish manzili", ru: "Адрес доставки" },
+  "invoice.sku": { uz: "SKU", ru: "Артикул" },
+  "invoice.item": { uz: "Mahsulot", ru: "Товар" },
+  "invoice.qty": { uz: "Soni", ru: "Кол-во" },
+  "invoice.price": { uz: "Narxi", ru: "Цена" },
+  "invoice.sum": { uz: "Summa", ru: "Сумма" },
+  "invoice.total": { uz: "Jami", ru: "Итого" },
+  "invoice.notes": { uz: "Izoh", ru: "Комментарий" },
+  "invoice.footer": { uz: "Bu hujjat ShopFlow tomonidan avtomatik yaratilgan", ru: "Этот документ создан автоматически системой ShopFlow" },
 
   // ─── Admin: CustomerDetailDrawer ─────────────────────
   "customerDetail.label": { uz: "Mijoz · {date} dan", ru: "Клиент · с {date}" },
