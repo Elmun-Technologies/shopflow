@@ -1,5 +1,10 @@
 // Platforma uchun umumiy skeleton komponentlar.
 
+// Eng kichik primitive — className orqali shape va o'lcham berish mumkin.
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`bg-slate-800 rounded animate-pulse ${className}`} />;
+}
+
 export function SkelLine({ w = "100%", h = 12 }: { w?: string | number; h?: number }) {
   return (
     <div

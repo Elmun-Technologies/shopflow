@@ -15,6 +15,7 @@ import {
 import { useAsync } from "../hooks/useAsync";
 import { leadsApi } from "../api/endpoints";
 import { exportToCsv } from "../utils/exportCsv";
+import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency, formatRelative } from "../utils/format";
 import type { Lead, LeadStatus, ChannelType } from "../types/api";
@@ -223,9 +224,7 @@ export default function LeadsPage() {
       {/* List */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
-          </div>
+          <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
