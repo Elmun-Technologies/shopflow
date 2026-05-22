@@ -469,7 +469,9 @@ export const dictionary: Record<string, Entry> = {
   "header.profileMenu": { uz: "Profil menyusi", ru: "Меню профиля" },
   "notif.title": { uz: "Bildirishnomalar", ru: "Уведомления" },
   "notif.empty": { uz: "Hozircha bildirishnoma yo'q", ru: "Пока нет уведомлений" },
-  "notif.refreshing": { uz: "Har 60 soniyada yangilanadi", ru: "Обновляется каждые 60 секунд" },
+  "notif.refreshing": { uz: "Har 15 soniyada yangilanadi", ru: "Обновляется каждые 15 секунд" },
+  "notif.mute": { uz: "Ovozni o'chirish", ru: "Отключить звук" },
+  "notif.unmute": { uz: "Ovozni yoqish", ru: "Включить звук" },
 
   // Keyboard shortcuts
   "shortcuts.title": { uz: "Klaviatura yorliqlari", ru: "Горячие клавиши" },
