@@ -1,14 +1,16 @@
-import { Search, Bell, ChevronDown, Menu } from "lucide-react";
+import { Search, ChevronDown, Menu } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { useT } from "../i18n";
+import { NotificationsPanel } from "./NotificationsPanel";
 
 interface HeaderProps {
   onMobileMenuOpen?: () => void;
+  onNotifNavigate?: (page: "orders" | "leads") => void;
 }
 
-export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
+export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProps = {}) {
   const { user, tenant, logout } = useAuth();
   const { t } = useT();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -68,12 +70,7 @@ export default function Header({ onMobileMenuOpen }: HeaderProps = {}) {
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          aria-label={t("header.notifications")}
-          className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-        >
-          <Bell className="w-5 h-5" />
-        </button>
+        <NotificationsPanel onNavigate={onNotifNavigate} />
 
         <div className="relative" ref={profileRef}>
           <button

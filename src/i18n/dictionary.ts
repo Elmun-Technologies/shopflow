@@ -466,6 +466,26 @@ export const dictionary: Record<string, Entry> = {
   "header.searchPlaceholder": { uz: "Buyurtma, mahsulot, mijoz…", ru: "Заказ, товар, клиент…" },
   "header.notifications": { uz: "Bildirishnomalar", ru: "Уведомления" },
   "header.profileMenu": { uz: "Profil menyusi", ru: "Меню профиля" },
+  "notif.title": { uz: "Bildirishnomalar", ru: "Уведомления" },
+  "notif.empty": { uz: "Hozircha bildirishnoma yo'q", ru: "Пока нет уведомлений" },
+  "notif.refreshing": { uz: "Har 60 soniyada yangilanadi", ru: "Обновляется каждые 60 секунд" },
+
+  // Keyboard shortcuts
+  "shortcuts.title": { uz: "Klaviatura yorliqlari", ru: "Горячие клавиши" },
+  "shortcuts.tip": { uz: "Sahifaga o'tish: avval 'g' bosing, so'ng harf", ru: "Переход на страницу: сначала 'g', затем буква" },
+  "shortcuts.palette": { uz: "Tezkor qidiruv", ru: "Быстрый поиск" },
+  "shortcuts.help": { uz: "Bu oynani ko'rsatish", ru: "Показать это окно" },
+  "shortcuts.escape": { uz: "Yopish / bekor qilish", ru: "Закрыть / отменить" },
+  "shortcuts.goDashboard": { uz: "Dashboard'ga o'tish", ru: "Перейти на Дашборд" },
+  "shortcuts.goOrders": { uz: "Buyurtmalarga o'tish", ru: "Перейти к Заказам" },
+  "shortcuts.goProducts": { uz: "Mahsulotlarga o'tish", ru: "Перейти к Товарам" },
+  "shortcuts.goCustomers": { uz: "Mijozlarga o'tish", ru: "Перейти к Клиентам" },
+  "shortcuts.goLeads": { uz: "Lidlarga o'tish", ru: "Перейти к Лидам" },
+  "shortcuts.goChat": { uz: "Chat'ga o'tish", ru: "Перейти к Чату" },
+  "shortcuts.goMarketing": { uz: "Marketing'ga o'tish", ru: "Перейти к Маркетингу" },
+  "shortcuts.goAnalytics": { uz: "Tahlilga o'tish", ru: "Перейти к Аналитике" },
+  "shortcuts.goVitrina": { uz: "Vitrina'ga o'tish", ru: "Перейти к Витрине" },
+  "shortcuts.goSettings": { uz: "Sozlamalarga o'tish", ru: "Перейти к Настройкам" },
 
   // ─── Admin: Customers page ───────────────────────────
   "customers.title": { uz: "Mijozlar", ru: "Клиенты" },
