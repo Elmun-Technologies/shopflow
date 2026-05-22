@@ -110,7 +110,7 @@ function DashboardPage() {
         <div className="lg:col-span-2">
           <RevenueChart />
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           <SalesByCategory />
           <WeeklySales />
         </div>
@@ -120,7 +120,7 @@ function DashboardPage() {
         <div className="lg:col-span-2">
           <RecentOrders />
         </div>
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           <TopProducts />
           <TrafficSources />
         </div>
