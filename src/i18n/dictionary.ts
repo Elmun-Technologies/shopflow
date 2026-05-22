@@ -335,6 +335,23 @@ export const dictionary: Record<string, Entry> = {
   "leadDetail.interactions": { uz: "Aloqalar tarixi", ru: "История взаимодействий" },
   "leadDetail.addNote": { uz: "Eslatma qo'shish", ru: "Добавить заметку" },
 
+  // ─── Admin: UI Builder ────────────────────────────────
+  "ui.tab.blocks": { uz: "Bloklar", ru: "Блоки" },
+  "ui.tab.templates": { uz: "Shablonlar", ru: "Шаблоны" },
+  "ui.tab.brand": { uz: "Brend", ru: "Бренд" },
+  "ui.searchBlocks": { uz: "Bloklarni qidirish…", ru: "Поиск блоков…" },
+  "ui.editor": { uz: "Muharrir", ru: "Редактор" },
+  "ui.blockCount": { uz: "{n} blok · {active} faol", ru: "{n} блоков · {active} активных" },
+  "ui.published": { uz: "Nashr", ru: "Опубликован" },
+  "ui.hidden": { uz: "Yashirin", ru: "Скрыт" },
+  "ui.saved": { uz: "Saqlandi!", ru: "Сохранено!" },
+
+  // ─── Moysklad Integration ──────────────────────────────
+  "moysklad.status.CONNECTED": { uz: "Ulangan", ru: "Подключено" },
+  "moysklad.status.CONNECTING": { uz: "Ulanmoqda", ru: "Подключение…" },
+  "moysklad.status.ERROR": { uz: "Xato", ru: "Ошибка" },
+  "moysklad.status.DISCONNECTED": { uz: "Ulanmagan", ru: "Не подключено" },
+
   // ─── Admin: Products page ─────────────────────────────
   "products.title": { uz: "Mahsulotlar", ru: "Товары" },
   "products.count": { uz: "{count} ta mahsulot", ru: "{count} товаров" },
