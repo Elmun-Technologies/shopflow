@@ -671,7 +671,7 @@ function StoreInner({ slug }: { slug: string }) {
       setView("success");
       twa?.HapticFeedback?.notificationOccurred("success");
     } catch (e: unknown) {
-      setSubmitError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setSubmitError(e instanceof Error ? e.message : t("common.error"));
       twa?.HapticFeedback?.notificationOccurred("error");
     } finally {
       setSubmitting(false);

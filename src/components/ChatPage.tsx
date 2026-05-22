@@ -260,7 +260,7 @@ export default function ChatPage() {
         prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) } : null,
       );
       setMessageText(content);
-      alert(err instanceof Error ? err.message : "Xabar yuborilmadi");
+      alert(err instanceof Error ? err.message : t("chat.sendFailed"));
     } finally {
       setSendBusy(false);
     }
@@ -560,7 +560,7 @@ export default function ChatPage() {
               <div className="py-8 text-center">
                 <MessageSquare className="w-8 h-8 text-slate-700 mx-auto mb-2" />
                 <p className="text-xs text-slate-500">
-                  {loading ? "Yuklanmoqda…" : "Chatlar topilmadi"}
+                  {loading ? t("common.loading") : t("chat.empty")}
                 </p>
               </div>
             )}

@@ -24,6 +24,7 @@ export const dictionary: Record<string, Entry> = {
   "common.confirm": { uz: "Tasdiqlash", ru: "Подтвердить" },
   "common.optional": { uz: "ixtiyoriy", ru: "необязательно" },
   "common.required": { uz: "majburiy", ru: "обязательно" },
+  "common.error": { uz: "Xato yuz berdi", ru: "Произошла ошибка" },
 
   // ─── Storefront: Tabs ─────────────────────────────────
   "store.tab.home": { uz: "Bosh", ru: "Главная" },
@@ -593,6 +594,8 @@ export const dictionary: Record<string, Entry> = {
   "chat.filter.resolved": { uz: "Yakunlandi", ru: "Закрыто" },
   "chat.messagePlaceholder": { uz: "Xabar yozing…", ru: "Напишите сообщение…" },
   "chat.funnelTitle": { uz: "Savdo varonkasi (Chat funnel)", ru: "Воронка продаж (Chat funnel)" },
+  "chat.sendFailed": { uz: "Xabar yuborilmadi", ru: "Не удалось отправить сообщение" },
+  "chat.empty": { uz: "Chatlar topilmadi", ru: "Чаты не найдены" },
 
   // Funnel stages (used in ChatPage)
   "funnel.new": { uz: "Yangi", ru: "Новый" },

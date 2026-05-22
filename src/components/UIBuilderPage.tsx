@@ -190,7 +190,7 @@ export default function UIBuilderPage() {
       setSavedMessage(t("ui.saved"));
       setTimeout(() => setSavedMessage(""), 2500);
     } catch {
-      setSavedMessage("Xato yuz berdi");
+      setSavedMessage(t("common.error"));
       setTimeout(() => setSavedMessage(""), 2500);
     } finally {
       setSaving(false);
