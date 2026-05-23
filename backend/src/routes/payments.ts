@@ -1,10 +1,61 @@
 // Payments routes — admin panel uchun to'lov usullari va tranzaksiyalarni
 // boshqarish + provayder'lar (Click/Payme/Uzum/...) uchun webhook qabuli.
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
+
+function getPublicBaseUrl(): string {
+  const raw =
+    process.env.PUBLIC_URL ??
+    process.env.API_PUBLIC_URL ??
+    `https://${process.env.DOMAIN ?? "shop-flow.uz"}`;
+  return raw.replace(/\/$/, "");
+}
+
+/** Har bir tenant uchun noyob webhook URL (Click/Payme kabilar path orqali tenantni biladi). */
+export function paymentWebhookUrl(tenantSlug: string, methodCode: string): string {
+  return `${getPublicBaseUrl()}/api/payments/webhook/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(methodCode)}`;
+}
+
+async function resolveTenantId(prisma: PrismaClient, ref: string): Promise<string | null> {
+  const tenant = await prisma.tenant.findFirst({
+    where: { OR: [{ slug: ref }, { id: ref }] },
+    select: { id: true },
+  });
+  return tenant?.id ?? null;
+}
+
+type WebhookPaymentMethod = {
+  id: string;
+  tenantId: string;
+  autoConfirm: boolean;
+  config: unknown;
+  testMode: boolean;
+};
+
+async function loadPaymentMethodForWebhook(
+  prisma: PrismaClient,
+  tenantRef: string,
+  methodCode: string,
+): Promise<WebhookPaymentMethod | null> {
+  const tenantId = await resolveTenantId(prisma, tenantRef);
+  if (!tenantId) return null;
+  return prisma.paymentMethod.findUnique({
+    where: { tenantId_code: { tenantId, code: methodCode } },
+    select: { id: true, tenantId: true, autoConfirm: true, config: true, testMode: true },
+  });
+}
+
+function tenantRefFromRequest(req: FastifyRequest): string | undefined {
+  const header = req.headers["x-shopflow-tenant"];
+  if (typeof header === "string" && header.trim()) return header.trim();
+  const q = req.query as { tenant?: string };
+  if (typeof q.tenant === "string" && q.tenant.trim()) return q.tenant.trim();
+  return undefined;
+}
 
 // Provayder konfiguratsiya — frontend'da yashirin maydonlar (apiKey, secretKey)
 // faqat "configured: true/false" sifatida ko'rinadi.
@@ -49,6 +100,10 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
 
     // Barcha tenant to'lov usullari ro'yxati
     admin.get("/methods", async (req) => {
+      const tenant = await admin.prisma.tenant.findUnique({
+        where: { id: req.session.tenantId },
+        select: { slug: true },
+      });
       const items = await admin.prisma.paymentMethod.findMany({
         where: { tenantId: req.session.tenantId },
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
@@ -65,6 +120,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             type: m.type,
             configured: cfg.configured,
             configPreview: cfg.preview,
+            webhookUrl: tenant?.slug ? paymentWebhookUrl(tenant.slug, m.code) : undefined,
             minAmount: m.minAmount ? Number(m.minAmount) : null,
             maxAmount: m.maxAmount ? Number(m.maxAmount) : null,
             commissionPercent: m.commissionPercent ? Number(m.commissionPercent) : null,
@@ -270,16 +326,13 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Webhook qabuli — auth talab qilinmaydi (provayder o'zining imzosini yuboradi)
-  app.post<{ Params: { methodCode: string }; Body: unknown }>(
-    "/webhook/:methodCode",
-    async (req, reply) => {
-      const { methodCode } = z.object({ methodCode: z.string() }).parse(req.params);
-      const tenantId = (req.headers["x-shopflow-tenant"] as string | undefined) ?? "";
-
-      const method = await app.prisma.paymentMethod.findFirst({
-        where: { code: methodCode, ...(tenantId && { tenantId }) },
-        select: { id: true, tenantId: true, autoConfirm: true, config: true, testMode: true },
-      });
+  const handlePaymentWebhook = async (
+    req: FastifyRequest,
+    reply: FastifyReply,
+    tenantRef: string,
+    methodCode: string,
+  ) => {
+      const method = await loadPaymentMethodForWebhook(app.prisma, tenantRef, methodCode);
       if (!method) {
         return reply.code(404).send({ error: "Payment method not found" });
       }
@@ -460,6 +513,32 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       });
 
       return reply.code(200).send({ ok: true });
+  };
+
+  // Asosiy URL: /api/payments/webhook/:tenantSlug/:methodCode
+  app.post<{ Params: { tenantSlug: string; methodCode: string }; Body: unknown }>(
+    "/webhook/:tenantSlug/:methodCode",
+    async (req, reply) => {
+      const { tenantSlug, methodCode } = z
+        .object({ tenantSlug: z.string().min(1), methodCode: z.string().min(1) })
+        .parse(req.params);
+      return handlePaymentWebhook(req, reply, tenantSlug, methodCode);
+    },
+  );
+
+  // Legacy: /api/payments/webhook/:methodCode?tenant=slug yoki x-shopflow-tenant header
+  app.post<{ Params: { methodCode: string }; Body: unknown }>(
+    "/webhook/:methodCode",
+    async (req, reply) => {
+      const { methodCode } = z.object({ methodCode: z.string().min(1) }).parse(req.params);
+      const tenantRef = tenantRefFromRequest(req);
+      if (!tenantRef) {
+        return reply.code(400).send({
+          error: "Tenant talab qilinadi",
+          hint: "Yangi URL: /api/payments/webhook/{tenantSlug}/{methodCode} yoki ?tenant=slug",
+        });
+      }
+      return handlePaymentWebhook(req, reply, tenantRef, methodCode);
     },
   );
 };

@@ -30,6 +30,7 @@ interface ApiMethod {
   autoConfirm: boolean;
   position: number;
   transactionsCount: number;
+  webhookUrl?: string;
 }
 
 interface ApiTransaction {
@@ -71,7 +72,10 @@ function adapt(m: ApiMethod, txns: ApiTransaction[]): PaymentMethod {
     icon: "Wallet",
     status: backendToUiStatus(m.status),
     type: (m.type as "instant" | "installment" | "cash") ?? "instant",
-    config: m.configPreview as PaymentConfig,
+    config: {
+      ...(m.configPreview as PaymentConfig),
+      ...(m.webhookUrl ? { webhookUrl: m.webhookUrl } : {}),
+    },
     stats: {
       totalTransactions: own.length,
       totalAmount: success.reduce((s, t) => s + t.amount, 0),
@@ -700,7 +704,7 @@ export default function PaymentsPage() {
                     <input type="password" defaultValue={selectedMethod.config.password} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
-                {selectedMethod.config.webhookUrl !== undefined && (
+                {selectedMethod.config.webhookUrl && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Webhook URL</label>
                     <div className="flex items-center gap-2">
