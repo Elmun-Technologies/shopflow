@@ -37,8 +37,9 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-shopflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopflow}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env da o'rnating (kamida 32 belgi)}
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      DOMAIN: ${DOMAIN:-localhost}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://shop-flow.uz}
+      DOMAIN: ${DOMAIN:-shop-flow.uz}
+      PUBLIC_URL: ${PUBLIC_URL:-https://shop-flow.uz}
       PORT: "4000"
       UPLOADS_DIR: /app/uploads
       # AI yordamchi — ixtiyoriy. Sozlansa Telegram'da mijoz xabarlariga AI javob beradi
@@ -82,8 +83,8 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      DOMAIN: ${DOMAIN:-localhost}
-      EMAIL: ${EMAIL:-admin@example.com}
+      DOMAIN: ${DOMAIN:-shop-flow.uz}
+      EMAIL: ${EMAIL:-admin@shop-flow.uz}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
