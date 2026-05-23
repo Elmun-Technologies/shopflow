@@ -298,6 +298,7 @@ type CartItem = {
   qty: number;
   name: string;
   price: number;
+  oldPrice: number | null;
   imageUrl: string | null;
 };
 
@@ -646,6 +647,7 @@ function StoreInner({ slug }: { slug: string }) {
         qty: 1,
         name: product.name,
         price: Number(product.price),
+        oldPrice: product.oldPrice != null ? Number(product.oldPrice) : null,
         imageUrl: product.imageUrl,
       }];
     });
