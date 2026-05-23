@@ -26,9 +26,9 @@ export default function WeeklySales() {
   const Tip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-sm font-medium text-white">{label}</p>
-          <p className="text-sm font-semibold text-emerald-400">
+        <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
+          <p className="text-sm font-medium text-forest-800">{label}</p>
+          <p className="text-sm font-semibold text-forest-700">
             {formatCompactCurrency(payload[0].value as number, currency)}
           </p>
         </div>
@@ -42,15 +42,15 @@ export default function WeeklySales() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.5 }}
-      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
+      className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
-      <h3 className="text-base font-semibold text-white">{t("widget.weeklySales")}</h3>
+      <h3 className="text-base font-semibold text-forest-800">{t("widget.weeklySales")}</h3>
       <p className="text-xs text-slate-500 mt-0.5 mb-3">Oxirgi 7 kun</p>
 
       <div className="h-44">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
           </div>
         ) : series.every((s) => s.sales === 0) ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-500">
@@ -61,16 +61,16 @@ export default function WeeklySales() {
             <BarChart data={series} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="weeklyBarGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor="#5FA340" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#5FA340" stopOpacity={0.4} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 6" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10 }} dy={5} />
+              <CartesianGrid strokeDasharray="2 6" stroke="#E5E5DA" vertical={false} />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 10 }} dy={5} />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 10 }}
+                tick={{ fill: "#94A3B8", fontSize: 10 }}
                 tickFormatter={(value) => formatCompactCurrency(Number(value), currency)}
                 width={42}
               />

@@ -27,17 +27,17 @@ export default function TrafficSources() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.7 }}
-      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
+      className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
-      <h3 className="text-base font-semibold text-white flex items-center gap-2">
-        <Radio className="w-4 h-4 text-emerald-400" />
+      <h3 className="text-base font-semibold text-forest-800 flex items-center gap-2">
+        <Radio className="w-4 h-4 text-forest-700" />
         {t("widget.trafficSources")}
       </h3>
       <p className="text-xs text-slate-500 mt-0.5 mb-4">Buyurtmalar qaysi kanaldan</p>
 
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+          <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
         </div>
       ) : sources.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-32 text-center">
@@ -54,13 +54,13 @@ export default function TrafficSources() {
               className="space-y-1.5"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-300 font-medium truncate">{s.source}</span>
+                <span className="text-xs text-slate-700 font-medium truncate">{s.source}</span>
                 <div className="flex items-baseline gap-2 flex-shrink-0">
-                  <span className="text-sm font-semibold text-white">{s.visitors}</span>
+                  <span className="text-sm font-semibold text-forest-800">{s.visitors}</span>
                   <span className="text-[10px] text-slate-500">{s.percentage}%</span>
                 </div>
               </div>
-              <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-cream-100/60 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${s.percentage}%` }}

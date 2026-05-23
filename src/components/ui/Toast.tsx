@@ -89,18 +89,18 @@ function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => 
   const palette = {
     success: {
       Icon: CheckCircle2,
-      cls: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300",
-      iconCls: "text-emerald-400",
+      cls: "bg-leaf-100 border-leaf-400/50 text-forest-700",
+      iconCls: "text-forest-700",
     },
     error: {
       Icon: AlertCircle,
-      cls: "bg-rose-500/15 border-rose-500/30 text-rose-300",
-      iconCls: "text-rose-400",
+      cls: "bg-rose-100 border-rose-300 text-rose-600",
+      iconCls: "text-rose-600",
     },
     info: {
       Icon: Info,
-      cls: "bg-slate-800/90 border-slate-700 text-slate-200",
-      iconCls: "text-blue-400",
+      cls: "bg-cream-100/90 border-cream-300 text-forest-700",
+      iconCls: "text-sky-600",
     },
   }[toast.kind];
 

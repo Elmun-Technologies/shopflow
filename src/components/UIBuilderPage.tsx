@@ -261,8 +261,8 @@ export default function UIBuilderPage() {
         return (
           <div className="w-full rounded-xl overflow-hidden" style={{ background: `linear-gradient(135deg, ${s.bgColor || brand.primaryColor}, ${brand.secondaryColor})` }}>
             <div className="p-5">
-              <h2 className="text-lg font-bold text-white">{s.title}</h2>
-              <p className="text-xs text-white/80 mt-1">{s.subtitle}</p>
+              <h2 className="text-lg font-bold text-forest-800">{s.title}</h2>
+              <p className="text-xs text-forest-800/80 mt-1">{s.subtitle}</p>
               <button className="mt-3 px-4 py-2 bg-white text-slate-900 text-xs font-semibold rounded-lg">{s.buttonText}</button>
             </div>
           </div>
@@ -278,19 +278,19 @@ export default function UIBuilderPage() {
         const prods = getProducts(s.count || 4, s.category);
         return (
           <div className="w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
+            <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className={`grid gap-2 ${isMobile ? "grid-cols-2" : "grid-cols-4"}`}>
               {prods.map((p) => (
-                <div key={p.id} className="bg-slate-800 rounded-xl p-2.5 hover:bg-slate-750 transition-colors">
-                  <div className="w-full h-20 bg-slate-700 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                <div key={p.id} className="bg-cream-100 rounded-xl p-2.5 hover:bg-slate-750 transition-colors">
+                  <div className="w-full h-20 bg-cream-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
                     {p.imageUrl ? (
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
                       <Package className="w-7 h-7 text-slate-500" />
                     )}
                   </div>
-                  <p className="text-[10px] text-white truncate">{p.name}</p>
-                  <p className="text-[10px] text-emerald-400 font-bold mt-0.5">
+                  <p className="text-[10px] text-forest-800 truncate">{p.name}</p>
+                  <p className="text-[10px] text-forest-700 font-bold mt-0.5">
                     {p.price > 0 ? p.price.toLocaleString() : "—"}
                   </p>
                   {p.oldPrice != null && (
@@ -306,29 +306,29 @@ export default function UIBuilderPage() {
       case "flash_sale": {
         const fsProds = getProducts(s.count || 4);
         return (
-          <div className="w-full bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <div className="w-full bg-rose-100 border border-rose-300 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-red-400">{s.title}</h3>
+              <h3 className="text-sm font-semibold text-rose-600">{s.title}</h3>
               {s.showTimer && (
                 <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-red-400" />
-                  <span className="text-xs text-red-400 font-mono">04:23:15</span>
+                  <Clock className="w-3 h-3 text-rose-600" />
+                  <span className="text-xs text-rose-600 font-mono">04:23:15</span>
                 </div>
               )}
             </div>
             <div className={`grid gap-2 ${isMobile ? "grid-cols-2" : "grid-cols-4"}`}>
               {fsProds.map((p) => (
-                <div key={p.id} className="bg-slate-800 rounded-xl p-2.5">
-                  <div className="w-full h-20 bg-slate-700 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                <div key={p.id} className="bg-cream-100 rounded-xl p-2.5">
+                  <div className="w-full h-20 bg-cream-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
                     {p.imageUrl ? (
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
                       <Package className="w-7 h-7 text-slate-500" />
                     )}
                   </div>
-                  <p className="text-[10px] text-white truncate">{p.name}</p>
+                  <p className="text-[10px] text-forest-800 truncate">{p.name}</p>
                   <div className="flex items-center gap-1">
-                    <p className="text-[10px] text-red-400 font-bold">
+                    <p className="text-[10px] text-rose-600 font-bold">
                       {p.price > 0 ? p.price.toLocaleString() : "—"}
                     </p>
                     {p.oldPrice != null && (
@@ -345,11 +345,11 @@ export default function UIBuilderPage() {
       case "product_of_day": {
         const pod = previewProducts[0];
         return (
-          <div className="w-full bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-amber-400 mb-3">{s.title}</h3>
+          <div className="w-full bg-amber-100 border border-amber-300 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-amber-500 mb-3">{s.title}</h3>
             {pod ? (
               <div className="flex gap-3">
-                <div className="w-24 h-24 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className="w-24 h-24 bg-cream-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {pod.imageUrl ? (
                     <img src={pod.imageUrl} alt={pod.name} className="w-full h-full object-cover" />
                   ) : (
@@ -357,21 +357,21 @@ export default function UIBuilderPage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{pod.name}</p>
+                  <p className="text-sm font-bold text-forest-800 truncate">{pod.name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-lg font-bold text-emerald-400">{pod.price.toLocaleString()}</span>
+                    <span className="text-lg font-bold text-forest-700">{pod.price.toLocaleString()}</span>
                     {pod.oldPrice != null && <span className="text-sm text-slate-500 line-through">{pod.oldPrice.toLocaleString()}</span>}
                   </div>
                   {s.showStockBar && (
                     <div className="mt-2">
-                      <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-cream-200 rounded-full overflow-hidden">
                         <div className="h-full w-[40%] bg-amber-500 rounded-full" />
                       </div>
                     </div>
                   )}
                   <div className="flex items-center gap-1 mt-2">
-                    <Clock className="w-3 h-3 text-amber-400" />
-                    <span className="text-xs text-amber-400 font-mono">08:45:22</span>
+                    <Clock className="w-3 h-3 text-amber-500" />
+                    <span className="text-xs text-amber-500 font-mono">08:45:22</span>
                   </div>
                 </div>
               </div>
@@ -385,20 +385,20 @@ export default function UIBuilderPage() {
       case "popular_categories":
         return (
           <div className="w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
+            <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className={`grid gap-2 ${isMobile ? "grid-cols-3" : "grid-cols-6"}`}>
               {(realCategories.length > 0 ? realCategories : []).slice(0, s.count || 6).map((cat) => (
-                <div key={cat.id} className="bg-slate-800 rounded-xl p-3 text-center hover:bg-slate-750 transition-colors cursor-pointer">
+                <div key={cat.id} className="bg-cream-100 rounded-xl p-3 text-center hover:bg-slate-750 transition-colors cursor-pointer">
                   <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-1" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                     <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                   </div>
-                  <p className="text-[10px] text-white">{cat.name}</p>
+                  <p className="text-[10px] text-forest-800">{cat.name}</p>
                 </div>
               ))}
               {realCategories.length === 0 && [1, 2, 3, 4, 5, 6].slice(0, s.count || 6).map((i) => (
-                <div key={i} className="bg-slate-800 rounded-xl p-3 text-center">
-                  <div className="w-10 h-10 mx-auto rounded-full bg-slate-700 mb-1" />
-                  <p className="text-[10px] text-slate-600">Kategoriya {i}</p>
+                <div key={i} className="bg-cream-100 rounded-xl p-3 text-center">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-cream-200 mb-1" />
+                  <p className="text-[10px] text-slate-400">Kategoriya {i}</p>
                 </div>
               ))}
             </div>
@@ -408,15 +408,15 @@ export default function UIBuilderPage() {
       case "categories_grid":
         return (
           <div className="w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
+            <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="space-y-1">
               {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between bg-slate-800 rounded-lg px-3 py-2 hover:bg-slate-750 transition-colors cursor-pointer">
+                <div key={cat.id} className="flex items-center justify-between bg-cream-100 rounded-lg px-3 py-2 hover:bg-slate-750 transition-colors cursor-pointer">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                       <Grid3X3 className="w-3 h-3" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                     </div>
-                    <span className="text-xs text-white">{cat.name}</span>
+                    <span className="text-xs text-forest-800">{cat.name}</span>
                   </div>
                   <ChevronRight className="w-3 h-3 text-slate-500" />
                 </div>
@@ -428,14 +428,14 @@ export default function UIBuilderPage() {
       case "categories_2x2":
         return (
           <div className="w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
+            <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="grid grid-cols-2 gap-2">
               {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).slice(0, s.count || 4).map((cat) => (
-                <div key={cat.id} className="bg-slate-800 rounded-xl p-3 flex items-center gap-2 hover:bg-slate-750 transition-colors cursor-pointer">
+                <div key={cat.id} className="bg-cream-100 rounded-xl p-3 flex items-center gap-2 hover:bg-slate-750 transition-colors cursor-pointer">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                     <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                   </div>
-                  <span className="text-xs text-white">{cat.name}</span>
+                  <span className="text-xs text-forest-800">{cat.name}</span>
                 </div>
               ))}
             </div>
@@ -445,16 +445,16 @@ export default function UIBuilderPage() {
       case "stories":
         return (
           <div className="w-full">
-            <h3 className="text-sm font-semibold text-white mb-2">{s.title}</h3>
+            <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex-shrink-0 w-16 cursor-pointer">
                   <div className="w-14 h-14 mx-auto rounded-full border-2 border-emerald-500 p-0.5">
-                    <div className="w-full h-full bg-slate-700 rounded-full flex items-center justify-center">
-                      <Play className="w-4 h-4 text-slate-400" />
+                    <div className="w-full h-full bg-cream-200 rounded-full flex items-center justify-center">
+                      <Play className="w-4 h-4 text-slate-500" />
                     </div>
                   </div>
-                  <p className="text-[9px] text-center text-slate-400 mt-1">Hikoya {i}</p>
+                  <p className="text-[9px] text-center text-slate-500 mt-1">Hikoya {i}</p>
                 </div>
               ))}
             </div>
@@ -464,13 +464,13 @@ export default function UIBuilderPage() {
       case "announcement":
         return (
           <div className="w-full py-2.5 px-4 rounded-lg text-center" style={{ backgroundColor: s.bgColor || "#f59e0b" }}>
-            <p className="text-xs text-white font-medium">{s.text}</p>
+            <p className="text-xs text-forest-800 font-medium">{s.text}</p>
           </div>
         );
 
       case "search":
         return (
-          <div className="w-full bg-slate-800 rounded-xl px-3 py-2.5 flex items-center gap-2">
+          <div className="w-full bg-cream-100 rounded-xl px-3 py-2.5 flex items-center gap-2">
             <Search className="w-4 h-4 text-slate-500" />
             <span className="text-xs text-slate-500">{s.placeholder}</span>
           </div>
@@ -495,7 +495,7 @@ export default function UIBuilderPage() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-slate-500">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="text-sm">Yuklanmoqda...</span>
         </div>
@@ -506,8 +506,8 @@ export default function UIBuilderPage() {
   return (
     <div className="h-full flex">
       {/* Left Sidebar */}
-      <div className="w-72 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div className="flex border-b border-slate-800">
+      <div className="w-72 flex-shrink-0 bg-white border-r border-cream-300 flex flex-col">
+        <div className="flex border-b border-cream-300">
           {[
             { key: "blocks" as const, label: t("ui.tab.blocks"), icon: LayoutGrid },
             { key: "templates" as const, label: t("ui.tab.templates"), icon: LayoutTemplate },
@@ -519,7 +519,7 @@ export default function UIBuilderPage() {
                 key={tab.key}
                 onClick={() => setActivePanel(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-all ${
-                  activePanel === tab.key ? "text-emerald-400 border-b-2 border-emerald-400" : "text-slate-500 hover:text-white"
+                  activePanel === tab.key ? "text-forest-700 border-b-2 border-emerald-400" : "text-slate-500 hover:text-forest-900"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -540,7 +540,7 @@ export default function UIBuilderPage() {
                     placeholder={t("ui.searchBlocks")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-cream-100 border border-cream-300 rounded-lg pl-8 pr-3 py-2 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
                   />
                 </div>
 
@@ -549,10 +549,10 @@ export default function UIBuilderPage() {
                   const catLabels: Record<string, string> = { products: "Mahsulotlar", navigation: "Navigatsiya", media: "Media" };
                   return (
                     <div key={category} className="mb-2">
-                      <button onClick={() => toggleCategory(category)} className="flex items-center gap-1.5 w-full py-2 text-xs font-medium text-slate-400 hover:text-white transition-colors">
+                      <button onClick={() => toggleCategory(category)} className="flex items-center gap-1.5 w-full py-2 text-xs font-medium text-slate-500 hover:text-forest-900 transition-colors">
                         {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         {catLabels[category]}
-                        <span className="ml-auto text-[10px] text-slate-600">{defs.length}</span>
+                        <span className="ml-auto text-[10px] text-slate-400">{defs.length}</span>
                       </button>
                       <AnimatePresence>
                         {isExpanded && (
@@ -564,16 +564,16 @@ export default function UIBuilderPage() {
                                   <button
                                     key={def.type}
                                     onClick={() => addBlock(def)}
-                                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group text-left"
+                                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-cream-100/50 hover:bg-cream-100 transition-colors group text-left"
                                   >
-                                    <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-slate-700 transition-colors">
+                                    <div className="w-8 h-8 bg-cream-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-cream-200 transition-colors">
                                       <Icon className="w-4 h-4 text-slate-500" />
                                     </div>
                                     <div className="min-w-0">
-                                      <p className="text-xs text-white truncate">{def.label}</p>
+                                      <p className="text-xs text-forest-800 truncate">{def.label}</p>
                                       <p className="text-[10px] text-slate-500 truncate">{def.description}</p>
                                     </div>
-                                    <Plus className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 ml-auto flex-shrink-0" />
+                                    <Plus className="w-3.5 h-3.5 text-slate-400 group-hover:text-forest-700 ml-auto flex-shrink-0" />
                                   </button>
                                 );
                               })}
@@ -593,18 +593,18 @@ export default function UIBuilderPage() {
                   <button
                     key={tpl.id}
                     onClick={() => applyTemplate(tpl.id)}
-                    className="w-full text-left bg-slate-800/50 hover:bg-slate-800 rounded-xl p-3 transition-colors"
+                    className="w-full text-left bg-cream-100/50 hover:bg-cream-100 rounded-xl p-3 transition-colors"
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: tpl.previewColor + "20" }}>
                         <LayoutTemplate className="w-5 h-5" style={{ color: tpl.previewColor }} />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-white">{tpl.name}</p>
+                        <p className="text-xs font-semibold text-forest-800">{tpl.name}</p>
                         <p className="text-[10px] text-slate-500">{tpl.category} · {tpl.blocks.length} bo'lim</p>
                       </div>
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">{tpl.description}</p>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">{tpl.description}</p>
                   </button>
                 ))}
               </motion.div>
@@ -614,14 +614,14 @@ export default function UIBuilderPage() {
               <motion.div key="brand" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Do'kon nomi</label>
-                  <input value={brand.name} onChange={(e) => setBrand({ ...brand, name: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50" />
+                  <input value={brand.name} onChange={(e) => setBrand({ ...brand, name: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Asosiy</label>
                     <div className="flex items-center gap-2">
                       <input type="color" value={brand.primaryColor} onChange={(e) => setBrand({ ...brand, primaryColor: e.target.value })} className="w-8 h-8 rounded-lg border-0 p-0 bg-transparent cursor-pointer" />
-                      <span className="text-[10px] text-slate-400 font-mono">{brand.primaryColor}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{brand.primaryColor}</span>
                     </div>
                   </div>
                   <div>
@@ -641,7 +641,7 @@ export default function UIBuilderPage() {
                   <label className="text-xs text-slate-500 mb-1.5 block">Mahsulot kartasi</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["compact", "standard", "large"] as const).map((style) => (
-                      <button key={style} onClick={() => setBrand({ ...brand, productCardStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.productCardStyle === style ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                      <button key={style} onClick={() => setBrand({ ...brand, productCardStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.productCardStyle === style ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"}`}>
                         {style}
                       </button>
                     ))}
@@ -651,7 +651,7 @@ export default function UIBuilderPage() {
                   <label className="text-xs text-slate-500 mb-1.5 block">Kategoriya uslubi</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["list", "grid", "circle"] as const).map((style) => (
-                      <button key={style} onClick={() => setBrand({ ...brand, categoryStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.categoryStyle === style ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                      <button key={style} onClick={() => setBrand({ ...brand, categoryStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.categoryStyle === style ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"}`}>
                         {style}
                       </button>
                     ))}
@@ -659,15 +659,15 @@ export default function UIBuilderPage() {
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Telefon</label>
-                  <input value={brand.phone} onChange={(e) => setBrand({ ...brand, phone: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50" />
+                  <input value={brand.phone} onChange={(e) => setBrand({ ...brand, phone: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Email</label>
-                  <input value={brand.email} onChange={(e) => setBrand({ ...brand, email: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50" />
+                  <input value={brand.email} onChange={(e) => setBrand({ ...brand, email: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Manzil</label>
-                  <input value={brand.address} onChange={(e) => setBrand({ ...brand, address: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50" />
+                  <input value={brand.address} onChange={(e) => setBrand({ ...brand, address: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
               </motion.div>
             )}
@@ -678,16 +678,16 @@ export default function UIBuilderPage() {
       {/* Center Canvas */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="h-12 border-b border-slate-800 flex items-center justify-between px-4 flex-shrink-0">
+        <div className="h-12 border-b border-cream-300 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-white">{t("ui.editor")}</span>
+            <span className="text-sm font-semibold text-forest-800">{t("ui.editor")}</span>
             <span className="text-xs text-slate-500">{t("ui.blockCount", { n: blocks.length, active: blocks.filter((b) => b.enabled).length })}</span>
             {savedMessage && (
               <motion.span
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
-                className={`text-xs flex items-center gap-1 ${savedMessage === t("ui.saved") ? "text-emerald-400" : "text-red-400"}`}
+                className={`text-xs flex items-center gap-1 ${savedMessage === t("ui.saved") ? "text-forest-700" : "text-rose-600"}`}
               >
                 <CheckCircle2 className="w-3 h-3" />
                 {savedMessage}
@@ -699,27 +699,27 @@ export default function UIBuilderPage() {
             <button
               onClick={() => setPublished(!published)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                published ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-slate-800 text-slate-500 border border-slate-700"
+                published ? "bg-leaf-100 text-forest-700 border border-leaf-300/60" : "bg-cream-100 text-slate-500 border border-cream-300"
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
               {published ? t("ui.published") : t("ui.hidden")}
             </button>
-            <div className="flex items-center bg-slate-800 rounded-lg p-0.5">
-              <button onClick={() => setPreviewMode("mobile")} className={`p-1.5 rounded-md transition-all ${previewMode === "mobile" ? "bg-slate-700 text-white" : "text-slate-500"}`}>
+            <div className="flex items-center bg-cream-100 rounded-lg p-0.5">
+              <button onClick={() => setPreviewMode("mobile")} className={`p-1.5 rounded-md transition-all ${previewMode === "mobile" ? "bg-cream-200 text-forest-800" : "text-slate-500"}`}>
                 <Smartphone className="w-4 h-4" />
               </button>
-              <button onClick={() => setPreviewMode("desktop")} className={`p-1.5 rounded-md transition-all ${previewMode === "desktop" ? "bg-slate-700 text-white" : "text-slate-500"}`}>
+              <button onClick={() => setPreviewMode("desktop")} className={`p-1.5 rounded-md transition-all ${previewMode === "desktop" ? "bg-cream-200 text-forest-800" : "text-slate-500"}`}>
                 <Monitor className="w-4 h-4" />
               </button>
             </div>
-            <button onClick={() => setShowPreview(!showPreview)} className={`p-1.5 rounded-lg transition-all ${showPreview ? "bg-emerald-500/10 text-emerald-400" : "text-slate-500"}`}>
+            <button onClick={() => setShowPreview(!showPreview)} className={`p-1.5 rounded-lg transition-all ${showPreview ? "bg-leaf-100 text-forest-700" : "text-slate-500"}`}>
               <Eye className="w-4 h-4" />
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-60 text-forest-800 text-xs font-medium rounded-lg transition-colors"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               {t("common.save")}
@@ -731,10 +731,10 @@ export default function UIBuilderPage() {
           {/* Block List */}
           <div className="flex-1 overflow-y-auto p-4">
             {blocks.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl">
+              <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-cream-300 rounded-xl">
                 <Plus className="w-8 h-8 text-slate-700 mb-2" />
                 <p className="text-sm text-slate-500">Blok qo'shing</p>
-                <p className="text-xs text-slate-600 mt-1">Chap paneldan tanlang</p>
+                <p className="text-xs text-slate-400 mt-1">Chap paneldan tanlang</p>
               </div>
             ) : (
               <div className="space-y-2 max-w-2xl mx-auto">
@@ -747,9 +747,9 @@ export default function UIBuilderPage() {
                     onDragLeave={handleDragLeave}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, index)}
-                    className={`group relative bg-slate-900 border rounded-xl p-3 transition-all cursor-move ${
-                      selectedBlockId === block.id ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-slate-800 hover:border-slate-700"
-                    } ${!block.enabled ? "opacity-40" : ""} ${dragOverIndex === index && draggedIndex !== index ? "border-emerald-500/30 bg-emerald-500/5" : ""} ${draggedIndex === index ? "opacity-50" : ""}`}
+                    className={`group relative bg-white border rounded-xl p-3 transition-all cursor-move ${
+                      selectedBlockId === block.id ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-cream-300 hover:border-cream-300"
+                    } ${!block.enabled ? "opacity-40" : ""} ${dragOverIndex === index && draggedIndex !== index ? "border-leaf-400/50 bg-leaf-400/5" : ""} ${draggedIndex === index ? "opacity-50" : ""}`}
                     onClick={() => setSelectedBlockId(block.id)}
                   >
                     <div className="flex items-center gap-3">
@@ -757,20 +757,20 @@ export default function UIBuilderPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); moveUp(index); }}
                           disabled={index === 0}
-                          className="p-0.5 text-slate-600 hover:text-white disabled:opacity-20 transition-colors"
+                          className="p-0.5 text-slate-400 hover:text-forest-900 disabled:opacity-20 transition-colors"
                         >
                           <ArrowUp className="w-3 h-3" />
                         </button>
-                        <GripVertical className="w-4 h-4 text-slate-600" />
+                        <GripVertical className="w-4 h-4 text-slate-400" />
                         <button
                           onClick={(e) => { e.stopPropagation(); moveDown(index); }}
                           disabled={index === blocks.length - 1}
-                          className="p-0.5 text-slate-600 hover:text-white disabled:opacity-20 transition-colors"
+                          className="p-0.5 text-slate-400 hover:text-forest-900 disabled:opacity-20 transition-colors"
                         >
                           <ArrowDown className="w-3 h-3" />
                         </button>
                       </div>
-                      <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 bg-cream-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         {(() => {
                           const def = blockDefinitions.find((d) => d.type === block.type);
                           const Icon = def ? (iconMap[def.icon] || Package) : Package;
@@ -778,17 +778,17 @@ export default function UIBuilderPage() {
                         })()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white">{block.title}</p>
+                        <p className="text-sm text-forest-800">{block.title}</p>
                         <p className="text-[10px] text-slate-500">{blockDefinitions.find((d) => d.type === block.type)?.description}</p>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); toggleBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors" title={block.enabled ? "O'chirish" : "Yoqish"}>
+                        <button onClick={(e) => { e.stopPropagation(); toggleBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title={block.enabled ? "O'chirish" : "Yoqish"}>
                           {block.enabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block); }} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors" title="Nusxa">
+                        <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title="Nusxa">
                           <Copy className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="O'chirish">
+                        <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-colors" title="O'chirish">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -798,7 +798,7 @@ export default function UIBuilderPage() {
                 {/* Drop zone at end */}
                 <div
                   className={`h-12 border-2 border-dashed rounded-xl flex items-center justify-center text-xs transition-colors ${
-                    dragOverIndex === blocks.length ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-slate-800 text-slate-600"
+                    dragOverIndex === blocks.length ? "border-leaf-400/50 bg-leaf-400/5 text-forest-700" : "border-cream-300 text-slate-400"
                   }`}
                   onDragEnter={() => setDragOverIndex(blocks.length)}
                   onDragLeave={handleDragLeave}
@@ -819,26 +819,26 @@ export default function UIBuilderPage() {
                 animate={{ width: previewMode === "mobile" ? 360 : 480, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="border-l border-slate-800 bg-slate-950 overflow-hidden flex flex-col"
+                className="border-l border-cream-300 bg-cream-50 overflow-hidden flex flex-col"
               >
-                <div className="h-10 border-b border-slate-800 flex items-center justify-between px-3 flex-shrink-0">
-                  <span className="text-xs font-medium text-slate-400">Preview</span>
+                <div className="h-10 border-b border-cream-300 flex items-center justify-between px-3 flex-shrink-0">
+                  <span className="text-xs font-medium text-slate-500">Preview</span>
                   <div className="flex items-center gap-2">
                     {previewProducts.length > 0 && (
-                      <span className="text-[10px] text-slate-600">{previewProducts.length} mahsulot</span>
+                      <span className="text-[10px] text-slate-400">{previewProducts.length} mahsulot</span>
                     )}
-                    <span className="text-[10px] text-slate-600">{previewMode === "mobile" ? "375px" : "480px"}</span>
+                    <span className="text-[10px] text-slate-400">{previewMode === "mobile" ? "375px" : "480px"}</span>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3">
                   <div className={`mx-auto ${previewMode === "mobile" ? "w-[320px]" : "w-full"}`}>
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-800">
+                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-cream-300">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-forest-800" style={{ backgroundColor: brand.primaryColor }}>
                           {brand.logo}
                         </div>
-                        <span className="text-xs font-semibold text-white">{brand.name}</span>
+                        <span className="text-xs font-semibold text-forest-800">{brand.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Search className="w-3.5 h-3.5 text-slate-500" />
@@ -854,12 +854,12 @@ export default function UIBuilderPage() {
                     </div>
 
                     {/* Footer */}
-                    <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+                    <div className="mt-6 pt-4 border-t border-cream-300 text-center">
                       <p className="text-[10px] text-slate-500">{brand.name} © 2025</p>
                       <div className="flex items-center justify-center gap-3 mt-2">
-                        {brand.phone && <Phone className="w-3 h-3 text-slate-600" />}
-                        {brand.email && <Mail className="w-3 h-3 text-slate-600" />}
-                        {brand.address && <MapPin className="w-3 h-3 text-slate-600" />}
+                        {brand.phone && <Phone className="w-3 h-3 text-slate-400" />}
+                        {brand.email && <Mail className="w-3 h-3 text-slate-400" />}
+                        {brand.address && <MapPin className="w-3 h-3 text-slate-400" />}
                       </div>
                     </div>
                   </div>
@@ -878,11 +878,11 @@ export default function UIBuilderPage() {
             animate={{ width: 280, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-l border-slate-800 bg-slate-900 overflow-hidden flex flex-col"
+            className="border-l border-cream-300 bg-white overflow-hidden flex flex-col"
           >
-            <div className="h-12 border-b border-slate-800 flex items-center justify-between px-4 flex-shrink-0">
-              <span className="text-sm font-semibold text-white">Blok sozlamalari</span>
-              <button onClick={() => setSelectedBlockId(null)} className="p-1 rounded-lg text-slate-500 hover:text-white">
+            <div className="h-12 border-b border-cream-300 flex items-center justify-between px-4 flex-shrink-0">
+              <span className="text-sm font-semibold text-forest-800">Blok sozlamalari</span>
+              <button onClick={() => setSelectedBlockId(null)} className="p-1 rounded-lg text-slate-500 hover:text-forest-900">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -892,7 +892,7 @@ export default function UIBuilderPage() {
                 <input
                   value={selectedBlock.title}
                   onChange={(e) => updateBlockTitle(selectedBlock.id, e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
                 />
               </div>
 
@@ -907,7 +907,7 @@ export default function UIBuilderPage() {
                         max={12}
                         value={value}
                         onChange={(e) => updateBlockSetting(selectedBlock.id, key, parseInt(e.target.value) || 1)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
                       />
                     </div>
                   );
@@ -921,7 +921,7 @@ export default function UIBuilderPage() {
                       <input
                         value={value}
                         onChange={(e) => updateBlockSetting(selectedBlock.id, key, e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
                       />
                     </div>
                   );
@@ -933,7 +933,7 @@ export default function UIBuilderPage() {
                       <select
                         value={value}
                         onChange={(e) => updateBlockSetting(selectedBlock.id, key, e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
                       >
                         <option value="">Barcha kategoriyalar</option>
                         {realCategories.map((c) => (
@@ -954,7 +954,7 @@ export default function UIBuilderPage() {
                           onChange={(e) => updateBlockSetting(selectedBlock.id, key, e.target.value)}
                           className="w-8 h-8 rounded-lg border-0 p-0 bg-transparent cursor-pointer"
                         />
-                        <span className="text-xs text-slate-400 font-mono">{value}</span>
+                        <span className="text-xs text-slate-500 font-mono">{value}</span>
                       </div>
                     </div>
                   );
@@ -970,7 +970,7 @@ export default function UIBuilderPage() {
                       <label className="text-xs text-slate-500">{labels[key] || key}</label>
                       <button
                         onClick={() => updateBlockSetting(selectedBlock.id, key, !value)}
-                        className={`relative w-8 h-4 rounded-full transition-all ${value ? "bg-emerald-500" : "bg-slate-700"}`}
+                        className={`relative w-8 h-4 rounded-full transition-all ${value ? "bg-leaf-400" : "bg-cream-200"}`}
                       >
                         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${value ? "left-4" : "left-0.5"}`} />
                       </button>

@@ -95,17 +95,17 @@ import { useT } from "../i18n";
 type PaymentMethodStatus = "active" | "inactive" | "pending" | "error";
 
 const statusConfig: Record<PaymentMethodStatus, { color: string; bg: string; label: string; icon: React.ElementType }> = {
-  active: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Faol", icon: CheckCircle2 },
-  inactive: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20", label: "Nofaol", icon: XCircle },
-  pending: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Kutilmoqda", icon: Clock },
-  error: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", label: "Xatolik", icon: AlertTriangle },
+  active: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60", label: "Faol", icon: CheckCircle2 },
+  inactive: { color: "text-slate-500", bg: "bg-slate-100 border-slate-300", label: "Nofaol", icon: XCircle },
+  pending: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300", label: "Kutilmoqda", icon: Clock },
+  error: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300", label: "Xatolik", icon: AlertTriangle },
 };
 
 const txnStatusConfig: Record<string, { color: string; label: string }> = {
-  success: { color: "text-emerald-400", label: "Muvaffaqiyatli" },
-  pending: { color: "text-amber-400", label: "Kutilmoqda" },
-  failed: { color: "text-red-400", label: "Bekor" },
-  refunded: { color: "text-slate-400", label: "Qaytarildi" },
+  success: { color: "text-forest-700", label: "Muvaffaqiyatli" },
+  pending: { color: "text-amber-500", label: "Kutilmoqda" },
+  failed: { color: "text-rose-600", label: "Bekor" },
+  refunded: { color: "text-slate-500", label: "Qaytarildi" },
 };
 
 const iconMap: Record<string, React.ElementType> = {
@@ -116,8 +116,8 @@ function CustomTooltip({ active, payload }: ChartTooltipProps) {
   if (active && payload && payload.length) {
     const date = (payload[0].payload as { date?: string } | undefined)?.date ?? "";
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-xs text-white font-medium">{date}</p>
+      <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-xs text-forest-800 font-medium">{date}</p>
         {payload.map((p) => (
           <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value} ta</p>
         ))}
@@ -274,33 +274,33 @@ export default function PaymentsPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t("payments.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("payments.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("payments.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           {loading && (
-            <span className="flex items-center gap-1.5 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               {t("payments.loading")}
             </span>
           )}
           {error && (
-            <span className="flex items-center gap-1.5 text-xs text-rose-400">
+            <span className="flex items-center gap-1.5 text-xs text-rose-600">
               <AlertTriangle className="w-3.5 h-3.5" />
               {error}
             </span>
           )}
           {savedMessage && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <Check className="w-4 h-4 text-emerald-400" />
-              <span className="text-sm text-emerald-400">{savedMessage}</span>
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 px-3 py-2 bg-leaf-100 border border-leaf-300/60 rounded-lg">
+              <Check className="w-4 h-4 text-forest-700" />
+              <span className="text-sm text-forest-700">{savedMessage}</span>
             </motion.div>
           )}
           {availableToAdd.length > 0 && (
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu(!showAddMenu)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+                className="flex items-center gap-1.5 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
               >
                 <Plus className="w-4 h-4" />
                 {t("payments.addMethod")}
@@ -308,12 +308,12 @@ export default function PaymentsPage() {
               {showAddMenu && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setShowAddMenu(false)} />
-                  <div className="absolute top-full right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px]">
+                  <div className="absolute top-full right-0 mt-1 z-30 bg-cream-100 border border-cream-300 rounded-lg shadow-xl py-1 min-w-[180px]">
                     {availableToAdd.map((k) => (
                       <button
                         key={k.code}
                         onClick={() => { addMethod(k.code, k.name); setShowAddMenu(false); }}
-                        className="w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700"
+                        className="w-full text-left px-3 py-2 text-sm text-forest-800 hover:bg-cream-200"
                       >
                         {k.name}
                       </button>
@@ -329,12 +329,12 @@ export default function PaymentsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: t("payments.stats.revenue"), value: (totalRevenue / 1000000).toFixed(1) + "M so'm", icon: DollarSign, color: "text-emerald-400" },
-          { label: t("payments.stats.transactions"), value: totalTxns.toLocaleString(), icon: Activity, color: "text-blue-400" },
-          { label: t("payments.stats.successRate"), value: avgSuccess + "%", icon: ShieldCheck, color: "text-violet-400" },
-          { label: t("payments.stats.today"), value: (todayRevenue / 1000000).toFixed(1) + "M so'm", icon: TrendingUp, color: "text-amber-400" },
+          { label: t("payments.stats.revenue"), value: (totalRevenue / 1000000).toFixed(1) + "M so'm", icon: DollarSign, color: "text-forest-700" },
+          { label: t("payments.stats.transactions"), value: totalTxns.toLocaleString(), icon: Activity, color: "text-sky-600" },
+          { label: t("payments.stats.successRate"), value: avgSuccess + "%", icon: ShieldCheck, color: "text-violet-600" },
+          { label: t("payments.stats.today"), value: (todayRevenue / 1000000).toFixed(1) + "M so'm", icon: TrendingUp, color: "text-amber-500" },
         ].map((stat, i) => (
-          <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-white border border-cream-300 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
               <p className="text-xs text-slate-500">{stat.label}</p>
@@ -346,17 +346,17 @@ export default function PaymentsPage() {
 
       {/* Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">{t("payments.chart.daily")}</h3>
+        <div className="lg:col-span-2 bg-white border border-cream-300 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-forest-800 mb-4">{t("payments.chart.daily")}</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dailyPaymentStats} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" vertical={false} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 11 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="click" name="Click" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="payme" name="Payme" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="click" name="Click" fill="#0EA5E9" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="payme" name="Payme" fill="#5FA340" radius={[3, 3, 0, 0]} maxBarSize={20} />
                 <Bar dataKey="uzum" name="Uzum" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={20} />
                 <Bar dataKey="alif" name="Alif" fill="#8b5cf6" radius={[3, 3, 0, 0]} maxBarSize={20} />
                 <Bar dataKey="cash" name="Naqd" fill="#64748b" radius={[3, 3, 0, 0]} maxBarSize={20} />
@@ -364,8 +364,8 @@ export default function PaymentsPage() {
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">{t("payments.chart.byMethod")}</h3>
+        <div className="bg-white border border-cream-300 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-forest-800 mb-4">{t("payments.chart.byMethod")}</h3>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -376,9 +376,9 @@ export default function PaymentsPage() {
                   const { active, payload } = props as ChartTooltipProps;
                   if (active && payload && payload.length) {
                     return (
-                      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-                        <p className="text-xs text-white font-medium">{payload[0].name}</p>
-                        <p className="text-xs text-slate-400">{t("payments.chart.txnsCount", { n: String(payload[0].value ?? 0) })}</p>
+                      <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
+                        <p className="text-xs text-forest-800 font-medium">{payload[0].name}</p>
+                        <p className="text-xs text-slate-500">{t("payments.chart.txnsCount", { n: String(payload[0].value ?? 0) })}</p>
                       </div>
                     );
                   }
@@ -392,9 +392,9 @@ export default function PaymentsPage() {
               <div key={d.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                  <span className="text-xs text-slate-400">{d.name}</span>
+                  <span className="text-xs text-slate-500">{d.name}</span>
                 </div>
-                <span className="text-xs text-white font-medium">{d.value}</span>
+                <span className="text-xs text-forest-800 font-medium">{d.value}</span>
               </div>
             ))}
           </div>
@@ -404,7 +404,7 @@ export default function PaymentsPage() {
       {/* Payment Methods */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">{t("payments.methods")}</h2>
+          <h2 className="text-lg font-semibold text-forest-800">{t("payments.methods")}</h2>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
@@ -413,7 +413,7 @@ export default function PaymentsPage() {
                 placeholder={t("payments.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                className="bg-cream-100 border border-cream-300 rounded-lg pl-8 pr-3 py-1.5 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
               />
             </div>
           </div>
@@ -431,25 +431,25 @@ export default function PaymentsPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors"
+                className="bg-white border border-cream-300 rounded-xl p-5 hover:border-cream-300 transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${method.status === "active" ? "bg-emerald-500/10" : "bg-slate-800"}`}>
-                      <MethodIcon className={`w-6 h-6 ${method.status === "active" ? "text-emerald-400" : "text-slate-500"}`} />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${method.status === "active" ? "bg-leaf-100" : "bg-cream-100"}`}>
+                      <MethodIcon className={`w-6 h-6 ${method.status === "active" ? "text-forest-700" : "text-slate-500"}`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-semibold text-white">{method.name}</h3>
+                        <h3 className="text-base font-semibold text-forest-800">{method.name}</h3>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${st.bg} ${st.color}`}>
                           <StatusIcon className="w-3 h-3" />
                           {st.label}
                         </span>
                         {method.type === "installment" && (
-                          <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-medium">Nasiya</span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-500 text-[10px] font-medium">Nasiya</span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-400 mt-1">{method.description}</p>
+                      <p className="text-sm text-slate-500 mt-1">{method.description}</p>
                       <div className="flex items-center gap-4 mt-2">
                         <span className="text-xs text-slate-500">Oxirgi yangilanish: {new Date(method.lastUpdated).toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", year: "numeric" })}</span>
                         {method.config.commissionPercent !== undefined && (
@@ -464,7 +464,7 @@ export default function PaymentsPage() {
                         setSelectedMethod(method);
                         setShowConfig(true);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-white transition-all"
+                      className="flex items-center gap-1.5 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-xs text-forest-800 transition-all"
                     >
                       <Settings className="w-3.5 h-3.5" />
                       Sozlash
@@ -472,10 +472,10 @@ export default function PaymentsPage() {
                     <button
                       onClick={() => toggleMethod(method.id)}
                       disabled={busyId === method.id}
-                      className={`relative w-11 h-6 rounded-full transition-all disabled:opacity-50 ${method.status === "active" ? "bg-emerald-500" : "bg-slate-700"}`}
+                      className={`relative w-11 h-6 rounded-full transition-all disabled:opacity-50 ${method.status === "active" ? "bg-leaf-400" : "bg-cream-200"}`}
                     >
                       {busyId === method.id ? (
-                        <Loader2 className="absolute top-1 left-1/2 -translate-x-1/2 w-4 h-4 text-white animate-spin" />
+                        <Loader2 className="absolute top-1 left-1/2 -translate-x-1/2 w-4 h-4 text-forest-800 animate-spin" />
                       ) : (
                         <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${method.status === "active" ? "left-5" : "left-0.5"}`} />
                       )}
@@ -484,26 +484,26 @@ export default function PaymentsPage() {
                 </div>
 
                 {/* Stats row */}
-                <div className="grid grid-cols-5 gap-3 mt-4 pt-4 border-t border-slate-800">
+                <div className="grid grid-cols-5 gap-3 mt-4 pt-4 border-t border-cream-300">
                   <div>
                     <p className="text-[10px] text-slate-500">Tranzaksiyalar</p>
-                    <p className="text-sm font-bold text-white">{method.stats.totalTransactions.toLocaleString()}</p>
+                    <p className="text-sm font-bold text-forest-800">{method.stats.totalTransactions.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500">Daromad</p>
-                    <p className="text-sm font-bold text-emerald-400">{(method.stats.totalAmount / 1000000).toFixed(1)}M</p>
+                    <p className="text-sm font-bold text-forest-700">{(method.stats.totalAmount / 1000000).toFixed(1)}M</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500">Muvaffaqiyat</p>
-                    <p className="text-sm font-bold text-white">{method.stats.successRate}%</p>
+                    <p className="text-sm font-bold text-forest-800">{method.stats.successRate}%</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500">O'rtacha</p>
-                    <p className="text-sm font-bold text-white">{(method.stats.avgAmount / 1000).toFixed(0)}k</p>
+                    <p className="text-sm font-bold text-forest-800">{(method.stats.avgAmount / 1000).toFixed(0)}k</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500">Bugun</p>
-                    <p className="text-sm font-bold text-amber-400">{method.stats.todayTransactions}</p>
+                    <p className="text-sm font-bold text-amber-500">{method.stats.todayTransactions}</p>
                   </div>
                 </div>
               </motion.div>
@@ -513,18 +513,18 @@ export default function PaymentsPage() {
       </div>
 
       {/* Transactions Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">So'nggi tranzaksiyalar</h3>
+      <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-cream-300 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-forest-800">So'nggi tranzaksiyalar</h3>
           <div className="flex items-center gap-2">
-            <select value={txnFilter} onChange={(e) => setTxnFilter(e.target.value)} className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
+            <select value={txnFilter} onChange={(e) => setTxnFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-lg px-2 py-1 text-xs text-forest-800 focus:outline-none">
               <option value="all">Barcha</option>
               <option value="success">Muvaffaqiyatli</option>
               <option value="pending">Kutilmoqda</option>
               <option value="failed">Bekor</option>
               <option value="refunded">Qaytarildi</option>
             </select>
-            <button className="flex items-center gap-1 px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-400 hover:text-white transition-all">
+            <button className="flex items-center gap-1 px-2 py-1 bg-cream-100 border border-cream-300 rounded-lg text-xs text-slate-500 hover:text-forest-900 transition-all">
               <Download className="w-3 h-3" />
               Export
             </button>
@@ -533,7 +533,7 @@ export default function PaymentsPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-800/30">
+              <tr className="border-b border-cream-300 bg-cream-100/30">
                 <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">ID</th>
                 <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Buyurtma</th>
                 <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Mijoz</th>
@@ -546,25 +546,25 @@ export default function PaymentsPage() {
             <tbody>
               {paginatedTxns.map((txn, i) => {
                 const tsKey = txn.status.toLowerCase();
-                const ts = txnStatusConfig[tsKey] ?? { color: "text-slate-400", label: txn.status };
+                const ts = txnStatusConfig[tsKey] ?? { color: "text-slate-500", label: txn.status };
                 const methodName = txn.method?.name ?? "—";
                 return (
-                  <motion.tr key={txn.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-5 text-sm text-slate-400 font-mono">{txn.id.slice(0, 8)}</td>
-                    <td className="py-3 px-5 text-sm text-white">{txn.orderId ?? "—"}</td>
+                  <motion.tr key={txn.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors">
+                    <td className="py-3 px-5 text-sm text-slate-500 font-mono">{txn.id.slice(0, 8)}</td>
+                    <td className="py-3 px-5 text-sm text-forest-800">{txn.orderId ?? "—"}</td>
                     <td className="py-3 px-5">
-                      <p className="text-sm text-white">{txn.externalId ?? "—"}</p>
+                      <p className="text-sm text-forest-800">{txn.externalId ?? "—"}</p>
                       <p className="text-xs text-slate-500">{txn.currency}</p>
                     </td>
                     <td className="py-3 px-5">
                       <span className="text-xs font-medium" style={{ color: methodColors[methodName] || "#94a3b8" }}>{methodName}</span>
                     </td>
-                    <td className="py-3 px-5 text-sm font-semibold text-white text-right">{txn.amount.toLocaleString()}</td>
+                    <td className="py-3 px-5 text-sm font-semibold text-forest-800 text-right">{txn.amount.toLocaleString()}</td>
                     <td className="py-3 px-5">
                       <span className={`text-xs font-medium ${ts.color}`}>{ts.label}</span>
-                      {txn.errorMessage && <p className="text-[10px] text-red-400 mt-0.5">{txn.errorMessage}</p>}
+                      {txn.errorMessage && <p className="text-[10px] text-rose-600 mt-0.5">{txn.errorMessage}</p>}
                     </td>
-                    <td className="py-3 px-5 text-sm text-slate-400">{new Date(txn.createdAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</td>
+                    <td className="py-3 px-5 text-sm text-slate-500">{new Date(txn.createdAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</td>
                   </motion.tr>
                 );
               })}
@@ -572,12 +572,12 @@ export default function PaymentsPage() {
           </table>
         </div>
         {filteredTxns.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-cream-300">
             <p className="text-xs text-slate-500">
               {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredTxns.length)} / {filteredTxns.length} ta
             </p>
             <div className="flex items-center gap-1">
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-30 transition-all">
+              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 disabled:opacity-30 transition-all">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -587,12 +587,12 @@ export default function PaymentsPage() {
                 else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
                 else pageNum = currentPage - 2 + i;
                 return (
-                  <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`w-7 h-7 rounded-lg text-xs font-medium transition-all ${currentPage === pageNum ? "bg-emerald-500 text-white" : "text-slate-500 hover:text-white hover:bg-slate-800"}`}>
+                  <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`w-7 h-7 rounded-lg text-xs font-medium transition-all ${currentPage === pageNum ? "bg-leaf-400 text-forest-800" : "text-slate-500 hover:text-forest-900 hover:bg-cream-100"}`}>
                     {pageNum}
                   </button>
                 );
               })}
-              <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-30 transition-all">
+              <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 disabled:opacity-30 transition-all">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -614,29 +614,29 @@ export default function PaymentsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
+              className="bg-white border border-cream-300 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-6 border-b border-slate-800">
+              <div className="flex items-center justify-between p-6 border-b border-cream-300">
                 <div>
-                  <h2 className="text-lg font-bold text-white">{selectedMethod.name} sozlamalari</h2>
+                  <h2 className="text-lg font-bold text-forest-800">{selectedMethod.name} sozlamalari</h2>
                   <p className="text-sm text-slate-500 mt-0.5">Integratsiya ma'lumotlari</p>
                 </div>
-                <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="p-6 space-y-4">
                 {/* Test mode */}
-                <div className="flex items-center justify-between bg-slate-800/50 rounded-xl p-3">
+                <div className="flex items-center justify-between bg-cream-100/50 rounded-xl p-3">
                   <div>
-                    <p className="text-sm text-white">Test rejimi</p>
+                    <p className="text-sm text-forest-800">Test rejimi</p>
                     <p className="text-xs text-slate-500">Haqiqiy to'lovlarni o'tkazmaydi</p>
                   </div>
                   <button
                     onClick={() => setTestMode((prev) => ({ ...prev, [selectedMethod.id]: !(prev[selectedMethod.id] ?? selectedMethod.config.testMode) }))}
-                    className={`relative w-11 h-6 rounded-full transition-all ${(testMode[selectedMethod.id] ?? selectedMethod.config.testMode) ? "bg-amber-500" : "bg-slate-700"}`}
+                    className={`relative w-11 h-6 rounded-full transition-all ${(testMode[selectedMethod.id] ?? selectedMethod.config.testMode) ? "bg-amber-500" : "bg-cream-200"}`}
                   >
                     <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${(testMode[selectedMethod.id] ?? selectedMethod.config.testMode) ? "left-5" : "left-0.5"}`} />
                   </button>
@@ -647,8 +647,8 @@ export default function PaymentsPage() {
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Merchant ID</label>
                     <div className="flex items-center gap-2">
-                      <input defaultValue={selectedMethod.config.merchantId} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
-                      <button className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors" title="Nusxa olish">
+                      <input defaultValue={selectedMethod.config.merchantId} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors" title="Nusxa olish">
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
@@ -657,15 +657,15 @@ export default function PaymentsPage() {
                 {selectedMethod.config.serviceId !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Service ID</label>
-                    <input defaultValue={selectedMethod.config.serviceId} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input defaultValue={selectedMethod.config.serviceId} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.apiKey !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">API Key</label>
                     <div className="flex items-center gap-2">
-                      <input type="password" defaultValue={selectedMethod.config.apiKey} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
-                      <button className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                      <input type="password" defaultValue={selectedMethod.config.apiKey} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
                         <Eye className="w-4 h-4" />
                       </button>
                     </div>
@@ -675,8 +675,8 @@ export default function PaymentsPage() {
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Secret Key</label>
                     <div className="flex items-center gap-2">
-                      <input type="password" defaultValue={selectedMethod.config.secretKey} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
-                      <button className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                      <input type="password" defaultValue={selectedMethod.config.secretKey} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
                         <Eye className="w-4 h-4" />
                       </button>
                     </div>
@@ -685,27 +685,27 @@ export default function PaymentsPage() {
                 {selectedMethod.config.terminalId !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Terminal ID</label>
-                    <input defaultValue={selectedMethod.config.terminalId} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input defaultValue={selectedMethod.config.terminalId} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.login !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Login</label>
-                    <input defaultValue={selectedMethod.config.login} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input defaultValue={selectedMethod.config.login} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.password !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Parol</label>
-                    <input type="password" defaultValue={selectedMethod.config.password} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input type="password" defaultValue={selectedMethod.config.password} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.webhookUrl !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Webhook URL</label>
                     <div className="flex items-center gap-2">
-                      <input defaultValue={selectedMethod.config.webhookUrl} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400" readOnly />
-                      <button className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                      <input defaultValue={selectedMethod.config.webhookUrl} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-slate-500" readOnly />
+                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
@@ -714,45 +714,45 @@ export default function PaymentsPage() {
                 {selectedMethod.config.redirectUrl !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Redirect URL</label>
-                    <input defaultValue={selectedMethod.config.redirectUrl} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input defaultValue={selectedMethod.config.redirectUrl} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Minimal summa</label>
-                    <input type="number" defaultValue={selectedMethod.config.minAmount} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input type="number" defaultValue={selectedMethod.config.minAmount} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Maksimal summa</label>
-                    <input type="number" defaultValue={selectedMethod.config.maxAmount} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                    <input type="number" defaultValue={selectedMethod.config.maxAmount} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 </div>
 
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">Komissiya (%)</label>
-                  <input type="number" step="0.1" defaultValue={selectedMethod.config.commissionPercent} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+                  <input type="number" step="0.1" defaultValue={selectedMethod.config.commissionPercent} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <label className="text-xs text-slate-500">Avtomatik tasdiqlash</label>
                   <button
-                    className={`relative w-8 h-4 rounded-full transition-all ${selectedMethod.config.autoConfirm ? "bg-emerald-500" : "bg-slate-700"}`}
+                    className={`relative w-8 h-4 rounded-full transition-all ${selectedMethod.config.autoConfirm ? "bg-leaf-400" : "bg-cream-200"}`}
                   >
                     <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${selectedMethod.config.autoConfirm ? "left-4" : "left-0.5"}`} />
                   </button>
                 </div>
 
                 {/* Links */}
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                <div className="flex items-center gap-2 pt-2 border-t border-cream-300">
                   {selectedMethod.docsUrl && (
-                    <a href={selectedMethod.docsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                    <a href={selectedMethod.docsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-forest-700 hover:text-forest-700 transition-colors">
                       <BookOpen className="w-3.5 h-3.5" />
                       Hujjatlar
                     </a>
                   )}
                   {selectedMethod.integrationUrl && (
-                    <a href={selectedMethod.integrationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                    <a href={selectedMethod.integrationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-forest-700 hover:text-forest-700 transition-colors">
                       <ExternalLink className="w-3.5 h-3.5" />
                       API docs
                     </a>
@@ -761,8 +761,8 @@ export default function PaymentsPage() {
               </div>
 
               <div className="flex items-center justify-end gap-2 p-6 pt-0">
-                <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">Bekor</button>
-                <button onClick={() => saveConfig(selectedMethod.id, selectedMethod.config)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-all">
+                <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all">Bekor</button>
+                <button onClick={() => saveConfig(selectedMethod.id, selectedMethod.config)} className="flex items-center gap-1.5 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-sm font-medium rounded-lg transition-all">
                   <Save className="w-4 h-4" />
                   Saqlash
                 </button>

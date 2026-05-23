@@ -40,11 +40,11 @@ interface CustomerDetailResponse {
 
 // Faqat ranglar — labellar t() orqali
 const ORDER_STATUS_CLS: Record<OrderStatus, string> = {
-  PENDING: "bg-amber-500/15 text-amber-300",
-  PROCESSING: "bg-blue-500/15 text-blue-300",
-  COMPLETED: "bg-emerald-500/15 text-emerald-300",
-  CANCELLED: "bg-rose-500/15 text-rose-300",
-  REFUNDED: "bg-slate-700 text-slate-300",
+  PENDING: "bg-amber-100 text-amber-600",
+  PROCESSING: "bg-sky-100 text-sky-700",
+  COMPLETED: "bg-leaf-100 text-forest-700",
+  CANCELLED: "bg-rose-100 text-rose-600",
+  REFUNDED: "bg-cream-200 text-slate-700",
 };
 
 function formatMoney(n: number, currency: string): string {
@@ -144,31 +144,31 @@ export default function CustomerDetailDrawer({
   return (
     <div className="fixed inset-0 z-[200] flex justify-end" role="dialog" aria-modal="true">
       <button onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-label="Yopish" />
-      <div className="relative w-full sm:max-w-md bg-slate-900 border-l border-slate-800 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
           </div>
         ) : error ? (
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
-            <AlertCircle className="w-10 h-10 text-rose-400" />
-            <p className="text-sm text-rose-300">{error}</p>
-            <button onClick={onClose} className="px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300">Yopish</button>
+            <AlertCircle className="w-10 h-10 text-rose-600" />
+            <p className="text-sm text-rose-600">{error}</p>
+            <button onClick={onClose} className="px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">Yopish</button>
           </div>
         ) : data ? (
           <>
             {/* Header */}
-            <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white border-b border-cream-300 px-5 py-3 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center font-semibold">
+                <div className="w-10 h-10 rounded-full bg-leaf-100 text-forest-700 flex items-center justify-center font-semibold">
                   {data.customer.name.slice(0, 1).toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-white">{data.customer.name}</h2>
+                  <h2 className="text-base font-semibold text-forest-800">{data.customer.name}</h2>
                   <div className="text-[11px] text-slate-500">{t("customerDetail.label", { date: formatDate(data.customer.createdAt) })}</div>
                 </div>
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+              <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -176,15 +176,15 @@ export default function CustomerDetailDrawer({
             <div className="flex-1 p-5 space-y-5">
               {/* Stats */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3">
+                <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
                   <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.totalSpent")}</div>
-                  <div className="text-lg font-bold text-emerald-300">
+                  <div className="text-lg font-bold text-forest-700">
                     {formatMoney(data.stats.totalSpent, "UZS")}
                   </div>
                 </div>
-                <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3">
+                <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
                   <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.orders")}</div>
-                  <div className="text-lg font-bold text-white">{data.stats.orderCount}</div>
+                  <div className="text-lg font-bold text-forest-800">{data.stats.orderCount}</div>
                 </div>
               </div>
 
@@ -192,7 +192,7 @@ export default function CustomerDetailDrawer({
               <Section title={t("customerDetail.contact")} icon={UserIcon} action={
                 <button
                   onClick={() => setEditing((v) => !v)}
-                  className="text-xs text-emerald-300 hover:text-emerald-200 flex items-center gap-1"
+                  className="text-xs text-forest-700 hover:text-forest-700 flex items-center gap-1"
                 >
                   {editing ? <X className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
                   {editing ? t("common.cancel") : t("customerDetail.edit")}
@@ -211,13 +211,13 @@ export default function CustomerDetailDrawer({
                         value={form.notes}
                         onChange={(e) => setForm({ ...form, notes: e.target.value })}
                         rows={3}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-2.5 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
                       />
                     </label>
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="w-full mt-1 py-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium flex items-center justify-center gap-1.5"
+                      className="w-full mt-1 py-2 text-xs bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg font-medium flex items-center justify-center gap-1.5"
                     >
                       {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                       {t("common.save")}
@@ -226,19 +226,19 @@ export default function CustomerDetailDrawer({
                 ) : (
                   <div className="space-y-1.5 text-sm">
                     {data.customer.phone && (
-                      <a href={`tel:${data.customer.phone}`} className="flex items-center gap-2 text-slate-300 hover:text-emerald-300">
+                      <a href={`tel:${data.customer.phone}`} className="flex items-center gap-2 text-slate-700 hover:text-forest-700">
                         <Phone className="w-3.5 h-3.5" />
                         {data.customer.phone}
                       </a>
                     )}
                     {data.customer.email && (
-                      <a href={`mailto:${data.customer.email}`} className="flex items-center gap-2 text-slate-300 hover:text-emerald-300">
+                      <a href={`mailto:${data.customer.email}`} className="flex items-center gap-2 text-slate-700 hover:text-forest-700">
                         <Mail className="w-3.5 h-3.5" />
                         {data.customer.email}
                       </a>
                     )}
                     {data.customer.location && (
-                      <div className="flex items-center gap-2 text-slate-400">
+                      <div className="flex items-center gap-2 text-slate-500">
                         <MapPin className="w-3.5 h-3.5" />
                         {data.customer.location}
                       </div>
@@ -251,14 +251,14 @@ export default function CustomerDetailDrawer({
                     {(data.customer.tags?.length ?? 0) > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {data.customer.tags.map((tag) => (
-                          <span key={tag} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">
+                          <span key={tag} className="text-[10px] bg-cream-100 text-slate-700 px-2 py-0.5 rounded-full">
                             {tag}
                           </span>
                         ))}
                       </div>
                     )}
                     {data.customer.notes && (
-                      <p className="text-[11px] text-slate-400 italic mt-2 pt-2 border-t border-slate-800">
+                      <p className="text-[11px] text-slate-500 italic mt-2 pt-2 border-t border-cream-300">
                         {data.customer.notes}
                       </p>
                     )}
@@ -271,7 +271,7 @@ export default function CustomerDetailDrawer({
                 {data.orders.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-3">{t("customerDetail.noOrders")}</p>
                 ) : (
-                  <div className="divide-y divide-slate-800">
+                  <div className="divide-y divide-cream-300">
                     {data.orders.map((order) => {
                       const cls = ORDER_STATUS_CLS[order.status];
                       return (
@@ -279,11 +279,11 @@ export default function CustomerDetailDrawer({
                           key={order.id}
                           onClick={() => onOpenOrder?.(order.id)}
                           disabled={!onOpenOrder}
-                          className="w-full flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:bg-slate-800/30 -mx-3 px-3 rounded-lg text-left transition-colors disabled:cursor-default"
+                          className="w-full flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:bg-cream-100/30 -mx-3 px-3 rounded-lg text-left transition-colors disabled:cursor-default"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-sm font-medium text-white">#{order.code}</span>
+                              <span className="text-sm font-medium text-forest-800">#{order.code}</span>
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${cls}`}>
                                 {t(`order.adminStatus.${order.status}`)}
                               </span>
@@ -293,11 +293,11 @@ export default function CustomerDetailDrawer({
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-semibold text-white">
+                            <div className="text-sm font-semibold text-forest-800">
                               {formatMoney(order.total, order.currency)}
                             </div>
                           </div>
-                          {onOpenOrder && <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />}
+                          {onOpenOrder && <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
                         </button>
                       );
                     })}
@@ -326,7 +326,7 @@ function Section({
         </div>
         {action}
       </div>
-      <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3">{children}</div>
+      <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">{children}</div>
     </div>
   );
 }
@@ -344,7 +344,7 @@ function EditField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-2.5 py-1.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
       />
     </label>
   );

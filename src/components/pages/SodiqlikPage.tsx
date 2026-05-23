@@ -5,8 +5,8 @@ import type { LoyaltyRule, LoyaltyRuleType, LoyaltySettings } from "../../data/m
 import { initialLoyaltyRules, initialLoyaltySettings, loyaltyRuleTypeLabels, loyaltyRuleTypeDescriptions } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
 
-const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
-const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
+const inputClass = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20";
+const labelClass = "block text-xs font-medium text-slate-500 mb-1.5";
 
 export default function SodiqlikPage() {
   const [rules, setRules] = useState<LoyaltyRule[]>(initialLoyaltyRules);
@@ -45,12 +45,12 @@ export default function SodiqlikPage() {
   if (pageMode === "settings") {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => setPageMode("list")} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
-          <h1 className="text-2xl font-bold text-white">Sodiqlik dasturi sozlamalari</h1>
+        <div className="flex items-center gap-4 pb-4 border-b border-cream-300">
+          <button onClick={() => setPageMode("list")} className="p-2 rounded-lg hover:bg-cream-100" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold text-forest-800">Sodiqlik dasturi sozlamalari</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => setPageMode("list")} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button onClick={() => setPageMode("list")} className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => setPageMode("list")} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
+            <button onClick={() => setPageMode("list")} className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">Saqlash</button>
           </div>
         </div>
 
@@ -62,12 +62,12 @@ export default function SodiqlikPage() {
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
-          <h1 className="text-2xl font-bold text-white">{editItem ? "Qoidani tahrirlash" : "Yangi qoida"}</h1>
+        <div className="flex items-center gap-4 pb-4 border-b border-cream-300">
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-cream-100" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold text-forest-800">{editItem ? "Qoidani tahrirlash" : "Yangi qoida"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button form="rule-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
+            <button form="rule-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">Saqlash</button>
           </div>
         </div>
 
@@ -80,30 +80,30 @@ export default function SodiqlikPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Sodiqlik dasturi</h1>
+          <h1 className="text-2xl font-bold text-forest-800">Sodiqlik dasturi</h1>
           <p className="text-sm text-slate-500 mt-1">Sodiqlik ballaini boshqaring va qoidalarni o'rnatish</p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Jami qoidalar</p>
-            <p className="text-lg font-semibold text-white">{stats.totalRules}</p>
+            <p className="text-lg font-semibold text-forest-800">{stats.totalRules}</p>
           </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Faol qoidalar</p>
-            <p className="text-lg font-semibold text-emerald-400">{stats.activeRules}</p>
+            <p className="text-lg font-semibold text-forest-700">{stats.activeRules}</p>
           </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Ball qiymati</p>
-            <p className="text-lg font-semibold text-white">{stats.pointValue}</p>
+            <p className="text-lg font-semibold text-forest-800">{stats.pointValue}</p>
           </div>
         </div>
       </div>
 
       <div className="flex justify-end gap-2">
-        <button onClick={() => setPageMode("settings")} className="px-4 py-2 rounded-lg text-sm bg-slate-800 hover:bg-slate-700 text-white font-medium">
+        <button onClick={() => setPageMode("settings")} className="px-4 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-forest-800 font-medium">
           Sozlamalar
         </button>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           Yangi qoida
         </button>
@@ -111,36 +111,36 @@ export default function SodiqlikPage() {
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
         {rules.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+          <div className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
             <EmptyState
               icon={Award}
               title="Sodiqlik qoidasi yarating"
               description="Hali sodiqlik dasturi qoidalari yaratilmagan. Xaridorlarga ball berish uchun birinchi qoidani yarating."
               buttonText="Yangi qoida"
               onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
-              iconColor="text-amber-400"
+              iconColor="text-amber-500"
             />
           </div>
         ) : (
           rules.map((r) => (
-            <motion.div key={r.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+            <motion.div key={r.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-cream-300 bg-white/50 p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white mb-1">{r.name}</h3>
-                  <p className="text-sm text-slate-400 mb-2">{r.description}</p>
-                  <div className="flex flex-wrap gap-3 text-xs text-slate-400">
-                    <span className="px-2 py-1 rounded bg-slate-800">{loyaltyRuleTypeLabels[r.type]}</span>
-                    <span className="px-2 py-1 rounded bg-slate-800">{r.pointsValue} ball</span>
-                    {r.purchaseRate && <span className="px-2 py-1 rounded bg-slate-800">Har {r.purchaseRate} so'mda 1 ball</span>}
-                    {r.minSpend && <span className="px-2 py-1 rounded bg-slate-800">Min: {r.minSpend.toLocaleString()} so'm</span>}
+                  <h3 className="font-semibold text-forest-800 mb-1">{r.name}</h3>
+                  <p className="text-sm text-slate-500 mb-2">{r.description}</p>
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                    <span className="px-2 py-1 rounded bg-cream-100">{loyaltyRuleTypeLabels[r.type]}</span>
+                    <span className="px-2 py-1 rounded bg-cream-100">{r.pointsValue} ball</span>
+                    {r.purchaseRate && <span className="px-2 py-1 rounded bg-cream-100">Har {r.purchaseRate} so'mda 1 ball</span>}
+                    {r.minSpend && <span className="px-2 py-1 rounded bg-cream-100">Min: {r.minSpend.toLocaleString()} so'm</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${r.active ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/50 text-slate-400"}`}>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${r.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>
                     {r.active ? "Faol" : "O'chiq"}
                   </span>
-                  <button onClick={() => { setEditItem(r); setPageMode("edit"); }} className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
-                  <button onClick={() => setPendingDelete(r.id)} className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => { setEditItem(r); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => setPendingDelete(r.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
             </motion.div>
@@ -151,12 +151,12 @@ export default function SodiqlikPage() {
       <AnimatePresence>
         {pendingDelete && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70" onClick={() => setPendingDelete(null)}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-              <p className="text-white font-medium mb-2">O'chirishni tasdiqlang</p>
-              <p className="text-sm text-slate-400 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white border border-cream-300 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+              <p className="text-forest-800 font-medium mb-2">O'chirishni tasdiqlang</p>
+              <p className="text-sm text-slate-500 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-                <button onClick={() => { setRules((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium">O'chirish</button>
+                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
+                <button onClick={() => { setRules((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">O'chirish</button>
               </div>
             </motion.div>
           </motion.div>
@@ -189,8 +189,8 @@ function RuleForm({ initial, error, onSave }: RuleFormProps) {
   return (
     <form id="rule-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Qoida ma'lumotlari</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Qoida ma'lumotlari</h3>
           <div>
             <label className={labelClass}>Qoida turi</label>
             <select className={inputClass} value={type} onChange={(e) => setType(e.target.value as LoyaltyRuleType)}>
@@ -199,7 +199,7 @@ function RuleForm({ initial, error, onSave }: RuleFormProps) {
               <option value="spend_goal">X sarfla, Y ol</option>
               <option value="review">Sharh yozish</option>
             </select>
-            <p className="text-xs text-slate-400 mt-2">{loyaltyRuleTypeDescriptions[type]}</p>
+            <p className="text-xs text-slate-500 mt-2">{loyaltyRuleTypeDescriptions[type]}</p>
           </div>
           <div>
             <label className={labelClass}>Qoida nomi</label>
@@ -210,8 +210,8 @@ function RuleForm({ initial, error, onSave }: RuleFormProps) {
             <textarea className={inputClass + " min-h-[100px]"} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Ball qiymatlari</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Ball qiymatlari</h3>
           <div>
             <label className={labelClass}>Ball qiymati</label>
             <input type="number" className={inputClass} value={pointsValue} onChange={(e) => setPointsValue(Number(e.target.value))} />
@@ -231,16 +231,16 @@ function RuleForm({ initial, error, onSave }: RuleFormProps) {
         </div>
       </div>
       <div className="space-y-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Holat</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Holat</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
-              {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
+              {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
-            <span className="text-sm text-slate-300">Faol</span>
+            <span className="text-sm text-slate-700">Faol</span>
           </label>
-          {error && <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
         </div>
       </div>
     </form>
@@ -251,8 +251,8 @@ function SettingsForm({ settings, onUpdate }: { settings: LoyaltySettings; onUpd
   return (
     <form className="grid grid-cols-3 gap-6">
       <div className="col-span-2">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Umumiy sozlamalar</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Umumiy sozlamalar</h3>
           <div>
             <label className={labelClass}>Ball qiymati (1 ball = ? so'm)</label>
             <input
@@ -261,19 +261,19 @@ function SettingsForm({ settings, onUpdate }: { settings: LoyaltySettings; onUpd
               value={settings.pointValue}
               onChange={(e) => onUpdate({ ...settings, pointValue: Number(e.target.value) })}
             />
-            <p className="text-xs text-slate-400 mt-2">Mijozlar qancha so'mning o'rniga 1 ballni foydalana oladi</p>
+            <p className="text-xs text-slate-500 mt-2">Mijozlar qancha so'mning o'rniga 1 ballni foydalana oladi</p>
           </div>
         </div>
       </div>
       <div className="space-y-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Dastur holati</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Dastur holati</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={settings.enabled} onChange={(e) => onUpdate({ ...settings, enabled: e.target.checked })} />
             <div className={`w-5 h-5 rounded border ${settings.enabled ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
-              {settings.enabled && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
+              {settings.enabled && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
-            <span className="text-sm text-slate-300">Dastur faol</span>
+            <span className="text-sm text-slate-700">Dastur faol</span>
           </label>
         </div>
       </div>

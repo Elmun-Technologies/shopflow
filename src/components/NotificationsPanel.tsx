@@ -180,11 +180,11 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
       <button
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label={t("header.notifications")}
-        className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+        className="relative p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all"
       >
         {muted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
         {unseenCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-forest-800 text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
             {unseenCount > 9 ? "9+" : unseenCount}
           </span>
         )}
@@ -198,15 +198,15 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
             role="menu"
-            className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden flex flex-col z-50"
+            className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] bg-white border border-cream-300 rounded-xl shadow-2xl overflow-hidden flex flex-col z-50"
           >
-            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
-              <p className="text-sm font-semibold text-white">{t("notif.title")}</p>
+            <div className="px-4 py-3 border-b border-cream-300 flex items-center justify-between flex-shrink-0">
+              <p className="text-sm font-semibold text-forest-800">{t("notif.title")}</p>
               <div className="flex items-center gap-2">
                 {loading && <Loader2 className="w-3.5 h-3.5 text-slate-500 animate-spin" />}
                 <button
                   onClick={toggleMuted}
-                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                  className="p-1 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"
                   title={muted ? t("notif.unmute") : t("notif.mute")}
                   aria-label={muted ? t("notif.unmute") : t("notif.mute")}
                 >
@@ -222,29 +222,29 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
                   <p className="text-sm text-slate-500">{t("notif.empty")}</p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-800/60">
+                <div className="divide-y divide-cream-300/60">
                   {items.map((it) => {
                     const Icon = it.kind === "order" ? ShoppingBag : it.kind === "lead" ? Radio : ShoppingCart;
-                    const colorCls = it.kind === "order" ? "text-emerald-400" : it.kind === "lead" ? "text-blue-400" : "text-amber-400";
+                    const colorCls = it.kind === "order" ? "text-forest-700" : it.kind === "lead" ? "text-sky-600" : "text-amber-500";
                     const isNew = it.createdAt > lastSeen;
                     return (
                       <button
                         key={it.id}
                         onClick={() => handleItemClick(it)}
-                        className="w-full text-left px-4 py-3 hover:bg-slate-800/50 active:bg-slate-800 transition-colors flex items-start gap-3"
+                        className="w-full text-left px-4 py-3 hover:bg-cream-100/50 active:bg-cream-100 transition-colors flex items-start gap-3"
                       >
-                        <div className={`w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0 ${colorCls}`}>
+                        <div className={`w-8 h-8 rounded-lg bg-cream-100 flex items-center justify-center flex-shrink-0 ${colorCls}`}>
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-medium text-white truncate flex-1">{it.title}</p>
+                            <p className="text-xs font-medium text-forest-800 truncate flex-1">{it.title}</p>
                             {isNew && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />}
                           </div>
-                          <p className="text-[11px] text-slate-400 truncate mt-0.5">{it.subtitle}</p>
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">{it.subtitle}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">{formatRelative(it.createdAt)}</p>
                         </div>
-                        <ExternalLink className="w-3 h-3 text-slate-600 flex-shrink-0 mt-1" />
+                        <ExternalLink className="w-3 h-3 text-slate-400 flex-shrink-0 mt-1" />
                       </button>
                     );
                   })}
@@ -252,7 +252,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
               )}
             </div>
 
-            <div className="border-t border-slate-800 px-4 py-2 text-center flex-shrink-0">
+            <div className="border-t border-cream-300 px-4 py-2 text-center flex-shrink-0">
               <p className="text-[10px] text-slate-500">{t("notif.refreshing")}</p>
             </div>
           </motion.div>

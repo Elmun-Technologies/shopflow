@@ -36,9 +36,9 @@ export default function RevenueChart() {
   const Tip = ({ active, payload, label }: ChartTooltipProps) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-800/95 backdrop-blur border border-slate-700 rounded-xl px-3.5 py-2.5 shadow-2xl">
-          <p className="text-xs text-slate-400 mb-1">{label}</p>
-          <p className="text-base font-bold text-white">
+        <div className="bg-cream-100/95 backdrop-blur border border-cream-300 rounded-xl px-3.5 py-2.5 shadow-2xl">
+          <p className="text-xs text-slate-500 mb-1">{label}</p>
+          <p className="text-base font-bold text-forest-800">
             {formatCompactCurrency(payload[0].value as number, currency)}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">
@@ -55,18 +55,18 @@ export default function RevenueChart() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.3 }}
-      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
+      className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h3 className="text-base font-semibold text-white">{t("widget.revenue")}</h3>
+          <h3 className="text-base font-semibold text-forest-800">{t("widget.revenue")}</h3>
           <div className="flex items-baseline gap-2 mt-2">
-            <p className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+            <p className="text-2xl md:text-3xl font-bold text-forest-800 tracking-tight">
               {formatCompactCurrency(stats.current, currency)}
             </p>
             {stats.change !== 0 && (
               <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
-                stats.change >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                stats.change >= 0 ? "bg-leaf-100 text-forest-700" : "bg-rose-100 text-rose-600"
               }`}>
                 <TrendingUp className={`w-3 h-3 ${stats.change < 0 ? "rotate-180" : ""}`} />
                 {Math.abs(stats.change).toFixed(1)}%
@@ -80,7 +80,7 @@ export default function RevenueChart() {
       <div className="h-64">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
           </div>
         ) : series.every((s) => s.revenue === 0) ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-500">
@@ -91,22 +91,22 @@ export default function RevenueChart() {
             <AreaChart data={series} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#5FA340" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#5FA340" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 6" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="2 6" stroke="#E5E5DA" vertical={false} />
               <XAxis
                 dataKey="month"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
+                tick={{ fill: "#94A3B8", fontSize: 11 }}
                 dy={5}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
+                tick={{ fill: "#94A3B8", fontSize: 11 }}
                 tickFormatter={(value) => formatCompactCurrency(Number(value), currency)}
                 width={50}
               />
@@ -114,7 +114,7 @@ export default function RevenueChart() {
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#10b981"
+                stroke="#5FA340"
                 strokeWidth={2.5}
                 fill="url(#revenueGradient)"
                 dot={false}

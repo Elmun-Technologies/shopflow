@@ -68,8 +68,8 @@ export function BrowserNotifSection() {
     <div className="space-y-4">
       {/* Sarlavha */}
       <div>
-        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-          <BellRing className="w-4 h-4 text-emerald-400" />
+        <h3 className="text-sm font-semibold text-forest-800 flex items-center gap-2">
+          <BellRing className="w-4 h-4 text-forest-700" />
           {t("notifSettings.title")}
         </h3>
         <p className="text-xs text-slate-500 mt-1">{t("notifSettings.subtitle")}</p>
@@ -79,22 +79,22 @@ export function BrowserNotifSection() {
       {permState !== "unsupported" && (
         <div className={`rounded-xl border p-3 flex items-center justify-between gap-3 ${
           permState === "granted"
-            ? "bg-emerald-500/10 border-emerald-500/30"
+            ? "bg-leaf-100 border-leaf-400/50"
             : permState === "denied"
-              ? "bg-rose-500/10 border-rose-500/30"
-              : "bg-amber-500/10 border-amber-500/30"
+              ? "bg-rose-100 border-rose-300"
+              : "bg-amber-100 border-amber-300"
         }`}>
           <div className="flex items-center gap-2 min-w-0">
             {permState === "granted" ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-forest-700 flex-shrink-0" />
             ) : (
-              <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${permState === "denied" ? "text-rose-400" : "text-amber-400"}`} />
+              <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${permState === "denied" ? "text-rose-600" : "text-amber-500"}`} />
             )}
             <div className="min-w-0">
-              <p className="text-xs font-medium text-white">
+              <p className="text-xs font-medium text-forest-800">
                 {permState === "granted" ? t("notifSettings.perm.granted") : permState === "denied" ? t("notifSettings.perm.denied") : t("notifSettings.perm.default")}
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 mt-0.5">
                 {permState === "denied" ? t("notifSettings.perm.deniedHint") : t("notifSettings.perm.hint")}
               </p>
             </div>
@@ -102,7 +102,7 @@ export function BrowserNotifSection() {
           {permState === "default" && (
             <button
               onClick={handleRequestPermission}
-              className="px-3 py-1.5 text-xs font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg flex-shrink-0"
+              className="px-3 py-1.5 text-xs font-medium bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg flex-shrink-0"
             >
               {t("notifSettings.perm.enable")}
             </button>
@@ -111,16 +111,16 @@ export function BrowserNotifSection() {
       )}
 
       {/* Voqea turlari jadval */}
-      <div className="bg-slate-800/40 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr,70px,70px] gap-2 px-3 py-2 border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+      <div className="bg-cream-100/40 border border-cream-300 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-[1fr,70px,70px] gap-2 px-3 py-2 border-b border-cream-300 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
           <span>{t("notifSettings.event")}</span>
           <span className="text-center">{t("notifSettings.sound")}</span>
           <span className="text-center">{t("notifSettings.browser")}</span>
         </div>
         {EVENTS.map((e) => (
-          <div key={e.key} className="grid grid-cols-[1fr,70px,70px] gap-2 px-3 py-3 border-b border-slate-800/40 last:border-0 items-center">
+          <div key={e.key} className="grid grid-cols-[1fr,70px,70px] gap-2 px-3 py-3 border-b border-cream-300/40 last:border-0 items-center">
             <div>
-              <p className="text-sm text-white font-medium">{t(e.labelKey)}</p>
+              <p className="text-sm text-forest-800 font-medium">{t(e.labelKey)}</p>
               <p className="text-[11px] text-slate-500 mt-0.5">{t(e.descKey)}</p>
             </div>
             <ToggleSwitch checked={prefs[e.key].sound} onChange={() => toggleEvent(e.key, "sound")} />
@@ -132,13 +132,13 @@ export function BrowserNotifSection() {
       {/* Ovoz turi tanlash */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-medium text-white flex items-center gap-2">
-            <Volume2 className="w-3.5 h-3.5 text-slate-400" />
+          <p className="text-sm font-medium text-forest-800 flex items-center gap-2">
+            <Volume2 className="w-3.5 h-3.5 text-slate-500" />
             {t("notifSettings.soundType")}
           </p>
           <button
             onClick={() => playSound(prefs.soundType)}
-            className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+            className="flex items-center gap-1 text-xs text-forest-700 hover:text-forest-700 font-medium"
           >
             <Play className="w-3 h-3" />
             {t("notifSettings.testSound")}
@@ -151,8 +151,8 @@ export function BrowserNotifSection() {
               onClick={() => setSoundType(opt.value)}
               className={`px-3 py-2.5 rounded-lg text-xs font-medium border transition-all ${
                 prefs.soundType === opt.value
-                  ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                  : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
+                  ? "bg-leaf-100 border-leaf-400/60 text-forest-700"
+                  : "bg-cream-100 border-cream-300 text-slate-700 hover:bg-cream-200"
               }`}
             >
               {t(opt.labelKey)}
@@ -170,7 +170,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
     <div className="flex items-center justify-center">
       <button
         onClick={onChange}
-        className={`w-10 h-6 rounded-full transition-all relative ${checked ? "bg-emerald-500" : "bg-slate-700"}`}
+        className={`w-10 h-6 rounded-full transition-all relative ${checked ? "bg-leaf-400" : "bg-cream-200"}`}
       >
         <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${checked ? "left-5" : "left-1"}`} />
       </button>

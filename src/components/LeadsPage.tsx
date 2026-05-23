@@ -24,13 +24,13 @@ import LeadDetailModal from "./LeadDetailModal";
 
 // Faqat rangli stillar — label'lar t() orqali olinadi
 const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
-  NEW: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-  CONTACTED: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-  QUALIFIED: { color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
-  PROPOSAL: { color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
-  NEGOTIATION: { color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-  WON: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  LOST: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+  NEW: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
+  CONTACTED: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
+  QUALIFIED: { color: "text-violet-600", bg: "bg-violet-100 border-violet-300" },
+  PROPOSAL: { color: "text-cyan-600", bg: "bg-cyan-100 border-cyan-500/20" },
+  NEGOTIATION: { color: "text-orange-600", bg: "bg-orange-100 border-orange-300" },
+  WON: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
+  LOST: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
 };
 
 export default function LeadsPage() {
@@ -117,7 +117,7 @@ export default function LeadsPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-white">{t("leads.title")}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("leads.title")}</h1>
         <p className="text-sm text-slate-500 mt-1">
           {t("leads.subtitle")}
         </p>
@@ -125,21 +125,21 @@ export default function LeadsPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <StatCard label={t("leads.kpi.total")} value={total.toString()} accent="text-white" />
+        <StatCard label={t("leads.kpi.total")} value={total.toString()} accent="text-forest-800" />
         <StatCard
           label={t("leads.kpi.new")}
           value={statusCount("NEW").toString()}
-          accent="text-blue-400"
+          accent="text-sky-600"
         />
         <StatCard
           label={t("leads.kpi.won")}
           value={statusCount("WON").toString()}
-          accent="text-emerald-400"
+          accent="text-forest-700"
         />
         <StatCard
           label={t("leads.kpi.wonValue")}
           value={formatCompactCurrency(stats?.wonValue ?? 0, currency)}
-          accent="text-emerald-400"
+          accent="text-forest-700"
         />
       </div>
 
@@ -149,12 +149,12 @@ export default function LeadsPage() {
           {stats.byChannel.slice(0, 6).map((ch) => (
             <div
               key={ch.channelId ?? "none"}
-              className="bg-slate-900 border border-slate-800 rounded-lg p-3"
+              className="bg-white border border-cream-300 rounded-lg p-3"
             >
               <p className="text-[10px] text-slate-500 uppercase truncate">
                 {ch.channel?.name ?? t("leads.kpi.otherChannel")}
               </p>
-              <p className="text-lg font-bold text-white mt-1">{ch.count}</p>
+              <p className="text-lg font-bold text-forest-800 mt-1">{ch.count}</p>
               <p className="text-[10px] text-slate-500 truncate">
                 {formatCompactCurrency(ch.value, currency)}
               </p>
@@ -175,14 +175,14 @@ export default function LeadsPage() {
               setPage(1);
             }}
             placeholder={t("leads.searchPlaceholder")}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full bg-white border border-cream-300 rounded-lg pl-10 pr-4 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
           />
         </label>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all flex-shrink-0 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all flex-shrink-0 disabled:opacity-50"
           title={t("orders.export")}
         >
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -190,7 +190,7 @@ export default function LeadsPage() {
         </button>
         <button
           type="button"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">{t("leads.newLead")}</span>
@@ -209,8 +209,8 @@ export default function LeadsPage() {
             }}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
               statusFilter === b.key
-                ? "bg-emerald-500 text-white"
-                : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                ? "bg-leaf-400 text-forest-800"
+                : "bg-white border border-cream-300 text-slate-500 hover:text-forest-900"
             }`}
           >
             {b.label}
@@ -222,16 +222,16 @@ export default function LeadsPage() {
       </div>
 
       {/* List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
         {loading ? (
           <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
-            <p className="text-sm text-slate-300">{error.message}</p>
+            <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+            <p className="text-sm text-slate-700">{error.message}</p>
             <button
               onClick={refetch}
-              className="mt-3 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
+              className="mt-3 px-3 py-1.5 text-xs bg-cream-100 hover:bg-cream-200 rounded-lg text-slate-700"
             >
               {t("orders.retry")}
             </button>
@@ -247,7 +247,7 @@ export default function LeadsPage() {
         )}
 
         {total > pageSize && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800 text-xs text-slate-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-cream-300 text-xs text-slate-500">
             <span>
               {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
             </span>
@@ -255,14 +255,14 @@ export default function LeadsPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+                className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.prev")}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * pageSize >= total}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+                className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.next")}
               </button>
@@ -284,7 +284,7 @@ export default function LeadsPage() {
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-cream-300 rounded-xl p-4">
       <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
       <p className={`text-2xl font-bold mt-1 ${accent}`}>{value}</p>
     </div>
@@ -306,7 +306,7 @@ function LeadTable({
     <div className="hidden md:block overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-slate-800">
+          <tr className="border-b border-cream-300">
             <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("leads.col.lead")}</th>
             <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("leads.col.contact")}</th>
             <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("leads.col.channel")}</th>
@@ -320,22 +320,22 @@ function LeadTable({
           {leads.map((lead) => {
             const style = statusStyle[lead.status];
             return (
-              <tr key={lead.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+              <tr key={lead.id} className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors">
                 <td className="py-3 px-4">
                   <div>
-                    <p className="text-sm font-medium text-white">{lead.name}</p>
+                    <p className="text-sm font-medium text-forest-800">{lead.name}</p>
                     <p className="text-xs text-slate-500">#{lead.code}</p>
                   </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex flex-col gap-0.5">
                     {lead.phone && (
-                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="flex items-center gap-1 text-xs text-slate-500">
                         <Phone className="w-3 h-3" /> {lead.phone}
                       </span>
                     )}
                     {lead.email && (
-                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="flex items-center gap-1 text-xs text-slate-500">
                         <Mail className="w-3 h-3" /> {lead.email}
                       </span>
                     )}
@@ -343,12 +343,12 @@ function LeadTable({
                 </td>
                 <td className="py-3 px-4">
                   {lead.channel ? (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800 text-xs text-slate-300">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cream-100 text-xs text-slate-700">
                       <MessageSquare className="w-3 h-3" />
                       {channelLabel(lead.channel.type, t) || lead.channel.name}
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-600">—</span>
+                    <span className="text-xs text-slate-400">—</span>
                   )}
                 </td>
                 <td className="py-3 px-4">
@@ -359,7 +359,7 @@ function LeadTable({
                   </span>
                 </td>
                 <td className="py-3 px-4">
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-forest-800">
                     {formatCompactCurrency(Number(lead.value), currency)}
                   </span>
                 </td>
@@ -369,7 +369,7 @@ function LeadTable({
                 <td className="py-3 px-4 text-right">
                   <button
                     onClick={() => onOpen(lead.id)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all"
                     aria-label={t("leads.details")}
                   >
                     <Eye className="w-4 h-4" />
@@ -383,7 +383,7 @@ function LeadTable({
     </div>
 
     {/* Mobile — card */}
-    <div className="md:hidden divide-y divide-slate-800/50">
+    <div className="md:hidden divide-y divide-cream-300/50">
       {leads.map((lead) => {
         const style = statusStyle[lead.status];
         return (
@@ -391,18 +391,18 @@ function LeadTable({
             key={lead.id}
             type="button"
             onClick={() => onOpen(lead.id)}
-            className="w-full text-left p-4 hover:bg-slate-800/30 active:bg-slate-800/50 transition-colors"
+            className="w-full text-left p-4 hover:bg-cream-100/30 active:bg-cream-100/50 transition-colors"
           >
             <div className="flex items-start justify-between gap-3 mb-2">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">{lead.name}</p>
+                <p className="text-sm font-semibold text-forest-800 truncate">{lead.name}</p>
                 <p className="text-xs text-slate-500">#{lead.code}</p>
                 {(lead.phone || lead.email) && (
-                  <p className="text-xs text-slate-400 mt-1 truncate">{lead.phone ?? lead.email}</p>
+                  <p className="text-xs text-slate-500 mt-1 truncate">{lead.phone ?? lead.email}</p>
                 )}
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold text-white whitespace-nowrap">
+                <p className="text-sm font-bold text-forest-800 whitespace-nowrap">
                   {formatCompactCurrency(Number(lead.value), currency)}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">{formatRelative(lead.createdAt)}</p>
@@ -413,7 +413,7 @@ function LeadTable({
                 {t(`leads.status.${lead.status}`)}
               </span>
               {lead.channel && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-[11px] text-slate-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cream-100 text-[11px] text-slate-700">
                   <MessageSquare className="w-3 h-3" />
                   {channelLabel(lead.channel.type, t) || lead.channel.name}
                 </span>
@@ -438,7 +438,7 @@ function EmptyLeads({ search }: { search: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       <Inbox className="w-12 h-12 text-slate-700 mb-3" />
-      <h3 className="text-base font-semibold text-white">
+      <h3 className="text-base font-semibold text-forest-800">
         {search ? t("leads.empty.search") : t("leads.empty.none")}
       </h3>
       <p className="text-sm text-slate-500 mt-1 max-w-md">

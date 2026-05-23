@@ -30,19 +30,19 @@ import type { ChannelType, Channel } from "../types/api";
 import { useT } from "../i18n";
 
 const channelTypeMeta: Record<ChannelType, { label: string; icon: React.ElementType; color: string }> = {
-  WEBSITE: { label: "Veb-sayt", icon: Globe, color: "text-blue-400" },
-  LANDING_PAGE: { label: "Landing Page", icon: Monitor, color: "text-cyan-400" },
-  INSTAGRAM: { label: "Instagram", icon: Instagram, color: "text-pink-400" },
-  TELEGRAM: { label: "Telegram", icon: Send, color: "text-sky-400" },
-  FACEBOOK: { label: "Facebook", icon: Facebook, color: "text-blue-500" },
+  WEBSITE: { label: "Veb-sayt", icon: Globe, color: "text-sky-600" },
+  LANDING_PAGE: { label: "Landing Page", icon: Monitor, color: "text-cyan-600" },
+  INSTAGRAM: { label: "Instagram", icon: Instagram, color: "text-pink-600" },
+  TELEGRAM: { label: "Telegram", icon: Send, color: "text-sky-600" },
+  FACEBOOK: { label: "Facebook", icon: Facebook, color: "text-sky-600" },
   WHATSAPP: { label: "WhatsApp", icon: MessageCircle, color: "text-green-400" },
-  EMAIL: { label: "Email", icon: Mail, color: "text-amber-400" },
-  PHONE: { label: "Telefon", icon: Phone, color: "text-emerald-400" },
-  REFERRAL: { label: "Referral", icon: UsersIcon, color: "text-violet-400" },
-  GOOGLE_ADS: { label: "Google Ads", icon: Target, color: "text-red-400" },
-  YANDEX_DIRECT: { label: "Yandex Direct", icon: Target, color: "text-orange-400" },
+  EMAIL: { label: "Email", icon: Mail, color: "text-amber-500" },
+  PHONE: { label: "Telefon", icon: Phone, color: "text-forest-700" },
+  REFERRAL: { label: "Referral", icon: UsersIcon, color: "text-violet-600" },
+  GOOGLE_ADS: { label: "Google Ads", icon: Target, color: "text-rose-600" },
+  YANDEX_DIRECT: { label: "Yandex Direct", icon: Target, color: "text-orange-600" },
   MARKETPLACE: { label: "Marketplace", icon: ShoppingBag, color: "text-purple-400" },
-  OFFLINE: { label: "Offline", icon: MapPin, color: "text-slate-400" },
+  OFFLINE: { label: "Offline", icon: MapPin, color: "text-slate-500" },
 };
 
 export default function PlatformsPage() {
@@ -70,14 +70,14 @@ export default function PlatformsPage() {
         className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6"
       >
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t("platforms.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("platforms.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
             {t("platforms.subtitle")}
           </p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white flex-shrink-0"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">{t("platforms.newChannel")}</span>
@@ -86,17 +86,17 @@ export default function PlatformsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
         </div>
       ) : error ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400" />
-          <p className="text-sm text-slate-300">{error.message}</p>
+        <div className="bg-white border border-cream-300 rounded-xl p-6 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-rose-600" />
+          <p className="text-sm text-slate-700">{error.message}</p>
         </div>
       ) : channels.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
+        <div className="bg-white border border-cream-300 rounded-xl p-12 text-center">
           <Layers className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-          <p className="text-base font-semibold text-white">{t("platforms.empty.title")}</p>
+          <p className="text-base font-semibold text-forest-800">{t("platforms.empty.title")}</p>
           <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
             {t("platforms.empty.hint")}
           </p>
@@ -196,14 +196,14 @@ function ChannelCard({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="bg-white border border-cream-300 rounded-xl p-5">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center ${meta.color}`}>
+          <div className={`w-10 h-10 rounded-lg bg-cream-100 flex items-center justify-center ${meta.color}`}>
             <Icon className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">{channel.name}</p>
+            <p className="text-sm font-semibold text-forest-800">{channel.name}</p>
             <p className="text-xs text-slate-500">
               {meta.label}
               {botUsername && (
@@ -213,7 +213,7 @@ function ChannelCard({
                     href={`https://t.me/${botUsername}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-emerald-400 hover:underline"
+                    className="text-forest-700 hover:underline"
                   >
                     @{botUsername}
                   </a>
@@ -224,7 +224,7 @@ function ChannelCard({
         </div>
         <span
           className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
-            channel.active ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-700 text-slate-400"
+            channel.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200 text-slate-500"
           }`}
         >
           {channel.active ? "Aktiv" : "O'chirilgan"}
@@ -232,17 +232,17 @@ function ChannelCard({
       </div>
 
       {channel.type === "TELEGRAM" && (
-        <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 mb-3">
+        <div className="bg-cream-100/50 border border-cream-300 rounded-lg p-2.5 mb-3">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] text-slate-500 uppercase mb-0.5">Bot token</p>
-              <p className="text-[11px] text-slate-300 font-mono truncate">
-                {hasToken ? (config.botToken as string) : <span className="text-slate-600">kiritilmagan</span>}
+              <p className="text-[11px] text-slate-700 font-mono truncate">
+                {hasToken ? (config.botToken as string) : <span className="text-slate-400">kiritilmagan</span>}
               </p>
             </div>
             <button
               onClick={() => setShowTokenModal(true)}
-              className="ml-2 px-2 py-1 rounded text-emerald-400 hover:bg-slate-700 text-[11px] font-medium"
+              className="ml-2 px-2 py-1 rounded text-forest-700 hover:bg-cream-200 text-[11px] font-medium"
             >
               {hasToken ? "O'zgartirish" : "Qo'shish"}
             </button>
@@ -250,16 +250,16 @@ function ChannelCard({
         </div>
       )}
 
-      <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-2.5 mb-3">
+      <div className="bg-cream-100/50 border border-cream-300 rounded-lg p-2.5 mb-3">
         <p className="text-[10px] text-slate-500 uppercase mb-1">Webhook URL</p>
         <div className="flex items-center gap-2">
-          <code className="text-[11px] text-slate-300 font-mono truncate flex-1">{webhookUrl}</code>
+          <code className="text-[11px] text-slate-700 font-mono truncate flex-1">{webhookUrl}</code>
           <button
             onClick={copy}
-            className="p-1 rounded text-slate-500 hover:text-white flex-shrink-0"
+            className="p-1 rounded text-slate-500 hover:text-forest-900 flex-shrink-0"
             aria-label="Nusxa olish"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-forest-700" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
@@ -268,7 +268,7 @@ function ChannelCard({
         <button
           onClick={handleConnectTelegram}
           disabled={connecting}
-          className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-lg text-sm font-medium text-sky-400 disabled:opacity-50"
+          className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-sky-100 hover:bg-sky-200 border border-sky-500/30 rounded-lg text-sm font-medium text-sky-600 disabled:opacity-50"
         >
           {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
           Telegram'ga avto-ulash (setWebhook)
@@ -279,8 +279,8 @@ function ChannelCard({
         <div
           className={`mb-3 px-3 py-2 rounded-lg text-xs ${
             connectMsg.ok
-              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-              : "bg-red-500/10 border border-red-500/20 text-red-400"
+              ? "bg-leaf-100 border border-leaf-300/60 text-forest-700"
+              : "bg-rose-100 border border-rose-300 text-rose-600"
           }`}
         >
           {connectMsg.text}
@@ -292,20 +292,20 @@ function ChannelCard({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowHelp(!showHelp)}
-            className="px-2 py-1 rounded text-emerald-400 hover:bg-slate-800 text-[11px] font-medium"
+            className="px-2 py-1 rounded text-forest-700 hover:bg-cream-100 text-[11px] font-medium"
           >
             {showHelp ? "Yopish" : "Qanday ulanadi?"}
           </button>
           <button
             onClick={onToggle}
-            className="p-1.5 rounded text-slate-500 hover:text-white hover:bg-slate-800"
+            className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"
             title={channel.active ? "O'chirish" : "Yoqish"}
           >
             {channel.active ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-slate-800"
+            className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"
             title="O'chirish"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -347,7 +347,7 @@ function ChannelSetupHelp({
                 href="https://t.me/BotFather"
                 target="_blank"
                 rel="noreferrer"
-                className="text-emerald-400 underline"
+                className="text-forest-700 underline"
               >
                 @BotFather
               </a>
@@ -356,7 +356,7 @@ function ChannelSetupHelp({
             </Step>
             <Step n={2}>
               Brauzer adres satriga quyidagi URL'ni kiriting (TOKEN ni o'zgartirib):
-              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all whitespace-pre-wrap">
+              <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto break-all whitespace-pre-wrap">
                 {`https://api.telegram.org/bot<TOKEN>/setWebhook?url=${webhookUrl}`}
               </pre>
             </Step>
@@ -372,7 +372,7 @@ function ChannelSetupHelp({
           <>
             <Step n={1}>Veb-saytingizdagi forma'ni quyidagicha sozlang:</Step>
             <Step n={2}>
-              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+              <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto whitespace-pre-wrap break-all">
 {`<script>
 fetch("${webhookUrl}", {
   method: "POST",
@@ -398,7 +398,7 @@ fetch("${webhookUrl}", {
                 href="https://developers.facebook.com/apps"
                 target="_blank"
                 rel="noreferrer"
-                className="text-emerald-400 underline"
+                className="text-forest-700 underline"
               >
                 Meta for Developers
               </a>{" "}
@@ -406,7 +406,7 @@ fetch("${webhookUrl}", {
             </Step>
             <Step n={2}>
               App'ga Webhook qo'shing. Callback URL sifatida quyidagini kiriting:
-              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all">
+              <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto break-all">
                 {webhookUrl}
               </pre>
             </Step>
@@ -420,7 +420,7 @@ fetch("${webhookUrl}", {
           <>
             <Step n={1}>Tashqi platforma webhook'iga quyidagi URL'ni kiriting:</Step>
             <Step n={2}>
-              <pre className="mt-1 p-2 bg-slate-950 rounded text-[10px] text-slate-300 font-mono overflow-x-auto break-all">
+              <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto break-all">
                 {webhookUrl}
               </pre>
             </Step>
@@ -433,8 +433,8 @@ fetch("${webhookUrl}", {
   };
 
   return (
-    <div className="mt-3 pt-3 border-t border-slate-800 space-y-2">
-      <p className="text-xs font-semibold text-white mb-2">Sozlash bosqichlari</p>
+    <div className="mt-3 pt-3 border-t border-cream-300 space-y-2">
+      <p className="text-xs font-semibold text-forest-800 mb-2">Sozlash bosqichlari</p>
       {renderSteps()}
     </div>
   );
@@ -442,8 +442,8 @@ fetch("${webhookUrl}", {
 
 function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2 text-xs text-slate-300">
-      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-bold">
+    <div className="flex items-start gap-2 text-xs text-slate-700">
+      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-leaf-200 text-forest-700 flex items-center justify-center text-[10px] font-bold">
         {n}
       </span>
       <div className="flex-1 min-w-0">{children}</div>
@@ -485,16 +485,16 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
+        className="bg-white border border-cream-300 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
       >
-        <h2 className="text-lg font-bold text-white">{t("platforms.add.title")}</h2>
+        <h2 className="text-lg font-bold text-forest-800">{t("platforms.add.title")}</h2>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("platforms.add.type")}</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">{t("platforms.add.type")}</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as ChannelType)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
           >
             {(Object.keys(channelTypeMeta) as ChannelType[]).map((k) => (
               <option key={k} value={k}>
@@ -505,26 +505,26 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("platforms.add.name")}</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">{t("platforms.add.name")}</label>
           <input
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={type === "TELEGRAM" ? t("platforms.add.namePh.telegram") : t("platforms.add.namePh.generic")}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 
         {type === "TELEGRAM" && (
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">
               {t("platforms.add.botToken")}{" "}
               <a
                 href="https://t.me/BotFather"
                 target="_blank"
                 rel="noreferrer"
-                className="text-emerald-400 hover:underline"
+                className="text-forest-700 hover:underline"
               >
                 {t("platforms.add.botFather")}
               </a>
@@ -534,7 +534,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
               placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm font-mono focus:outline-none focus:border-emerald-500"
             />
             <p className="text-[10px] text-slate-500 mt-1">
               {t("platforms.add.tokenNote")}
@@ -542,16 +542,16 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
           </div>
         )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex items-center gap-2 justify-end">
-          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-400 hover:text-white">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-500 hover:text-forest-900">
             {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+            className="flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {t("platforms.add.create")}
@@ -597,51 +597,51 @@ function BotTokenModal({
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
+        className="bg-white border border-cream-300 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
       >
-        <h2 className="text-lg font-bold text-white">Bot token</h2>
+        <h2 className="text-lg font-bold text-forest-800">Bot token</h2>
 
-        <div className="text-xs text-slate-400 space-y-2 bg-slate-800/50 border border-slate-800 rounded-lg p-3">
+        <div className="text-xs text-slate-500 space-y-2 bg-cream-100/50 border border-cream-300 rounded-lg p-3">
           <p>1. Telegram'da{" "}
             <a
               href="https://t.me/BotFather"
               target="_blank"
               rel="noreferrer"
-              className="text-emerald-400 underline"
+              className="text-forest-700 underline"
             >
               @BotFather
             </a>
             'ga yozing
           </p>
-          <p>2. <code className="bg-slate-900 px-1 rounded">/newbot</code> komandasini yuboring</p>
+          <p>2. <code className="bg-white px-1 rounded">/newbot</code> komandasini yuboring</p>
           <p>3. Bot nomi va username'ni bering</p>
-          <p>4. BotFather sizga token beradi (masalan: <code className="bg-slate-900 px-1 rounded">7891234567:AAE...</code>)</p>
+          <p>4. BotFather sizga token beradi (masalan: <code className="bg-white px-1 rounded">7891234567:AAE...</code>)</p>
           <p>5. Tokenni nusxalab, quyiga joylashtiring</p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Bot token</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">Bot token</label>
           <input
             type="text"
             required
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm font-mono focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm font-mono focus:outline-none focus:border-emerald-500"
             autoFocus
           />
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex items-center gap-2 justify-end">
-          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-400 hover:text-white">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-500 hover:text-forest-900">
             Bekor qilish
           </button>
           <button
             type="submit"
             disabled={saving || !token.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+            className="flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Saqlash

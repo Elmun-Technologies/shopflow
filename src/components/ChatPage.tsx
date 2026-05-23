@@ -120,10 +120,10 @@ import type { ChartTooltipProps } from "../utils/chart";
 function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-sm font-medium text-white">{label}</p>
-        <p className="text-xs text-emerald-400">Kiruvchi: {payload[0].value}</p>
-        <p className="text-xs text-blue-400">Yakunlangan: {payload[1]?.value}</p>
+      <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-sm font-medium text-forest-800">{label}</p>
+        <p className="text-xs text-forest-700">Kiruvchi: {payload[0].value}</p>
+        <p className="text-xs text-sky-600">Yakunlangan: {payload[1]?.value}</p>
       </div>
     );
   }
@@ -288,14 +288,14 @@ export default function ChatPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-4 flex-shrink-0">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t("chat.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("chat.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("chat.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowAnalytics(!showAnalytics)}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all ${
-              showAnalytics ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
+              showAnalytics ? "bg-leaf-100 border-leaf-400/50 text-forest-700" : "bg-cream-100 border-cream-300 text-forest-800 hover:bg-cream-200"
             }`}
           >
             <BarChart3 className="w-4 h-4" />
@@ -307,18 +307,18 @@ export default function ChatPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 flex-shrink-0">
         {[
-          { label: t("chat.stats.active"), value: activeCount, icon: MessageSquare, color: "text-emerald-400", alert: false },
-          { label: t("chat.stats.waiting"), value: waitingCount, icon: Clock, color: "text-amber-400", alert: waitingCount > 0 },
-          { label: t("chat.stats.resolvedToday"), value: resolvedToday, icon: CheckCheck, color: "text-blue-400", alert: false },
-          { label: t("chat.stats.potential"), value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-violet-400", alert: false },
-          { label: t("chat.stats.avgResponse"), value: "42s", icon: Zap, color: "text-cyan-400", alert: false },
+          { label: t("chat.stats.active"), value: activeCount, icon: MessageSquare, color: "text-forest-700", alert: false },
+          { label: t("chat.stats.waiting"), value: waitingCount, icon: Clock, color: "text-amber-500", alert: waitingCount > 0 },
+          { label: t("chat.stats.resolvedToday"), value: resolvedToday, icon: CheckCheck, color: "text-sky-600", alert: false },
+          { label: t("chat.stats.potential"), value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-violet-600", alert: false },
+          { label: t("chat.stats.avgResponse"), value: "42s", icon: Zap, color: "text-cyan-600", alert: false },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.06 }}
-            className={`bg-slate-900 border rounded-xl p-4 ${stat.alert ? "border-amber-500/20" : "border-slate-800"}`}
+            className={`bg-white border rounded-xl p-4 ${stat.alert ? "border-amber-300" : "border-cream-300"}`}
           >
             <div className="flex items-center gap-2 mb-1">
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
@@ -335,9 +335,9 @@ export default function ChatPage() {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-4 flex-shrink-0">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Funnel */}
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white border border-cream-300 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-forest-800 mb-4 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-forest-700" />
                   {t("chat.funnelTitle")}
                 </h3>
                 <div className="space-y-1.5">
@@ -347,13 +347,13 @@ export default function ChatPage() {
                     return (
                       <div key={fs.stage}>
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[11px] text-slate-400">{t(`funnel.${fs.stage}`)}</span>
+                          <span className="text-[11px] text-slate-500">{t(`funnel.${fs.stage}`)}</span>
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-white font-medium">{fs.count}</span>
-                            {fs.value > 0 && <span className="text-[10px] text-emerald-400">{(fs.value / 1000000).toFixed(1)}M</span>}
+                            <span className="text-[11px] text-forest-800 font-medium">{fs.count}</span>
+                            {fs.value > 0 && <span className="text-[10px] text-forest-700">{(fs.value / 1000000).toFixed(1)}M</span>}
                           </div>
                         </div>
-                        <div className="h-5 bg-slate-800 rounded-md overflow-hidden relative">
+                        <div className="h-5 bg-cream-100 rounded-md overflow-hidden relative">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${(fs.count / maxCount) * 100}%` }}
@@ -361,7 +361,7 @@ export default function ChatPage() {
                             className="h-full rounded-md flex items-center px-2"
                             style={{ backgroundColor: cfg.color.replace("text-", "").replace("400", "500").replace("slate", "64748b").replace("blue", "3b82f6").replace("cyan", "06b6d4").replace("violet", "8b5cf6").replace("amber", "f59e0b").replace("orange", "f97316").replace("emerald", "10b981").replace("red", "ef4444").replace("pink", "ec4899") }}
                           >
-                            <span className="text-[10px] text-white font-medium">{Math.round((fs.count / maxCount) * 100)}%</span>
+                            <span className="text-[10px] text-forest-800 font-medium">{Math.round((fs.count / maxCount) * 100)}%</span>
                           </motion.div>
                         </div>
                       </div>
@@ -371,9 +371,9 @@ export default function ChatPage() {
               </div>
 
               {/* Hourly Volume */}
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white border border-cream-300 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-forest-800 mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-forest-700" />
                   Soatlik hajm
                 </h3>
                 <div className="h-48">
@@ -396,7 +396,7 @@ export default function ChatPage() {
                 </div>
                 <div className="flex items-center justify-center gap-4 mt-1">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+                    <div className="w-2.5 h-2.5 rounded-sm bg-leaf-400" />
                     <span className="text-[10px] text-slate-500">Kiruvchi</span>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -407,24 +407,24 @@ export default function ChatPage() {
               </div>
 
               {/* Agent Performance */}
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                  <Headphones className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white border border-cream-300 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-forest-800 mb-4 flex items-center gap-2">
+                  <Headphones className="w-4 h-4 text-forest-700" />
                   Agentlar samaradorligi
                 </h3>
                 <div className="space-y-3">
                   {agents.map((agent) => (
                     <div key={agent.id} className="flex items-center gap-3">
                       <div className="relative">
-                        <div className="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                        <div className="w-9 h-9 bg-cream-100 rounded-full flex items-center justify-center text-xs font-bold text-forest-800">
                           {agent.avatar}
                         </div>
                         <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
-                          agent.status === "online" ? "bg-emerald-500" : agent.status === "away" ? "bg-amber-500" : "bg-slate-500"
+                          agent.status === "online" ? "bg-leaf-400" : agent.status === "away" ? "bg-amber-500" : "bg-slate-500"
                         }`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{agent.name}</p>
+                        <p className="text-sm font-medium text-forest-800 truncate">{agent.name}</p>
                         <div className="flex items-center gap-3 mt-0.5">
                           <span className="text-[10px] text-slate-500">{agent.activeChats} faol</span>
                           <span className="text-[10px] text-slate-500">{agent.resolvedToday} yakun</span>
@@ -432,8 +432,8 @@ export default function ChatPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                        <span className="text-xs text-white font-medium">{agent.csat}</span>
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
+                        <span className="text-xs text-forest-800 font-medium">{agent.csat}</span>
                       </div>
                     </div>
                   ))}
@@ -447,9 +447,9 @@ export default function ChatPage() {
       {/* Main Chat Area — mobile single-pane (list ↔ active), desktop split */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Chat List Sidebar — hidden on mobile when a chat is active */}
-        <div className={`${activeChat ? "hidden md:flex" : "flex"} w-full md:w-80 md:flex-shrink-0 bg-slate-900 border border-slate-800 rounded-xl flex-col overflow-hidden`}>
+        <div className={`${activeChat ? "hidden md:flex" : "flex"} w-full md:w-80 md:flex-shrink-0 bg-white border border-cream-300 rounded-xl flex-col overflow-hidden`}>
           {/* Search & Filters */}
-          <div className="p-3 border-b border-slate-800">
+          <div className="p-3 border-b border-cream-300">
             <div className="relative mb-2">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
@@ -457,7 +457,7 @@ export default function ChatPage() {
                 placeholder={t("chat.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                className="w-full bg-cream-100 border border-cream-300 rounded-lg pl-8 pr-3 py-1.5 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
               />
             </div>
             <div className="flex items-center gap-1 overflow-x-auto pb-1">
@@ -472,36 +472,36 @@ export default function ChatPage() {
                   onClick={() => setStatusFilter(f.key === "all" ? "all" : f.key)}
                   className={`px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap transition-all ${
                     (f.key === "all" && statusFilter === "all") || statusFilter === f.key
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-slate-800 text-slate-400 border border-slate-700"
+                      ? "bg-leaf-100 text-forest-700 border border-leaf-300/60"
+                      : "bg-cream-100 text-slate-500 border border-cream-300"
                   }`}
                 >
                   {f.label}
                 </button>
               ))}
-              <button onClick={() => setShowFilters(!showFilters)} className="p-1 rounded-md bg-slate-800 text-slate-400 hover:text-white transition-all">
+              <button onClick={() => setShowFilters(!showFilters)} className="p-1 rounded-md bg-cream-100 text-slate-500 hover:text-forest-900 transition-all">
                 <Filter className="w-3 h-3" />
               </button>
             </div>
             <AnimatePresence>
               {showFilters && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="grid grid-cols-2 gap-1.5 pt-2 mt-2 border-t border-slate-800">
-                    <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-[10px] text-white focus:outline-none">
+                  <div className="grid grid-cols-2 gap-1.5 pt-2 mt-2 border-t border-cream-300">
+                    <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
                       <option value="all">Barcha kanallar</option>
                       {Object.entries(channelLabels).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
                     </select>
-                    <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-[10px] text-white focus:outline-none">
+                    <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
                       <option value="all">Barcha agentlar</option>
                       {agents.map((a) => (<option key={a.id} value={a.name}>{a.name}</option>))}
                     </select>
-                    <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="bg-slate-800 border border-slate-700 rounded-md px-2 py-1 text-[10px] text-white focus:outline-none">
+                    <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
                       <option value="all">Barcha prioritetlar</option>
                       <option value="high">Yuqori</option>
                       <option value="medium">O'rta</option>
                       <option value="low">Past</option>
                     </select>
-                    <button onClick={() => { setSearchQuery(""); setChannelFilter("all"); setStatusFilter("all"); setAgentFilter("all"); setPriorityFilter("all"); }} className="text-[10px] text-slate-400 hover:text-white transition-colors">Tozalash</button>
+                    <button onClick={() => { setSearchQuery(""); setChannelFilter("all"); setStatusFilter("all"); setAgentFilter("all"); setPriorityFilter("all"); }} className="text-[10px] text-slate-500 hover:text-forest-900 transition-colors">Tozalash</button>
                   </div>
                 </motion.div>
               )}
@@ -517,38 +517,38 @@ export default function ChatPage() {
                 <button
                   key={chat.id}
                   onClick={() => setActiveChat(chat)}
-                  className={`w-full text-left p-3 border-b border-slate-800/50 transition-all ${
-                    isActive ? "bg-emerald-500/5 border-l-2 border-l-emerald-500" : "hover:bg-slate-800/30 border-l-2 border-l-transparent"
+                  className={`w-full text-left p-3 border-b border-cream-300/50 transition-all ${
+                    isActive ? "bg-leaf-400/5 border-l-2 border-l-emerald-500" : "hover:bg-cream-100/30 border-l-2 border-l-transparent"
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <div className="relative flex-shrink-0">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        chat.priority === "high" ? "bg-red-500/20 text-red-400" :
-                        chat.priority === "medium" ? "bg-amber-500/20 text-amber-400" :
-                        "bg-emerald-500/20 text-emerald-400"
+                        chat.priority === "high" ? "bg-rose-200 text-rose-600" :
+                        chat.priority === "medium" ? "bg-amber-200 text-amber-500" :
+                        "bg-leaf-200 text-forest-700"
                       }`}>
                         {chat.customerAvatar}
                       </div>
                       {chat.unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-forest-800 font-bold">
                           {chat.unreadCount}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className={`text-xs font-medium truncate ${isActive ? "text-emerald-400" : "text-white"}`}>{chat.customerName}</p>
+                        <p className={`text-xs font-medium truncate ${isActive ? "text-forest-700" : "text-forest-800"}`}>{chat.customerName}</p>
                         <span className="text-[10px] text-slate-500 flex-shrink-0">{chat.lastMessageTime}</span>
                       </div>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{chat.lastMessage}</p>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">{chat.lastMessage}</p>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className={`text-[9px] px-1 py-0.5 rounded border ${cfg.bg} ${cfg.color}`}>
                           {t(`funnel.${chat.funnelStage}`)}
                         </span>
                         <span className="text-[9px] text-slate-500">{channelLabels[chat.channel]}</span>
                         {chat.estimatedValue > 0 && (
-                          <span className="text-[9px] text-emerald-400">{(chat.estimatedValue / 1000000).toFixed(1)}M</span>
+                          <span className="text-[9px] text-forest-700">{(chat.estimatedValue / 1000000).toFixed(1)}M</span>
                         )}
                       </div>
                     </div>
@@ -571,23 +571,23 @@ export default function ChatPage() {
         {activeChat ? (
           <div className="flex-1 flex gap-4 min-h-0">
             {/* Messages Area */}
-            <div className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div className="flex-1 flex flex-col bg-white border border-cream-300 rounded-xl overflow-hidden">
               {/* Chat Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 flex-shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-cream-300 flex-shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   {/* Mobile back — chat list'ga qaytish */}
                   <button
                     onClick={() => setActiveChat(null)}
-                    className="md:hidden p-1.5 -ml-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                    className="md:hidden p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100"
                     aria-label="Orqaga"
                   >
                     <CornerDownLeft className="w-4 h-4" />
                   </button>
-                  <div className="w-9 h-9 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">
+                  <div className="w-9 h-9 bg-leaf-200 rounded-full flex items-center justify-center text-forest-700 text-xs font-bold flex-shrink-0">
                     {activeChat.customerAvatar}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white">{activeChat.customerName}</p>
+                    <p className="text-sm font-semibold text-forest-800">{activeChat.customerName}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-slate-500">{activeChat.customerPhone}</span>
                       <span className="text-[10px] text-slate-500">{channelLabels[activeChat.channel]}</span>
@@ -595,20 +595,20 @@ export default function ChatPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <Phone className="w-4 h-4" />
                   </button>
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <Mail className="w-4 h-4" />
                   </button>
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               {/* Funnel Stage Bar */}
-              <div className="px-4 py-2 border-b border-slate-800 flex-shrink-0">
+              <div className="px-4 py-2 border-b border-cream-300 flex-shrink-0">
                 <div className="flex items-center gap-1 overflow-x-auto">
                   {funnelStages.map((stage) => {
                     const cfg = funnelStageConfig[stage];
@@ -622,8 +622,8 @@ export default function ChatPage() {
                           isCurrent
                             ? `${cfg.bg} ${cfg.color}`
                             : isPast
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "bg-slate-800 text-slate-500"
+                            ? "bg-leaf-100 text-forest-700"
+                            : "bg-cream-100 text-slate-500"
                         }`}
                       >
                         {isPast && !isCurrent ? <CheckCheck className="w-3 h-3" /> : null}
@@ -640,12 +640,12 @@ export default function ChatPage() {
                   <div key={msg.id} className={`flex ${msg.sender === "agent" || msg.sender === "bot" ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[70%] rounded-xl px-3 py-2 ${
                       msg.sender === "agent"
-                        ? "bg-emerald-500/20 text-emerald-100"
+                        ? "bg-leaf-200 text-emerald-100"
                         : msg.sender === "bot"
-                        ? "bg-blue-500/20 text-blue-100"
+                        ? "bg-sky-200 text-blue-100"
                         : msg.sender === "system"
-                        ? "bg-slate-700/50 text-slate-400 text-center mx-auto text-[10px]"
-                        : "bg-slate-800 text-white"
+                        ? "bg-cream-200/70 text-slate-500 text-center mx-auto text-[10px]"
+                        : "bg-cream-100 text-forest-800"
                     }`}>
                       {msg.sender === "system" ? (
                         <span>{msg.text}</span>
@@ -655,7 +655,7 @@ export default function ChatPage() {
                           <div className={`flex items-center gap-1 mt-1 ${msg.sender === "customer" ? "justify-end" : "justify-end"}`}>
                             <span className="text-[10px] text-slate-500">{msg.timestamp}</span>
                             {msg.sender === "agent" && (
-                              msg.read ? <CheckCheck className="w-3 h-3 text-emerald-400" /> : <Check className="w-3 h-3 text-slate-500" />
+                              msg.read ? <CheckCheck className="w-3 h-3 text-forest-700" /> : <Check className="w-3 h-3 text-slate-500" />
                             )}
                           </div>
                         </>
@@ -667,7 +667,7 @@ export default function ChatPage() {
               </div>
 
               {/* Input Area */}
-              <div className="px-3 py-2 border-t border-slate-800 flex-shrink-0">
+              <div className="px-3 py-2 border-t border-cream-300 flex-shrink-0">
                 <AnimatePresence>
                   {showQuickReplies && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-2">
@@ -676,7 +676,7 @@ export default function ChatPage() {
                           <button
                             key={qr.id}
                             onClick={() => handleQuickReply(qr.text)}
-                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md text-[10px] text-slate-300 hover:text-white transition-all"
+                            className="px-2 py-1 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-md text-[10px] text-slate-700 hover:text-forest-900 transition-all"
                             title={qr.text}
                           >
                             {qr.title}
@@ -687,10 +687,10 @@ export default function ChatPage() {
                   )}
                 </AnimatePresence>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setShowQuickReplies(!showQuickReplies)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button onClick={() => setShowQuickReplies(!showQuickReplies)} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <CornerDownLeft className="w-4 h-4" />
                   </button>
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <Paperclip className="w-4 h-4" />
                   </button>
                   <input
@@ -699,15 +699,15 @@ export default function ChatPage() {
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                     placeholder={t("chat.messagePlaceholder")}
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                    className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
                   />
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all">
+                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <Smile className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handleSendMessage}
                     disabled={!messageText.trim()}
-                    className="p-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    className="p-2 rounded-lg bg-leaf-400 hover:bg-leaf-500 text-forest-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -716,61 +716,61 @@ export default function ChatPage() {
             </div>
 
             {/* Customer Info Sidebar */}
-            <div className="w-64 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-y-auto">
+            <div className="w-64 flex-shrink-0 bg-white border border-cream-300 rounded-xl p-4 overflow-y-auto">
               <div className="text-center mb-4">
                 <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-lg font-bold ${
-                  activeChat.priority === "high" ? "bg-red-500/20 text-red-400" :
-                  activeChat.priority === "medium" ? "bg-amber-500/20 text-amber-400" :
-                  "bg-emerald-500/20 text-emerald-400"
+                  activeChat.priority === "high" ? "bg-rose-200 text-rose-600" :
+                  activeChat.priority === "medium" ? "bg-amber-200 text-amber-500" :
+                  "bg-leaf-200 text-forest-700"
                 }`}>
                   {activeChat.customerAvatar}
                 </div>
-                <p className="text-sm font-semibold text-white mt-2">{activeChat.customerName}</p>
+                <p className="text-sm font-semibold text-forest-800 mt-2">{activeChat.customerName}</p>
                 <p className="text-[10px] text-slate-500">{activeChat.customerPhone}</p>
               </div>
 
               <div className="space-y-3">
-                <div className="bg-slate-800/50 rounded-lg p-2.5">
+                <div className="bg-cream-100/50 rounded-lg p-2.5">
                   <p className="text-[10px] text-slate-500">Potensial qiymat</p>
-                  <p className="text-sm font-bold text-emerald-400">{activeChat.estimatedValue.toLocaleString()} so'm</p>
+                  <p className="text-sm font-bold text-forest-700">{activeChat.estimatedValue.toLocaleString()} so'm</p>
                 </div>
-                <div className="bg-slate-800/50 rounded-lg p-2.5">
+                <div className="bg-cream-100/50 rounded-lg p-2.5">
                   <p className="text-[10px] text-slate-500">Birinchi javob vaqti</p>
-                  <p className="text-sm font-bold text-white">{activeChat.firstResponseTime ? activeChat.firstResponseTime + "s" : "—"}</p>
+                  <p className="text-sm font-bold text-forest-800">{activeChat.firstResponseTime ? activeChat.firstResponseTime + "s" : "—"}</p>
                 </div>
-                <div className="bg-slate-800/50 rounded-lg p-2.5">
+                <div className="bg-cream-100/50 rounded-lg p-2.5">
                   <p className="text-[10px] text-slate-500">O'rtacha javob</p>
-                  <p className="text-sm font-bold text-white">{activeChat.avgResponseTime ? activeChat.avgResponseTime + "s" : "—"}</p>
+                  <p className="text-sm font-bold text-forest-800">{activeChat.avgResponseTime ? activeChat.avgResponseTime + "s" : "—"}</p>
                 </div>
-                <div className="bg-slate-800/50 rounded-lg p-2.5">
+                <div className="bg-cream-100/50 rounded-lg p-2.5">
                   <p className="text-[10px] text-slate-500">CSAT</p>
                   <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                    <p className="text-sm font-bold text-white">{activeChat.csat || "—"}</p>
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-400" />
+                    <p className="text-sm font-bold text-forest-800">{activeChat.csat || "—"}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-800">
+              <div className="mt-4 pt-4 border-t border-cream-300">
                 <p className="text-[10px] text-slate-500 mb-2">Teglar</p>
                 <div className="flex flex-wrap gap-1">
                   {activeChat.tags.map((tag) => (
-                    <span key={tag} className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-400">{tag}</span>
+                    <span key={tag} className="px-1.5 py-0.5 rounded bg-cream-100 text-[10px] text-slate-500">{tag}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
+              <div className="mt-4 pt-4 border-t border-cream-300 space-y-2">
                 <p className="text-[10px] text-slate-500 mb-2">Amallar</p>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-white transition-all">
+                <button className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all">
                   <Archive className="w-3.5 h-3.5" />
                   Arxivlash
                 </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-white transition-all">
+                <button className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all">
                   <Tag className="w-3.5 h-3.5" />
                   Teg qo'shish
                 </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs text-red-400 transition-all">
+                <button className="w-full flex items-center gap-2 px-3 py-2 bg-rose-100 hover:bg-rose-200 border border-rose-300 rounded-lg text-xs text-rose-600 transition-all">
                   <Ban className="w-3.5 h-3.5" />
                   Spam deb belgilash
                 </button>
@@ -778,7 +778,7 @@ export default function ChatPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-xl">
+          <div className="flex-1 flex items-center justify-center bg-white border border-cream-300 rounded-xl">
             <div className="text-center">
               <MessageSquare className="w-12 h-12 text-slate-700 mx-auto mb-3" />
               <p className="text-sm text-slate-500">Chat tanlang</p>

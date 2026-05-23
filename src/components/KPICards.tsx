@@ -24,8 +24,8 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.revenue",
     icon: DollarSign,
     format: (v, c) => formatCurrency(v, c),
-    iconBg: "bg-emerald-500/10",
-    iconColor: "text-emerald-400",
+    iconBg: "bg-leaf-100",
+    iconColor: "text-forest-700",
     sparkColor: "#10b981",
   },
   {
@@ -33,8 +33,8 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.orders",
     icon: ShoppingBag,
     format: (v) => v.toLocaleString(),
-    iconBg: "bg-sky-500/10",
-    iconColor: "text-sky-400",
+    iconBg: "bg-sky-100",
+    iconColor: "text-sky-600",
     sparkColor: "#0ea5e9",
   },
   {
@@ -42,8 +42,8 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.customers",
     icon: Users,
     format: (v) => v.toLocaleString(),
-    iconBg: "bg-violet-500/10",
-    iconColor: "text-violet-400",
+    iconBg: "bg-violet-100",
+    iconColor: "text-violet-600",
     sparkColor: "#8b5cf6",
   },
   {
@@ -51,8 +51,8 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.conversion",
     icon: TrendingUp,
     format: (v) => `${v.toFixed(2)}%`,
-    iconBg: "bg-amber-500/10",
-    iconColor: "text-amber-400",
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-500",
     sparkColor: "#f59e0b",
   },
 ];
@@ -92,7 +92,7 @@ export default function KPICards() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: index * 0.08 }}
-            className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 hover:shadow-lg hover:shadow-emerald-500/5 transition-all group"
+            className="bg-white border border-cream-300/80 rounded-2xl p-5 hover:border-cream-300 hover:shadow-lg hover:shadow-leaf-500/5 transition-all group"
           >
             {/* Top row: icon + label + trend chip */}
             <div className="flex items-start justify-between mb-4">
@@ -100,13 +100,13 @@ export default function KPICards() {
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${cfg.iconBg}`}>
                   <Icon className={`w-4.5 h-4.5 ${cfg.iconColor}`} />
                 </div>
-                <p className="text-sm text-slate-400 font-medium">{t(cfg.titleKey)}</p>
+                <p className="text-sm text-slate-500 font-medium">{t(cfg.titleKey)}</p>
               </div>
               {stat.change !== 0 && (
                 <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                   isPositive
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "bg-rose-500/10 text-rose-400"
+                    ? "bg-leaf-100 text-forest-700"
+                    : "bg-rose-100 text-rose-600"
                 }`}>
                   {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                   {Math.abs(stat.change).toFixed(1)}%
@@ -115,7 +115,7 @@ export default function KPICards() {
             </div>
 
             {/* Big number */}
-            <p className="text-3xl font-bold text-white tracking-tight leading-none mb-1">
+            <p className="text-3xl font-bold text-forest-800 tracking-tight leading-none mb-1">
               {cfg.format(stat.value, currency)}
             </p>
 

@@ -23,10 +23,10 @@ export default function SalesByCategory() {
       const item = payload[0];
       const sales = (item.payload as { sales?: number } | undefined)?.sales ?? 0;
       return (
-        <div className="bg-slate-800/95 backdrop-blur border border-slate-700 rounded-xl px-3 py-2 shadow-2xl">
-          <p className="text-xs font-medium text-white">{item.name}</p>
-          <p className="text-[11px] text-slate-400">{item.value}%</p>
-          <p className="text-xs font-semibold text-emerald-400 mt-0.5">
+        <div className="bg-cream-100/95 backdrop-blur border border-cream-300 rounded-xl px-3 py-2 shadow-2xl">
+          <p className="text-xs font-medium text-forest-800">{item.name}</p>
+          <p className="text-[11px] text-slate-500">{item.value}%</p>
+          <p className="text-xs font-semibold text-forest-700 mt-0.5">
             {formatCompactCurrency(sales, currency)}
           </p>
         </div>
@@ -43,15 +43,15 @@ export default function SalesByCategory() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.4 }}
-      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
+      className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
-      <h3 className="text-base font-semibold text-white">{t("widget.salesByCategory")}</h3>
+      <h3 className="text-base font-semibold text-forest-800">{t("widget.salesByCategory")}</h3>
       <p className="text-xs text-slate-500 mb-3 mt-0.5">Mahsulot kategoriyalari taqsimoti</p>
 
       <div className="relative h-44">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
           </div>
         ) : items.length === 0 ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-500">
@@ -81,25 +81,25 @@ export default function SalesByCategory() {
             {/* Markazdagi raqam */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <p className="text-[10px] text-slate-500 uppercase tracking-wider">Jami</p>
-              <p className="text-lg font-bold text-white">{items.length}</p>
+              <p className="text-lg font-bold text-forest-800">{items.length}</p>
             </div>
           </>
         )}
       </div>
 
       {items.length > 0 && (
-        <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-800/60">
+        <div className="space-y-1.5 mt-3 pt-3 border-t border-cream-300/60">
           {items.slice(0, 4).map((cat, index) => (
             <div key={cat.name} className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                <span className="text-slate-300 truncate">{cat.name}</span>
+                <span className="text-slate-700 truncate">{cat.name}</span>
               </div>
-              <span className="text-slate-400 font-medium flex-shrink-0">{cat.value}%</span>
+              <span className="text-slate-500 font-medium flex-shrink-0">{cat.value}%</span>
             </div>
           ))}
           {items.length > 4 && (
-            <p className="text-[10px] text-slate-600 pl-4">+{items.length - 4} ko'proq</p>
+            <p className="text-[10px] text-slate-400 pl-4">+{items.length - 4} ko'proq</p>
           )}
         </div>
       )}

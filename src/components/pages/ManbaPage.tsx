@@ -5,14 +5,14 @@ import type { MarketingSource } from "../../data/marketingData";
 import { initialSources } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
 
-const inputClass = "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20";
-const labelClass = "block text-xs font-medium text-slate-400 mb-1.5";
+const inputClass = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20";
+const labelClass = "block text-xs font-medium text-slate-500 mb-1.5";
 const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3";
-const tdClass = "py-3 px-3 text-sm text-slate-200 border-t border-slate-800";
+const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
 
 function ROIBadge({ spend, conversions }: { spend: number; conversions: number }) {
   const costPerConversion = spend > 0 && conversions > 0 ? (spend / conversions).toFixed(0) : "0";
-  return <span className="text-xs text-slate-300">{costPerConversion} so'm/ta</span>;
+  return <span className="text-xs text-slate-700">{costPerConversion} so'm/ta</span>;
 }
 
 export default function ManbaPage() {
@@ -59,12 +59,12 @@ export default function ManbaPage() {
   if (pageMode !== "list") {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-slate-800" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
-          <h1 className="text-2xl font-bold text-white">{editItem ? "Manba tahrirlash" : "Yangi manba"}</h1>
+        <div className="flex items-center gap-4 pb-4 border-b border-cream-300">
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-cream-100" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold text-forest-800">{editItem ? "Manba tahrirlash" : "Yangi manba"}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-            <button form="source-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
+            <button form="source-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">Saqlash</button>
           </div>
         </div>
 
@@ -77,21 +77,21 @@ export default function ManbaPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Reklama manbalar</h1>
+          <h1 className="text-2xl font-bold text-forest-800">Reklama manbalar</h1>
           <p className="text-sm text-slate-500 mt-1">Reklama manba va kanallarini boshqaring</p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Jami manbalar</p>
-            <p className="text-lg font-semibold text-white">{stats.totalSources}</p>
+            <p className="text-lg font-semibold text-forest-800">{stats.totalSources}</p>
           </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Ushbu oy xaraji</p>
-            <p className="text-lg font-semibold text-white">{stats.totalSpend.toLocaleString()} so'm</p>
+            <p className="text-lg font-semibold text-forest-800">{stats.totalSpend.toLocaleString()} so'm</p>
           </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Konversiyalar</p>
-            <p className="text-lg font-semibold text-emerald-400">{stats.totalConversions}</p>
+            <p className="text-lg font-semibold text-forest-700">{stats.totalConversions}</p>
           </div>
         </div>
       </div>
@@ -101,14 +101,14 @@ export default function ManbaPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Qidirish..." className={inputClass + " pl-10"} />
         </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           Yangi manba
         </button>
       </div>
 
       {sources.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
           <EmptyState
             icon={Zap}
             title="Reklama manbasini qo'shing"
@@ -119,9 +119,9 @@ export default function ManbaPage() {
           />
         </motion.div>
       ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
           <table className="w-full min-w-[850px]">
-            <thead className="bg-slate-900/80">
+            <thead className="bg-white/80">
               <tr>
                 <th className={thClass}>Manba nomi</th>
                 <th className={thClass}>Kanal</th>
@@ -135,17 +135,17 @@ export default function ManbaPage() {
             </thead>
             <tbody>
               {filtered.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-800/40">
+                <tr key={s.id} className="hover:bg-cream-100/40">
                   <td className={tdClass + " font-medium"}>{s.name}</td>
                   <td className={tdClass + " text-xs"}>{s.channel}</td>
-                  <td className={tdClass + " text-xs font-mono text-slate-400"}>{s.utmSource}</td>
+                  <td className={tdClass + " text-xs font-mono text-slate-500"}>{s.utmSource}</td>
                   <td className={tdClass}>{s.spendMonthly.toLocaleString()} so'm</td>
                   <td className={tdClass}>{s.conversions}</td>
                   <td className={tdClass}><ROIBadge spend={s.spendMonthly} conversions={s.conversions} /></td>
-                  <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${s.active ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/50 text-slate-400"}`}>{s.active ? "Faol" : "O'chiq"}</span></td>
+                  <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${s.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>{s.active ? "Faol" : "O'chiq"}</span></td>
                   <td className={tdClass + " text-right whitespace-nowrap"}>
-                    <button onClick={() => { setEditItem(s); setPageMode("edit"); }} className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => setPendingDelete(s.id)} className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => { setEditItem(s); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => setPendingDelete(s.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -158,12 +158,12 @@ export default function ManbaPage() {
       <AnimatePresence>
         {pendingDelete && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70" onClick={() => setPendingDelete(null)}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-              <p className="text-white font-medium mb-2">O'chirishni tasdiqlang</p>
-              <p className="text-sm text-slate-400 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white border border-cream-300 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+              <p className="text-forest-800 font-medium mb-2">O'chirishni tasdiqlang</p>
+              <p className="text-sm text-slate-500 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800">Bekor</button>
-                <button onClick={() => { setSources((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-white font-medium">O'chirish</button>
+                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
+                <button onClick={() => { setSources((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">O'chirish</button>
               </div>
             </motion.div>
           </motion.div>
@@ -196,8 +196,8 @@ function SourceForm({ initial, error, onSave }: SourceFormProps) {
   return (
     <form id="source-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Manba ma'lumotlari</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Manba ma'lumotlari</h3>
           <div>
             <label className={labelClass}>Manba nomi</label>
             <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
@@ -217,8 +217,8 @@ function SourceForm({ initial, error, onSave }: SourceFormProps) {
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Natijalar</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Natijalar</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Ushbu oy xaraji (so'm)</label>
@@ -232,16 +232,16 @@ function SourceForm({ initial, error, onSave }: SourceFormProps) {
         </div>
       </div>
       <div className="space-y-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <h3 className="font-semibold text-white">Holat</h3>
+        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
+          <h3 className="font-semibold text-forest-800">Holat</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
-              {active && <div className="w-full h-full flex items-center justify-center text-white text-xs">✓</div>}
+              {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
-            <span className="text-sm text-slate-300">Faol</span>
+            <span className="text-sm text-slate-700">Faol</span>
           </label>
-          {error && <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
         </div>
       </div>
     </form>

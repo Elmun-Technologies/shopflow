@@ -359,15 +359,15 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
         initial={false}
         animate={{ width: collapsed ? 72 : 240 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
-        className={`fixed left-0 top-0 h-screen bg-slate-900 border-r border-slate-800 z-50 flex flex-col transition-transform duration-200 ${
+        className={`fixed left-0 top-0 h-screen bg-cream-100 border-r border-cream-300 z-50 flex flex-col transition-transform duration-200 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
       {/* Logo */}
-      <div className="flex items-center h-16 px-4 border-b border-slate-800">
+      <div className="flex items-center h-16 px-4 border-b border-cream-300">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Store className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 bg-forest-700 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Store className="w-5 h-5 text-leaf-300" />
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -377,7 +377,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                 exit={{ opacity: 0, x: -8 }}
                 className="min-w-0"
               >
-                <p className="text-sm font-bold text-white truncate">ShopFlow</p>
+                <p className="text-sm font-bold text-forest-800 truncate">ShopFlow</p>
                 <p className="text-[10px] text-slate-500 truncate">{tenant?.name ?? "—"}</p>
               </motion.div>
             )}
@@ -389,12 +389,12 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
       {!collapsed && (
         <button
           onClick={() => setPaletteOpen(true)}
-          className="mx-2 mt-2 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-800 text-xs text-slate-400 transition-colors"
+          className="mx-2 mt-2 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-cream-200/80 hover:bg-cream-200 border border-cream-300 text-xs text-slate-500 transition-colors"
           title="Tezkor navigatsiya (⌘K)"
         >
           <SearchIcon className="w-3.5 h-3.5" />
           <span className="flex-1 text-left">{t("sidebar.search")}</span>
-          <kbd className="text-[10px] bg-slate-700/60 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+          <kbd className="text-[10px] bg-cream-300/80 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
         </button>
       )}
 
@@ -477,10 +477,29 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           onToggle={() => setState((s) => ({ ...s, marketingOpen: !s.marketingOpen }))}
           onNavigate={onMarketingNavigate}
         />
+
+        {/* Promo card — Commerly stilida pastdagi yashil card */}
+        {!collapsed && (
+          <div className="mx-1 mt-4 p-3 rounded-2xl bg-gradient-to-br from-leaf-100 to-leaf-200 border border-leaf-300/50 relative overflow-hidden">
+            <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-leaf-400/30 blur-xl" />
+            <div className="relative">
+              <div className="w-7 h-7 rounded-lg bg-leaf-400 flex items-center justify-center mb-2">
+                <Award className="w-4 h-4 text-forest-800" />
+              </div>
+              <p className="text-xs font-semibold text-forest-800">Productive with AI</p>
+              <p className="text-[10px] text-forest-700/80 mt-0.5 leading-tight">
+                Avto javoblar, teg insight, va vaqtni tejaydigan vositalar
+              </p>
+              <button className="w-full mt-2.5 py-1.5 bg-forest-700 hover:bg-forest-800 text-white text-xs font-semibold rounded-lg transition-colors">
+                Upgrade Plan
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-slate-800 px-2 py-2 space-y-1">
+      <div className="border-t border-cream-300 px-2 py-2 space-y-1">
         <SidebarItem
           icon={settingsItem.icon}
           label={itemLabel(settingsItem)}
@@ -491,7 +510,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
 
         {/* User mini-card */}
         <div className="px-2 py-2 flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-leaf-100 text-forest-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
             {initials || "?"}
           </div>
           <AnimatePresence>
@@ -502,14 +521,14 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <p className="text-xs font-medium text-white truncate">{user?.name ?? "—"}</p>
+                <p className="text-xs font-medium text-forest-800 truncate">{user?.name ?? "—"}</p>
                 <p className="text-[10px] text-slate-500 truncate">{user?.role ?? ""}</p>
               </motion.div>
             )}
           </AnimatePresence>
           <button
             onClick={handleLogout}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-all flex-shrink-0"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-cream-200 transition-all flex-shrink-0"
             title={t("sidebar.logout")}
             aria-label={t("sidebar.logout")}
           >
@@ -519,15 +538,15 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
 
         {/* Til o'zgartirish — kompakt segmented */}
         {!collapsed && (
-          <div className="flex items-center gap-1 p-1 mb-1 bg-slate-800/40 rounded-lg">
+          <div className="flex items-center gap-1 p-1 mb-1 bg-cream-200/60 rounded-lg">
             {(["uz", "ru"] as Lang[]).map((l) => (
               <button
                 key={l}
                 onClick={() => setLang(l)}
                 className={`flex-1 py-1 text-[11px] font-semibold rounded transition-all ${
                   lang === l
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-500 hover:text-slate-300"
+                    ? "bg-cream-300 text-forest-800"
+                    : "text-slate-500 hover:text-slate-700"
                 }`}
               >
                 {l.toUpperCase()}
@@ -538,7 +557,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
 
         <button
           onClick={() => setState((s) => ({ ...s, collapsed: !s.collapsed }))}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-200 transition-all"
           aria-label={collapsed ? "Sidebar'ni kengaytirish" : "Sidebar'ni yig'ish"}
         >
           {collapsed ? (
@@ -567,17 +586,17 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
-              className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+              className="bg-cream-100 border border-cream-300 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-cream-300">
                 <CommandIcon className="w-4 h-4 text-slate-500" />
                 <input
                   autoFocus
                   value={paletteQuery}
                   onChange={(e) => setPaletteQuery(e.target.value)}
                   placeholder="Sahifani qidiring…"
-                  className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+                  className="flex-1 bg-transparent text-sm text-forest-800 placeholder-slate-500 focus:outline-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && filteredPalette[0]) {
                       const sel = filteredPalette[0];
@@ -588,7 +607,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                     }
                   }}
                 />
-                <button onClick={() => setPaletteOpen(false)} className="p-1 text-slate-500 hover:text-white">
+                <button onClick={() => setPaletteOpen(false)} className="p-1 text-slate-500 hover:text-forest-900">
                   <XIcon className="w-4 h-4" />
                 </button>
               </div>
@@ -607,19 +626,19 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                           setPaletteOpen(false);
                           setPaletteQuery("");
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-cream-200 hover:text-forest-900"
                       >
                         <PIcon className="w-4 h-4 text-slate-500 flex-shrink-0" />
                         <span className="flex-1 text-left">{p.label}</span>
-                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">{p.section}</span>
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">{p.section}</span>
                       </button>
                     );
                   })
                 )}
               </div>
-              <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
+              <div className="px-4 py-2 border-t border-cream-300 text-[10px] text-slate-500 flex items-center justify-between">
                 <span>↵ ochish</span>
-                <span><kbd className="bg-slate-800 px-1 py-0.5 rounded">Esc</kbd> yopish</span>
+                <span><kbd className="bg-cream-200 px-1 py-0.5 rounded">Esc</kbd> yopish</span>
               </div>
             </motion.div>
           </motion.div>
@@ -678,7 +697,7 @@ function NavGroupBlock({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
+        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 transition-colors"
         aria-expanded={open}
       >
         <span className="flex items-center gap-1.5">
@@ -752,7 +771,7 @@ function MarketingBlock({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
+        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 transition-colors"
         aria-expanded={open}
       >
         <span>Marketing</span>
@@ -773,8 +792,8 @@ function MarketingBlock({
               onClick={() => onNavigate(marketingSub)}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all mb-2 ${
                 active
-                  ? "bg-emerald-500/10 text-emerald-400 font-medium"
-                  : "text-slate-300 hover:text-white hover:bg-slate-800"
+                  ? "bg-leaf-100 text-forest-700 font-medium"
+                  : "text-slate-700 hover:text-forest-900 hover:bg-cream-200"
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
@@ -784,7 +803,7 @@ function MarketingBlock({
             {/* Mantiqiy mini-guruhlar — vizual aniqlik */}
             {marketingSubGroups.map((g) => (
               <div key={g.id} className="mb-2">
-                <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-slate-600">
+                <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-slate-400">
                   {g.label}
                 </div>
                 {g.items.map((sub) => {
@@ -797,11 +816,11 @@ function MarketingBlock({
                       onClick={() => onNavigate(sub)}
                       className={`w-full flex items-center gap-2.5 pl-3 pr-3 py-1.5 rounded-lg text-left text-xs transition-all ${
                         subActive
-                          ? "bg-emerald-500/10 text-emerald-400 font-medium"
-                          : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                          ? "bg-leaf-100 text-forest-700 font-medium"
+                          : "text-slate-500 hover:text-forest-900 hover:bg-cream-200/80"
                       }`}
                     >
-                      <SubIcon className={`w-3.5 h-3.5 flex-shrink-0 ${subActive ? "text-emerald-400" : "text-slate-500"}`} />
+                      <SubIcon className={`w-3.5 h-3.5 flex-shrink-0 ${subActive ? "text-forest-700" : "text-slate-500"}`} />
                       <span className="truncate">{marketingSubLabels[sub]}</span>
                     </button>
                   );
@@ -841,10 +860,10 @@ function SidebarItem({
         onClick={onClick}
         title={collapsed ? (badge > 0 ? `${label} (${badge})` : label) : undefined}
         className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 ${
-          active ? "bg-emerald-500/10 text-emerald-400" : "text-slate-400 hover:text-white hover:bg-slate-800"
+          active ? "bg-leaf-100 text-forest-700" : "text-slate-500 hover:text-forest-900 hover:bg-cream-200"
         } ${collapsed ? "justify-center" : ""}`}
       >
-        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? "text-emerald-400" : ""}`} />
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? "text-forest-700" : ""}`} />
         {!collapsed && <span className="text-sm font-medium truncate flex-1 text-left">{label}</span>}
         {badge > 0 && (collapsed ? (
           <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
