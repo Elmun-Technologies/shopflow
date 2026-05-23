@@ -6,6 +6,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { notifyCustomer } from "../lib/telegram-notify.js";
 import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
+import { grantOrderPoints } from "./loyalty.js";
 import type { PrismaClient } from "@prisma/client";
 
 // Promo kodni inline tekshirish (import tsikli oldini olish)
@@ -405,6 +406,11 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
 
       return order;
     });
+
+    // Sodiqlik ballari — xariddan ball berish (fonda)
+    grantOrderPoints(app.prisma, tenant.id, customer.id, order.id, subtotal)
+      .then((pts) => { if (pts > 0) app.log.info({ orderId: order.id, points: pts }, "[loyalty] points granted"); })
+      .catch((e) => app.log.warn({ err: e }, "[loyalty] grant failed"));
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
     if (customer.telegramUserId) {
@@ -893,7 +899,11 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   app.post("/:tenantSlug/wishlist", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
     const data = z
-      .object({ tgUserId: z.coerce.number().int().positive(), productId: z.string() })
+      .object({
+        tgUserId: z.coerce.number().int().positive(),
+        productId: z.string(),
+        initData: z.string().optional(),
+      })
       .parse(req.body);
 
     const tenant = await app.prisma.tenant.findUnique({
@@ -901,6 +911,17 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    // initData HMAC tekshiruvi
+    if (data.initData) {
+      const botToken = await getBotTokenForTenant(app.prisma as never, tenant.id);
+      if (botToken) {
+        const check = verifyTelegramInitData(data.initData, botToken);
+        if (!check.valid || (check.userId && check.userId !== data.tgUserId)) {
+          return reply.code(401).send({ error: "Telegram autentifikatsiya muvaffaqiyatsiz" });
+        }
+      }
+    }
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
@@ -993,6 +1014,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // POST /:slug/reviews — mijoz yangi sharh yuboradi (PENDING — admin moderatsiyasi)
   const reviewSubmitSchema = z.object({
     tgUserId: z.coerce.number().int().positive(),
+    initData: z.string().optional(),
     productId: z.string(),
     rating: z.number().int().min(1).max(5),
     text: z.string().min(5).max(2000),
@@ -1007,6 +1029,17 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    // initData tekshiruvi
+    if (data.initData) {
+      const botToken = await getBotTokenForTenant(app.prisma as never, tenant.id);
+      if (botToken) {
+        const check = verifyTelegramInitData(data.initData, botToken);
+        if (!check.valid || (check.userId && check.userId !== data.tgUserId)) {
+          return reply.code(401).send({ error: "Telegram autentifikatsiya muvaffaqiyatsiz" });
+        }
+      }
+    }
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
