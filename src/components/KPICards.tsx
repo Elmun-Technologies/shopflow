@@ -12,10 +12,10 @@ interface CardConfig {
   titleKey: string;
   icon: React.ElementType;
   format: (v: number, currency: string) => string;
-  // Soft pastel ranglar — har card uchun
-  iconBg: string;
-  iconColor: string;
-  sparkColor: string; // sparkline rangi
+  accent: string;       // top border color
+  iconBg: string;       // icon wrapper bg
+  iconColor: string;    // icon color
+  sparkColor: string;
 }
 
 const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "conversion" }> = [
@@ -24,8 +24,9 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.revenue",
     icon: DollarSign,
     format: (v, c) => formatCurrency(v, c),
-    iconBg: "bg-leaf-100",
-    iconColor: "text-forest-700",
+    accent: "#10b981",
+    iconBg: "rgba(16,185,129,0.1)",
+    iconColor: "#10b981",
     sparkColor: "#10b981",
   },
   {
@@ -33,17 +34,19 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.orders",
     icon: ShoppingBag,
     format: (v) => v.toLocaleString(),
-    iconBg: "bg-sky-100",
-    iconColor: "text-sky-600",
-    sparkColor: "#0ea5e9",
+    accent: "#3b82f6",
+    iconBg: "rgba(59,130,246,0.1)",
+    iconColor: "#3b82f6",
+    sparkColor: "#3b82f6",
   },
   {
     key: "customers",
     titleKey: "kpi.customers",
     icon: Users,
     format: (v) => v.toLocaleString(),
-    iconBg: "bg-violet-100",
-    iconColor: "text-violet-600",
+    accent: "#8b5cf6",
+    iconBg: "rgba(139,92,246,0.1)",
+    iconColor: "#8b5cf6",
     sparkColor: "#8b5cf6",
   },
   {
@@ -51,8 +54,9 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.conversion",
     icon: TrendingUp,
     format: (v) => `${v.toFixed(2)}%`,
-    iconBg: "bg-amber-100",
-    iconColor: "text-amber-500",
+    accent: "#f59e0b",
+    iconBg: "rgba(245,158,11,0.1)",
+    iconColor: "#f59e0b",
     sparkColor: "#f59e0b",
   },
 ];
@@ -61,13 +65,10 @@ export default function KPICards() {
   const { tenant } = useAuth();
   const { t } = useT();
   const { data, loading } = useAsync(() => dashboardApi.kpis(), []);
-  // Sparkline uchun oxirgi 14 kun ma'lumotlari (faqat revenue + orders haqiqiy data)
   const { data: dailySales } = useAsync(() => dashboardApi.dailySales(14), []);
   const currency = tenant?.currency ?? "UZS";
 
-  if (loading) {
-    return <KPICardsSkeleton />;
-  }
+  if (loading) return <KPICardsSkeleton />;
 
   const sparkData = dailySales ?? [];
 
@@ -78,73 +79,95 @@ export default function KPICards() {
         const isPositive = stat.change >= 0;
         const Icon = cfg.icon;
 
-        // Sparkline data — revenue va orders uchun haqiqiy, boshqalari uchun yo'q
         let spark: Array<{ v: number }> | null = null;
-        if (cfg.key === "revenue" && sparkData.length > 0) {
+        if (cfg.key === "revenue" && sparkData.length > 0)
           spark = sparkData.map((d) => ({ v: d.sales }));
-        } else if (cfg.key === "orders" && sparkData.length > 0) {
+        else if (cfg.key === "orders" && sparkData.length > 0)
           spark = sparkData.map((d) => ({ v: d.orders }));
-        }
 
         return (
           <motion.div
             key={cfg.key}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.08 }}
-            className="bg-white border border-cream-300/80 rounded-2xl p-5 hover:border-cream-300 hover:shadow-lg hover:shadow-leaf-500/5 transition-all group"
+            transition={{ duration: 0.35, delay: index * 0.07 }}
+            className="relative bg-white rounded-2xl overflow-hidden"
+            style={{
+              border: "1px solid #eaeae0",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}
           >
-            {/* Top row: icon + label + trend chip */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${cfg.iconBg}`}>
-                  <Icon className={`w-4.5 h-4.5 ${cfg.iconColor}`} />
+            {/* Top accent stripe */}
+            <div
+              className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+              style={{ backgroundColor: cfg.accent }}
+            />
+
+            <div className="p-5 pt-5">
+              {/* Header row */}
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className="flex items-center justify-center rounded-xl"
+                  style={{ width: 38, height: 38, backgroundColor: cfg.iconBg }}
+                >
+                  <Icon style={{ width: 18, height: 18, color: cfg.iconColor }} />
                 </div>
-                <p className="text-sm text-slate-500 font-medium">{t(cfg.titleKey)}</p>
+                {stat.change !== 0 && (
+                  <div
+                    className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[11px] font-semibold"
+                    style={{
+                      backgroundColor: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+                      color: isPositive ? "#059669" : "#dc2626",
+                    }}
+                  >
+                    {isPositive
+                      ? <ArrowUpRight style={{ width: 12, height: 12 }} />
+                      : <ArrowDownRight style={{ width: 12, height: 12 }} />
+                    }
+                    {Math.abs(stat.change).toFixed(1)}%
+                  </div>
+                )}
               </div>
-              {stat.change !== 0 && (
-                <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                  isPositive
-                    ? "bg-leaf-100 text-forest-700"
-                    : "bg-rose-100 text-rose-600"
-                }`}>
-                  {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {Math.abs(stat.change).toFixed(1)}%
-                </div>
-              )}
-            </div>
 
-            {/* Big number */}
-            <p className="text-3xl font-bold text-forest-800 tracking-tight leading-none mb-1">
-              {cfg.format(stat.value, currency)}
-            </p>
+              {/* Value */}
+              <p
+                className="text-2xl font-bold tracking-tight leading-none mb-1"
+                style={{ color: "#14201A" }}
+              >
+                {cfg.format(stat.value, currency)}
+              </p>
+              <p className="text-xs font-medium" style={{ color: "#94a3b8" }}>
+                {t(cfg.titleKey)}
+              </p>
 
-            {/* Bottom: sparkline yoki sub-label */}
-            <div className="mt-3 h-10">
-              {spark && spark.length > 1 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={spark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-                    <defs>
-                      <linearGradient id={`grad-${cfg.key}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={cfg.sparkColor} stopOpacity={0.4} />
-                        <stop offset="100%" stopColor={cfg.sparkColor} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      type="monotone"
-                      dataKey="v"
-                      stroke={cfg.sparkColor}
-                      strokeWidth={1.75}
-                      fill={`url(#grad-${cfg.key})`}
-                      isAnimationActive={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <span className="text-xs text-slate-500 inline-flex items-center h-full">
-                  {stat.change !== 0 ? t("kpi.vsLastMonth") : t("kpi.noData")}
-                </span>
-              )}
+              {/* Sparkline */}
+              <div className="mt-4 h-10">
+                {spark && spark.length > 1 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={spark} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id={`kpi-grad-${cfg.key}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={cfg.sparkColor} stopOpacity={0.25} />
+                          <stop offset="100%" stopColor={cfg.sparkColor} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <Area
+                        type="monotone"
+                        dataKey="v"
+                        stroke={cfg.sparkColor}
+                        strokeWidth={1.5}
+                        fill={`url(#kpi-grad-${cfg.key})`}
+                        isAnimationActive={false}
+                        dot={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-xs flex items-center h-full" style={{ color: "#cbd5e1" }}>
+                    {stat.change !== 0 ? t("kpi.vsLastMonth") : t("kpi.noData")}
+                  </p>
+                )}
+              </div>
             </div>
           </motion.div>
         );

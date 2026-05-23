@@ -92,15 +92,41 @@ function DashboardPage() {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6"
+        transition={{ duration: 0.28 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-7"
       >
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-forest-700 font-semibold mb-1">{currentDate}</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-forest-900 tracking-tight">Welcome back!</h1>
-          <p className="text-sm text-slate-500 mt-1">Bugungi savdo va operatsiya holati</p>
+          <p
+            className="text-[10px] font-semibold uppercase tracking-widest mb-1.5"
+            style={{ color: "#7BC056" }}
+          >
+            {currentDate}
+          </p>
+          <h1
+            className="text-2xl md:text-3xl font-bold tracking-tight"
+            style={{ color: "#14201A" }}
+          >
+            Assalomu alaykum! 👋
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "#94a3b8" }}>
+            Bugungi savdo va operatsiya holati
+          </p>
+        </div>
+
+        {/* Date badge */}
+        <div
+          className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl self-start"
+          style={{ backgroundColor: "#fff", border: "1px solid #EAEAE0" }}
+        >
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: "#10b981" }}
+          />
+          <span className="text-xs font-medium" style={{ color: "#475569" }}>
+            Jonli ma'lumotlar
+          </span>
         </div>
       </motion.div>
 

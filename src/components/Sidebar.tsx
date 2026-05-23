@@ -358,48 +358,66 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
       <motion.aside
         initial={false}
         animate={{ width: collapsed ? 72 : 240 }}
-        transition={{ duration: 0.25, ease: "easeInOut" }}
-        className={`fixed left-0 top-0 h-screen bg-cream-100 border-r border-cream-300 z-50 flex flex-col transition-transform duration-200 ${
+        transition={{ duration: 0.22, ease: "easeInOut" }}
+        className={`fixed left-0 top-0 h-screen z-50 flex flex-col transition-transform duration-200 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
+        style={{
+          backgroundColor: "#ffffff",
+          borderRight: "1px solid #EAEAE0",
+        }}
       >
       {/* Logo */}
-      <div className="flex items-center h-16 px-4 border-b border-cream-300">
+      <div
+        className="flex items-center h-16 px-4"
+        style={{ borderBottom: "1px solid #EAEAE0" }}
+      >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 bg-forest-700 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Store className="w-5 h-5 text-leaf-300" />
+          <div
+            className="flex items-center justify-center flex-shrink-0 rounded-xl"
+            style={{ width: 36, height: 36, background: "linear-gradient(135deg, #2D4938, #4F6B53)" }}
+          >
+            <Store className="w-4.5 h-4.5" style={{ color: "#95D26F" }} />
           </div>
           <AnimatePresence>
             {!collapsed && (
               <motion.div
-                initial={{ opacity: 0, x: -8 }}
+                initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
+                exit={{ opacity: 0, x: -6 }}
+                transition={{ duration: 0.15 }}
                 className="min-w-0"
               >
-                <p className="text-sm font-bold text-forest-800 truncate">ShopFlow</p>
-                <p className="text-[10px] text-slate-500 truncate">{tenant?.name ?? "—"}</p>
+                <p className="text-sm font-bold truncate" style={{ color: "#1F3327" }}>ShopFlow</p>
+                <p className="text-[10px] truncate" style={{ color: "#94a3b8" }}>{tenant?.name ?? "—"}</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Search trigger — Cmd+K to'liq qidirish */}
+      {/* Search trigger */}
       {!collapsed && (
         <button
           onClick={() => setPaletteOpen(true)}
-          className="mx-2 mt-2 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-cream-200/80 hover:bg-cream-200 border border-cream-300 text-xs text-slate-500 transition-colors"
+          className="mx-3 mt-3 flex items-center gap-2 px-3 py-2 rounded-xl transition-colors"
+          style={{
+            backgroundColor: "#F4F4ED",
+            border: "1px solid #E5E5DA",
+          }}
           title="Tezkor navigatsiya (⌘K)"
         >
-          <SearchIcon className="w-3.5 h-3.5" />
-          <span className="flex-1 text-left">{t("sidebar.search")}</span>
-          <kbd className="text-[10px] bg-cream-300/80 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+          <SearchIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#94a3b8" }} />
+          <span className="flex-1 text-left text-xs" style={{ color: "#94a3b8" }}>{t("sidebar.search")}</span>
+          <kbd
+            className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+            style={{ backgroundColor: "#E5E5DA", color: "#64748b" }}
+          >⌘K</kbd>
         </button>
       )}
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden">
         {/* Tezkor (pinned) — operator o'zi pin qilgan */}
         {!collapsed && pinned.length > 0 && (
           <div className="pt-1 mb-1">
@@ -478,20 +496,35 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           onNavigate={onMarketingNavigate}
         />
 
-        {/* Promo card — Commerly stilida pastdagi yashil card */}
+        {/* Promo card */}
         {!collapsed && (
-          <div className="mx-1 mt-4 p-3 rounded-2xl bg-gradient-to-br from-leaf-100 to-leaf-200 border border-leaf-300/50 relative overflow-hidden">
-            <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-leaf-400/30 blur-xl" />
+          <div
+            className="mx-1 mt-3 p-3.5 rounded-2xl relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #F0F8E3, #DCEDC2)",
+              border: "1px solid #C5E29F",
+            }}
+          >
+            <div
+              className="absolute -top-5 -right-5 w-20 h-20 rounded-full opacity-30"
+              style={{ backgroundColor: "#95D26F", filter: "blur(20px)" }}
+            />
             <div className="relative">
-              <div className="w-7 h-7 rounded-lg bg-leaf-400 flex items-center justify-center mb-2">
-                <Award className="w-4 h-4 text-forest-800" />
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center mb-2.5"
+                style={{ backgroundColor: "#5FA340" }}
+              >
+                <Award className="w-4 h-4 text-white" />
               </div>
-              <p className="text-xs font-semibold text-forest-800">Productive with AI</p>
-              <p className="text-[10px] text-forest-700/80 mt-0.5 leading-tight">
-                Avto javoblar, teg insight, va vaqtni tejaydigan vositalar
+              <p className="text-xs font-bold" style={{ color: "#1F3327" }}>AI bilan samaraliroq</p>
+              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: "#4F6B53" }}>
+                Avto javoblar va smart insight'lar
               </p>
-              <button className="w-full mt-2.5 py-1.5 bg-forest-700 hover:bg-forest-800 text-white text-xs font-semibold rounded-lg transition-colors">
-                Upgrade Plan
+              <button
+                className="w-full mt-2.5 py-1.5 text-white text-xs font-semibold rounded-lg transition-colors"
+                style={{ backgroundColor: "#2D4938" }}
+              >
+                Yangilash
               </button>
             </div>
           </div>
@@ -499,7 +532,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-cream-300 px-2 py-2 space-y-1">
+      <div className="px-2 py-2 space-y-1" style={{ borderTop: "1px solid #EAEAE0" }}>
         <SidebarItem
           icon={settingsItem.icon}
           label={itemLabel(settingsItem)}
@@ -508,9 +541,12 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           onClick={() => onPageChange(settingsItem.page)}
         />
 
-        {/* User mini-card */}
-        <div className="px-2 py-2 flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-leaf-100 text-forest-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+        {/* User row */}
+        <div className="flex items-center gap-2 px-2 py-1.5 min-w-0">
+          <div
+            className="flex items-center justify-center text-xs font-bold flex-shrink-0 rounded-lg"
+            style={{ width: 32, height: 32, backgroundColor: "#2D4938", color: "#95D26F" }}
+          >
             {initials || "?"}
           </div>
           <AnimatePresence>
@@ -521,54 +557,77 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <p className="text-xs font-medium text-forest-800 truncate">{user?.name ?? "—"}</p>
-                <p className="text-[10px] text-slate-500 truncate">{user?.role ?? ""}</p>
+                <p className="text-xs font-semibold truncate" style={{ color: "#1F3327" }}>
+                  {user?.name ?? "—"}
+                </p>
+                <p className="text-[10px] truncate" style={{ color: "#94a3b8" }}>
+                  {user?.role ?? ""}
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-cream-200 transition-all flex-shrink-0"
-            title={t("sidebar.logout")}
-            aria-label={t("sidebar.logout")}
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          {!collapsed && (
+            <button
+              onClick={handleLogout}
+              className="p-1.5 rounded-lg transition-all flex-shrink-0"
+              style={{ color: "#94a3b8" }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.backgroundColor = "#FEF2F2"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.backgroundColor = ""; }}
+              title={t("sidebar.logout")}
+              aria-label={t("sidebar.logout")}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Til o'zgartirish — kompakt segmented */}
+        {/* Language + collapse row */}
         {!collapsed && (
-          <div className="flex items-center gap-1 p-1 mb-1 bg-cream-200/60 rounded-lg">
-            {(["uz", "ru"] as Lang[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={`flex-1 py-1 text-[11px] font-semibold rounded transition-all ${
-                  lang === l
-                    ? "bg-cream-300 text-forest-800"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5 px-1">
+            <div
+              className="flex items-center gap-0.5 p-0.5 rounded-lg flex-shrink-0"
+              style={{ backgroundColor: "#F4F4ED" }}
+            >
+              {(["uz", "ru"] as Lang[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className="px-2 py-1 text-[10px] font-semibold rounded-md transition-all"
+                  style={
+                    lang === l
+                      ? { backgroundColor: "#fff", color: "#1F3327", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }
+                      : { color: "#94a3b8" }
+                  }
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setState((s) => ({ ...s, collapsed: !s.collapsed }))}
+              className="ml-auto flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all"
+              style={{ color: "#94a3b8" }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#F4F4ED"; e.currentTarget.style.color = "#1F3327"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; e.currentTarget.style.color = "#94a3b8"; }}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>{t("sidebar.collapse")}</span>
+            </button>
           </div>
         )}
 
-        <button
-          onClick={() => setState((s) => ({ ...s, collapsed: !s.collapsed }))}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-200 transition-all"
-          aria-label={collapsed ? "Sidebar'ni kengaytirish" : "Sidebar'ni yig'ish"}
-        >
-          {collapsed ? (
+        {collapsed && (
+          <button
+            onClick={() => setState((s) => ({ ...s, collapsed: !s.collapsed }))}
+            className="w-full flex items-center justify-center py-2 rounded-lg transition-all"
+            style={{ color: "#94a3b8" }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#F4F4ED"; e.currentTarget.style.color = "#1F3327"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; e.currentTarget.style.color = "#94a3b8"; }}
+          >
             <ChevronRight className="w-4 h-4" />
-          ) : (
-            <>
-              <ChevronLeft className="w-4 h-4" />
-              <span className="text-xs font-medium">{t("sidebar.collapse")}</span>
-            </>
-          )}
-        </button>
+          </button>
+        )}
       </div>
       </motion.aside>
 
@@ -583,20 +642,31 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
             onClick={() => setPaletteOpen(false)}
           >
             <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              className="bg-cream-100 border border-cream-300 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+              initial={{ y: -16, opacity: 0, scale: 0.97 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -16, opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              className="w-full max-w-lg rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: "#FAFAF5",
+                border: "1px solid #E5E5DA",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-cream-300">
-                <CommandIcon className="w-4 h-4 text-slate-500" />
+              {/* Search input */}
+              <div
+                className="flex items-center gap-3 px-4 py-3.5"
+                style={{ borderBottom: "1px solid #EAEAE0" }}
+              >
+                <CommandIcon className="w-4 h-4 flex-shrink-0" style={{ color: "#94a3b8" }} />
                 <input
                   autoFocus
                   value={paletteQuery}
                   onChange={(e) => setPaletteQuery(e.target.value)}
                   placeholder="Sahifani qidiring…"
-                  className="flex-1 bg-transparent text-sm text-forest-800 placeholder-slate-500 focus:outline-none"
+                  className="flex-1 bg-transparent text-sm focus:outline-none"
+                  style={{ color: "#1F3327" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && filteredPalette[0]) {
                       const sel = filteredPalette[0];
@@ -607,13 +677,21 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                     }
                   }}
                 />
-                <button onClick={() => setPaletteOpen(false)} className="p-1 text-slate-500 hover:text-forest-900">
+                <button
+                  onClick={() => setPaletteOpen(false)}
+                  className="p-1 rounded-lg transition-colors"
+                  style={{ color: "#94a3b8" }}
+                >
                   <XIcon className="w-4 h-4" />
                 </button>
               </div>
-              <div className="max-h-[60vh] overflow-y-auto py-1">
+
+              {/* Results */}
+              <div className="max-h-[60vh] overflow-y-auto py-1.5">
                 {filteredPalette.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-slate-500">Topilmadi</div>
+                  <div className="py-8 text-center text-sm" style={{ color: "#94a3b8" }}>
+                    Topilmadi
+                  </div>
                 ) : (
                   filteredPalette.map((p, i) => {
                     const PIcon = p.icon;
@@ -626,19 +704,41 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                           setPaletteOpen(false);
                           setPaletteQuery("");
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-cream-200 hover:text-forest-900"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                        style={{ color: "#475569" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#F4F4ED"; e.currentTarget.style.color = "#1F3327"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; e.currentTarget.style.color = "#475569"; }}
                       >
-                        <PIcon className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                        <span className="flex-1 text-left">{p.label}</span>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">{p.section}</span>
+                        <div
+                          className="flex items-center justify-center rounded-lg flex-shrink-0"
+                          style={{ width: 28, height: 28, backgroundColor: "#F4F4ED" }}
+                        >
+                          <PIcon className="w-3.5 h-3.5" style={{ color: "#64748b" }} />
+                        </div>
+                        <span className="flex-1 text-left font-medium">{p.label}</span>
+                        <span
+                          className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md"
+                          style={{ backgroundColor: "#F4F4ED", color: "#94a3b8" }}
+                        >
+                          {p.section}
+                        </span>
                       </button>
                     );
                   })
                 )}
               </div>
-              <div className="px-4 py-2 border-t border-cream-300 text-[10px] text-slate-500 flex items-center justify-between">
+
+              <div
+                className="px-4 py-2 text-[10px] flex items-center justify-between"
+                style={{ borderTop: "1px solid #EAEAE0", color: "#94a3b8" }}
+              >
                 <span>↵ ochish</span>
-                <span><kbd className="bg-cream-200 px-1 py-0.5 rounded">Esc</kbd> yopish</span>
+                <span>
+                  <kbd
+                    className="px-1.5 py-0.5 rounded font-mono"
+                    style={{ backgroundColor: "#EAEAE0", color: "#64748b" }}
+                  >Esc</kbd>{" "}yopish
+                </span>
               </div>
             </motion.div>
           </motion.div>
@@ -693,22 +793,31 @@ function NavGroupBlock({
   }
 
   return (
-    <div className="pt-1">
+    <div className="pt-2">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 transition-colors"
+        className="w-full flex items-center justify-between px-2.5 py-1 transition-colors rounded-md group"
         aria-expanded={open}
+        style={{ color: "#94a3b8" }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = "#64748b"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = "#94a3b8"; }}
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest">
           {group.labelKey ? t(group.labelKey) : group.label}
           {!open && groupBadge > 0 && (
-            <span className="bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full normal-case tracking-normal">
+            <span
+              className="font-bold normal-case tracking-normal"
+              style={{ backgroundColor: "#ef4444", color: "#fff", fontSize: 9, padding: "1px 5px", borderRadius: 999 }}
+            >
               {groupBadge > 99 ? "99+" : groupBadge}
             </span>
           )}
         </span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "" : "-rotate-90"}`} />
+        <ChevronDown
+          className="w-3 h-3 transition-transform"
+          style={{ transform: open ? undefined : "rotate(-90deg)" }}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -855,41 +964,95 @@ function SidebarItem({
 }) {
   return (
     <div className="relative group">
+      {/* Left accent bar */}
+      {active && (
+        <span
+          className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full z-10"
+          style={{ backgroundColor: "#5FA340" }}
+        />
+      )}
+
       <button
         type="button"
         onClick={onClick}
         title={collapsed ? (badge > 0 ? `${label} (${badge})` : label) : undefined}
-        className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 ${
-          active ? "bg-leaf-100 text-forest-700" : "text-slate-500 hover:text-forest-900 hover:bg-cream-200"
-        } ${collapsed ? "justify-center" : ""}`}
+        className={`relative w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-150 ${
+          collapsed ? "justify-center" : ""
+        }`}
+        style={{
+          backgroundColor: active ? "#F0F8E3" : undefined,
+          color: active ? "#2D4938" : "#64748b",
+        }}
+        onMouseEnter={(e) => {
+          if (!active) {
+            e.currentTarget.style.backgroundColor = "#F4F4ED";
+            e.currentTarget.style.color = "#1F3327";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!active) {
+            e.currentTarget.style.backgroundColor = "";
+            e.currentTarget.style.color = "#64748b";
+          }
+        }}
       >
-        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? "text-forest-700" : ""}`} />
-        {!collapsed && <span className="text-sm font-medium truncate flex-1 text-left">{label}</span>}
-        {badge > 0 && (collapsed ? (
-          <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-            {badge > 9 ? "9+" : badge}
+        <Icon
+          style={{
+            width: 16, height: 16,
+            flexShrink: 0,
+            color: active ? "#5FA340" : undefined,
+          }}
+        />
+        {!collapsed && (
+          <span
+            className="text-sm truncate flex-1 text-left"
+            style={{ fontWeight: active ? 600 : 500 }}
+          >
+            {label}
           </span>
-        ) : (
-          <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-            {badge > 99 ? "99+" : badge}
-          </span>
-        ))}
-        {active && !collapsed && badge === 0 && !pinned && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+        )}
+        {badge > 0 && (
+          collapsed ? (
+            <span
+              className="absolute top-0.5 right-0.5 flex items-center justify-center font-bold"
+              style={{
+                minWidth: 15, height: 15, padding: "0 3px",
+                backgroundColor: "#ef4444", color: "#fff",
+                fontSize: 9, borderRadius: 999,
+              }}
+            >
+              {badge > 9 ? "9+" : badge}
+            </span>
+          ) : (
+            <span
+              className="flex items-center justify-center font-bold text-white"
+              style={{
+                minWidth: 18, height: 18, padding: "0 5px",
+                backgroundColor: "#ef4444", fontSize: 10,
+                borderRadius: 999, lineHeight: 1,
+              }}
+            >
+              {badge > 99 ? "99+" : badge}
+            </span>
+          )
+        )}
       </button>
-      {/* Pin tugmasi — faqat expanded + onTogglePin bo'lsa, hover'da yoki pinned bo'lsa ko'rinadi */}
+
+      {/* Pin button */}
       {!collapsed && onTogglePin && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
-          className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-opacity ${
-            pinned
-              ? "opacity-100 text-amber-400"
-              : "opacity-0 group-hover:opacity-100 text-slate-500 hover:text-amber-400"
-          }`}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all"
+          style={{
+            opacity: pinned ? 1 : 0,
+            color: pinned ? "#f59e0b" : "#94a3b8",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "#f59e0b"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = pinned ? "1" : "0"; e.currentTarget.style.color = pinned ? "#f59e0b" : "#94a3b8"; }}
           title={pinned ? "Pin'dan olib tashlash" : "Pin qo'shish"}
-          aria-label={pinned ? "Pin'dan olib tashlash" : "Pin qo'shish"}
         >
-          {pinned ? <Pin className="w-3.5 h-3.5 fill-amber-400" /> : <PinOff className="w-3.5 h-3.5" />}
+          {pinned ? <Pin className="w-3 h-3 fill-amber-400" /> : <PinOff className="w-3 h-3" />}
         </button>
       )}
     </div>

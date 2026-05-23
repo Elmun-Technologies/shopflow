@@ -52,10 +52,11 @@ export default function RevenueChart() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.3 }}
-      className="bg-white border border-cream-300/80 rounded-2xl p-5"
+      transition={{ duration: 0.35, delay: 0.25 }}
+      className="bg-white rounded-2xl p-5"
+      style={{ border: "1px solid #EAEAE0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-start justify-between mb-5">
         <div>
