@@ -80,6 +80,7 @@ model User {
   assignedConversations Conversation[]        @relation("ConversationAssignee")
   conversationMessages  ConversationMessage[] @relation("ConversationMessageAuthor")
   moderatedReviews      Review[]              @relation("ReviewModerator")
+  refreshTokens  RefreshToken[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1278,4 +1279,21 @@ model LoyaltyRule {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, active])
+}
+
+// ============== REFRESH TOKENS ==============
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+
+  @@index([userId])
+  @@index([tokenHash])
 }

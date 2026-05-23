@@ -1,6 +1,16 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import argon2 from "argon2";
+import { createHash, randomBytes } from "node:crypto";
+
+const REFRESH_TOKEN_TTL_DAYS = 30;
+const ACCESS_TOKEN_TTL = "15m"; // 15 daqiqa
+
+function generateRefreshToken() {
+  const raw = randomBytes(40).toString("hex");
+  const hash = createHash("sha256").update(raw).digest("hex");
+  return { raw, hash };
+}
 
 const registerSchema = z.object({
   tenantName: z.string().min(2).max(80),
@@ -44,18 +54,24 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     });
 
     const owner = tenant.users[0];
-    const token = app.jwt.sign({
-      userId: owner.id,
-      tenantId: tenant.id,
-      role: owner.role,
-      email: owner.email,
+    const accessToken = app.jwt.sign(
+      { userId: owner.id, tenantId: tenant.id, role: owner.role, email: owner.email },
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+
+    const { raw: refreshRaw, hash: refreshHash } = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+    await app.prisma.refreshToken.create({
+      data: { userId: owner.id, tokenHash: refreshHash, expiresAt, userAgent: (req.headers["user-agent"] as string) ?? null },
     });
 
-    return {
-      token,
+    return reply.code(201).send({
+      token: accessToken,
+      refreshToken: refreshRaw,
+      expiresIn: 15 * 60,
       user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role },
       tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, currency: tenant.currency },
-    };
+    });
   });
 
   app.post("/login", { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
@@ -86,15 +102,27 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: "Email yoki parol noto'g'ri" });
     }
 
-    const token = app.jwt.sign({
-      userId: user.id,
-      tenantId: user.tenantId,
-      role: user.role,
-      email: user.email,
+    const accessToken = app.jwt.sign(
+      { userId: user.id, tenantId: user.tenantId, role: user.role, email: user.email },
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+
+    const { raw: refreshRaw, hash: refreshHash } = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+    await app.prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: refreshHash,
+        expiresAt,
+        userAgent: (req.headers["user-agent"] as string) ?? null,
+        ipAddress: req.ip ?? null,
+      },
     });
 
     return {
-      token,
+      token: accessToken,
+      refreshToken: refreshRaw,
+      expiresIn: 15 * 60,
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
       tenant: {
         id: user.tenant.id,
@@ -103,6 +131,51 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         currency: user.tenant.currency,
       },
     };
+  });
+
+  // Refresh token — yangi access token olish
+  app.post("/refresh", { config: { rateLimit: { max: 30, timeWindow: "5 minutes" } } }, async (req, reply) => {
+    const { refreshToken: raw } = z.object({ refreshToken: z.string().min(10) }).parse(req.body);
+    const hash = createHash("sha256").update(raw).digest("hex");
+
+    const stored = await app.prisma.refreshToken.findUnique({
+      where: { tokenHash: hash },
+      include: { user: { include: { tenant: true } } },
+    });
+
+    if (!stored) return reply.code(401).send({ error: "Noto'g'ri yoki eskirgan refresh token" });
+    if (stored.revokedAt) return reply.code(401).send({ error: "Token bekor qilingan" });
+    if (stored.expiresAt < new Date()) return reply.code(401).send({ error: "Refresh token muddati tugagan" });
+    if (!stored.user.active) return reply.code(401).send({ error: "Foydalanuvchi nofaol" });
+
+    // Eski tokenni yangilash (lastUsedAt)
+    await app.prisma.refreshToken.update({
+      where: { id: stored.id },
+      data: { lastUsedAt: new Date() },
+    });
+
+    const newAccess = app.jwt.sign(
+      { userId: stored.userId, tenantId: stored.user.tenantId, role: stored.user.role, email: stored.user.email },
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+
+    return {
+      token: newAccess,
+      expiresIn: 15 * 60,
+    };
+  });
+
+  // Logout — refresh tokenni bekor qilish
+  app.post("/logout", async (req, reply) => {
+    const body = z.object({ refreshToken: z.string().optional() }).safeParse(req.body);
+    if (body.success && body.data.refreshToken) {
+      const hash = createHash("sha256").update(body.data.refreshToken).digest("hex");
+      await app.prisma.refreshToken.updateMany({
+        where: { tokenHash: hash },
+        data: { revokedAt: new Date() },
+      }).catch(() => null);
+    }
+    return reply.code(204).send();
   });
 
   app.get("/me", { preHandler: [app.authenticate] }, async (req) => {
