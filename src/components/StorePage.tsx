@@ -3,9 +3,10 @@
 
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import {
-  ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
-  X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
-  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck, Bell, Star, Send,
+  ShoppingCart, Search, Package, ChevronRight,
+  X, CheckCircle2, Loader2, ArrowLeft,
+  Tag, Heart, Share2, ShieldCheck, BadgeCheck, Star, Send,
+  ShoppingBag, Truck, Plus, Minus,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -14,7 +15,11 @@ import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
 import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
-import { formatUzPhone, isValidUzPhone } from "../utils/phone";
+import { ProductCard } from "./storefront/ProductCard";
+import { CartView } from "./storefront/CartView";
+import { CheckoutView } from "./storefront/CheckoutView";
+import { SuccessView } from "./storefront/SuccessView";
+import { useDebounce } from "../hooks/useDebounce";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -327,14 +332,6 @@ function viewToTab(v: StoreView): StoreTab | null {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
-async function fetchStorefront(slug: string): Promise<StorefrontData> {
-  const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Server xatosi" }));
-    throw new Error((err as { error?: string }).error || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
 
 async function submitCheckout(
   slug: string,
@@ -378,6 +375,8 @@ function StoreInner({ slug }: { slug: string }) {
   const [view, setView] = useState<StoreView>("home");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  // Debounced qidiruv — 250ms kechikish bilan filterlash (har keystroke emas)
+  const debouncedSearch = useDebounce(searchQuery, 250);
   const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart(slug));
   const [cartRemindShown, setCartRemindShown] = useState(false);
@@ -509,10 +508,31 @@ function StoreInner({ slug }: { slug: string }) {
   }, [data?.brand?.primaryColor]);
 
   useEffect(() => {
-    fetchStorefront(slug)
-      .then(setData)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}`, { signal });
+        if (signal.aborted) return;
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Server xatosi" }));
+          throw new Error((err as { error?: string }).error || `HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as StorefrontData;
+        if (!signal.aborted) setData(json);
+      } catch (e) {
+        if (signal.aborted) return;
+        setError(e instanceof Error ? e.message : "Noma'lum xato");
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => controller.abort();
   }, [slug]);
 
   // Savatni localStorage'ga saqlash (mijoz Mini App'ni yopib qaytsa ham qoladi)
@@ -682,8 +702,8 @@ function StoreInner({ slug }: { slug: string }) {
     if (!data) return [];
     let prods = data.products.slice();
     if (selectedCategoryId) prods = prods.filter((p) => p.categoryId === selectedCategoryId);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       prods = prods.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
     }
     switch (sortBy) {
@@ -705,7 +725,7 @@ function StoreInner({ slug }: { slug: string }) {
         break;
     }
     return prods;
-  }, [data, selectedCategoryId, searchQuery, sortBy]);
+  }, [data, selectedCategoryId, debouncedSearch, sortBy]);
 
   // ---- LOADING ----
   if (loading) {
@@ -760,388 +780,59 @@ function StoreInner({ slug }: { slug: string }) {
 
   // ---- SUCCESS ----
   if (view === "success" && orderResult) {
-    const deliveryDate = estimatedDeliveryDate();
-    const deliveryStr = formatUzDate(deliveryDate);
-    const hasTg = !!telegramUser?.userId;
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
-          <div className="max-w-md mx-auto">
-            {/* Hero — yashil belgi + sarlavha */}
-            <div className="flex flex-col items-center mb-6">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300" style={{ backgroundColor: primaryColor + "20" }}>
-                <CheckCircle2 className="w-11 h-11" style={{ color: primaryColor }} strokeWidth={2.5} />
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-1">{t("success.title")}</h2>
-              <p className="text-sm text-slate-400">{t("success.subtitle")}</p>
-            </div>
-
-            {/* Buyurtma kartochkasi */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] text-slate-500 uppercase tracking-wider">Buyurtma</p>
-                  <p className="text-lg font-bold text-white">#{orderResult.code}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[11px] text-slate-500 uppercase tracking-wider">Jami</p>
-                  <p className="text-lg font-bold" style={{ color: primaryColor }}>
-                    {formatPrice(orderResult.total, orderResult.currency)}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2">
-                <Truck className="w-4 h-4 text-sky-400 flex-shrink-0" />
-                <span className="text-xs text-slate-300">Yetkazib berish: <span className="font-medium text-white">{deliveryStr}</span></span>
-              </div>
-            </div>
-
-            {/* Status taymlayni — keyingi qadamlar */}
-            <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 mb-4">
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-3">Keyingi qadamlar</p>
-              <div className="space-y-3">
-                {[
-                  { label: t("success.step.received"), desc: t("success.step.receivedDesc"), done: true },
-                  { label: t("success.step.processing"), desc: t("success.step.processingDesc"), done: false, active: true },
-                  { label: t("success.step.shipping"), desc: t("success.step.shippingDesc"), done: false },
-                  { label: t("success.step.delivered"), desc: deliveryStr, done: false },
-                ].map((s, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      s.done
-                        ? "bg-emerald-500 text-white"
-                        : s.active
-                          ? "bg-amber-500/20 text-amber-300 ring-2 ring-amber-500/40"
-                          : "bg-slate-800 text-slate-600"
-                    }`}>
-                      {s.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
-                    </div>
-                    <div className="flex-1 min-w-0 pb-0.5">
-                      <p className={`text-sm font-medium ${s.done || s.active ? "text-white" : "text-slate-500"}`}>{s.label}</p>
-                      <p className="text-[11px] text-slate-500">{s.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bildirishnoma haqida eslatma */}
-            {hasTg ? (
-              <div className="flex items-start gap-2.5 p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-6">
-                <Bell className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-sky-200 leading-relaxed">
-                  {t("success.notify.tg")}
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2.5 p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl mb-6">
-                <Bell className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Buyurtma raqamingizni <span className="font-semibold">#{orderResult.code}</span> saqlab qo'ying — kerak bo'lsa shu raqam orqali tekshiring.
-                </p>
-              </div>
-            )}
-
-            {/* Action tugmalari */}
-            <div className="space-y-2">
-              <button
-                onClick={() => {
-                  setProfileInitialView("orders");
-                  setView("profile");
-                  setOrderResult(null);
-                }}
-                className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <ShoppingBag className="w-5 h-5" />
-                {t("success.viewOrder")}
-              </button>
-              <button
-                onClick={() => {
-                  setProfileInitialView(undefined);
-                  setView("home");
-                  setOrderResult(null);
-                }}
-                className="w-full py-3 rounded-2xl font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-all"
-              >
-                {t("success.continueShopping")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SuccessView
+        orderResult={orderResult}
+        primaryColor={primaryColor}
+        hasTelegram={!!telegramUser?.userId}
+        onViewOrders={() => {
+          setProfileInitialView("orders");
+          setView("profile");
+          setOrderResult(null);
+        }}
+        onContinueShopping={() => {
+          setProfileInitialView(undefined);
+          setView("home");
+          setOrderResult(null);
+        }}
+      />
     );
   }
 
   // ---- CHECKOUT ----
   if (view === "checkout") {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
-          <button onClick={() => setView("cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h2 className="text-base font-semibold text-white">{t("checkout.title")}</h2>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Order summary */}
-          <div className="bg-slate-900 rounded-2xl p-4">
-            <h3 className="text-xs font-medium text-slate-400 mb-3">{t("checkout.orderSummary")}</h3>
-            {cart.map((item) => (
-              <div key={item.productId} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
-                <span className="text-sm text-white">{item.name} <span className="text-slate-500">×{item.qty}</span></span>
-                <span className="text-sm font-medium" style={{ color: primaryColor }}>
-                  {formatPrice(item.price * item.qty, data.tenant.currency)}
-                </span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between pt-3 mt-1">
-              <span className="text-sm font-semibold text-white">{t("checkout.total")}</span>
-              <span className="text-base font-bold" style={{ color: primaryColor }}>
-                {formatPrice(cartTotal, data.tenant.currency)}
-              </span>
-            </div>
-          </div>
-
-          {/* Customer form */}
-          <div className="bg-slate-900 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-medium text-slate-400 mb-1">{t("checkout.yourInfo")}</h3>
-
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.name")} *</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder={t("checkout.namePlaceholder")}
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.phone")} *</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="tel"
-                  placeholder="+998 90 123 45 67"
-                  value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: formatUzPhone(e.target.value) }))}
-                  inputMode="tel"
-                  autoComplete="tel"
-                  className={`w-full bg-slate-800 border rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none ${
-                    form.phone && !isValidUzPhone(form.phone)
-                      ? "border-rose-500/40 focus:border-rose-500/60"
-                      : "border-slate-700 focus:border-emerald-500/50"
-                  }`}
-                />
-              </div>
-              {form.phone && !isValidUzPhone(form.phone) && (
-                <p className="text-[11px] text-rose-300 mt-1">{t("checkout.phoneInvalid")}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.addressLabel")}</label>
-              {savedAddresses.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
-                  {savedAddresses.map((a) => {
-                    const full = formatAddress(a);
-                    const isActive = form.address === full;
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, address: full }))}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${
-                          isActive
-                            ? "text-white"
-                            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                        }`}
-                        style={isActive ? { backgroundColor: primaryColor } : {}}
-                      >
-                        📍 {a.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder={t("checkout.address")}
-                  value={form.address}
-                  onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
-                />
-              </div>
-              {/* GPS — joriy joylashuvni olish */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!navigator.geolocation) {
-                    alert(t("checkout.gpsUnsupported"));
-                    return;
-                  }
-                  setGpsBusy(true);
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      const { latitude, longitude } = pos.coords;
-                      const lat = Number(latitude.toFixed(6));
-                      const lng = Number(longitude.toFixed(6));
-                      // Address bo'sh bo'lsa, koordinatadan o'qiladigan label yasaymiz
-                      setForm((f) => ({
-                        ...f,
-                        lat,
-                        lng,
-                        address: f.address.trim() || `GPS: ${lat}, ${lng}`,
-                      }));
-                      haptic.medium();
-                      setGpsBusy(false);
-                    },
-                    (err) => {
-                      setGpsBusy(false);
-                      alert(err.code === err.PERMISSION_DENIED
-                        ? t("checkout.gpsDenied")
-                        : t("checkout.gpsError"));
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-                  );
-                }}
-                disabled={gpsBusy}
-                className="mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/15 disabled:opacity-50 rounded-xl text-sm text-sky-300 transition-colors"
-              >
-                {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="text-base leading-none">📍</span>}
-                {t("checkout.gps")}
-              </button>
-              {form.lat != null && form.lng != null && (
-                <p className="text-[11px] text-emerald-300 mt-1.5 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3 h-3" />
-                  {t("checkout.gpsDetected")}: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.note")}</label>
-              <textarea
-                placeholder={t("checkout.notePlaceholder")}
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                rows={2}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
-              />
-            </div>
-          </div>
-
-          {submitError && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-              <p className="text-sm text-red-400">{submitError}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
-          <button
-            onClick={handleCheckout}
-            disabled={submitting || !form.name.trim() || !isValidUzPhone(form.phone)}
-            className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {submitting ? t("checkout.sending") : `${t("checkout.submit")} · ${formatPrice(cartTotal, data.tenant.currency)}`}
-          </button>
-        </div>
-      </div>
+      <CheckoutView
+        cart={cart}
+        cartTotal={cartTotal}
+        currency={data.tenant.currency}
+        primaryColor={primaryColor}
+        form={form}
+        savedAddresses={savedAddresses}
+        gpsBusy={gpsBusy}
+        submitting={submitting}
+        submitError={submitError}
+        onBack={() => setView("cart")}
+        onFormChange={setForm}
+        onGpsBusy={setGpsBusy}
+        onSubmit={handleCheckout}
+      />
     );
   }
 
   // ---- CART ----
   if (view === "cart") {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
-          <button onClick={() => setView("home")} className="p-2 rounded-xl text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h2 className="text-base font-semibold text-white">{t("cart.title")}</h2>
-          <span className="ml-1 text-xs text-slate-400">{t("cart.items", { count: cartCount })}</span>
-        </div>
-
-        {cart.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mb-4">
-              <ShoppingCart className="w-8 h-8 text-slate-600" />
-            </div>
-            <p className="text-white font-medium mb-1">{t("cart.empty.title")}</p>
-            <p className="text-sm text-slate-400">{t("cart.addMore")}</p>
-            <button
-              onClick={() => setView("home")}
-              className="mt-4 px-6 py-2.5 rounded-2xl text-sm font-medium text-white"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {t("cart.shopNow")}
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {cart.map((item) => (
-                <div key={item.productId} className="bg-slate-900 rounded-2xl p-3 flex items-center gap-3">
-                  <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="w-7 h-7 text-slate-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: primaryColor }}>
-                      {formatPrice(item.price, data.tenant.currency)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => updateQty(item.productId, -1)}
-                      className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 active:scale-90 transition-transform"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="text-sm font-semibold text-white w-5 text-center">{item.qty}</span>
-                    <button
-                      onClick={() => updateQty(item.productId, 1)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 border-t border-slate-800 bg-slate-950">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-slate-400">{t("cart.totalItems", { count: cartCount })}</span>
-                <span className="text-lg font-bold text-white">{formatPrice(cartTotal, data.tenant.currency)}</span>
-              </div>
-              <button
-                onClick={() => setView("checkout")}
-                className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98]"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {t("cart.placeOrder")}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      <CartView
+        cart={cart}
+        cartTotal={cartTotal}
+        cartCount={cartCount}
+        currency={data.tenant.currency}
+        primaryColor={primaryColor}
+        onBack={() => setView("home")}
+        onCheckout={() => setView("checkout")}
+        onUpdateQty={updateQty}
+      />
     );
   }
 
@@ -1803,121 +1494,37 @@ function StoreInner({ slug }: { slug: string }) {
   };
 
   // ---- HOME ----
-  const renderProductCard = (product: StoreProduct) => {
-    const qty = cartQty(product.id);
+  // Memoized ProductCard wrapper — har mahsulot uchun alohida memo
+  const renderProductCard = useCallback((product: StoreProduct) => {
     const price = Number(product.price);
     const oldPrice = product.oldPrice != null ? Number(product.oldPrice) : null;
     const discountPct = calcDiscountPct(price, oldPrice);
     const liveCampaign = isCampaignLive(product.saleCampaign);
-    const isFav = favorites.has(product.id);
-    const outOfStock = product.stock <= 0;
-    const lowStock = !outOfStock && product.stock > 0 && product.stock <= 5;
 
     return (
-      <div
+      <ProductCard
         key={product.id}
-        className={`bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group ${
-          outOfStock ? "opacity-70" : ""
-        }`}
-        onClick={() => setSelectedProduct(product)}
-      >
-        {/* Top-left badges (discount + campaign) */}
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-          {discountPct > 0 && (
-            <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-              −{discountPct}%
-            </span>
-          )}
-          {liveCampaign && product.saleCampaign && (
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${SALE_BADGE_STYLES[product.saleCampaign.badgeColor]}`}>
-              {product.saleCampaign.label}
-            </span>
-          )}
-        </div>
-
-        {/* Top-right heart (favorite) */}
-        <button
-          onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
-          aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
-          className="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
-        >
-          <Heart
-            className={`w-3.5 h-3.5 transition-colors ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`}
-            strokeWidth={2}
-          />
-        </button>
-
-        {/* Image */}
-        <div className="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden relative">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <Package className="w-10 h-10 text-slate-600" />
-          )}
-          {outOfStock && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <span className="text-white text-xs font-bold px-3 py-1 bg-slate-800/80 rounded-md border border-slate-700">
-                Tugagan
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="p-2.5">
-          {/* Price line — WB-style: big bold + small struck */}
-          <div className="flex items-baseline gap-1.5 mb-1">
-            <span className="text-sm font-bold text-white">
-              {price.toLocaleString("uz-UZ")}
-              <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
-            </span>
-            {oldPrice != null && oldPrice > price && (
-              <span className="text-[10px] text-slate-500 line-through">
-                {oldPrice.toLocaleString("uz-UZ")}
-              </span>
-            )}
-          </div>
-
-          {/* Name */}
-          <p className="text-[11px] text-slate-300 line-clamp-2 leading-tight mb-2 min-h-[28px]">{product.name}</p>
-
-          {/* Low stock indicator */}
-          {lowStock && (
-            <p className="text-[10px] text-amber-300 mb-1 leading-tight">
-              ⚡ Faqat {product.stock} ta qoldi
-            </p>
-          )}
-
-          {/* Add to cart */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!outOfStock) addToCart(product);
-            }}
-            disabled={outOfStock}
-            className="w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
-            style={{
-              backgroundColor: outOfStock ? "#475569" : qty > 0 ? "#10b981" : primaryColor,
-            }}
-          >
-            {outOfStock ? (
-              "Tugagan"
-            ) : qty > 0 ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Savatda · {qty} dona
-              </>
-            ) : (
-              <>
-                <Plus className="w-3.5 h-3.5" />
-                Savatga
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+        productId={product.id}
+        name={product.name}
+        price={price}
+        oldPrice={oldPrice}
+        imageUrl={product.imageUrl}
+        stock={product.stock}
+        featured={product.featured}
+        currency={data.tenant.currency}
+        primaryColor={primaryColor}
+        isFav={favorites.has(product.id)}
+        qty={cartQty(product.id)}
+        discountPct={discountPct}
+        liveCampaign={liveCampaign}
+        campaignLabel={product.saleCampaign?.label}
+        campaignBadgeColor={product.saleCampaign?.badgeColor as Parameters<typeof ProductCard>[0]["campaignBadgeColor"]}
+        onSelect={() => setSelectedProduct(product)}
+        onToggleFav={() => toggleFavorite(product.id)}
+        onAddToCart={() => addToCart(product)}
+      />
     );
-  };
+  }, [data, primaryColor, favorites, cartQty, toggleFavorite, addToCart, setSelectedProduct]);
 
   // Render blocks from layout, or fall back to plain products grid
   // ---- PROFILE ----
@@ -2212,12 +1819,12 @@ function StoreInner({ slug }: { slug: string }) {
         })}
 
         {/* If category is selected or search query, show filtered products */}
-        {(selectedCategoryId || searchQuery) && (
+        {(selectedCategoryId || debouncedSearch) && (
           <div>
             <h3 className="text-sm font-semibold text-white mb-3">
               {selectedCategoryId
                 ? categories.find((c) => c.id === selectedCategoryId)?.name || "Mahsulotlar"
-                : `"${searchQuery}" qidiruv natijalari`}
+                : `"${debouncedSearch}" qidiruv natijalari`}
             </h3>
             <div className="grid grid-cols-2 gap-3">
               {filteredProducts.map(renderProductCard)}
