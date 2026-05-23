@@ -45,13 +45,13 @@ const cardVariants = {
 const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-2xl">
-      <p className="text-xs text-slate-400 mb-1.5">{label}</p>
+    <div className="bg-cream-100 border border-cream-300 rounded-xl px-4 py-3 shadow-2xl">
+      <p className="text-xs text-slate-500 mb-1.5">{label}</p>
       {payload.map((p, i) => (
         <div key={p.dataKey ?? p.name ?? i} className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-xs text-slate-300">{p.name}:</span>
-          <span className="text-xs text-white font-semibold">{formatNumber(p.value)}</span>
+          <span className="text-xs text-slate-700">{p.name}:</span>
+          <span className="text-xs text-forest-800 font-semibold">{formatNumber(p.value)}</span>
         </div>
       ))}
     </div>
@@ -166,27 +166,27 @@ export default function AnalyticsPage() {
         className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-6"
       >
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t("analytics.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("analytics.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("analytics.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Time Range Selector */}
-          <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5">
+          <div className="flex items-center bg-cream-100 border border-cream-300 rounded-lg p-0.5">
             {(Object.keys(timeRangeLabels) as AnalyticsTimeRange[]).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                   timeRange === range
-                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-leaf-400 text-forest-800 shadow-lg shadow-leaf-500/20"
+                    : "text-slate-500 hover:text-forest-900"
                 }`}
               >
                 {timeRangeLabels[range]}
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all">
+          <button className="flex items-center gap-2 px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all">
             <Download className="w-4 h-4" />
             {t("analytics.export")}
           </button>
@@ -204,7 +204,7 @@ export default function AnalyticsPage() {
               initial="hidden"
               animate="visible"
               variants={cardVariants}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all group"
+              className="bg-white border border-cream-300 rounded-xl p-4 hover:border-cream-300 transition-all group"
             >
               <div className="flex items-center justify-between mb-3">
                 <div
@@ -216,10 +216,10 @@ export default function AnalyticsPage() {
                 <div
                   className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${
                     kpi.trend === "up"
-                      ? "text-emerald-400 bg-emerald-400/10"
+                      ? "text-forest-700 bg-emerald-400/10"
                       : kpi.trend === "down" && kpi.id === "returns"
-                      ? "text-emerald-400 bg-emerald-400/10"
-                      : "text-red-400 bg-red-400/10"
+                      ? "text-forest-700 bg-emerald-400/10"
+                      : "text-rose-600 bg-red-400/10"
                   }`}
                 >
                   {kpi.trend === "up" ? (
@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
                   {Math.abs(kpi.change)}%
                 </div>
               </div>
-              <p className="text-lg font-bold text-white">{kpi.value}</p>
+              <p className="text-lg font-bold text-forest-800">{kpi.value}</p>
               <p className="text-[11px] text-slate-500 mt-0.5">{kpi.label}</p>
             </motion.div>
           );
@@ -244,21 +244,21 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="lg:col-span-2 bg-white border border-cream-300 rounded-xl p-5"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-white">{t("analytics.revenueTrend.title")}</h3>
+              <h3 className="text-sm font-semibold text-forest-800">{t("analytics.revenueTrend.title")}</h3>
               <p className="text-xs text-slate-500 mt-0.5">{t("analytics.revenueTrend.subtitle")}</p>
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-slate-400">{t("analytics.legend.revenue")}</span>
+                <div className="w-2 h-2 rounded-full bg-leaf-400" />
+                <span className="text-slate-500">{t("analytics.legend.revenue")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-slate-400">{t("analytics.legend.orders")}</span>
+                <span className="text-slate-500">{t("analytics.legend.orders")}</span>
               </div>
             </div>
           </div>
@@ -266,19 +266,19 @@ export default function AnalyticsPage() {
             <AreaChart data={monthlyRevenue}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#5FA340" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#5FA340" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="ordersGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" />
+              <XAxis dataKey="month" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis
                 yAxisId="revenue"
-                tick={{ fill: "#64748b", fontSize: 11 }}
+                tick={{ fill: "#94A3B8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => formatNumber(v)}
@@ -286,7 +286,7 @@ export default function AnalyticsPage() {
               <YAxis
                 yAxisId="orders"
                 orientation="right"
-                tick={{ fill: "#64748b", fontSize: 11 }}
+                tick={{ fill: "#94A3B8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
                 yAxisId="revenue"
                 type="monotone"
                 dataKey="revenue"
-                stroke="#10b981"
+                stroke="#5FA340"
                 strokeWidth={2}
                 fill="url(#revenueGrad)"
                 name="Daromad"
@@ -318,15 +318,15 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
-          className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-white mb-1">Haftalik sotuv</h3>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">Haftalik sotuv</h3>
           <p className="text-xs text-slate-500 mb-4">Haftaning kunlari bo'yicha</p>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={dailySales}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" />
+              <XAxis dataKey="day" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="orders"
@@ -347,21 +347,21 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.35 }}
-          className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="lg:col-span-2 bg-white border border-cream-300 rounded-xl p-5"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-white">Top mahsulotlar</h3>
+              <h3 className="text-sm font-semibold text-forest-800">Top mahsulotlar</h3>
               <p className="text-xs text-slate-500 mt-0.5">Eng ko'p sotilgan mahsulotlar</p>
             </div>
-            <button className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+            <button className="text-xs text-forest-700 hover:text-forest-700 flex items-center gap-1">
               Barchasi <ChevronRight className="w-3 h-3" />
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-800">
+                <tr className="border-b border-cream-300">
                   <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">#</th>
                   <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">Mahsulot</th>
                   <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">Kategoriya</th>
@@ -374,33 +374,33 @@ export default function AnalyticsPage() {
                 {topProducts.map((p, i) => (
                   <tr
                     key={p.id}
-                    className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
+                    className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors"
                   >
                     <td className="py-3 pr-4">
                       <span
                         className={`text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center ${
-                          i < 3 ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-800 text-slate-500"
+                          i < 3 ? "bg-leaf-100 text-forest-700" : "bg-cream-100 text-slate-500"
                         }`}
                       >
                         {p.rank}
                       </span>
                     </td>
                     <td className="py-3 pr-4">
-                      <span className="text-sm text-white font-medium">{p.name}</span>
+                      <span className="text-sm text-forest-800 font-medium">{p.name}</span>
                     </td>
                     <td className="py-3 pr-4">
-                      <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-md">{p.category}</span>
+                      <span className="text-xs text-slate-500 bg-cream-100 px-2 py-1 rounded-md">{p.category}</span>
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      <span className="text-sm text-white">{p.sold.toLocaleString()}</span>
+                      <span className="text-sm text-forest-800">{p.sold.toLocaleString()}</span>
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      <span className="text-sm text-white font-medium">{formatNumber(p.revenue)}</span>
+                      <span className="text-sm text-forest-800 font-medium">{formatNumber(p.revenue)}</span>
                     </td>
                     <td className="py-3 text-right">
                       <span
                         className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-                          p.growth >= 0 ? "text-emerald-400" : "text-red-400"
+                          p.growth >= 0 ? "text-forest-700" : "text-rose-600"
                         }`}
                       >
                         {p.growth >= 0 ? (
@@ -423,9 +423,9 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
-          className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-white mb-1">Trafik manbalari</h3>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">Trafik manbalari</h3>
           <p className="text-xs text-slate-500 mb-4">Tashrifchilar qayerdan keladi</p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -449,10 +449,10 @@ export default function AnalyticsPage() {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload;
                   return (
-                    <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-2xl">
-                      <p className="text-xs font-medium text-white">{d.name}</p>
-                      <p className="text-xs text-slate-400">{d.visitors.toLocaleString()} tashrif</p>
-                      <p className="text-xs text-emerald-400">{d.conversions} konversiya</p>
+                    <div className="bg-cream-100 border border-cream-300 rounded-xl px-4 py-3 shadow-2xl">
+                      <p className="text-xs font-medium text-forest-800">{d.name}</p>
+                      <p className="text-xs text-slate-500">{d.visitors.toLocaleString()} tashrif</p>
+                      <p className="text-xs text-forest-700">{d.conversions} konversiya</p>
                     </div>
                   );
                 }}
@@ -464,11 +464,11 @@ export default function AnalyticsPage() {
               <div key={s.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                  <span className="text-xs text-slate-300">{s.name}</span>
+                  <span className="text-xs text-slate-700">{s.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-500">{s.visitors.toLocaleString()}</span>
-                  <span className="text-xs text-white font-medium w-10 text-right">{s.percentage}%</span>
+                  <span className="text-xs text-forest-800 font-medium w-10 text-right">{s.percentage}%</span>
                 </div>
               </div>
             ))}
@@ -483,16 +483,16 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.45 }}
-          className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-white mb-1">Kategoriya bo'yicha sotuv</h3>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">Kategoriya bo'yicha sotuv</h3>
           <p className="text-xs text-slate-500 mb-4">Har bir kategoriyaning ulushi</p>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={categorySales} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" horizontal={false} />
               <XAxis
                 type="number"
-                tick={{ fill: "#64748b", fontSize: 11 }}
+                tick={{ fill: "#94A3B8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => formatNumber(v)}
@@ -520,24 +520,24 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
-          className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-white mb-1">Konversiya funnel</h3>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">Konversiya funnel</h3>
           <p className="text-xs text-slate-500 mb-4">Tashrifdan buyurtmagacha</p>
           <div className="space-y-3">
             {conversionFunnel.map((step, i) => (
               <div key={step.stage}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-slate-300 font-medium">{step.stage}</span>
+                  <span className="text-xs text-slate-700 font-medium">{step.stage}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-white font-semibold">
+                    <span className="text-xs text-forest-800 font-semibold">
                       {step.count.toLocaleString()}
                     </span>
                     <span className="text-[10px] text-slate-500">{step.percentage}%</span>
                   </div>
                 </div>
                 <div className="relative">
-                  <div className="h-8 bg-slate-800 rounded-lg overflow-hidden">
+                  <div className="h-8 bg-cream-100 rounded-lg overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${step.percentage}%` }}
@@ -557,7 +557,7 @@ export default function AnalyticsPage() {
                   </div>
                   {i < conversionFunnel.length - 1 && step.dropOff > 0 && (
                     <div className="absolute -right-1 top-1/2 -translate-y-1/2">
-                      <span className="text-[9px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-full">
+                      <span className="text-[9px] text-rose-600 bg-red-400/10 px-1.5 py-0.5 rounded-full">
                         -{step.dropOff}%
                       </span>
                     </div>
@@ -576,9 +576,9 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.55 }}
-          className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-white mb-1">Geografiya</h3>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">Geografiya</h3>
           <p className="text-xs text-slate-500 mb-4">Shaharlar bo'yicha buyurtmalar</p>
           <div className="space-y-3">
             {geographyData.map((g, i) => (
@@ -590,12 +590,12 @@ export default function AnalyticsPage() {
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-white font-medium">{g.city}</span>
+                    <span className="text-xs text-forest-800 font-medium">{g.city}</span>
                     <span className="text-[10px] text-slate-500">{g.orders} buyurtma</span>
                   </div>
-                  <span className="text-xs text-slate-400 font-medium">{g.percentage}%</span>
+                  <span className="text-xs text-slate-500 font-medium">{g.percentage}%</span>
                 </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-cream-100 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${g.percentage}%` }}
@@ -616,9 +616,9 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.6 }}
-          className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+          className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-white mb-1">Mijoz segmentlari</h3>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">Mijoz segmentlari</h3>
           <p className="text-xs text-slate-500 mb-4">Mijozlar toifasi bo'yicha taqsimot</p>
           <div className="grid grid-cols-2 gap-3 mb-4">
             {customerSegments.map((seg, i) => (
@@ -627,16 +627,16 @@ export default function AnalyticsPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.65 + i * 0.08 }}
-                className="bg-slate-800/50 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition-all"
+                className="bg-cream-100/50 border border-cream-300 rounded-xl p-3.5 hover:border-cream-300 transition-all"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: seg.color }}
                   />
-                  <span className="text-xs text-slate-300 font-medium">{seg.name}</span>
+                  <span className="text-xs text-slate-700 font-medium">{seg.name}</span>
                 </div>
-                <p className="text-lg font-bold text-white">{seg.count.toLocaleString()}</p>
+                <p className="text-lg font-bold text-forest-800">{seg.count.toLocaleString()}</p>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-[10px] text-slate-500">{seg.percentage}%</span>
                   <span className="text-[10px] text-slate-500">
@@ -644,7 +644,7 @@ export default function AnalyticsPage() {
                   </span>
                 </div>
                 {/* Mini progress */}
-                <div className="h-1 bg-slate-700 rounded-full mt-2 overflow-hidden">
+                <div className="h-1 bg-cream-200 rounded-full mt-2 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${seg.percentage}%` }}
@@ -658,16 +658,16 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Segment summary pie */}
-          <div className="bg-slate-800/30 rounded-xl p-3 flex items-center justify-between">
+          <div className="bg-cream-100/30 rounded-xl p-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {customerSegments.map((seg) => (
                 <div key={seg.name} className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
-                  <span className="text-[10px] text-slate-400">{seg.name.split(" ")[0]}</span>
+                  <span className="text-[10px] text-slate-500">{seg.name.split(" ")[0]}</span>
                 </div>
               ))}
             </div>
-            <span className="text-xs text-white font-semibold">
+            <span className="text-xs text-forest-800 font-semibold">
               {customerSegments.reduce((a, s) => a + s.count, 0).toLocaleString()} jami
             </span>
           </div>
@@ -679,9 +679,9 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 1.0 }}
-        className="mt-8 pt-6 border-t border-slate-800"
+        className="mt-8 pt-6 border-t border-cream-300"
       >
-        <p className="text-xs text-slate-600 text-center">
+        <p className="text-xs text-slate-400 text-center">
           Barcha ma'lumotlar demo maqsadida ko'rsatilgan · ShopFlow Analytics
         </p>
       </motion.div>

@@ -20,12 +20,12 @@ export default function TopProducts() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.6 }}
-      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
+      className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-base font-semibold text-white flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-base font-semibold text-forest-800 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-forest-700" />
             {t("widget.topProducts")}
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">{t("widget.topProducts.subtitle")}</p>
@@ -34,7 +34,7 @@ export default function TopProducts() {
 
       {loading ? (
         <div className="flex items-center justify-center py-10">
-          <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+          <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -55,26 +55,26 @@ export default function TopProducts() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <span className="text-[10px] font-bold text-slate-600 w-4 text-center">
+                    <span className="text-[10px] font-bold text-slate-400 w-4 text-center">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white truncate">{product.name}</p>
+                      <p className="text-sm font-medium text-forest-800 truncate">{product.name}</p>
                       <p className="text-[11px] text-slate-500 truncate">{product.category ?? "—"}</p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-emerald-400">{product.sold}</p>
+                    <p className="text-sm font-semibold text-forest-700">{product.sold}</p>
                     <p className="text-[11px] text-slate-500">{formatCurrency(product.price, currency)}</p>
                   </div>
                 </div>
                 {/* Progress bar — sotuv miqdoriga proportsional */}
-                <div className="h-1 bg-slate-800/60 rounded-full overflow-hidden ml-7">
+                <div className="h-1 bg-cream-100/60 rounded-full overflow-hidden ml-7">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ duration: 0.6, delay: 0.6 + index * 0.05, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                    className="h-full bg-gradient-to-r from-leaf-500 to-leaf-400 rounded-full"
                   />
                 </div>
               </motion.div>

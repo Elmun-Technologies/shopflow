@@ -57,7 +57,7 @@ export default function CustomersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-white">{t("customers.title")}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("customers.title")}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("customers.subtitle")}</p>
       </motion.div>
 
@@ -72,14 +72,14 @@ export default function CustomersPage() {
               setPage(1);
             }}
             placeholder={t("customers.searchPlaceholder")}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full bg-white border border-cream-300 rounded-lg pl-10 pr-4 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
           />
         </label>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all flex-shrink-0 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all flex-shrink-0 disabled:opacity-50"
           title={t("orders.export")}
         >
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -87,28 +87,28 @@ export default function CustomersPage() {
         </button>
         <button
           type="button"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">{t("customers.newCustomer")}</span>
         </button>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
         {loading ? (
           <TableRowsSkeleton rows={8} cols={4} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
-            <p className="text-sm text-slate-300">{error.message}</p>
-            <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300">
+            <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+            <p className="text-sm text-slate-700">{error.message}</p>
+            <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
               {t("orders.retry")}
             </button>
           </div>
         ) : customers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <Users className="w-12 h-12 text-slate-700 mb-3" />
-            <p className="text-base font-semibold text-white">
+            <p className="text-base font-semibold text-forest-800">
               {search ? t("customers.empty.search") : t("customers.empty.none")}
             </p>
             <p className="text-sm text-slate-500 mt-1 max-w-md">
@@ -121,7 +121,7 @@ export default function CustomersPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-cream-300">
                     <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.customer")}</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.contact")}</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("customers.col.location")}</th>
@@ -132,15 +132,15 @@ export default function CustomersPage() {
                   {customers.map((c) => (
                     <tr
                       key={c.id}
-                      className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                      className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors cursor-pointer"
                       onClick={() => setOpenCustomerId(c.id)}
                     >
                       <td className="py-3 px-4">
-                        <p className="text-sm font-medium text-white">{c.name}</p>
+                        <p className="text-sm font-medium text-forest-800">{c.name}</p>
                         {c.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {c.tags.slice(0, 3).map((tag) => (
-                              <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                              <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-cream-100 text-slate-500">
                                 {tag}
                               </span>
                             ))}
@@ -150,12 +150,12 @@ export default function CustomersPage() {
                       <td className="py-3 px-4">
                         <div className="flex flex-col gap-0.5">
                           {c.email && (
-                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                            <span className="flex items-center gap-1 text-xs text-slate-500">
                               <Mail className="w-3 h-3" /> {c.email}
                             </span>
                           )}
                           {c.phone && (
-                            <span className="flex items-center gap-1 text-xs text-slate-400">
+                            <span className="flex items-center gap-1 text-xs text-slate-500">
                               <Phone className="w-3 h-3" /> {c.phone}
                             </span>
                           )}
@@ -163,7 +163,7 @@ export default function CustomersPage() {
                       </td>
                       <td className="py-3 px-4">
                         {c.location && (
-                          <span className="flex items-center gap-1 text-xs text-slate-400">
+                          <span className="flex items-center gap-1 text-xs text-slate-500">
                             <MapPin className="w-3 h-3" /> {c.location}
                           </span>
                         )}
@@ -178,28 +178,28 @@ export default function CustomersPage() {
             </div>
 
             {/* Mobile — card */}
-            <div className="md:hidden divide-y divide-slate-800/50">
+            <div className="md:hidden divide-y divide-cream-300/50">
               {customers.map((c) => (
                 <button
                   key={c.id}
                   type="button"
                   onClick={() => setOpenCustomerId(c.id)}
-                  className="w-full text-left p-4 hover:bg-slate-800/30 active:bg-slate-800/50 transition-colors"
+                  className="w-full text-left p-4 hover:bg-cream-100/30 active:bg-cream-100/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{c.name}</p>
+                      <p className="text-sm font-semibold text-forest-800 truncate">{c.name}</p>
                       {c.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {c.tags.slice(0, 3).map((tag) => (
-                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-cream-100 text-slate-500">
                               {tag}
                             </span>
                           ))}
                         </div>
                       )}
                       {(c.phone || c.email) && (
-                        <p className="text-xs text-slate-400 mt-1 truncate">{c.phone ?? c.email}</p>
+                        <p className="text-xs text-slate-500 mt-1 truncate">{c.phone ?? c.email}</p>
                       )}
                       {c.location && (
                         <p className="text-xs text-slate-500 mt-0.5 truncate">{c.location}</p>
@@ -214,7 +214,7 @@ export default function CustomersPage() {
         )}
 
         {total > pageSize && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800 text-xs text-slate-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-cream-300 text-xs text-slate-500">
             <span>
               {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
             </span>
@@ -222,14 +222,14 @@ export default function CustomersPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+                className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.prev")}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * pageSize >= total}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+                className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.next")}
               </button>

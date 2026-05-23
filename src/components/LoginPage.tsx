@@ -32,30 +32,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-cream-50 flex items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center mb-3">
-            <Store className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 bg-leaf-400 rounded-2xl flex items-center justify-center mb-3">
+            <Store className="w-7 h-7 text-forest-800" />
           </div>
-          <h1 className="text-2xl font-bold text-white">ShopFlow</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-forest-800">ShopFlow</h1>
+          <p className="text-sm text-slate-500 mt-1">
             {mode === "login" ? t("login.title.login") : t("login.title.register")}
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4"
+          className="bg-white border border-cream-300 rounded-2xl p-6 space-y-4"
         >
           {mode === "register" && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">
                   {t("login.tenantName")}
                 </label>
                 <input
@@ -63,12 +63,12 @@ export default function LoginPage() {
                   required
                   value={tenantName}
                   onChange={(e) => setTenantName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
                   placeholder={t("login.tenantNamePlaceholder")}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">
                   {t("login.yourName")}
                 </label>
                 <input
@@ -76,64 +76,64 @@ export default function LoginPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">
-              {t("login.tenantSlug")} {mode === "login" && <span className="text-slate-600">({t("common.optional")})</span>}
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+              {t("login.tenantSlug")} {mode === "login" && <span className="text-slate-400">({t("common.optional")})</span>}
             </label>
             <input
               type="text"
               required={mode === "register"}
               value={tenantSlug}
               onChange={(e) => setTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
               placeholder="mening-dokonim"
               pattern="[a-z0-9-]+"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("login.email")}</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">{t("login.email")}</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
               placeholder="you@example.com"
               autoComplete="email"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">{t("login.password")}</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">{t("login.password")}</label>
             <input
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="flex items-start gap-2 px-3 py-2 bg-rose-100 border border-rose-300 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-rose-600">{error}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-white text-sm font-medium transition-all"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-forest-800 text-sm font-medium transition-all"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {mode === "login" ? t("login.submit.login") : t("login.submit.register")}
@@ -142,7 +142,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setMode(mode === "login" ? "register" : "login")}
-            className="w-full text-center text-sm text-slate-400 hover:text-white transition-colors"
+            className="w-full text-center text-sm text-slate-500 hover:text-forest-900 transition-colors"
           >
             {mode === "login" ? t("login.switchToRegister") : t("login.switchToLogin")}
           </button>

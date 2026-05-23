@@ -98,9 +98,9 @@ function DashboardPage() {
         className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6"
       >
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold mb-1">{currentDate}</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Salom 👋</h1>
-          <p className="text-sm text-slate-400 mt-1">Bugungi savdo va operatsiya holati</p>
+          <p className="text-[11px] uppercase tracking-wider text-forest-700 font-semibold mb-1">{currentDate}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-forest-900 tracking-tight">Welcome back!</h1>
+          <p className="text-sm text-slate-500 mt-1">Bugungi savdo va operatsiya holati</p>
         </div>
       </motion.div>
 
@@ -172,8 +172,8 @@ function AppShell() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-leaf-500 animate-spin" />
       </div>
     );
   }
@@ -249,7 +249,7 @@ function AppShell() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-cream-50">
       <Sidebar
         currentPage={currentPage}
         onPageChange={(p) => { setCurrentPage(p); setMobileSidebarOpen(false); }}
@@ -294,8 +294,8 @@ function App() {
     return (
       <ErrorBoundary>
         <Suspense fallback={
-          <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+          <div className="min-h-screen bg-cream-50 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-leaf-500 animate-spin" />
           </div>
         }>
           <StorePage slug={slug} />

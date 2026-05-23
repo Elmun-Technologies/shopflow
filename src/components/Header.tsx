@@ -44,12 +44,12 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
     .toUpperCase();
 
   return (
-    <header className="h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
+    <header className="h-16 bg-cream-50/80 backdrop-blur-md border-b border-cream-300 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
       {onMobileMenuOpen && (
         <button
           onClick={onMobileMenuOpen}
           aria-label={t("header.menu")}
-          className="md:hidden mr-2 p-2 -ml-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
+          className="md:hidden mr-2 p-2 -ml-2 rounded-lg text-slate-700 hover:text-forest-900 hover:bg-cream-100"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -64,7 +64,7 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder={t("header.searchPlaceholder")}
             aria-label={t("header.search")}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+            className="w-full bg-cream-100 border border-cream-300 rounded-lg pl-10 pr-4 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20 transition-all"
           />
         </label>
       </div>
@@ -77,13 +77,13 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
             onClick={() => setProfileOpen(!profileOpen)}
             aria-label={t("header.profileMenu")}
             aria-expanded={profileOpen}
-            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-lg hover:bg-slate-800 transition-all"
+            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-lg hover:bg-cream-100 transition-all"
           >
-            <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+            <div className="w-8 h-8 bg-forest-700 rounded-full flex items-center justify-center text-white text-sm font-semibold">
               {initials || "?"}
             </div>
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-white">{user?.name ?? "—"}</p>
+              <p className="text-sm font-medium text-forest-800">{user?.name ?? "—"}</p>
               <p className="text-xs text-slate-500">{tenant?.name ?? user?.role ?? ""}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-slate-500" />
@@ -97,12 +97,12 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
                 exit={{ opacity: 0, y: 8, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-56 bg-cream-100 border border-cream-300 rounded-xl shadow-2xl overflow-hidden"
               >
-                <div className="px-4 py-3 border-b border-slate-700">
-                  <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                <div className="px-4 py-3 border-b border-cream-300">
+                  <p className="text-sm font-medium text-forest-800 truncate">{user?.name}</p>
                   <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                  <p className="text-[10px] text-emerald-400 mt-1">
+                  <p className="text-[10px] text-forest-700 mt-1">
                     {tenant?.slug} · {user?.role}
                   </p>
                 </div>
@@ -113,7 +113,7 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
                       setProfileOpen(false);
                       logout();
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-slate-700/50 transition-colors"
+                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-cream-200/50 transition-colors"
                   >
                     {t("sidebar.logout")}
                   </button>

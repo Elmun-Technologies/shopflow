@@ -14,11 +14,11 @@ import OrderDetailDrawer from "./OrderDetailDrawer";
 
 // Faqat rangli stillar — labellar t() orqali olinadi
 const statusStyle: Record<OrderStatus, { color: string; bg: string }> = {
-  PENDING: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-  PROCESSING: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-  COMPLETED: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  CANCELLED: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
-  REFUNDED: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20" },
+  PENDING: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
+  PROCESSING: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
+  COMPLETED: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
+  CANCELLED: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
+  REFUNDED: { color: "text-slate-500", bg: "bg-slate-100 border-slate-300" },
 };
 
 export default function OrdersPage() {
@@ -101,7 +101,7 @@ export default function OrdersPage() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-white">{t("orders.title")}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("orders.title")}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("orders.subtitle")}</p>
       </motion.div>
 
@@ -116,14 +116,14 @@ export default function OrdersPage() {
               setPage(1);
             }}
             placeholder={t("orders.searchPlaceholder")}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full bg-white border border-cream-300 rounded-lg pl-10 pr-4 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
           />
         </label>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white transition-all flex-shrink-0 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-3 py-2.5 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all flex-shrink-0 disabled:opacity-50"
           title={t("orders.export")}
         >
           {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -131,7 +131,7 @@ export default function OrdersPage() {
         </button>
         <button
           type="button"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white transition-all flex-shrink-0"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">{t("orders.newOrder")}</span>
@@ -149,8 +149,8 @@ export default function OrdersPage() {
             }}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
               statusFilter === tab.key
-                ? "bg-emerald-500 text-white"
-                : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                ? "bg-leaf-400 text-forest-800"
+                : "bg-white border border-cream-300 text-slate-500 hover:text-forest-900"
             }`}
           >
             {tab.label}
@@ -158,21 +158,21 @@ export default function OrdersPage() {
         ))}
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
         {loading ? (
           <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
-            <p className="text-sm text-slate-300">{error.message}</p>
-            <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300">
+            <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+            <p className="text-sm text-slate-700">{error.message}</p>
+            <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
               {t("orders.retry")}
             </button>
           </div>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
             <Inbox className="w-12 h-12 text-slate-700 mb-3" />
-            <p className="text-base font-semibold text-white">
+            <p className="text-base font-semibold text-forest-800">
               {search ? t("orders.empty.search") : t("orders.empty.none")}
             </p>
             <p className="text-sm text-slate-500 mt-1 max-w-md">
@@ -184,7 +184,7 @@ export default function OrdersPage() {
         )}
 
         {total > pageSize && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800 text-xs text-slate-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-cream-300 text-xs text-slate-500">
             <span>
               {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} / {total}
             </span>
@@ -192,14 +192,14 @@ export default function OrdersPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+                className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.prev")}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * pageSize >= total}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+                className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.next")}
               </button>
@@ -247,7 +247,7 @@ function OrderTable({
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-slate-800">
+            <tr className="border-b border-cream-300">
               <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.code")}</th>
               <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.customer")}</th>
               <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.channel")}</th>
@@ -269,22 +269,22 @@ function OrderTable({
                 <tr
                   key={order.id}
                   onClick={() => onOpen(order.id)}
-                  className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                  className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors cursor-pointer"
                 >
                   <td className="py-3 px-4">
-                    <span className="text-sm font-medium text-white">#{order.code}</span>
+                    <span className="text-sm font-medium text-forest-800">#{order.code}</span>
                   </td>
                   <td className="py-3 px-4">
                     <div>
-                      <p className="text-sm text-white">{order.customer?.name ?? "—"}</p>
+                      <p className="text-sm text-forest-800">{order.customer?.name ?? "—"}</p>
                       <p className="text-xs text-slate-500">{order.customer?.email ?? order.customer?.phone ?? ""}</p>
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-sm text-slate-300">{order.channel?.name ?? "—"}</span>
+                    <span className="text-sm text-slate-700">{order.channel?.name ?? "—"}</span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-sm font-medium text-white">
+                    <span className="text-sm font-medium text-forest-800">
                       {formatCurrency(Number(order.total), order.currency || currency)}
                     </span>
                   </td>
@@ -301,7 +301,7 @@ function OrderTable({
                     {openMenuId === order.id && (
                       <>
                         <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
-                        <div className="absolute top-full left-4 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 min-w-[160px]">
+                        <div className="absolute top-full left-4 mt-1 z-30 bg-cream-100 border border-cream-300 rounded-xl shadow-xl py-1 min-w-[160px]">
                           {(Object.keys(statusStyle) as OrderStatus[]).map((s) => {
                             const sc = statusStyle[s];
                             const isCurrent = s === order.status;
@@ -310,12 +310,12 @@ function OrderTable({
                                 key={s}
                                 onClick={() => !isCurrent && handleChangeStatus(order.id, s, order.code)}
                                 disabled={isCurrent}
-                                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-700 transition-colors ${
+                                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-cream-200 transition-colors ${
                                   isCurrent ? "opacity-60 cursor-default" : ""
                                 }`}
                               >
                                 <span className={sc.color}>{t(`order.adminStatus.${s}`)}</span>
-                                {isCurrent && <span className="text-emerald-400">✓</span>}
+                                {isCurrent && <span className="text-forest-700">✓</span>}
                               </button>
                             );
                           })}
@@ -332,7 +332,7 @@ function OrderTable({
                         <button
                           onClick={() => handleChangeStatus(order.id, quickAction.next, order.code)}
                           disabled={updatingId === order.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-md text-xs font-medium text-forest-800 transition-colors"
                           title={t("orders.action.hint", { action: quickAction.label })}
                         >
                           {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
@@ -341,7 +341,7 @@ function OrderTable({
                       )}
                       <button
                         onClick={() => onOpen(order.id)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all"
                         aria-label={t("orders.viewDetails")}
                       >
                         <Eye className="w-4 h-4" />
@@ -356,7 +356,7 @@ function OrderTable({
       </div>
 
       {/* Mobile — card ko'rinishi */}
-      <div className="md:hidden divide-y divide-slate-800/50">
+      <div className="md:hidden divide-y divide-cream-300/50">
         {orders.map((order) => {
           const style = statusStyle[order.status];
           const quickAction: { next: OrderStatus; label: string } | null =
@@ -368,16 +368,16 @@ function OrderTable({
               key={order.id}
               type="button"
               onClick={() => onOpen(order.id)}
-              className="w-full text-left p-4 hover:bg-slate-800/30 active:bg-slate-800/50 transition-colors"
+              className="w-full text-left p-4 hover:bg-cream-100/30 active:bg-cream-100/50 transition-colors"
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white">#{order.code}</p>
-                  <p className="text-sm text-slate-300 truncate mt-0.5">{order.customer?.name ?? "—"}</p>
+                  <p className="text-sm font-semibold text-forest-800">#{order.code}</p>
+                  <p className="text-sm text-slate-700 truncate mt-0.5">{order.customer?.name ?? "—"}</p>
                   <p className="text-xs text-slate-500 truncate">{order.customer?.phone ?? order.customer?.email ?? ""}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-white whitespace-nowrap">
+                  <p className="text-sm font-bold text-forest-800 whitespace-nowrap">
                     {formatCurrency(Number(order.total), order.currency || currency)}
                   </p>
                   <p className="text-[10px] text-slate-500 mt-0.5">{formatDate(order.createdAt)}</p>
@@ -392,7 +392,7 @@ function OrderTable({
                   <button
                     onClick={(e) => { e.stopPropagation(); handleChangeStatus(order.id, quickAction.next, order.code); }}
                     disabled={updatingId === order.id}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-md text-xs font-medium text-white transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-md text-xs font-medium text-forest-800 transition-colors"
                   >
                     {updatingId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                     {quickAction.label}

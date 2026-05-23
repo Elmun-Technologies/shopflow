@@ -30,13 +30,13 @@ interface Props {
 
 // Faqat ranglar — labellar t() orqali (leads.status.{X})
 const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
-  NEW: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-  CONTACTED: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
-  QUALIFIED: { color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
-  PROPOSAL: { color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
-  NEGOTIATION: { color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-  WON: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  LOST: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" },
+  NEW: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
+  CONTACTED: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
+  QUALIFIED: { color: "text-violet-600", bg: "bg-violet-100 border-violet-300" },
+  PROPOSAL: { color: "text-cyan-600", bg: "bg-cyan-100 border-cyan-500/20" },
+  NEGOTIATION: { color: "text-orange-600", bg: "bg-orange-100 border-orange-300" },
+  WON: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
+  LOST: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
 };
 
 const allStatuses: LeadStatus[] = [
@@ -107,7 +107,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         >
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -115,11 +115,11 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
             </div>
           ) : error || !lead ? (
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-              <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
-              <p className="text-sm text-slate-300">{error?.message ?? "Lid topilmadi"}</p>
+              <AlertCircle className="w-10 h-10 text-rose-600 mb-3" />
+              <p className="text-sm text-slate-700">{error?.message ?? "Lid topilmadi"}</p>
               <button
                 onClick={onClose}
-                className="mt-4 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300"
+                className="mt-4 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700"
               >
                 Yopish
               </button>
@@ -127,10 +127,10 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
           ) : (
             <>
               {/* Header */}
-              <div className="flex items-start justify-between p-5 border-b border-slate-800">
+              <div className="flex items-start justify-between p-5 border-b border-cream-300">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-500">#{lead.code}</p>
-                  <h2 className="text-xl font-bold text-white mt-0.5 truncate">{lead.name}</h2>
+                  <h2 className="text-xl font-bold text-forest-800 mt-0.5 truncate">{lead.name}</h2>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <div className="relative">
                       <button
@@ -140,12 +140,12 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                         {t(`leads.status.${lead.status}`)}
                       </button>
                       {showStatusMenu && (
-                        <div className="absolute top-full mt-1 left-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 z-10 min-w-[150px]">
+                        <div className="absolute top-full mt-1 left-0 bg-cream-100 border border-cream-300 rounded-lg shadow-xl py-1 z-10 min-w-[150px]">
                           {allStatuses.map((s) => (
                             <button
                               key={s}
                               onClick={() => handleStatusChange(s)}
-                              className={`w-full px-3 py-1.5 text-left text-xs hover:bg-slate-700 ${statusStyle[s].color}`}
+                              className={`w-full px-3 py-1.5 text-left text-xs hover:bg-cream-200 ${statusStyle[s].color}`}
                             >
                               {t(`leads.status.${s}`)}
                             </button>
@@ -154,7 +154,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                       )}
                     </div>
                     {lead.channel && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-xs text-slate-300">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cream-100 text-xs text-slate-700">
                         {lead.channel.name}
                       </span>
                     )}
@@ -166,7 +166,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                  className="p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -188,15 +188,15 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                 </div>
 
                 {lead.notes && (
-                  <div className="bg-slate-800/50 border border-slate-800 rounded-lg p-3">
+                  <div className="bg-cream-100/50 border border-cream-300 rounded-lg p-3">
                     <p className="text-xs text-slate-500 mb-1">Izoh</p>
-                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{lead.notes}</p>
+                    <p className="text-sm text-forest-700 whitespace-pre-wrap">{lead.notes}</p>
                   </div>
                 )}
 
                 {/* Interactions */}
                 <div>
-                  <h3 className="text-sm font-semibold text-white mb-3">{t("leadDetail.interactions")}</h3>
+                  <h3 className="text-sm font-semibold text-forest-800 mb-3">{t("leadDetail.interactions")}</h3>
                   {lead.interactions.length === 0 ? (
                     <p className="text-xs text-slate-500">Aloqa yo'q</p>
                   ) : (
@@ -210,18 +210,18 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
 
                 {/* Add note */}
                 <div>
-                  <h3 className="text-sm font-semibold text-white mb-2">{t("leadDetail.addNote")}</h3>
+                  <h3 className="text-sm font-semibold text-forest-800 mb-2">{t("leadDetail.addNote")}</h3>
                   <textarea
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
                     rows={3}
                     placeholder="Lid haqida eslatma yozing..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                    className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
                   />
                   <button
                     onClick={handleAddNote}
                     disabled={!noteText.trim() || submitting}
-                    className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white transition-all"
+                    className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800 transition-all"
                   >
                     {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     Qo'shish
@@ -250,7 +250,7 @@ function InfoRow({
       <Icon className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
       <div className="min-w-0">
         <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm text-slate-200 truncate">{value || "—"}</p>
+        <p className="text-sm text-forest-700 truncate">{value || "—"}</p>
       </div>
     </div>
   );
@@ -260,16 +260,16 @@ function InteractionRow({ interaction }: { interaction: Interaction }) {
   const Icon = interactionIcons[interaction.type] ?? MessageSquare;
   return (
     <div className="flex items-start gap-3">
-      <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Icon className="w-3.5 h-3.5 text-slate-400" />
+      <div className="w-7 h-7 rounded-full bg-cream-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Icon className="w-3.5 h-3.5 text-slate-500" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-300 font-medium">{interaction.createdBy}</span>
-          <span className="text-slate-600">·</span>
+          <span className="text-slate-700 font-medium">{interaction.createdBy}</span>
+          <span className="text-slate-400">·</span>
           <span className="text-slate-500">{formatDateTime(interaction.createdAt)}</span>
         </div>
-        <p className="text-sm text-slate-200 mt-0.5 whitespace-pre-wrap">{interaction.content}</p>
+        <p className="text-sm text-forest-700 mt-0.5 whitespace-pre-wrap">{interaction.content}</p>
       </div>
     </div>
   );

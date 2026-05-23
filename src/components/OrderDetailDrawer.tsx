@@ -58,11 +58,11 @@ interface OrderDetailResponse {
 
 // Faqat ranglar — labellar t() orqali
 const STATUS_STYLE: Record<OrderStatus, { color: string; bg: string }> = {
-  PENDING: { color: "text-amber-300", bg: "bg-amber-500/15 border-amber-500/30" },
-  PROCESSING: { color: "text-blue-300", bg: "bg-blue-500/15 border-blue-500/30" },
-  COMPLETED: { color: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/30" },
-  CANCELLED: { color: "text-rose-300", bg: "bg-rose-500/15 border-rose-500/30" },
-  REFUNDED: { color: "text-slate-300", bg: "bg-slate-700 border-slate-600" },
+  PENDING: { color: "text-amber-600", bg: "bg-amber-100 border-amber-300" },
+  PROCESSING: { color: "text-sky-700", bg: "bg-sky-100 border-sky-300" },
+  COMPLETED: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-400/50" },
+  CANCELLED: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
+  REFUNDED: { color: "text-slate-700", bg: "bg-cream-200 border-slate-600" },
 };
 
 function formatMoney(n: string | number, currency: string): string {
@@ -282,37 +282,37 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         aria-label="Yopish"
       />
-      <div className="relative w-full sm:max-w-md bg-slate-900 border-l border-slate-800 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
           </div>
         ) : error ? (
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
-            <AlertCircle className="w-10 h-10 text-rose-400" />
-            <p className="text-sm text-rose-300">{error}</p>
-            <button onClick={onClose} className="px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300">
+            <AlertCircle className="w-10 h-10 text-rose-600" />
+            <p className="text-sm text-rose-600">{error}</p>
+            <button onClick={onClose} className="px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
               Yopish
             </button>
           </div>
         ) : order ? (
           <>
             {/* Header */}
-            <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white border-b border-cream-300 px-5 py-3 flex items-center justify-between z-10">
               <div>
                 <div className="text-[11px] text-slate-500">{t("invoice.code")}</div>
-                <h2 className="text-lg font-bold text-white">#{order.code}</h2>
+                <h2 className="text-lg font-bold text-forest-800">#{order.code}</h2>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={handlePrint}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors"
                   title={t("orderDetail.print")}
                   aria-label={t("orderDetail.print")}
                 >
                   <Printer className="w-5 h-5" />
                 </button>
-                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -321,8 +321,8 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
             <div className="flex-1 p-5 space-y-5">
               {/* Quick action panel — joriy status'ga ko'ra eng mantiqiy keyingi qadam */}
               {(order.status === "PENDING" || order.status === "PROCESSING") && (
-                <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                     <Send className="w-3.5 h-3.5" />
                     Keyingi qadam — bossangiz mijozga avtomatik Telegram xabar yuboriladi
                   </div>
@@ -331,7 +331,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                       <button
                         onClick={() => handleStatusChange("PROCESSING")}
                         disabled={updating}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-forest-800 transition-colors"
                       >
                         {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         Qabul qilish
@@ -341,7 +341,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                       <button
                         onClick={() => handleStatusChange("COMPLETED")}
                         disabled={updating}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-semibold text-white transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-forest-800 transition-colors"
                       >
                         {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         Yetkazildi
@@ -350,7 +350,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                     <button
                       onClick={() => handleStatusChange("CANCELLED")}
                       disabled={updating}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-700 hover:bg-rose-500/20 hover:text-rose-300 disabled:opacity-50 rounded-lg text-sm font-medium text-slate-300 transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-cream-200 hover:bg-rose-200 hover:text-rose-600 disabled:opacity-50 rounded-lg text-sm font-medium text-slate-700 transition-colors"
                     >
                       <X className="w-4 h-4" />
                       Bekor
@@ -375,7 +375,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                 {showStatusMenu && (
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setShowStatusMenu(false)} />
-                    <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-cream-100 border border-cream-300 rounded-xl shadow-xl py-1 overflow-hidden">
                       {(Object.keys(STATUS_STYLE) as OrderStatus[]).map((s) => {
                         const c = STATUS_STYLE[s];
                         const isCurrent = s === order.status;
@@ -384,12 +384,12 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                             key={s}
                             onClick={() => !isCurrent && handleStatusChange(s)}
                             disabled={isCurrent}
-                            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-slate-700 transition-colors ${
+                            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-cream-200 transition-colors ${
                               isCurrent ? "opacity-60 cursor-default" : ""
                             }`}
                           >
                             <span className={c.color}>{t(`order.adminStatus.${s}`)}</span>
-                            {isCurrent && <span className="text-emerald-400 text-xs">✓</span>}
+                            {isCurrent && <span className="text-forest-700 text-xs">✓</span>}
                           </button>
                         );
                       })}
@@ -402,21 +402,21 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               <Section title={t("orderDetail.customer")} icon={UserIcon}>
                 {order.customer ? (
                   <div className="space-y-1.5 text-sm">
-                    <div className="text-white font-medium">{order.customer.name}</div>
+                    <div className="text-forest-800 font-medium">{order.customer.name}</div>
                     {order.customer.phone && (
-                      <a href={`tel:${order.customer.phone}`} className="flex items-center gap-2 text-slate-300 hover:text-emerald-300">
+                      <a href={`tel:${order.customer.phone}`} className="flex items-center gap-2 text-slate-700 hover:text-forest-700">
                         <Phone className="w-3.5 h-3.5" />
                         {order.customer.phone}
                       </a>
                     )}
                     {order.customer.email && (
-                      <a href={`mailto:${order.customer.email}`} className="flex items-center gap-2 text-slate-300 hover:text-emerald-300">
+                      <a href={`mailto:${order.customer.email}`} className="flex items-center gap-2 text-slate-700 hover:text-forest-700">
                         <Mail className="w-3.5 h-3.5" />
                         {order.customer.email}
                       </a>
                     )}
                     {order.customer.location && (
-                      <div className="flex items-center gap-2 text-slate-400">
+                      <div className="flex items-center gap-2 text-slate-500">
                         <MapPin className="w-3.5 h-3.5" />
                         {order.customer.location}
                       </div>
@@ -429,22 +429,22 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
 
               {/* Items */}
               <Section title={t("orderDetail.products", { n: itemCount })} icon={PackageIcon}>
-                <div className="divide-y divide-slate-800">
+                <div className="divide-y divide-cream-300">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                       {item.product.imageUrl ? (
                         <img src={item.product.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                       ) : (
-                        <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                          <PackageIcon className="w-5 h-5 text-slate-600" />
+                        <div className="w-12 h-12 rounded-lg bg-cream-100 flex items-center justify-center flex-shrink-0">
+                          <PackageIcon className="w-5 h-5 text-slate-400" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm text-white truncate">{item.product.name}</div>
+                        <div className="text-sm text-forest-800 truncate">{item.product.name}</div>
                         <div className="text-[11px] text-slate-500">{item.product.sku}</div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-sm font-semibold text-forest-800">
                           {formatMoney(Number(item.price) * item.qty, order.currency)}
                         </div>
                         <div className="text-[11px] text-slate-500">
@@ -459,11 +459,11 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               {/* Totals */}
               <Section title={t("orderDetail.summary")} icon={Calendar}>
                 <div className="space-y-1 text-sm">
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Mahsulotlar yig'indisi</span>
                     <span>{formatMoney(subtotal, order.currency)}</span>
                   </div>
-                  <div className="flex justify-between text-base font-bold text-white pt-2 border-t border-slate-800 mt-2">
+                  <div className="flex justify-between text-base font-bold text-forest-800 pt-2 border-t border-cream-300 mt-2">
                     <span>Jami</span>
                     <span>{formatMoney(order.total, order.currency)}</span>
                   </div>
@@ -474,18 +474,18 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               <Section title={t("orderDetail.source")} icon={Calendar}>
                 <div className="space-y-1 text-sm">
                   {order.channel && (
-                    <div className="flex justify-between text-slate-400">
+                    <div className="flex justify-between text-slate-500">
                       <span>Kanal</span>
-                      <span className="text-slate-200">{order.channel.name}</span>
+                      <span className="text-forest-700">{order.channel.name}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Yaratilgan</span>
-                    <span className="text-slate-200">{formatDateTime(order.createdAt)}</span>
+                    <span className="text-forest-700">{formatDateTime(order.createdAt)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Yangilangan</span>
-                    <span className="text-slate-200">{formatDateTime(order.updatedAt)}</span>
+                    <span className="text-forest-700">{formatDateTime(order.updatedAt)}</span>
                   </div>
                 </div>
               </Section>
@@ -494,7 +494,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               {(order.shippingAddress || order.shippingLat) && (
                 <Section title={t("orderDetail.address")} icon={MapPin}>
                   {order.shippingAddress && (
-                    <p className="text-sm text-white mb-1.5">{order.shippingAddress}</p>
+                    <p className="text-sm text-forest-800 mb-1.5">{order.shippingAddress}</p>
                   )}
                   {order.shippingLat != null && order.shippingLng != null && (() => {
                     const lat = Number(order.shippingLat);
@@ -511,7 +511,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                             href={mapsUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex-1 px-2.5 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-md text-xs text-sky-300 text-center transition-colors"
+                            className="flex-1 px-2.5 py-1.5 bg-sky-100 hover:bg-sky-200 border border-sky-500/30 rounded-md text-xs text-sky-700 text-center transition-colors"
                           >
                             Google Maps
                           </a>
@@ -519,7 +519,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                             href={yandexUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex-1 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-md text-xs text-amber-300 text-center transition-colors"
+                            className="flex-1 px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-md text-xs text-amber-600 text-center transition-colors"
                           >
                             Yandex Maps
                           </a>
@@ -536,7 +536,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   <button
                     onClick={() => setShowAssigneeMenu(!showAssigneeMenu)}
                     disabled={updatingAssignee}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-sm text-forest-800 transition-colors disabled:opacity-50"
                   >
                     <span className="flex items-center gap-2">
                       {updatingAssignee && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -549,10 +549,10 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   {showAssigneeMenu && (
                     <>
                       <div className="fixed inset-0 z-20" onClick={() => setShowAssigneeMenu(false)} />
-                      <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-xl py-1 max-h-60 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-cream-100 border border-cream-300 rounded-xl shadow-xl py-1 max-h-60 overflow-y-auto">
                         <button
                           onClick={() => handleAssign(null)}
-                          className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-700"
+                          className="w-full text-left px-3 py-2 text-sm text-slate-500 hover:bg-cream-200"
                         >
                           — tayinlamaslik —
                         </button>
@@ -560,9 +560,9 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                           <button
                             key={u.id}
                             onClick={() => handleAssign(u.id)}
-                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-slate-700"
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-cream-200"
                           >
-                            <span className="text-white">{u.name}</span>
+                            <span className="text-forest-800">{u.name}</span>
                             <span className="text-[10px] text-slate-500">{u.role}</span>
                           </button>
                         ))}
@@ -580,13 +580,13 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                     onChange={(e) => setNewNote(e.target.value)}
                     rows={2}
                     placeholder="Jamoa uchun izoh yozing (mijoz ko'rmaydi)..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                    className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
                   />
                   {newNote.trim() && (
                     <button
                       onClick={handleAddNote}
                       disabled={addingNote}
-                      className="px-3 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium flex items-center gap-1.5"
+                      className="px-3 py-1.5 text-xs bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg font-medium flex items-center gap-1.5"
                     >
                       {addingNote && <Loader2 className="w-3 h-3 animate-spin" />}
                       Qo'shish
@@ -594,18 +594,18 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   )}
                 </div>
                 {orderNotes.length > 0 && (
-                  <div className="divide-y divide-slate-800/60">
+                  <div className="divide-y divide-cream-300/60">
                     {orderNotes.map((n) => (
                       <div key={n.id} className="py-2 group flex items-start gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white whitespace-pre-wrap">{n.content}</p>
+                          <p className="text-sm text-forest-800 whitespace-pre-wrap">{n.content}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
                             {n.authorName ?? "—"} · {formatDateTime(n.createdAt)}
                           </p>
                         </div>
                         <button
                           onClick={() => handleDeleteNote(n.id)}
-                          className="p-1 text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1 text-slate-500 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
                           aria-label="O'chirish"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -626,7 +626,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                       <div key={a.id} className="flex items-start gap-2.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-200">{a.summary ?? a.action}</p>
+                          <p className="text-sm text-forest-700">{a.summary ?? a.action}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
                             {a.actorName ?? "Tizim"} · {formatDateTime(a.createdAt)}
                           </p>
@@ -644,13 +644,13 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   onChange={(e) => setNotesDraft(e.target.value)}
                   rows={2}
                   placeholder={t("orderDetail.customerNotePlaceholder")}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                  className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
                 />
                 {notesDraft !== (order.notes ?? "") && (
                   <button
                     onClick={handleSaveNotes}
                     disabled={savingNotes}
-                    className="mt-2 px-3 py-1.5 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium flex items-center gap-1.5"
+                    className="mt-2 px-3 py-1.5 text-xs bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg font-medium flex items-center gap-1.5"
                   >
                     {savingNotes && <Loader2 className="w-3 h-3 animate-spin" />}
                     Saqlash
@@ -676,7 +676,7 @@ function Section({
         <Icon className="w-3.5 h-3.5" />
         {title}
       </div>
-      <div className="bg-slate-800/40 border border-slate-800 rounded-xl p-3">
+      <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
         {children}
       </div>
     </div>

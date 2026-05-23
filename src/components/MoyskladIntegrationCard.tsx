@@ -6,10 +6,10 @@ import { useConfirm } from "./ui/ConfirmDialog";
 import { useT } from "../i18n";
 
 const STATUS_BADGE_CLS: Record<MoyskladStatus["status"], string> = {
-  CONNECTED: "bg-emerald-400/15 text-emerald-300",
-  CONNECTING: "bg-blue-400/15 text-blue-300",
-  ERROR: "bg-rose-400/15 text-rose-300",
-  DISCONNECTED: "bg-slate-700 text-slate-300",
+  CONNECTED: "bg-leaf-100 text-forest-700",
+  CONNECTING: "bg-blue-400/15 text-sky-700",
+  ERROR: "bg-rose-400/15 text-rose-600",
+  DISCONNECTED: "bg-cream-200 text-slate-700",
 };
 
 function formatDate(iso: string | null | undefined): string {
@@ -131,7 +131,7 @@ export function MoyskladIntegrationCard() {
 
   if (loading) {
     return (
-      <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5 flex items-center justify-center min-h-[120px]">
+      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5 flex items-center justify-center min-h-[120px]">
         <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
       </div>
     );
@@ -141,14 +141,14 @@ export function MoyskladIntegrationCard() {
   const badgeCls = STATUS_BADGE_CLS[s];
 
   return (
-    <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
+    <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-orange-400/15">
             <Boxes className="w-5 h-5 text-orange-300" />
           </div>
           <div>
-            <h4 className="text-sm text-white font-semibold flex items-center gap-2">
+            <h4 className="text-sm text-forest-800 font-semibold flex items-center gap-2">
               MoySklad
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${badgeCls}`}>{t(`moysklad.status.${s}`)}</span>
             </h4>
@@ -156,8 +156,8 @@ export function MoyskladIntegrationCard() {
               Mahsulot katalogi, qoldiq va buyurtmalar yagona manbadan
             </p>
             {status?.accountName && (
-              <p className="text-[11px] text-slate-400 mt-1">
-                Hisob: <span className="text-slate-200">{status.accountName}</span>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Hisob: <span className="text-forest-700">{status.accountName}</span>
               </p>
             )}
           </div>
@@ -165,7 +165,7 @@ export function MoyskladIntegrationCard() {
       </div>
 
       {status?.lastError && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-xs text-rose-600 bg-rose-100 border border-rose-300 rounded-lg p-2.5">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>{status.lastError}</span>
         </div>
@@ -173,27 +173,27 @@ export function MoyskladIntegrationCard() {
 
       {s === "CONNECTED" && (
         <div className="grid grid-cols-2 gap-2 mb-3 text-[11px]">
-          <div className="bg-slate-900/40 rounded-lg p-2">
+          <div className="bg-cream-100/40 rounded-lg p-2">
             <div className="text-slate-500">Ulangan</div>
-            <div className="text-slate-200 mt-0.5">{formatDate(status?.connectedAt)}</div>
+            <div className="text-forest-700 mt-0.5">{formatDate(status?.connectedAt)}</div>
           </div>
-          <div className="bg-slate-900/40 rounded-lg p-2">
+          <div className="bg-cream-100/40 rounded-lg p-2">
             <div className="text-slate-500">Oxirgi sync</div>
-            <div className="text-slate-200 mt-0.5">{formatDate(status?.lastSyncAt)}</div>
+            <div className="text-forest-700 mt-0.5">{formatDate(status?.lastSyncAt)}</div>
           </div>
         </div>
       )}
 
       {activeJob && activeJob.status !== "COMPLETED" && activeJob.status !== "FAILED" && (
-        <div className="mb-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+        <div className="mb-3 bg-sky-100 border border-sky-300 rounded-lg p-3">
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-blue-300 flex items-center gap-1.5">
+            <span className="text-sky-700 flex items-center gap-1.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Sinxronlash...
             </span>
             <span className="text-blue-200">{activeJob.progress}%</span>
           </div>
-          <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-white rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-400 transition-all"
               style={{ width: `${activeJob.progress}%` }}
@@ -203,7 +203,7 @@ export function MoyskladIntegrationCard() {
       )}
 
       {activeJob?.status === "COMPLETED" && (
-        <div className="mb-3 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 flex items-center gap-2">
+        <div className="mb-3 text-xs text-forest-700 bg-leaf-100 border border-leaf-300/60 rounded-lg p-2.5 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           Sinxronizatsiya tugadi
         </div>
@@ -213,7 +213,7 @@ export function MoyskladIntegrationCard() {
         {s === "DISCONNECTED" || s === "ERROR" ? (
           <button
             onClick={() => setShowConnect(true)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-400/15 text-emerald-300 hover:bg-emerald-400/25 transition-all"
+            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-leaf-100 text-forest-700 hover:bg-emerald-400/25 transition-all"
           >
             Ulash
           </button>
@@ -222,20 +222,20 @@ export function MoyskladIntegrationCard() {
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-400/15 text-blue-300 hover:bg-blue-400/25 transition-all disabled:opacity-50 flex items-center gap-1.5"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-400/15 text-sky-700 hover:bg-blue-400/25 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
               To'liq sinxronlash
             </button>
             <button
               onClick={handleSubscribeWebhooks}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-cream-200 text-slate-700 hover:bg-slate-600 transition-all"
             >
               Webhook'larni ulash ({status?.webhookCount ?? 0})
             </button>
             <button
               onClick={handleDisconnect}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-500 hover:text-rose-300 hover:bg-rose-500/10 transition-all ml-auto"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-all ml-auto"
             >
               Uzish
             </button>
@@ -245,10 +245,10 @@ export function MoyskladIntegrationCard() {
 
       {showConnect && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-white border border-cream-300 rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-base font-semibold text-white">MoySklad'ga ulash</h3>
+                <h3 className="text-base font-semibold text-forest-800">MoySklad'ga ulash</h3>
                 <p className="text-xs text-slate-500 mt-1">Access token kiriting</p>
               </div>
               <button
@@ -256,13 +256,13 @@ export function MoyskladIntegrationCard() {
                   setShowConnect(false);
                   setConnectError(null);
                 }}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400"
+                className="p-1.5 hover:bg-cream-100 rounded-lg text-slate-500"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="text-xs text-slate-400 mb-3 space-y-1">
+            <div className="text-xs text-slate-500 mb-3 space-y-1">
               <div>1. MoySklad → Sozlamalar → Foydalanuvchilar → o'zingiz</div>
               <div>2. Pastda "Access token" → "Yangi token yaratish"</div>
               <div>3. Token'ni nusxalab, pastga joylang</div>
@@ -272,7 +272,7 @@ export function MoyskladIntegrationCard() {
               href="https://online.moysklad.ru/app/#admin"
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 mb-3"
+              className="text-xs text-sky-600 hover:text-sky-700 inline-flex items-center gap-1 mb-3"
             >
               MoySklad sozlamalari
               <ExternalLink className="w-3 h-3" />
@@ -283,11 +283,11 @@ export function MoyskladIntegrationCard() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="MoySklad access token"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-slate-600 mb-3"
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-slate-600 mb-3"
             />
 
             {connectError && (
-              <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 mb-3">
+              <div className="text-xs text-rose-600 bg-rose-100 border border-rose-300 rounded-lg p-2.5 mb-3">
                 {connectError}
               </div>
             )}
@@ -298,14 +298,14 @@ export function MoyskladIntegrationCard() {
                   setShowConnect(false);
                   setConnectError(null);
                 }}
-                className="flex-1 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                className="flex-1 px-3 py-2 text-sm text-slate-500 hover:text-forest-900 hover:bg-cream-100 rounded-lg transition-all"
               >
                 Bekor qilish
               </button>
               <button
                 onClick={handleConnect}
                 disabled={connecting || token.trim().length < 20}
-                className="flex-1 px-3 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-3 py-2 text-sm font-medium bg-leaf-400 hover:bg-emerald-400 text-slate-900 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {connecting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Ulash

@@ -28,9 +28,9 @@ const integrationIconMap: Record<string, React.ElementType> = {
 
 // Faqat icon va stillar — labellar t() orqali
 const statusStyle = {
-  connected: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  disconnected: { icon: XCircle, color: "text-slate-500", bg: "bg-slate-500/10" },
-  error: { icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10" },
+  connected: { icon: CheckCircle2, color: "text-forest-700", bg: "bg-emerald-400/10" },
+  disconnected: { icon: XCircle, color: "text-slate-500", bg: "bg-slate-100" },
+  error: { icon: AlertCircle, color: "text-rose-600", bg: "bg-red-400/10" },
 };
 
 const deviceIcon: Record<string, React.ElementType> = {
@@ -47,7 +47,7 @@ function InputField({ label, value, onChange, type = "text" }: {
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60 transition-colors"
       />
     </label>
   );
@@ -172,11 +172,11 @@ export default function SettingsPage() {
   const renderProfile = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+        <div className="w-16 h-16 bg-leaf-400 rounded-2xl flex items-center justify-center text-forest-800 text-xl font-bold">
           {profile.avatar}
         </div>
         <div>
-          <h3 className="text-white font-semibold">{profile.firstName} {profile.lastName}</h3>
+          <h3 className="text-forest-800 font-semibold">{profile.firstName} {profile.lastName}</h3>
           <p className="text-sm text-slate-500">{profile.role} · {profile.email}</p>
         </div>
       </div>
@@ -190,8 +190,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Parolni o'zgartirish — Saqlash bosilganda yangi parol bo'lsa serverga jo'natiladi */}
-      <div className="border-t border-slate-800 pt-6">
-        <h4 className="text-sm font-semibold text-white mb-1">{t("settings.profile.changePassword")}</h4>
+      <div className="border-t border-cream-300 pt-6">
+        <h4 className="text-sm font-semibold text-forest-800 mb-1">{t("settings.profile.changePassword")}</h4>
         <p className="text-xs text-slate-500 mb-3">{t("settings.profile.changePasswordHint")}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="block">
@@ -203,12 +203,12 @@ export default function SettingsPage() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 pr-10 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+                className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 pr-10 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-forest-900"
                 aria-label={showPassword ? t("settings.profile.hide") : t("settings.profile.show")}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -224,7 +224,7 @@ export default function SettingsPage() {
               autoComplete="new-password"
               placeholder="••••••••"
               minLength={8}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60 transition-colors"
             />
           </label>
         </div>
@@ -235,11 +235,11 @@ export default function SettingsPage() {
   const renderStore = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-lg font-bold">
+        <div className="w-14 h-14 bg-leaf-400 rounded-2xl flex items-center justify-center text-forest-800 text-lg font-bold">
           {store.logo}
         </div>
         <div>
-          <h3 className="text-white font-semibold">{store.name}</h3>
+          <h3 className="text-forest-800 font-semibold">{store.name}</h3>
           <p className="text-xs text-slate-500">{store.city} · {store.currency}</p>
         </div>
       </div>
@@ -255,23 +255,23 @@ export default function SettingsPage() {
         <InputField label={t("settings.store.workingHours")} value={store.workingHours} onChange={(v) => setStore({ ...store, workingHours: v })} />
         <InputField label={t("settings.store.currency")} value={store.currency} onChange={(v) => setStore({ ...store, currency: v })} />
       </div>
-      <div className="border-t border-slate-800 pt-4">
-        <h4 className="text-sm font-semibold text-white mb-3">{t("settings.store.delivery")}</h4>
+      <div className="border-t border-cream-300 pt-4">
+        <h4 className="text-sm font-semibold text-forest-800 mb-3">{t("settings.store.delivery")}</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.minOrder")}</label>
             <input type="number" value={store.minOrderAmount} onChange={(e) => setStore({ ...store, minOrderAmount: +e.target.value })}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
           </div>
           <div>
             <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.deliveryFee")}</label>
             <input type="number" value={store.deliveryFee} onChange={(e) => setStore({ ...store, deliveryFee: +e.target.value })}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
           </div>
           <div>
             <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.freeDeliveryFrom")}</label>
             <input type="number" value={store.freeDeliveryFrom} onChange={(e) => setStore({ ...store, freeDeliveryFrom: +e.target.value })}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
           </div>
         </div>
       </div>
@@ -285,23 +285,23 @@ export default function SettingsPage() {
 
       {notifications.length > 0 && (
         <div className="space-y-1">
-          <div className="grid grid-cols-[1fr,60px,60px,60px] gap-2 pb-3 border-b border-slate-800 mb-2">
+          <div className="grid grid-cols-[1fr,60px,60px,60px] gap-2 pb-3 border-b border-cream-300 mb-2">
             <span className="text-xs text-slate-500 font-medium">{t("settings.notify.type")}</span>
             <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.email")}</span>
             <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.push")}</span>
             <span className="text-xs text-slate-500 font-medium text-center">{t("settings.notify.sms")}</span>
           </div>
           {notifications.map((n) => (
-            <div key={n.id} className="grid grid-cols-[1fr,60px,60px,60px] gap-2 py-3 border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors rounded-lg px-2">
+            <div key={n.id} className="grid grid-cols-[1fr,60px,60px,60px] gap-2 py-3 border-b border-cream-300/50 hover:bg-cream-100/20 transition-colors rounded-lg px-2">
               <div>
-                <p className="text-sm text-white font-medium">{n.label}</p>
+                <p className="text-sm text-forest-800 font-medium">{n.label}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{n.description}</p>
               </div>
               {(["email", "push", "sms"] as const).map((ch) => (
                 <div key={ch} className="flex items-center justify-center">
                   <button
                     onClick={() => toggleNotification(n.id, ch)}
-                    className={`w-10 h-6 rounded-full transition-all relative ${n[ch] ? "bg-emerald-500" : "bg-slate-700"}`}
+                    className={`w-10 h-6 rounded-full transition-all relative ${n[ch] ? "bg-leaf-400" : "bg-cream-200"}`}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${n[ch] ? "left-5" : "left-1"}`} />
                   </button>
@@ -327,14 +327,14 @@ export default function SettingsPage() {
           : int.status === "error" ? t("settings.int.action.fix")
           : t("settings.int.action.connect");
         return (
-          <div key={int.id} className="bg-slate-800/50 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all">
+          <div key={int.id} className="bg-cream-100/50 border border-cream-300 rounded-xl p-4 hover:border-cream-300 transition-all">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: int.color + "20" }}>
                   <Icon className="w-5 h-5" style={{ color: int.color }} />
                 </div>
                 <div>
-                  <h4 className="text-sm text-white font-semibold">{int.name}</h4>
+                  <h4 className="text-sm text-forest-800 font-semibold">{int.name}</h4>
                   <p className="text-[11px] text-slate-500 mt-0.5">{int.description}</p>
                 </div>
               </div>
@@ -345,12 +345,12 @@ export default function SettingsPage() {
                 {statusLabel}
               </div>
               {int.connectedAt && (
-                <span className="text-[10px] text-slate-600">{int.connectedAt}</span>
+                <span className="text-[10px] text-slate-400">{int.connectedAt}</span>
               )}
               <button className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
-                int.status === "connected" ? "text-slate-400 hover:text-white hover:bg-slate-700" :
-                int.status === "error" ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20" :
-                "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
+                int.status === "connected" ? "text-slate-500 hover:text-forest-900 hover:bg-cream-200" :
+                int.status === "error" ? "text-amber-500 bg-amber-100 hover:bg-amber-400/20" :
+                "text-forest-700 bg-emerald-400/10 hover:bg-emerald-400/20"
               }`}>
                 {actionLabel}
               </button>
@@ -365,28 +365,28 @@ export default function SettingsPage() {
   const renderSecurity = () => (
     <div className="space-y-6">
       {/* 2FA */}
-      <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
+      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-sm text-white font-semibold">{t("settings.sec.2fa.title")}</h4>
+            <h4 className="text-sm text-forest-800 font-semibold">{t("settings.sec.2fa.title")}</h4>
             <p className="text-xs text-slate-500 mt-1">{t("settings.sec.2fa.hint")}</p>
           </div>
           <button
             onClick={() => setSecurity({ ...security, twoFactorEnabled: !security.twoFactorEnabled })}
-            className={`w-12 h-7 rounded-full transition-all relative ${security.twoFactorEnabled ? "bg-emerald-500" : "bg-slate-700"}`}
+            className={`w-12 h-7 rounded-full transition-all relative ${security.twoFactorEnabled ? "bg-leaf-400" : "bg-cream-200"}`}
           >
             <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${security.twoFactorEnabled ? "left-6" : "left-1"}`} />
           </button>
         </div>
         {security.twoFactorEnabled && (
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-slate-400">{t("settings.sec.2fa.method")}</span>
+            <span className="text-xs text-slate-500">{t("settings.sec.2fa.method")}</span>
             {(["sms", "app"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setSecurity({ ...security, twoFactorMethod: m })}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  security.twoFactorMethod === m ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                  security.twoFactorMethod === m ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"
                 }`}
               >
                 {m === "sms" ? "SMS" : "Authenticator"}
@@ -397,29 +397,29 @@ export default function SettingsPage() {
       </div>
 
       {/* Password */}
-      <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
-        <h4 className="text-sm text-white font-semibold mb-1">{t("settings.sec.password")}</h4>
+      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
+        <h4 className="text-sm text-forest-800 font-semibold mb-1">{t("settings.sec.password")}</h4>
         <p className="text-xs text-slate-500 mb-4">{t("settings.sec.lastChanged", { date: security.lastPasswordChange })}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="relative">
             <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.sec.newPassword")}</label>
             <input type={showPassword ? "text" : "password"} placeholder="••••••••"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 pr-10" />
-            <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-500 hover:text-white">
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60 pr-10" />
+            <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-500 hover:text-forest-900">
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
           <div>
             <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.sec.confirmPassword")}</label>
             <input type="password" placeholder="••••••••"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50" />
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
           </div>
         </div>
       </div>
 
       {/* Session */}
-      <div className="bg-slate-800/50 border border-slate-800 rounded-xl p-5">
-        <h4 className="text-sm text-white font-semibold mb-1">{t("settings.sec.session.title")}</h4>
+      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
+        <h4 className="text-sm text-forest-800 font-semibold mb-1">{t("settings.sec.session.title")}</h4>
         <p className="text-xs text-slate-500 mb-3">{t("settings.sec.session.hint")}</p>
         <div className="flex items-center gap-2">
           {[15, 30, 60, 120].map((m) => (
@@ -427,7 +427,7 @@ export default function SettingsPage() {
               key={m}
               onClick={() => setSecurity({ ...security, sessionTimeout: m })}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                security.sessionTimeout === m ? "bg-emerald-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                security.sessionTimeout === m ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"
               }`}
             >
               {m} min
@@ -438,25 +438,25 @@ export default function SettingsPage() {
 
       {/* Login History */}
       <div>
-        <h4 className="text-sm text-white font-semibold mb-3">{t("settings.sec.loginHistory")}</h4>
+        <h4 className="text-sm text-forest-800 font-semibold mb-3">{t("settings.sec.loginHistory")}</h4>
         <div className="space-y-2">
           {loginHistory.map((l) => {
             const browser = l.device.split(" — ")[0];
             const DevIcon = deviceIcon[browser] || Monitor;
             return (
-              <div key={l.id} className="flex items-center justify-between bg-slate-800/50 border border-slate-800 rounded-xl px-4 py-3 hover:border-slate-700 transition-colors">
+              <div key={l.id} className="flex items-center justify-between bg-cream-100/50 border border-cream-300 rounded-xl px-4 py-3 hover:border-cream-300 transition-colors">
                 <div className="flex items-center gap-3">
                   <DevIcon className="w-4 h-4 text-slate-500" />
                   <div>
-                    <p className="text-sm text-white">{l.device}</p>
+                    <p className="text-sm text-forest-800">{l.device}</p>
                     <p className="text-[11px] text-slate-500">{l.location} · {l.ip}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`text-xs font-medium ${l.status === "success" ? "text-emerald-400" : "text-red-400"}`}>
+                  <span className={`text-xs font-medium ${l.status === "success" ? "text-forest-700" : "text-rose-600"}`}>
                     {l.status === "success" ? t("settings.sec.loginSuccess") : t("settings.sec.loginFailed")}
                   </span>
-                  <p className="text-[10px] text-slate-600 mt-0.5">{l.date}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{l.date}</p>
                 </div>
               </div>
             );
@@ -470,51 +470,51 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h4 className="text-sm text-white font-semibold">{t("settings.api.title")}</h4>
+          <h4 className="text-sm text-forest-800 font-semibold">{t("settings.api.title")}</h4>
           <p className="text-xs text-slate-500 mt-0.5">{t("settings.api.hint")}</p>
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-colors">
+        <button className="flex items-center gap-1.5 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-xs font-medium rounded-lg transition-colors">
           <Plus className="w-3.5 h-3.5" />
           {t("settings.api.newKey")}
         </button>
       </div>
       {apiKeys.map((ak) => (
-        <div key={ak.id} className={`bg-slate-800/50 border rounded-xl p-4 transition-all ${ak.active ? "border-slate-800 hover:border-slate-700" : "border-slate-800/50 opacity-60"}`}>
+        <div key={ak.id} className={`bg-cream-100/50 border rounded-xl p-4 transition-all ${ak.active ? "border-cream-300 hover:border-cream-300" : "border-cream-300/50 opacity-60"}`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Key className="w-4 h-4 text-slate-500" />
-              <span className="text-sm text-white font-semibold">{ak.name}</span>
-              {!ak.active && <span className="text-[10px] text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full">{t("settings.api.disabled")}</span>}
+              <span className="text-sm text-forest-800 font-semibold">{ak.name}</span>
+              {!ak.active && <span className="text-[10px] text-slate-400 bg-cream-100 px-2 py-0.5 rounded-full">{t("settings.api.disabled")}</span>}
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => copyKey(ak.key, ak.id)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-200 transition-colors"
                 title={t("settings.api.copy")}
               >
-                {copiedKey === ak.id ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedKey === ak.id ? <CheckCircle2 className="w-3.5 h-3.5 text-forest-700" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
               <button
                 onClick={() => setApiKeys((prev) => prev.map((k) => k.id === ak.id ? { ...k, active: !k.active } : k))}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-200 transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
-              <button className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+              <button className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-          <div className="bg-slate-900 rounded-lg px-3 py-2 font-mono text-xs text-slate-400 mb-3">
+          <div className="bg-white rounded-lg px-3 py-2 font-mono text-xs text-slate-500 mb-3">
             {maskKey(ak.key)}
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap gap-1.5">
               {ak.permissions.map((p) => (
-                <span key={p} className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">{p}</span>
+                <span key={p} className="text-[10px] text-slate-500 bg-cream-100 px-2 py-0.5 rounded-md">{p}</span>
               ))}
             </div>
-            <div className="flex items-center gap-1 text-[10px] text-slate-600">
+            <div className="flex items-center gap-1 text-[10px] text-slate-400">
               <Clock className="w-3 h-3" />
               {ak.lastUsed}
             </div>
@@ -548,7 +548,7 @@ export default function SettingsPage() {
         className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6"
       >
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t("settings.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("settings.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">{t("settings.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -556,7 +556,7 @@ export default function SettingsPage() {
             <motion.span
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-xs text-emerald-400 flex items-center gap-1"
+              className="text-xs text-forest-700 flex items-center gap-1"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               {savedMsg}
@@ -566,7 +566,7 @@ export default function SettingsPage() {
             <motion.span
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-xs text-rose-400 flex items-center gap-1"
+              className="text-xs text-rose-600 flex items-center gap-1"
             >
               <AlertCircle className="w-3.5 h-3.5" />
               {errorMsg}
@@ -575,7 +575,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-emerald-500/20"
+            className="flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-leaf-500/20"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {t("settings.save")}
@@ -602,8 +602,8 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap text-xs font-medium transition-all flex-shrink-0 ${
                     isActive
-                      ? "bg-emerald-500 text-white"
-                      : "bg-slate-900 border border-slate-800 text-slate-400"
+                      ? "bg-leaf-400 text-forest-800"
+                      : "bg-white border border-cream-300 text-slate-500"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -613,7 +613,7 @@ export default function SettingsPage() {
             })}
           </div>
           {/* Desktop — vertical sidebar */}
-          <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-xl p-2 space-y-0.5 sticky top-20">
+          <div className="hidden md:block bg-white border border-cream-300 rounded-xl p-2 space-y-0.5 sticky top-20">
             {settingsTabOrder.map((tab) => {
               const Icon = tabIcons[tab];
               const isActive = activeTab === tab;
@@ -623,11 +623,11 @@ export default function SettingsPage() {
                   onClick={() => setActiveTab(tab)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all ${
                     isActive
-                      ? "bg-emerald-500/10 text-emerald-400"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                      ? "bg-leaf-100 text-forest-700"
+                      : "text-slate-500 hover:text-forest-900 hover:bg-cream-100"
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? "text-emerald-400" : ""}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? "text-forest-700" : ""}`} />
                   <span className="text-sm font-medium">{t(`settings.tab.${tab}`)}</span>
                   {isActive && (
                     <ChevronRight className="w-3.5 h-3.5 ml-auto" />
@@ -647,10 +647,10 @@ export default function SettingsPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-6"
+              className="bg-white border border-cream-300 rounded-xl p-6"
             >
-              <div className="mb-5 pb-4 border-b border-slate-800">
-                <h2 className="text-lg font-bold text-white">{t(`settings.tab.${activeTab}`)}</h2>
+              <div className="mb-5 pb-4 border-b border-cream-300">
+                <h2 className="text-lg font-bold text-forest-800">{t(`settings.tab.${activeTab}`)}</h2>
               </div>
               {tabRenderers[activeTab]()}
             </motion.div>

@@ -6,15 +6,15 @@ import { initialTransactions, transactionTypeLabels } from "../../data/marketing
 import EmptyState from "../EmptyState";
 
 const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3";
-const tdClass = "py-3 px-3 text-sm text-slate-200 border-t border-slate-800";
+const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
 
 function TransactionTypeBadge({ type }: { type: TransactionType }) {
   const map: Record<TransactionType, string> = {
-    earn: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
-    spend: "bg-orange-500/15 text-orange-400 border border-orange-500/30",
-    expire: "bg-red-500/15 text-red-400 border border-red-500/30",
-    manual_add: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
-    manual_remove: "bg-slate-700 text-slate-300",
+    earn: "bg-leaf-100 text-forest-700 border border-leaf-400/50",
+    spend: "bg-orange-500/15 text-orange-600 border border-orange-500/30",
+    expire: "bg-red-500/15 text-rose-600 border border-rose-300",
+    manual_add: "bg-sky-100 text-sky-600 border border-sky-300",
+    manual_remove: "bg-cream-200 text-slate-700",
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full border ${map[type]}`}>{transactionTypeLabels[type]}</span>;
 }
@@ -58,21 +58,21 @@ export default function TranzaksiyalarPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Ball tranzaksiyalari</h1>
+          <h1 className="text-2xl font-bold text-forest-800">Ball tranzaksiyalari</h1>
           <p className="text-sm text-slate-500 mt-1">Sodiqlik ball movaffaqiyatlari va operatsiyalari</p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Jami operatsiyalar</p>
-            <p className="text-lg font-semibold text-white">{stats.totalTransactions}</p>
+            <p className="text-lg font-semibold text-forest-800">{stats.totalTransactions}</p>
           </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Olingan ball</p>
-            <p className="text-lg font-semibold text-emerald-400">+{stats.earned}</p>
+            <p className="text-lg font-semibold text-forest-700">+{stats.earned}</p>
           </div>
-          <div className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2">
+          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
             <p className="text-[10px] text-slate-500 uppercase">Sarflangan ball</p>
-            <p className="text-lg font-semibold text-orange-400">-{stats.spent}</p>
+            <p className="text-lg font-semibold text-orange-600">-{stats.spent}</p>
           </div>
         </div>
       </div>
@@ -85,14 +85,14 @@ export default function TranzaksiyalarPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Qidirish..."
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 pl-10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
+            className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 pl-10 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20"
           />
         </div>
         <div className="flex gap-2">
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as TransactionType | "all")}
-            className="px-3 py-2 rounded-lg text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500/50"
+            className="px-3 py-2 rounded-lg text-sm bg-cream-100 text-slate-700 border border-cream-300 focus:outline-none focus:border-leaf-500/60"
           >
             <option value="all">Barcha turlar</option>
             <option value="earn">Olingan balllar</option>
@@ -101,7 +101,7 @@ export default function TranzaksiyalarPage() {
             <option value="manual_add">Qo'lda qo'shilgan</option>
             <option value="manual_remove">Qo'lda ayirilgan</option>
           </select>
-          <button onClick={handleDownload} className="px-4 py-2 rounded-lg text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 inline-flex items-center gap-2 font-medium">
+          <button onClick={handleDownload} className="px-4 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700 inline-flex items-center gap-2 font-medium">
             <Download className="w-4 h-4" />
             Yuklab olish
           </button>
@@ -109,7 +109,7 @@ export default function TranzaksiyalarPage() {
       </div>
 
       {transactions.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
           <EmptyState
             icon={Workflow}
             title="Hali tranzaksiya yo'q"
@@ -120,9 +120,9 @@ export default function TranzaksiyalarPage() {
           />
         </motion.div>
       ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
           <table className="w-full min-w-[900px]">
-            <thead className="bg-slate-900/80">
+            <thead className="bg-white/80">
               <tr>
                 <th className={thClass}>Foydalanuvchi</th>
                 <th className={thClass}>Turi</th>
@@ -142,16 +142,16 @@ export default function TranzaksiyalarPage() {
                 </tr>
               ) : (
                 filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/40">
+                  <tr key={t.id} className="hover:bg-cream-100/40">
                     <td className={tdClass + " font-medium"}>{t.customerName}</td>
                     <td className={tdClass}><TransactionTypeBadge type={t.type} /></td>
-                    <td className={tdClass + (t.points >= 0 ? " text-emerald-400" : " text-orange-400")}>
+                    <td className={tdClass + (t.points >= 0 ? " text-forest-700" : " text-orange-600")}>
                       {t.points >= 0 ? "+" : ""}{t.points}
                     </td>
                     <td className={tdClass}>{t.balance}</td>
                     <td className={tdClass + " text-xs max-w-xs truncate"}>{t.description}</td>
-                    <td className={tdClass + " text-xs text-slate-400"}>{t.orderId || "—"}</td>
-                    <td className={tdClass + " text-xs text-slate-400"}>{t.createdAt}</td>
+                    <td className={tdClass + " text-xs text-slate-500"}>{t.orderId || "—"}</td>
+                    <td className={tdClass + " text-xs text-slate-500"}>{t.createdAt}</td>
                   </tr>
                 ))
               )}

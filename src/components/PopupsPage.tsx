@@ -112,8 +112,8 @@ export default function PopupsPage() {
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Megaphone className="w-6 h-6 text-emerald-400" />
+          <h1 className="text-2xl font-bold text-forest-800 flex items-center gap-2">
+            <Megaphone className="w-6 h-6 text-forest-700" />
             {t("popups.title")}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -122,7 +122,7 @@ export default function PopupsPage() {
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+          className="flex items-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
         >
           <Plus className="w-4 h-4" />
           {t("popups.newPopup")}
@@ -131,18 +131,18 @@ export default function PopupsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
         </div>
       ) : popups.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl py-20 px-6 text-center">
+        <div className="bg-white border border-cream-300 rounded-xl py-20 px-6 text-center">
           <Megaphone className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-white mb-1">Hozircha popup yo'q</h3>
+          <h3 className="text-lg font-semibold text-forest-800 mb-1">Hozircha popup yo'q</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto mb-4">
             Birinchi popup'ingizni yarating — mijoz Mini App'ga kirganda chegirma, e'lon yoki taklif ko'rsatiladi.
           </p>
           <button
             onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
           >
             <Plus className="w-4 h-4" />
             Birinchi popup yaratish
@@ -187,49 +187,49 @@ function PopupCard({
 }) {
   const ctr = popup.impressions > 0 ? Math.round((popup.clicks / popup.impressions) * 100) : 0;
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition-colors">
+    <div className="bg-white border border-cream-300 rounded-2xl p-4 hover:border-cream-300 transition-colors">
       <div className="flex items-start gap-3 mb-3">
         {popup.imageUrl ? (
           <img src={popup.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
         ) : (
-          <div className="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0">
-            <ImageIcon className="w-5 h-5 text-slate-600" />
+          <div className="w-14 h-14 rounded-xl bg-cream-100 flex items-center justify-center flex-shrink-0">
+            <ImageIcon className="w-5 h-5 text-slate-400" />
           </div>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-semibold text-white truncate flex-1">{popup.title}</h3>
+            <h3 className="text-sm font-semibold text-forest-800 truncate flex-1">{popup.title}</h3>
             <span
               className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                popup.active ? "bg-emerald-500/15 text-emerald-300" : "bg-slate-800 text-slate-500"
+                popup.active ? "bg-leaf-100 text-forest-700" : "bg-cream-100 text-slate-500"
               }`}
             >
               {popup.active ? "Faol" : "O'chirilgan"}
             </span>
           </div>
-          <p className="text-xs text-slate-400 line-clamp-2">{popup.body}</p>
+          <p className="text-xs text-slate-500 line-clamp-2">{popup.body}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] text-slate-500">
-            <span className="px-2 py-0.5 bg-slate-800 rounded">{KIND_LABEL[popup.kind]}</span>
-            <span className="px-2 py-0.5 bg-slate-800 rounded">{TRIGGER_LABEL[popup.trigger]}</span>
+            <span className="px-2 py-0.5 bg-cream-100 rounded">{KIND_LABEL[popup.kind]}</span>
+            <span className="px-2 py-0.5 bg-cream-100 rounded">{TRIGGER_LABEL[popup.trigger]}</span>
             {popup.priority > 0 && <span>P:{popup.priority}</span>}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-800 pt-3">
+      <div className="flex items-center justify-between border-t border-cream-300 pt-3">
         <div className="flex items-center gap-3 text-[11px] text-slate-500">
           <span>👁 {popup.impressions}</span>
           <span>🖱 {popup.clicks}</span>
           {popup.impressions > 0 && <span>CTR: {ctr}%</span>}
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onToggle} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800" title={popup.active ? "Yashirish" : "Yoqish"}>
+          <button onClick={onToggle} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100" title={popup.active ? "Yashirish" : "Yoqish"}>
             {popup.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
-          <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800" title="Tahrirlash">
+          <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100" title="Tahrirlash">
             <Edit2 className="w-4 h-4" />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10" title="O'chirish">
+          <button onClick={onDelete} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100" title="O'chirish">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -292,12 +292,12 @@ function PopupEditor({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4" onClick={onClose}>
       <div
-        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="bg-white border border-cream-300 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-white">{isEdit ? "Popup tahrirlash" : "Yangi popup"}</h2>
-          <button onClick={onClose} className="p-1 -mr-1 text-slate-400 hover:text-white">
+        <div className="sticky top-0 bg-white border-b border-cream-300 px-5 py-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-forest-800">{isEdit ? "Popup tahrirlash" : "Yangi popup"}</h2>
+          <button onClick={onClose} className="p-1 -mr-1 text-slate-500 hover:text-forest-900">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -336,7 +336,7 @@ function PopupEditor({
             />
           )}
 
-          <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-800">
+          <div className="grid grid-cols-3 gap-3 pt-2 border-t border-cream-300">
             <Field
               label="Maks. ko'rsatish (kishi/popup)"
               type="number"
@@ -362,23 +362,23 @@ function PopupEditor({
               type="checkbox"
               checked={form.active}
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500/50"
+              className="w-4 h-4 rounded bg-cream-100 border-cream-300 text-emerald-500 focus:ring-emerald-500/50"
             />
-            <span className="text-sm text-slate-200">Faol</span>
+            <span className="text-sm text-forest-700">Faol</span>
           </label>
         </div>
 
-        <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 py-3 flex gap-2">
+        <div className="sticky bottom-0 bg-white border-t border-cream-300 px-5 py-3 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 text-sm text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg font-medium"
+            className="flex-1 py-2.5 text-sm text-slate-700 bg-cream-100 hover:bg-cream-200 rounded-lg font-medium"
           >
             Bekor
           </button>
           <button
             onClick={save}
             disabled={saving}
-            className="flex-1 py-2.5 text-sm bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg font-semibold text-white flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg font-semibold text-forest-800 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isEdit ? "Saqlash" : "Yaratish"}
@@ -402,7 +402,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
       />
     </label>
   );
@@ -416,7 +416,7 @@ function FieldArea({ label, value, onChange }: { label: string; value: string; o
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={3}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
       />
     </label>
   );
@@ -434,7 +434,7 @@ function SelectField({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-3 pr-9 py-2 text-sm text-white appearance-none focus:outline-none focus:border-emerald-500/50"
+          className="w-full bg-cream-100 border border-cream-300 rounded-lg pl-3 pr-9 py-2 text-sm text-forest-800 appearance-none focus:outline-none focus:border-leaf-500/60"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>

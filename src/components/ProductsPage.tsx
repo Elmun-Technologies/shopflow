@@ -156,7 +156,7 @@ export default function ProductsPage() {
         className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6"
       >
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">{t("products.title")}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-forest-800">{t("products.title")}</h1>
           <p className="text-sm text-slate-500 mt-1">
             {total > 0 ? t("products.count", { count: total }) : t("products.subtitle")}
           </p>
@@ -164,7 +164,7 @@ export default function ProductsPage() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowImport(true)}
-            className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 whitespace-nowrap"
             title={t("products.import")}
           >
             <Upload className="w-4 h-4" />
@@ -172,13 +172,13 @@ export default function ProductsPage() {
           </button>
           <button
             onClick={() => setShowCategories(true)}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm text-white whitespace-nowrap"
+            className="px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 whitespace-nowrap"
           >
             <span className="hidden sm:inline">{t("products.categories")} </span>({cats.length})
           </button>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium text-white flex-shrink-0"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{t("products.newProduct")}</span>
@@ -197,7 +197,7 @@ export default function ProductsPage() {
               setPage(1);
             }}
             placeholder={t("products.searchPlaceholder")}
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+            className="w-full bg-white border border-cream-300 rounded-lg pl-10 pr-4 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
           />
         </label>
         <select
@@ -206,7 +206,7 @@ export default function ProductsPage() {
             setCategoryFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500/50 min-w-[180px]"
+          className="px-3 py-2.5 bg-white border border-cream-300 rounded-lg text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60 min-w-[180px]"
         >
           <option value="all">{t("products.allCategories")}</option>
           {cats.map((c) => (
@@ -220,7 +220,7 @@ export default function ProductsPage() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div key={i} className="bg-white border border-cream-300 rounded-xl p-4">
               <Skeleton className="w-full aspect-video mb-3" />
               <Skeleton className="h-2.5 w-16 mb-2" />
               <Skeleton className="h-4 w-full mb-2" />
@@ -233,20 +233,20 @@ export default function ProductsPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
-          <AlertCircle className="w-10 h-10 text-red-400 mb-2" />
-          <p className="text-sm text-slate-300">{error.message}</p>
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white border border-cream-300 rounded-xl">
+          <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+          <p className="text-sm text-slate-700">{error.message}</p>
           <button
             onClick={refetch}
-            className="mt-3 px-3 py-1.5 text-xs bg-slate-800 rounded-lg text-slate-300"
+            className="mt-3 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700"
           >
             {t("orders.retry")}
           </button>
         </div>
       ) : products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-slate-900 border border-slate-800 rounded-xl">
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white border border-cream-300 rounded-xl">
           <Package className="w-12 h-12 text-slate-700 mb-3" />
-          <p className="text-base font-semibold text-white">
+          <p className="text-base font-semibold text-forest-800">
             {search ? t("products.empty.search") : t("products.empty.none")}
           </p>
           <p className="text-sm text-slate-500 mt-1 max-w-md">
@@ -257,13 +257,13 @@ export default function ProductsPage() {
         <>
         {/* Bulk action toolbar — tanlangan mahsulotlar bo'lsa ko'rinadi */}
         {selected.size > 0 && (
-          <div className="sticky top-0 z-30 mb-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap backdrop-blur">
-            <span className="text-sm font-medium text-emerald-300">
+          <div className="sticky top-0 z-30 mb-3 bg-leaf-100 border border-leaf-400/50 rounded-xl px-3 py-2.5 flex items-center gap-2 flex-wrap backdrop-blur">
+            <span className="text-sm font-medium text-forest-700">
               {t("products.bulk.selected", { count: selected.size })}
             </span>
             <button
               onClick={selectAllOnPage}
-              className="text-xs text-emerald-400 hover:text-emerald-300 underline"
+              className="text-xs text-forest-700 hover:text-forest-700 underline"
             >
               {products.every((p) => selected.has(p.id)) ? t("products.bulk.deselectPage") : t("products.bulk.selectAllPage")}
             </button>
@@ -271,7 +271,7 @@ export default function ProductsPage() {
             <button
               onClick={() => handleBulkFeatured(true)}
               disabled={bulkBusy}
-              className="px-2.5 py-1 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+              className="px-2.5 py-1 bg-cream-100 hover:bg-amber-200 hover:text-amber-600 disabled:opacity-50 rounded-md text-xs text-forest-700 flex items-center gap-1"
               title={t("products.bulk.showcaseTitle")}
             >
               <Star className="w-3 h-3" />
@@ -280,7 +280,7 @@ export default function ProductsPage() {
             <button
               onClick={() => handleBulkActive(true)}
               disabled={bulkBusy}
-              className="px-2.5 py-1 bg-slate-800 hover:bg-emerald-500/20 hover:text-emerald-300 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+              className="px-2.5 py-1 bg-cream-100 hover:bg-leaf-200 hover:text-forest-700 disabled:opacity-50 rounded-md text-xs text-forest-700 flex items-center gap-1"
             >
               <Eye className="w-3 h-3" />
               {t("products.bulk.enable")}
@@ -288,7 +288,7 @@ export default function ProductsPage() {
             <button
               onClick={() => handleBulkActive(false)}
               disabled={bulkBusy}
-              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+              className="px-2.5 py-1 bg-cream-100 hover:bg-cream-200 disabled:opacity-50 rounded-md text-xs text-forest-700 flex items-center gap-1"
             >
               <EyeOff className="w-3 h-3" />
               {t("products.bulk.disable")}
@@ -297,7 +297,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => setBulkCategoryOpen(!bulkCategoryOpen)}
                 disabled={bulkBusy}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-md text-xs text-slate-200 flex items-center gap-1"
+                className="px-2.5 py-1 bg-cream-100 hover:bg-cream-200 disabled:opacity-50 rounded-md text-xs text-forest-700 flex items-center gap-1"
               >
                 <Tag className="w-3 h-3" />
                 {t("products.bulk.category")}
@@ -305,10 +305,10 @@ export default function ProductsPage() {
               {bulkCategoryOpen && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setBulkCategoryOpen(false)} />
-                  <div className="absolute top-full right-0 mt-1 z-30 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px] max-h-60 overflow-y-auto">
+                  <div className="absolute top-full right-0 mt-1 z-30 bg-cream-100 border border-cream-300 rounded-lg shadow-xl py-1 min-w-[180px] max-h-60 overflow-y-auto">
                     <button
                       onClick={() => handleBulkCategory(null)}
-                      className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700"
+                      className="w-full text-left px-3 py-1.5 text-xs text-slate-500 hover:bg-cream-200"
                     >
                       {t("products.bulk.noCategory")}
                     </button>
@@ -316,7 +316,7 @@ export default function ProductsPage() {
                       <button
                         key={c.id}
                         onClick={() => handleBulkCategory(c.id)}
-                        className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-slate-700"
+                        className="w-full text-left px-3 py-1.5 text-xs text-forest-800 hover:bg-cream-200"
                       >
                         {c.name}
                       </button>
@@ -328,14 +328,14 @@ export default function ProductsPage() {
             <button
               onClick={handleBulkDelete}
               disabled={bulkBusy}
-              className="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
+              className="px-2.5 py-1 bg-rose-200 hover:bg-rose-200 text-rose-600 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               {t("products.bulk.delete")}
             </button>
             <button
               onClick={clearSelection}
-              className="ml-1 p-1 text-emerald-400 hover:text-emerald-300"
+              className="ml-1 p-1 text-forest-700 hover:text-forest-700"
               aria-label={t("products.bulk.clearSelection")}
             >
               <X className="w-4 h-4" />
@@ -367,14 +367,14 @@ export default function ProductsPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+              className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
             >
               {t("orders.prev")}
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page * pageSize >= total}
-              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30"
+              className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
             >
               {t("orders.next")}
             </button>
@@ -438,29 +438,29 @@ function ProductCard({
 }) {
   const { t } = useT();
   return (
-    <div className={`bg-slate-900 border rounded-xl p-4 transition-colors group ${
-      selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-slate-800 hover:border-slate-700"
+    <div className={`bg-white border rounded-xl p-4 transition-colors group ${
+      selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-cream-300 hover:border-cream-300"
     }`}>
-      <div className="w-full aspect-video bg-slate-800 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
+      <div className="w-full aspect-video bg-cream-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
         {product.imageUrl ? (
           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
         ) : (
-          <Package className="w-8 h-8 text-slate-600" />
+          <Package className="w-8 h-8 text-slate-400" />
         )}
         {/* Tanlash chexbox — hover'da yoki tanlangan bo'lsa ko'rinadi */}
         <button
           onClick={onToggleSelect}
           className={`absolute top-2 left-2 w-6 h-6 rounded-md flex items-center justify-center transition-all ${
             selected
-              ? "bg-emerald-500 text-white"
-              : "bg-slate-900/80 backdrop-blur text-slate-400 opacity-0 group-hover:opacity-100"
+              ? "bg-leaf-400 text-forest-800"
+              : "bg-white/80 backdrop-blur text-slate-500 opacity-0 group-hover:opacity-100"
           }`}
           aria-label={selected ? t("products.card.deselect") : t("products.card.select")}
         >
           {selected ? <Check className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
         </button>
         {product.featured && (
-          <span className="absolute top-2 left-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur text-amber-300 text-[10px] font-medium">
+          <span className="absolute top-2 left-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-200 backdrop-blur text-amber-600 text-[10px] font-medium">
             <Star className="w-3 h-3 fill-amber-300" />
             {t("products.card.featured")}
           </span>
@@ -468,14 +468,14 @@ function ProductCard({
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
-            className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-white"
+            className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900"
             title={t("products.card.edit")}
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded-md bg-slate-900/80 backdrop-blur text-slate-300 hover:text-red-400"
+            className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-rose-600"
             title={t("products.card.delete")}
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -483,11 +483,11 @@ function ProductCard({
         </div>
       </div>
       <p className="text-xs text-slate-500 uppercase tracking-wider">{product.sku}</p>
-      <p className="text-sm font-semibold text-white truncate mt-0.5">{product.name}</p>
+      <p className="text-sm font-semibold text-forest-800 truncate mt-0.5">{product.name}</p>
       <p className="text-xs text-slate-500 mt-1">{product.category?.name ?? t("products.card.uncategorized")}</p>
       <div className="flex items-center justify-between mt-3">
         <div>
-          <span className="text-base font-bold text-white">
+          <span className="text-base font-bold text-forest-800">
             {formatCurrency(Number(product.price), product.currency || currency)}
           </span>
           {product.oldPrice && Number(product.oldPrice) > Number(product.price) && (
@@ -498,7 +498,7 @@ function ProductCard({
         </div>
         <span
           className={`text-xs px-2 py-0.5 rounded-md ${
-            product.stock > 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+            product.stock > 0 ? "bg-leaf-100 text-forest-700" : "bg-rose-100 text-rose-600"
           }`}
         >
           {t("products.card.stock", { n: product.stock })}
@@ -720,16 +720,16 @@ function ProductFormModal({
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
+        className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
       >
-        <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
-          <h2 className="text-lg font-bold text-white">
+        <div className="flex items-center justify-between p-5 border-b border-cream-300 sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-bold text-forest-800">
             {product ? t("productForm.edit") : t("productForm.new")}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+            className="p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100"
           >
             <X className="w-5 h-5" />
           </button>
@@ -840,19 +840,19 @@ function ProductFormModal({
             {comboAddons.length > 0 && (
               <div className="space-y-2 mb-2">
                 {comboAddons.map((addon, i) => (
-                  <div key={addon.addonProductId} className="flex items-center gap-2 bg-slate-800/50 border border-slate-800 rounded-lg p-2">
+                  <div key={addon.addonProductId} className="flex items-center gap-2 bg-cream-100/50 border border-cream-300 rounded-lg p-2">
                     {addon.productImage ? (
                       <img src={addon.productImage} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center flex-shrink-0">
-                        <Package className="w-4 h-4 text-slate-600" />
+                      <div className="w-10 h-10 rounded bg-cream-100 flex items-center justify-center flex-shrink-0">
+                        <Package className="w-4 h-4 text-slate-400" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-white truncate">{addon.productName}</div>
+                      <div className="text-xs text-forest-800 truncate">{addon.productName}</div>
                       <div className="text-[10px] text-slate-500">{Number(addon.productPrice ?? 0).toLocaleString("uz-UZ")} so'm</div>
                     </div>
-                    <label className="flex items-center gap-1 text-[10px] text-slate-400">
+                    <label className="flex items-center gap-1 text-[10px] text-slate-500">
                       <input
                         type="number"
                         value={addon.discountPct}
@@ -862,11 +862,11 @@ function ProductFormModal({
                         }}
                         min={0}
                         max={100}
-                        className="w-12 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-xs text-white text-center"
+                        className="w-12 bg-white border border-cream-300 rounded px-1 py-0.5 text-xs text-forest-800 text-center"
                       />
                       <span>%</span>
                     </label>
-                    <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer">
+                    <label className="flex items-center gap-1 text-[10px] text-slate-500 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={addon.defaultSelected}
@@ -881,7 +881,7 @@ function ProductFormModal({
                     <button
                       type="button"
                       onClick={() => setComboAddons((prev) => prev.filter((_, j) => j !== i))}
-                      className="text-slate-500 hover:text-rose-400 p-1"
+                      className="text-slate-500 hover:text-rose-600 p-1"
                       aria-label="O'chirish"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -893,7 +893,7 @@ function ProductFormModal({
             <button
               type="button"
               onClick={() => setComboPickerOpen(true)}
-              className="w-full py-2 border-2 border-dashed border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 rounded-lg text-xs text-slate-400 hover:text-emerald-300 transition-colors flex items-center justify-center gap-1"
+              className="w-full py-2 border-2 border-dashed border-cream-300 hover:border-emerald-500/50 hover:bg-leaf-400/5 rounded-lg text-xs text-slate-500 hover:text-forest-700 transition-colors flex items-center justify-center gap-1"
             >
               <Plus className="w-3.5 h-3.5" />
               Qo'shimcha mahsulot qo'shish
@@ -911,19 +911,19 @@ function ProductFormModal({
             );
             return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4" onClick={() => setComboPickerOpen(false)}>
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="sticky top-0 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Mahsulot qo'shish</h3>
-                  <button type="button" onClick={() => setComboPickerOpen(false)} className="p-1 text-slate-400 hover:text-white">
+              <div className="bg-white border border-cream-300 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="sticky top-0 bg-white border-b border-cream-300 px-4 py-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-forest-800">Mahsulot qo'shish</h3>
+                  <button type="button" onClick={() => setComboPickerOpen(false)} className="p-1 text-slate-500 hover:text-forest-900">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 {available.length === 0 ? (
                   <div className="px-6 py-10 flex flex-col items-center gap-3 text-center">
-                    <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-cream-100 flex items-center justify-center">
                       <Package className="w-7 h-7 text-slate-500" />
                     </div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-forest-800">
                       {productsCatalog.length === 0
                         ? "Hali boshqa mahsulotlar yo'q"
                         : "Hamma mahsulotlar allaqachon qo'shilgan"}
@@ -936,7 +936,7 @@ function ProductFormModal({
                     <button
                       type="button"
                       onClick={() => setComboPickerOpen(false)}
-                      className="mt-1 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs text-slate-300"
+                      className="mt-1 px-4 py-1.5 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-slate-700"
                     >
                       Tushunarli
                     </button>
@@ -959,20 +959,20 @@ function ProductFormModal({
                         }]);
                         setComboPickerOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800/60 text-left"
+                      className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-cream-100/60 text-left"
                     >
                       {p.imageUrl ? (
                         <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover" />
                       ) : (
-                        <div className="w-9 h-9 rounded bg-slate-800 flex items-center justify-center">
-                          <Package className="w-4 h-4 text-slate-600" />
+                        <div className="w-9 h-9 rounded bg-cream-100 flex items-center justify-center">
+                          <Package className="w-4 h-4 text-slate-400" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-white truncate">{p.name}</div>
+                        <div className="text-xs text-forest-800 truncate">{p.name}</div>
                         <div className="text-[10px] text-slate-500">{p.sku} · {Number(p.price).toLocaleString("uz-UZ")} so'm</div>
                       </div>
-                      <Plus className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <Plus className="w-4 h-4 text-forest-700 flex-shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -988,9 +988,9 @@ function ProductFormModal({
                 type="checkbox"
                 checked={featured}
                 onChange={(e) => setFeatured(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-slate-600 bg-cream-100 text-emerald-500 focus:ring-emerald-500"
               />
-              <span className="text-sm text-slate-300">
+              <span className="text-sm text-slate-700">
                 {t("productForm.featured")}
               </span>
             </label>
@@ -999,53 +999,53 @@ function ProductFormModal({
                 type="checkbox"
                 checked={active}
                 onChange={(e) => setActive(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-slate-600 bg-cream-100 text-emerald-500 focus:ring-emerald-500"
               />
-              <span className="text-sm text-slate-300">{t("productForm.active")}</span>
+              <span className="text-sm text-slate-700">{t("productForm.active")}</span>
             </label>
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="flex items-start gap-2 p-3 bg-rose-100 border border-rose-300 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-rose-600">{error}</p>
             </div>
           )}
         </div>
 
         {/* Success overlay — yaratish/saqlashdan keyin */}
         {success && (
-          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center z-20 rounded-2xl">
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center z-20 rounded-2xl">
             <div className="flex flex-col items-center gap-3 px-6 py-8">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center animate-in zoom-in duration-300">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+              <div className="w-16 h-16 rounded-full bg-leaf-200 flex items-center justify-center animate-in zoom-in duration-300">
+                <CheckCircle2 className="w-10 h-10 text-forest-700" />
               </div>
-              <p className="text-base font-semibold text-white">{success}</p>
-              {name && <p className="text-sm text-slate-400">{name}</p>}
+              <p className="text-base font-semibold text-forest-800">{success}</p>
+              {name && <p className="text-sm text-slate-500">{name}</p>}
             </div>
           </div>
         )}
 
         {/* Image upload toast — yuqori o'ngda */}
         {imageToast && (
-          <div className="fixed top-6 right-6 z-[90] flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-lg shadow-2xl animate-in slide-in-from-right duration-200">
+          <div className="fixed top-6 right-6 z-[90] flex items-center gap-2 px-4 py-2.5 bg-leaf-400 text-forest-800 rounded-lg shadow-2xl animate-in slide-in-from-right duration-200">
             <CheckCircle2 className="w-4 h-4" />
             <span className="text-sm font-medium">{imageToast}</span>
           </div>
         )}
 
-        <div className="flex items-center gap-2 justify-end p-5 border-t border-slate-800 sticky bottom-0 bg-slate-900">
+        <div className="flex items-center gap-2 justify-end p-5 border-t border-cream-300 sticky bottom-0 bg-white">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-slate-400 hover:text-white"
+            className="px-4 py-2 text-sm text-slate-500 hover:text-forest-900"
           >
             {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+            className="flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {product ? t("common.save") : t("productForm.create")}
@@ -1152,41 +1152,41 @@ function CategoriesModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
+        className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between p-5 border-b border-slate-800">
-          <h2 className="text-lg font-bold text-white">{t("categoriesModal.title")}</h2>
+        <div className="flex items-center justify-between p-5 border-b border-cream-300">
+          <h2 className="text-lg font-bold text-forest-800">{t("categoriesModal.title")}</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+            className="p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleAdd} className="p-5 border-b border-slate-800 space-y-2">
+        <form onSubmit={handleAdd} className="p-5 border-b border-cream-300 space-y-2">
           <input
             type="text"
             required
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder={t("categoriesModal.newName")}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
           />
           <input
             type="text"
             value={newSlug}
             onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
             placeholder={t("categoriesModal.slug")}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
           />
           <label
             className={`flex items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
               uploading
-                ? "border-emerald-500/50 bg-emerald-500/5"
+                ? "border-emerald-500/50 bg-leaf-400/5"
                 : newImageUrl
-                  ? "border-slate-700"
-                  : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+                  ? "border-cream-300"
+                  : "border-cream-300 hover:border-slate-500 bg-cream-100/30"
             }`}
           >
             <input
@@ -1201,14 +1201,14 @@ function CategoriesModal({
               }}
             />
             {uploading ? (
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-forest-700">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 Yuklanmoqda...
               </div>
             ) : newImageUrl ? (
               <div className="flex items-center gap-2">
                 <img src={newImageUrl} alt="preview" className="w-12 h-12 rounded object-cover" />
-                <span className="text-xs text-slate-400">Rasmni o'zgartirish</span>
+                <span className="text-xs text-slate-500">Rasmni o'zgartirish</span>
               </div>
             ) : (
               <span className="text-xs text-slate-500">Rasm yuklash (ixtiyoriy)</span>
@@ -1218,16 +1218,16 @@ function CategoriesModal({
             <button
               type="button"
               onClick={() => setNewImageUrl("")}
-              className="text-[11px] text-red-400 hover:text-red-300"
+              className="text-[11px] text-rose-600 hover:text-red-300"
             >
               Rasmni olib tashlash
             </button>
           )}
-          {uploadError && <p className="text-[11px] text-red-400">{uploadError}</p>}
+          {uploadError && <p className="text-[11px] text-rose-600">{uploadError}</p>}
           <button
             type="submit"
             disabled={saving || uploading || !newName.trim()}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <Plus className="w-3.5 h-3.5" />
@@ -1242,7 +1242,7 @@ function CategoriesModal({
             categories.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 rounded-lg"
+                className="flex items-center gap-3 px-3 py-2 hover:bg-cream-100 rounded-lg"
               >
                 {c.imageUrl ? (
                   <img
@@ -1251,17 +1251,17 @@ function CategoriesModal({
                     className="w-10 h-10 rounded object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center flex-shrink-0">
-                    <Package className="w-4 h-4 text-slate-600" />
+                  <div className="w-10 h-10 rounded bg-cream-100 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-4 h-4 text-slate-400" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white truncate">{c.name}</p>
+                  <p className="text-sm text-forest-800 truncate">{c.name}</p>
                   <p className="text-xs text-slate-500 truncate">{c.slug}</p>
                 </div>
                 <button
                   onClick={() => handleDelete(c)}
-                  className="p-1.5 rounded text-slate-500 hover:text-red-400 flex-shrink-0"
+                  className="p-1.5 rounded text-slate-500 hover:text-rose-600 flex-shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -1277,7 +1277,7 @@ function CategoriesModal({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-slate-500 mb-1.5">{label}</label>
       {children}
     </div>
   );
@@ -1337,10 +1337,10 @@ function ImageGallery({
           onDrop={handleFileDrop}
           className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
             uploading
-              ? "border-emerald-500/50 bg-emerald-500/5"
+              ? "border-emerald-500/50 bg-leaf-400/5"
               : dropZoneActive
-                ? "border-emerald-500 bg-emerald-500/10"
-                : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+                ? "border-emerald-500 bg-leaf-100"
+                : "border-cream-300 hover:border-slate-500 bg-cream-100/30"
           }`}
         >
           <input
@@ -1356,13 +1356,13 @@ function ImageGallery({
           />
           {uploading ? (
             <div className="flex flex-col items-center gap-2">
-              <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
-              <span className="text-xs text-emerald-400">Yuklanmoqda...</span>
+              <Loader2 className="w-6 h-6 text-forest-700 animate-spin" />
+              <span className="text-xs text-forest-700">Yuklanmoqda...</span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <ImagePlus className="w-10 h-10 text-slate-500" />
-              <span className="text-sm font-medium text-slate-300">
+              <span className="text-sm font-medium text-slate-700">
                 Rasmlarni bu yerga sudrab tashlang yoki tanlang
               </span>
               <span className="text-[11px] text-slate-500">
@@ -1410,7 +1410,7 @@ function ImageGallery({
                 }
               }}
               onDragEnd={onDragEnd}
-              className={`relative group ${isCover ? "col-span-2 row-span-2 aspect-[4/3]" : "aspect-square"} bg-slate-800 rounded-lg overflow-hidden cursor-move transition-all ${
+              className={`relative group ${isCover ? "col-span-2 row-span-2 aspect-[4/3]" : "aspect-square"} bg-cream-100 rounded-lg overflow-hidden cursor-move transition-all ${
                 isDragSource ? "opacity-40" : ""
               } ${isDragTarget ? "ring-2 ring-emerald-500" : ""}`}
             >
@@ -1418,14 +1418,14 @@ function ImageGallery({
 
               {/* Asosiy belgisi */}
               {isCover && (
-                <div className="absolute top-2 left-2 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded shadow-lg">
+                <div className="absolute top-2 left-2 px-2 py-0.5 bg-leaf-400 text-forest-800 text-[10px] font-bold rounded shadow-lg">
                   ASOSIY
                 </div>
               )}
 
               {/* Tartib raqami (cover'dan tashqari) */}
               {!isCover && (
-                <div className="absolute top-1 left-1 w-5 h-5 bg-black/70 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+                <div className="absolute top-1 left-1 w-5 h-5 bg-black/70 text-forest-800 text-[10px] font-medium rounded-full flex items-center justify-center">
                   {i + 1}
                 </div>
               )}
@@ -1437,7 +1437,7 @@ function ImageGallery({
                     <button
                       type="button"
                       onClick={() => onMakeCover(i)}
-                      className="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 rounded text-[10px] font-medium text-white shadow"
+                      className="px-2 py-1 bg-leaf-400 hover:bg-leaf-500 rounded text-[10px] font-medium text-forest-800 shadow"
                       title="Asosiy qilish"
                     >
                       <Star className="w-3 h-3 inline mr-0.5" />
@@ -1447,7 +1447,7 @@ function ImageGallery({
                   <button
                     type="button"
                     onClick={() => onRemove(i)}
-                    className="w-7 h-7 bg-rose-500 hover:bg-rose-600 rounded flex items-center justify-center text-white shadow"
+                    className="w-7 h-7 bg-rose-500 hover:bg-rose-600 rounded flex items-center justify-center text-forest-800 shadow"
                     title="O'chirish"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1470,8 +1470,8 @@ function ImageGallery({
             onDrop={handleFileDrop}
             className={`aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
               dropZoneActive
-                ? "border-emerald-500 bg-emerald-500/10"
-                : "border-slate-700 hover:border-slate-500 bg-slate-800/30"
+                ? "border-emerald-500 bg-leaf-100"
+                : "border-cream-300 hover:border-slate-500 bg-cream-100/30"
             }`}
           >
             <input
@@ -1491,14 +1491,14 @@ function ImageGallery({
 
         {/* Yuklash holatida overlay */}
         {uploading && (
-          <div className="aspect-square flex items-center justify-center border-2 border-dashed border-emerald-500/50 rounded-lg bg-emerald-500/5">
-            <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
+          <div className="aspect-square flex items-center justify-center border-2 border-dashed border-emerald-500/50 rounded-lg bg-leaf-400/5">
+            <Loader2 className="w-5 h-5 text-forest-700 animate-spin" />
           </div>
         )}
       </div>
 
       <p className="text-[11px] text-slate-500 mt-2">
-        💡 <span className="text-slate-400">Birinchi rasm — asosiy</span> · rasmni sudrab tartibini o'zgartiring · hover qilib ⭐ "Asosiy" yoki 🗑 "O'chirish" tanlang
+        💡 <span className="text-slate-500">Birinchi rasm — asosiy</span> · rasmni sudrab tartibini o'zgartiring · hover qilib ⭐ "Asosiy" yoki 🗑 "O'chirish" tanlang
       </p>
     </Field>
   );

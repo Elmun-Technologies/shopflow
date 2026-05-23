@@ -65,7 +65,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           onClick={() => closeWith(false)}
         >
           <div
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-xl"
+            className="bg-white border border-cream-300 rounded-2xl p-5 max-w-sm w-full shadow-xl"
             onClick={(e) => e.stopPropagation()}
             role="alertdialog"
             aria-labelledby="confirm-title"
@@ -73,23 +73,23 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <div className="flex items-start gap-3 mb-4">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  isDanger ? "bg-rose-500/15 text-rose-400" : "bg-blue-500/15 text-blue-400"
+                  isDanger ? "bg-rose-100 text-rose-600" : "bg-sky-100 text-sky-600"
                 }`}
               >
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 id="confirm-title" className="text-base font-semibold text-white">
+                <h3 id="confirm-title" className="text-base font-semibold text-forest-800">
                   {active.opts.title}
                 </h3>
                 {active.opts.description && (
-                  <p className="text-sm text-slate-400 mt-1">{active.opts.description}</p>
+                  <p className="text-sm text-slate-500 mt-1">{active.opts.description}</p>
                 )}
               </div>
               <button
                 onClick={() => closeWith(false)}
                 aria-label="Yopish"
-                className="p-1 -mr-1 text-slate-500 hover:text-white"
+                className="p-1 -mr-1 text-slate-500 hover:text-forest-900"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -97,15 +97,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <div className="flex gap-2">
               <button
                 onClick={() => closeWith(false)}
-                className="flex-1 px-4 py-2.5 text-sm text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg font-medium transition-colors"
+                className="flex-1 px-4 py-2.5 text-sm text-slate-700 bg-cream-100 hover:bg-cream-200 rounded-lg font-medium transition-colors"
               >
                 {active.opts.cancelText ?? "Bekor"}
               </button>
               <button
                 onClick={() => closeWith(true)}
                 autoFocus
-                className={`flex-1 px-4 py-2.5 text-sm rounded-lg font-semibold transition-colors text-white ${
-                  isDanger ? "bg-rose-500 hover:bg-rose-600" : "bg-emerald-500 hover:bg-emerald-600"
+                className={`flex-1 px-4 py-2.5 text-sm rounded-lg font-semibold transition-colors text-forest-800 ${
+                  isDanger ? "bg-rose-500 hover:bg-rose-600" : "bg-leaf-400 hover:bg-leaf-500"
                 }`}
               >
                 {active.opts.confirmText ?? "Tasdiqlash"}

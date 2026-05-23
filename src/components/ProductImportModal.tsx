@@ -189,13 +189,13 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
   if (showDone) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={onClose}>
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 flex items-center justify-center mb-3">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-leaf-200 flex items-center justify-center mb-3">
+              <CheckCircle2 className="w-10 h-10 text-forest-700" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">{t("import.doneTitle")}</h3>
-            <p className="text-sm text-slate-400 mb-4">
+            <h3 className="text-lg font-bold text-forest-800 mb-1">{t("import.doneTitle")}</h3>
+            <p className="text-sm text-slate-500 mb-4">
               {t("import.doneSummary", {
                 ok: progress.done - progress.failed,
                 total: progress.total,
@@ -204,7 +204,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
             </p>
             <button
               onClick={() => { onDone(); onClose(); }}
-              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-semibold text-white"
+              className="w-full py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-semibold text-forest-800"
             >
               {t("common.close")}
             </button>
@@ -216,17 +216,17 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800 flex-shrink-0">
+        <div className="flex items-center justify-between p-5 border-b border-cream-300 flex-shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Upload className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-lg font-bold text-forest-800 flex items-center gap-2">
+              <Upload className="w-5 h-5 text-forest-700" />
               {t("import.title")}
             </h2>
             <p className="text-xs text-slate-500 mt-1">{t("import.subtitle")}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800">
+          <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -235,18 +235,18 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
           {!parsed.length ? (
             <>
               {/* Yo'riqnoma */}
-              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-4 space-y-2">
-                <p className="text-sm font-semibold text-white flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-400" />
+              <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-4 space-y-2">
+                <p className="text-sm font-semibold text-forest-800 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-forest-700" />
                   {t("import.format")}
                 </p>
-                <p className="text-xs text-slate-400 leading-relaxed">{t("import.formatHint")}</p>
-                <code className="block text-[11px] text-slate-300 bg-slate-900 rounded px-2 py-1.5 mt-2 font-mono">
+                <p className="text-xs text-slate-500 leading-relaxed">{t("import.formatHint")}</p>
+                <code className="block text-[11px] text-slate-700 bg-white rounded px-2 py-1.5 mt-2 font-mono">
                   sku, name, description, price, oldPrice, stock, category
                 </code>
                 <button
                   onClick={downloadSample}
-                  className="text-xs font-medium text-emerald-400 hover:text-emerald-300 flex items-center gap-1 mt-2"
+                  className="text-xs font-medium text-forest-700 hover:text-forest-700 flex items-center gap-1 mt-2"
                 >
                   <Download className="w-3 h-3" />
                   {t("import.downloadSample")}
@@ -256,14 +256,14 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
               {/* File upload */}
               <div>
                 <label className="block">
-                  <span className="text-xs text-slate-400 mb-1.5 block">{t("import.fromFile")}</span>
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 border border-slate-700 border-dashed rounded-lg cursor-pointer hover:border-emerald-500/50 transition-colors">
+                  <span className="text-xs text-slate-500 mb-1.5 block">{t("import.fromFile")}</span>
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-cream-100 border border-cream-300 border-dashed rounded-lg cursor-pointer hover:border-emerald-500/50 transition-colors">
                     <Upload className="w-4 h-4 text-slate-500" />
                     <input
                       type="file"
                       accept=".csv,.txt,.tsv"
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); }}
-                      className="flex-1 text-sm text-white file:hidden bg-transparent focus:outline-none"
+                      className="flex-1 text-sm text-forest-800 file:hidden bg-transparent focus:outline-none"
                     />
                   </div>
                 </label>
@@ -272,13 +272,13 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
               {/* Paste area */}
               <div>
                 <label className="block">
-                  <span className="text-xs text-slate-400 mb-1.5 block">{t("import.orPaste")}</span>
+                  <span className="text-xs text-slate-500 mb-1.5 block">{t("import.orPaste")}</span>
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     rows={8}
                     placeholder={SAMPLE_CSV}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 font-mono resize-none"
+                    className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 font-mono resize-none"
                   />
                 </label>
               </div>
@@ -287,40 +287,40 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
             <>
               {/* Tahlil natijasi */}
               <div className="grid grid-cols-3 gap-3">
-                <Stat label={t("import.stat.total")} value={parsed.length} color="text-white" />
-                <Stat label={t("import.stat.valid")} value={validRows.length} color="text-emerald-400" />
-                <Stat label={t("import.stat.invalid")} value={invalidRows.length} color="text-rose-400" />
+                <Stat label={t("import.stat.total")} value={parsed.length} color="text-forest-800" />
+                <Stat label={t("import.stat.valid")} value={validRows.length} color="text-forest-700" />
+                <Stat label={t("import.stat.invalid")} value={invalidRows.length} color="text-rose-600" />
               </div>
 
               {/* Preview table */}
-              <div className="border border-slate-800 rounded-lg overflow-hidden">
+              <div className="border border-cream-300 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-80">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-800/50 sticky top-0">
+                    <thead className="bg-cream-100/50 sticky top-0">
                       <tr>
-                        <th className="text-left py-2 px-2 text-slate-400 font-medium">#</th>
-                        <th className="text-left py-2 px-2 text-slate-400 font-medium">SKU</th>
-                        <th className="text-left py-2 px-2 text-slate-400 font-medium">{t("import.col.name")}</th>
-                        <th className="text-right py-2 px-2 text-slate-400 font-medium">{t("import.col.price")}</th>
-                        <th className="text-right py-2 px-2 text-slate-400 font-medium">{t("import.col.stock")}</th>
-                        <th className="text-left py-2 px-2 text-slate-400 font-medium">{t("import.col.category")}</th>
-                        <th className="text-left py-2 px-2 text-slate-400 font-medium">{t("import.col.status")}</th>
+                        <th className="text-left py-2 px-2 text-slate-500 font-medium">#</th>
+                        <th className="text-left py-2 px-2 text-slate-500 font-medium">SKU</th>
+                        <th className="text-left py-2 px-2 text-slate-500 font-medium">{t("import.col.name")}</th>
+                        <th className="text-right py-2 px-2 text-slate-500 font-medium">{t("import.col.price")}</th>
+                        <th className="text-right py-2 px-2 text-slate-500 font-medium">{t("import.col.stock")}</th>
+                        <th className="text-left py-2 px-2 text-slate-500 font-medium">{t("import.col.category")}</th>
+                        <th className="text-left py-2 px-2 text-slate-500 font-medium">{t("import.col.status")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {parsed.map((row) => (
-                        <tr key={row.rowNum} className={`border-t border-slate-800/50 ${row.errors.length > 0 ? "bg-rose-500/5" : ""}`}>
+                        <tr key={row.rowNum} className={`border-t border-cream-300/50 ${row.errors.length > 0 ? "bg-rose-500/5" : ""}`}>
                           <td className="py-1.5 px-2 text-slate-500">{row.rowNum}</td>
-                          <td className="py-1.5 px-2 text-white font-mono">{row.sku || "—"}</td>
-                          <td className="py-1.5 px-2 text-white truncate max-w-[180px]">{row.name || "—"}</td>
-                          <td className="py-1.5 px-2 text-right text-slate-300">{row.price ? row.price.toLocaleString() : "—"}</td>
-                          <td className="py-1.5 px-2 text-right text-slate-300">{row.stock}</td>
-                          <td className="py-1.5 px-2 text-slate-400">{row.categoryName || "—"}</td>
+                          <td className="py-1.5 px-2 text-forest-800 font-mono">{row.sku || "—"}</td>
+                          <td className="py-1.5 px-2 text-forest-800 truncate max-w-[180px]">{row.name || "—"}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-700">{row.price ? row.price.toLocaleString() : "—"}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-700">{row.stock}</td>
+                          <td className="py-1.5 px-2 text-slate-500">{row.categoryName || "—"}</td>
                           <td className="py-1.5 px-2">
                             {row.errors.length === 0 ? (
-                              <span className="text-emerald-400 text-[10px] font-medium">OK</span>
+                              <span className="text-forest-700 text-[10px] font-medium">OK</span>
                             ) : (
-                              <span className="text-rose-400 text-[10px] font-medium" title={row.errors.join(", ")}>
+                              <span className="text-rose-600 text-[10px] font-medium" title={row.errors.join(", ")}>
                                 ✗ {row.errors.join(", ")}
                               </span>
                             )}
@@ -334,17 +334,17 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
 
               {/* Progress */}
               {importing && (
-                <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-3">
-                  <div className="flex items-center justify-between text-xs text-slate-300 mb-1.5">
+                <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
+                  <div className="flex items-center justify-between text-xs text-slate-700 mb-1.5">
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {t("import.progressLabel")}
                     </span>
                     <span>{progress.done} / {progress.total}</span>
                   </div>
-                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-cream-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 transition-all"
+                      className="h-full bg-leaf-400 transition-all"
                       style={{ width: `${(progress.done / progress.total) * 100}%` }}
                     />
                   </div>
@@ -355,25 +355,25 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 justify-between p-4 border-t border-slate-800 flex-shrink-0">
+        <div className="flex items-center gap-2 justify-between p-4 border-t border-cream-300 flex-shrink-0">
           {parsed.length > 0 && (
             <button
               onClick={() => setText("")}
               disabled={importing}
-              className="px-3 py-2 text-sm text-slate-400 hover:text-white disabled:opacity-50"
+              className="px-3 py-2 text-sm text-slate-500 hover:text-forest-900 disabled:opacity-50"
             >
               ← {t("import.startOver")}
             </button>
           )}
           <div className="flex items-center gap-2 ml-auto">
-            <button onClick={onClose} disabled={importing} className="px-4 py-2 text-sm text-slate-400 hover:text-white disabled:opacity-50">
+            <button onClick={onClose} disabled={importing} className="px-4 py-2 text-sm text-slate-500 hover:text-forest-900 disabled:opacity-50">
               {t("common.cancel")}
             </button>
             {parsed.length > 0 && (
               <button
                 onClick={handleImport}
                 disabled={importing || validRows.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg text-sm font-semibold text-white"
+                className="flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-forest-800"
               >
                 {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {t("import.submit", { n: validRows.length })}
@@ -383,7 +383,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
         </div>
 
         {invalidRows.length > 0 && !importing && (
-          <div className="px-5 pb-3 -mt-2 flex items-center gap-1.5 text-[11px] text-amber-300">
+          <div className="px-5 pb-3 -mt-2 flex items-center gap-1.5 text-[11px] text-amber-600">
             <AlertCircle className="w-3 h-3" />
             {t("import.invalidWarning", { n: invalidRows.length })}
           </div>
@@ -395,7 +395,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
 
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="bg-slate-800/40 border border-slate-800 rounded-lg p-3">
+    <div className="bg-cream-100/40 border border-cream-300 rounded-lg p-3">
       <div className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</div>
       <div className={`text-xl font-bold mt-0.5 ${color}`}>{value}</div>
     </div>
