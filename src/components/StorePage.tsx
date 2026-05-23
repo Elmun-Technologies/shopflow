@@ -730,23 +730,23 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- LOADING ----
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950">
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
         {/* Header skeleton */}
         <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-800 animate-pulse" />
-          <div className="flex-1 space-y-1.5">
-            <div className="h-3 bg-slate-800 rounded-full w-1/2 animate-pulse" />
-            <div className="h-2.5 bg-slate-800 rounded-full w-1/3 animate-pulse" />
+          <div className="animate-pulse rounded-xl flex-shrink-0" style={{ width: 34, height: 34, backgroundColor: "#1e1e2a" }} />
+          <div className="flex-1 space-y-2">
+            <div className="animate-pulse rounded-full w-1/2" style={{ height: 12, backgroundColor: "#1e1e2a" }} />
+            <div className="animate-pulse rounded-full w-1/3" style={{ height: 10, backgroundColor: "#1e1e2a" }} />
           </div>
+          <div className="animate-pulse rounded-xl" style={{ width: 34, height: 34, backgroundColor: "#1e1e2a" }} />
         </div>
         {/* Category chips skeleton */}
-        <div className="px-3 py-2 flex gap-2 overflow-hidden">
+        <div className="px-4 pb-3 flex gap-2 overflow-hidden">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-7 bg-slate-800 rounded-lg animate-pulse flex-shrink-0" style={{ width: 60 + (i % 3) * 20 }} />
+            <div key={i} className="animate-pulse rounded-full flex-shrink-0" style={{ width: 64 + (i % 3) * 22, height: 30, backgroundColor: "#1e1e2a" }} />
           ))}
         </div>
-        {/* Product grid skeleton */}
-        <div className="p-3">
+        <div className="p-4">
           <ProductGridSkeleton count={6} />
         </div>
       </div>
@@ -756,13 +756,16 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- ERROR ----
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: "#0d0d14" }}>
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-400" />
+          <div
+            className="flex items-center justify-center mx-auto mb-4"
+            style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: "rgba(239,68,68,0.1)" }}
+          >
+            <X className="w-7 h-7" style={{ color: "#ef4444" }} />
           </div>
-          <p className="text-white font-semibold mb-1">Do'kon topilmadi</p>
-          <p className="text-sm text-slate-400">{error || "Noma'lum xato"}</p>
+          <p className="text-base font-semibold mb-1" style={{ color: "#f4f4f8" }}>Do'kon topilmadi</p>
+          <p className="text-sm" style={{ color: "#52526a" }}>{error || "Noma'lum xato"}</p>
         </div>
       </div>
     );
@@ -1519,12 +1522,16 @@ function StoreInner({ slug }: { slug: string }) {
         liveCampaign={liveCampaign}
         campaignLabel={product.saleCampaign?.label}
         campaignBadgeColor={product.saleCampaign?.badgeColor as Parameters<typeof ProductCard>[0]["campaignBadgeColor"]}
+        avgRating={product.avgRating}
+        weeklyBuyers={product.weeklyBuyers}
         onSelect={() => setSelectedProduct(product)}
         onToggleFav={() => toggleFavorite(product.id)}
         onAddToCart={() => addToCart(product)}
+        onIncrease={() => updateQty(product.id, 1)}
+        onDecrease={() => updateQty(product.id, -1)}
       />
     );
-  }, [data, primaryColor, favorites, cartQty, toggleFavorite, addToCart, setSelectedProduct]);
+  }, [data, primaryColor, favorites, cartQty, toggleFavorite, addToCart, updateQty, setSelectedProduct]);
 
   // Render blocks from layout, or fall back to plain products grid
   // ---- PROFILE ----
@@ -1841,111 +1848,168 @@ function StoreInner({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur border-b border-slate-800/50 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {brand.logo ? (
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}>
-              {brand.logo}
-            </div>
-          ) : null}
-          <span className="text-sm font-semibold text-white">{brand.name || data.tenant.name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowSearch(!showSearch)} className="p-2 rounded-xl text-slate-400 hover:text-white">
-            <Search className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setView("cart")}
-            className="relative p-2 rounded-xl text-white"
-            style={{ backgroundColor: primaryColor + "20" }}
-          >
-            <ShoppingCart className="w-5 h-5" style={{ color: primaryColor }} />
-            {cartCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {cartCount > 9 ? "9+" : cartCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
 
-      {/* Search bar */}
-      {showSearch && (
-        <div className="px-4 py-2 bg-slate-950 border-b border-slate-800">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              autoFocus
-              type="text"
-              placeholder={t("catalog.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800 rounded-2xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                <X className="w-4 h-4 text-slate-500" />
-              </button>
+      {/* ─── Header ─── */}
+      <div
+        className="sticky top-0 z-20 flex flex-col gap-0"
+        style={{
+          backgroundColor: "rgba(13,13,20,0.96)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        {/* Top bar: logo + actions */}
+        <div
+          className="flex items-center justify-between px-4 pb-3"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            {brand.logo && (
+              <div
+                className="flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: primaryColor }}
+              >
+                {brand.logo}
+              </div>
             )}
+            <div className="min-w-0">
+              <p className="text-sm font-bold truncate" style={{ color: "#f4f4f8" }}>
+                {brand.name || data.tenant.name}
+              </p>
+              {brand.address && (
+                <p className="text-[10px] truncate" style={{ color: "#3a3a56" }}>{brand.address}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="flex items-center justify-center active:scale-90 transition-transform"
+              style={{
+                width: 34, height: 34, borderRadius: 10,
+                backgroundColor: showSearch ? primaryColor + "20" : "#1e1e2a",
+                color: showSearch ? primaryColor : "#52526a",
+              }}
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setView("cart")}
+              className="relative flex items-center justify-center active:scale-90 transition-transform"
+              style={{
+                width: 34, height: 34, borderRadius: 10,
+                backgroundColor: cartCount > 0 ? primaryColor + "20" : "#1e1e2a",
+                color: cartCount > 0 ? primaryColor : "#52526a",
+              }}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {cartCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 flex items-center justify-center text-white text-[9px] font-bold rounded-full"
+                  style={{ minWidth: 16, height: 16, backgroundColor: primaryColor, padding: "0 3px" }}
+                >
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Category chips */}
-      {categories.length > 0 && (
-        <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide border-b border-slate-800/50">
-          <button
-            onClick={() => setSelectedCategoryId(null)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              selectedCategoryId === null ? "text-white" : "bg-slate-900 text-slate-400"
-            }`}
-            style={selectedCategoryId === null ? { backgroundColor: primaryColor } : {}}
-          >
-            Barchasi
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                selectedCategoryId === cat.id ? "text-white" : "bg-slate-900 text-slate-400"
-              }`}
-              style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor } : {}}
+        {/* Search bar — slides in */}
+        {showSearch && (
+          <div className="px-4 pb-3">
+            <div
+              className="flex items-center gap-2 px-3 rounded-2xl"
+              style={{
+                height: 40,
+                backgroundColor: "#1e1e2a",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
             >
-              {cat.name}
+              <Search className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#3a3a56" }} />
+              <input
+                autoFocus
+                type="text"
+                placeholder={t("catalog.searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent text-sm outline-none"
+                style={{ color: "#f4f4f8" }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="flex-shrink-0">
+                  <X className="w-3.5 h-3.5" style={{ color: "#52526a" }} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Category chips */}
+        {categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-3">
+            <button
+              onClick={() => setSelectedCategoryId(null)}
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+              style={
+                selectedCategoryId === null
+                  ? { backgroundColor: primaryColor, color: "#fff" }
+                  : { backgroundColor: "#1e1e2a", color: "#52526a", border: "1px solid rgba(255,255,255,0.06)" }
+              }
+            >
+              Barchasi
             </button>
-          ))}
-        </div>
-      )}
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
+                className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+                style={
+                  selectedCategoryId === cat.id
+                    ? { backgroundColor: primaryColor, color: "#fff" }
+                    : { backgroundColor: "#1e1e2a", color: "#52526a", border: "1px solid rgba(255,255,255,0.06)" }
+                }
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto pb-32">
         {renderHomeContent()}
       </div>
 
-      {/* Cart preview banner (Home — agar savatda mahsulot bo'lsa, total ko'rsatamiz) */}
+      {/* Floating cart bar */}
       {cartCount > 0 && view === "home" && (
-        <div className="fixed bottom-16 left-4 right-4 z-30">
+        <div className="fixed left-4 right-4 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}>
           <button
             onClick={() => setView("cart")}
-            className="w-full py-3 rounded-2xl font-semibold text-white text-sm flex items-center justify-between px-5 shadow-xl transition-all active:scale-[0.98]"
-            style={{ backgroundColor: primaryColor }}
+            className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-between px-4 active:scale-[0.98] transition-transform"
+            style={{
+              backgroundColor: primaryColor,
+              color: "#fff",
+            }}
           >
-            <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-              <span className="text-xs font-bold">{cartCount}</span>
-            </div>
-            <span>Savatga o'tish</span>
+            <span
+              className="flex items-center justify-center text-xs font-bold rounded-xl"
+              style={{ width: 26, height: 26, backgroundColor: "rgba(255,255,255,0.2)" }}
+            >
+              {cartCount}
+            </span>
+            <span className="font-semibold">Savatni ko'rish</span>
             <span className="font-bold">{formatPrice(cartTotal, data.tenant.currency)}</span>
           </button>
         </div>
       )}
 
-      {/* Bottom navigation — Home, Katalog, Savat, Takliflar, Profile */}
+      {/* Bottom Nav */}
       {currentTab && <BottomNav active={currentTab} cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />}
 
       {/* Marketing popups — admin paneldan boshqariladi */}
