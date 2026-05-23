@@ -7,6 +7,16 @@ import multipart from "@fastify/multipart";
 import { mkdir } from "node:fs/promises";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import * as Sentry from "@sentry/node";
+
+// Sentry — ishga tushirishdan oldin init qilinishi shart
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? "development",
+    tracesSampleRate: 0.1, // 10% so'rovlarni trace qiladi
+  });
+}
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authPlugin } from "./plugins/auth.js";
 import { authRoutes } from "./routes/auth.js";
@@ -104,6 +114,10 @@ app.setErrorHandler((err, req, reply) => {
     return reply.code(429).send({ error: "Juda ko'p so'rov. Biroz kutib turing." });
   }
   app.log.error({ err, url: req.url, method: req.method }, "Unhandled error");
+  // Sentry'ga yuborish — faqat 500 darajadagi xatolar
+  if (!httpErr.statusCode || httpErr.statusCode >= 500) {
+    Sentry.captureException(err);
+  }
   return reply.code(httpErr.statusCode ?? 500).send({ error: httpErr.message ?? "Server xatosi" });
 });
 
