@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
@@ -95,14 +95,12 @@ function DashboardPage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex items-start justify-between mb-6"
+        className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6"
       >
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">Dashboard</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <p className="text-sm text-slate-500">{currentDate}</p>
-          </div>
+          <p className="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold mb-1">{currentDate}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Salom 👋</h1>
+          <p className="text-sm text-slate-400 mt-1">Bugungi savdo va operatsiya holati</p>
         </div>
       </motion.div>
 

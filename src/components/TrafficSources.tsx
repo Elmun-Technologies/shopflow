@@ -1,36 +1,21 @@
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+// Kanal manbalari — modern progress-bar uslubidagi ro'yxat.
+// Recharts'siz, faqat CSS + width animation. Sof, kichik va o'qish oson.
+
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, Radio } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { dashboardApi } from "../api/endpoints";
-import type { ChartTooltipProps } from "../utils/chart";
 import { useT } from "../i18n";
 
-const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
-
-const Tip = ({ active, payload, label }: ChartTooltipProps) => {
-  if (active && payload && payload.length) {
-    const item = payload[0];
-    const percentage = (item.payload as { percentage?: number } | undefined)?.percentage ?? 0;
-    return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-sm font-medium text-white">{label}</p>
-        <p className="text-sm font-semibold text-emerald-400">{item.value} buyurtma</p>
-        <p className="text-xs text-slate-500">{percentage}% jami</p>
-      </div>
-    );
-  }
-  return null;
-};
+const COLORS = [
+  "from-emerald-500 to-emerald-400",
+  "from-sky-500 to-sky-400",
+  "from-amber-500 to-amber-400",
+  "from-violet-500 to-violet-400",
+  "from-pink-500 to-pink-400",
+  "from-cyan-500 to-cyan-400",
+  "from-rose-500 to-rose-400",
+];
 
 export default function TrafficSources() {
   const { t } = useT();
@@ -41,58 +26,49 @@ export default function TrafficSources() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.9 }}
-      className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+      transition={{ duration: 0.4, delay: 0.7 }}
+      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
     >
-      <h3 className="text-base font-semibold text-white mb-1">{t("widget.trafficSources")}</h3>
-      <p className="text-sm text-slate-500 mb-4">Buyurtmalar qaysi kanaldan kelmoqda</p>
+      <h3 className="text-base font-semibold text-white flex items-center gap-2">
+        <Radio className="w-4 h-4 text-emerald-400" />
+        {t("widget.trafficSources")}
+      </h3>
+      <p className="text-xs text-slate-500 mt-0.5 mb-4">Buyurtmalar qaysi kanaldan</p>
 
-      <div className="h-52">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
-          </div>
-        ) : sources.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-sm text-slate-500">
-            Kanal bo'yicha buyurtmalar yo'q
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={sources} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-              <XAxis
-                type="number"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
-              />
-              <YAxis
-                type="category"
-                dataKey="source"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                width={100}
-              />
-              <Tooltip content={<Tip />} />
-              <Bar dataKey="visitors" radius={[0, 4, 4, 0]} maxBarSize={24}>
-                {sources.map((s, index) => (
-                  <Cell key={`${s.channelId ?? index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      {sources.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          {sources.map((s, index) => (
-            <div key={`${s.channelId ?? index}-l`} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-              <span className="text-xs text-slate-400 truncate">{s.source}</span>
-              <span className="text-xs font-medium text-white ml-auto">{s.percentage}%</span>
-            </div>
+      {loading ? (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+        </div>
+      ) : sources.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-32 text-center">
+          <p className="text-sm text-slate-500">Kanal bo'yicha buyurtmalar yo'q</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sources.slice(0, 6).map((s, index) => (
+            <motion.div
+              key={`${s.channelId ?? index}`}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.7 + index * 0.05 }}
+              className="space-y-1.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-300 font-medium truncate">{s.source}</span>
+                <div className="flex items-baseline gap-2 flex-shrink-0">
+                  <span className="text-sm font-semibold text-white">{s.visitors}</span>
+                  <span className="text-[10px] text-slate-500">{s.percentage}%</span>
+                </div>
+              </div>
+              <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${s.percentage}%` }}
+                  transition={{ duration: 0.7, delay: 0.7 + index * 0.05, ease: "easeOut" }}
+                  className={`h-full bg-gradient-to-r ${COLORS[index % COLORS.length]} rounded-full`}
+                />
+              </div>
+            </motion.div>
           ))}
         </div>
       )}

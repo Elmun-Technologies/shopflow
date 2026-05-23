@@ -41,13 +41,13 @@ export default function WeeklySales() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.6 }}
-      className="bg-slate-900 border border-slate-800 rounded-xl p-5"
+      transition={{ duration: 0.4, delay: 0.5 }}
+      className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5"
     >
-      <h3 className="text-base font-semibold text-white mb-1">{t("widget.weeklySales")}</h3>
-      <p className="text-sm text-slate-500 mb-4">Oxirgi 7 kun</p>
+      <h3 className="text-base font-semibold text-white">{t("widget.weeklySales")}</h3>
+      <p className="text-xs text-slate-500 mt-0.5 mb-3">Oxirgi 7 kun</p>
 
-      <div className="h-52">
+      <div className="h-44">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
@@ -58,17 +58,24 @@ export default function WeeklySales() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={series} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
+            <BarChart data={series} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="weeklyBarGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="2 6" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10 }} dy={5} />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
+                tick={{ fill: "#64748b", fontSize: 10 }}
                 tickFormatter={(value) => formatCompactCurrency(Number(value), currency)}
+                width={42}
               />
-              <Tooltip content={<Tip />} />
-              <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Tooltip content={<Tip />} cursor={{ fill: "#1e293b40" }} />
+              <Bar dataKey="sales" fill="url(#weeklyBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} />
             </BarChart>
           </ResponsiveContainer>
         )}

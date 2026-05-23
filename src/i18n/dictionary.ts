@@ -473,6 +473,32 @@ export const dictionary: Record<string, Entry> = {
   "notif.mute": { uz: "Ovozni o'chirish", ru: "Отключить звук" },
   "notif.unmute": { uz: "Ovozni yoqish", ru: "Включить звук" },
 
+  // Notification settings panel (SettingsPage > Bildirishnomalar)
+  "notifSettings.title": { uz: "Brauzer notifikatsiyalari", ru: "Браузерные уведомления" },
+  "notifSettings.subtitle": { uz: "Yangi voqealar kelganda ovoz va desktop bildirishnomalarini boshqaring", ru: "Управляйте звуком и desktop-уведомлениями при новых событиях" },
+  "notifSettings.event": { uz: "Voqea", ru: "Событие" },
+  "notifSettings.sound": { uz: "Ovoz", ru: "Звук" },
+  "notifSettings.browser": { uz: "Brauzer", ru: "Браузер" },
+  "notifSettings.event.orders": { uz: "Yangi buyurtmalar", ru: "Новые заказы" },
+  "notifSettings.event.ordersDesc": { uz: "Mijoz buyurtma berganda", ru: "Когда клиент создаёт заказ" },
+  "notifSettings.event.leads": { uz: "Yangi lidlar", ru: "Новые лиды" },
+  "notifSettings.event.leadsDesc": { uz: "Kanal orqali yangi mijoz", ru: "Новый клиент через канал" },
+  "notifSettings.event.chat": { uz: "Chat xabarlari", ru: "Сообщения чата" },
+  "notifSettings.event.chatDesc": { uz: "Yangi xabar kelganda", ru: "Когда приходит новое сообщение" },
+  "notifSettings.soundType": { uz: "Ovoz turi", ru: "Тип звука" },
+  "notifSettings.testSound": { uz: "Sinash", ru: "Прослушать" },
+  "notifSettings.soundTypeHint": { uz: "Tanlangan ovoz darhol eshittiriladi — sizga yoqishini tekshiring", ru: "Выбранный звук сразу проиграется — проверьте, что вам нравится" },
+  "notifSettings.sound.ding": { uz: "Ding", ru: "Динь" },
+  "notifSettings.sound.bell": { uz: "Bell", ru: "Колокольчик" },
+  "notifSettings.sound.chime": { uz: "Chime", ru: "Перезвон" },
+
+  "notifSettings.perm.granted": { uz: "Brauzer notifikatsiyalari yoqilgan", ru: "Браузерные уведомления включены" },
+  "notifSettings.perm.denied": { uz: "Brauzer notifikatsiyalari bloklangan", ru: "Браузерные уведомления заблокированы" },
+  "notifSettings.perm.default": { uz: "Brauzer notifikatsiyalari yoqilmagan", ru: "Браузерные уведомления не включены" },
+  "notifSettings.perm.hint": { uz: "Tab background'da bo'lganda ham desktop'da bildirishnoma chiqaradi", ru: "Уведомление появится на рабочем столе, даже когда вкладка в фоне" },
+  "notifSettings.perm.deniedHint": { uz: "Brauzer sozlamalaridan ruxsat berishingiz kerak", ru: "Разрешите в настройках браузера" },
+  "notifSettings.perm.enable": { uz: "Yoqish", ru: "Включить" },
+
   // Keyboard shortcuts
   "shortcuts.title": { uz: "Klaviatura yorliqlari", ru: "Горячие клавиши" },
   "shortcuts.tip": { uz: "Sahifaga o'tish: avval 'g' bosing, so'ng harf", ru: "Переход на страницу: сначала 'g', затем буква" },
