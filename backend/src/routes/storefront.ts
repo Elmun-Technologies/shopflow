@@ -6,6 +6,42 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { notifyCustomer } from "../lib/telegram-notify.js";
 import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
+import type { PrismaClient } from "@prisma/client";
+
+// Promo kodni inline tekshirish (import tsikli oldini olish)
+async function applyPromoValidation(
+  prisma: PrismaClient,
+  tenantId: string,
+  code: string,
+  orderAmount: number,
+  customerId?: string | null,
+): Promise<{ valid: true; discount: number; promoCodeId: string } | { valid: false; error: string }> {
+  const promo = await prisma.promoCode.findUnique({
+    where: { tenantId_code: { tenantId, code: code.toUpperCase() } },
+  });
+  if (!promo || !promo.active) return { valid: false, error: "Promo kod topilmadi yoki faol emas" };
+  const now = new Date();
+  if (promo.startsAt && promo.startsAt > now) return { valid: false, error: "Promo kod hali boshlanmagan" };
+  if (promo.endsAt && promo.endsAt < now) return { valid: false, error: "Promo kod muddati tugagan" };
+  if (promo.usageLimit && promo.usageCount >= promo.usageLimit) {
+    return { valid: false, error: "Promo kod foydalanish limiti tugagan" };
+  }
+  if (promo.minOrderAmount && orderAmount < Number(promo.minOrderAmount)) {
+    return { valid: false, error: `Minimal buyurtma: ${Number(promo.minOrderAmount).toLocaleString("uz-UZ")} so'm` };
+  }
+  if (customerId && promo.perUserLimit > 0) {
+    const used = await prisma.promoUsage.count({ where: { promoCodeId: promo.id, customerId } });
+    if (used >= promo.perUserLimit) return { valid: false, error: "Siz bu kodni allaqachon ishlatgansiz" };
+  }
+  let discount = 0;
+  if (promo.discountType === "PERCENT") {
+    discount = Math.round(orderAmount * (Number(promo.discountValue) / 100));
+    if (promo.maxDiscount) discount = Math.min(discount, Number(promo.maxDiscount));
+  } else {
+    discount = Math.min(Number(promo.discountValue), orderAmount);
+  }
+  return { valid: true, discount, promoCodeId: promo.id };
+}
 
 export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Tenant'ning to'liq Vitrina ma'lumotlari:
@@ -127,6 +163,35 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // Promo kod tekshirish endpoint
+  app.post<{ Params: { tenantSlug: string }; Body: { code: string; total: number; tgUserId?: number } }>(
+    "/:tenantSlug/promo/validate",
+    async (req, reply) => {
+      const { tenantSlug } = req.params;
+      const { code, total, tgUserId } = req.body ?? {};
+      if (!code || !total) return reply.code(400).send({ error: "code va total talab qilinadi" });
+
+      const tenant = await app.prisma.tenant.findUnique({
+        where: { slug: tenantSlug },
+        select: { id: true },
+      });
+      if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+      let customerId: string | null = null;
+      if (tgUserId) {
+        const cust = await app.prisma.customer.findFirst({
+          where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+          select: { id: true },
+        });
+        customerId = cust?.id ?? null;
+      }
+
+      const result = await applyPromoValidation(app.prisma, tenant.id, code, total, customerId);
+      if (!result.valid) return reply.code(422).send({ error: result.error });
+      return { discount: result.discount, promoCodeId: result.promoCodeId };
+    },
+  );
+
   // Buyurtma yaratish (mijoz Mini App orqali)
   const checkoutSchema = z.object({
     customer: z.object({
@@ -147,6 +212,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         }),
       )
       .min(1),
+    // Promo kod
+    promoCode: z.string().max(40).optional(),
     // Telegram'dan kelgan ma'lumotlar (auth uchun)
     telegram: z
       .object({
@@ -199,7 +266,24 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         stock: p.stock,
       };
     });
-    const total = items.reduce((s, i) => s + i.qty * i.price, 0);
+    const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
+
+    // Promo kod tekshiruvi
+    let promoCodeId: string | null = null;
+    let promoDiscount = 0;
+    if (data.promoCode) {
+      const promoResult = await applyPromoValidation(
+        app.prisma, tenant.id, data.promoCode, subtotal,
+        null, // customerId keyinroq aniqlanadi
+      );
+      if (promoResult.valid) {
+        promoCodeId = promoResult.promoCodeId;
+        promoDiscount = promoResult.discount;
+      }
+      // Noto'g'ri promo kod checkout'ni to'xtatmaydi — shunchaki e'tiborsiz qoldiriladi
+    }
+
+    const total = subtotal - promoDiscount;
 
     // Mijozni topish yoki yaratish — avval Telegram userId bo'yicha, keyin telefon bo'yicha
     const tgUserId = data.telegram?.userId ? BigInt(data.telegram.userId) : null;
@@ -277,7 +361,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      return tx.order.create({
+      const order = await tx.order.create({
         data: {
           tenantId: tenant.id,
           code,
@@ -290,6 +374,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           shippingAddress: data.customer.address || null,
           shippingLat: data.customer.lat ?? null,
           shippingLng: data.customer.lng ?? null,
+          promoCodeId,
+          promoDiscount: promoDiscount > 0 ? promoDiscount : null,
           items: {
             create: items.map((i) => ({
               productId: i.productId,
@@ -300,6 +386,24 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         },
         include: { items: true },
       });
+
+      // Promo foydalanishini yozib qo'yamiz + usageCount oshiramiz
+      if (promoCodeId && promoDiscount > 0) {
+        await tx.promoUsage.create({
+          data: {
+            tenantId: tenant.id,
+            promoCodeId,
+            customerId: customer.id,
+            orderId: order.id,
+          },
+        });
+        await tx.promoCode.update({
+          where: { id: promoCodeId },
+          data: { usageCount: { increment: 1 } },
+        });
+      }
+
+      return order;
     });
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
@@ -319,6 +423,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({
       id: order.id,
       code: order.code,
+      subtotal,
+      promoDiscount: promoDiscount > 0 ? promoDiscount : null,
       total,
       currency: tenant.currency,
     });

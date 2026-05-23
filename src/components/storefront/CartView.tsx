@@ -32,16 +32,19 @@ interface CartViewProps {
   cartCount: number;
   currency: string;
   primaryColor: string;
+  storeSlug: string;
+  tgUserId?: number;
   onBack: () => void;
-  onCheckout: () => void;
+  onCheckout: (promoCodeId?: string, promoDiscount?: number) => void;
   onUpdateQty: (productId: string, delta: number) => void;
 }
 
 function CartViewInner({
   cart, cartTotal: _cartTotal, cartCount, currency, primaryColor,
+  storeSlug, tgUserId,
   onBack, onCheckout, onUpdateQty,
 }: CartViewProps) {
-  useT(); // i18n hook — kelajakda tarjima uchun
+  useT();
 
   // Tanlangan mahsulotlar (checkbox)
   const [selected, setSelected] = useState<Set<string>>(
@@ -49,9 +52,10 @@ function CartViewInner({
   );
   // Promo kod
   const [promoInput, setPromoInput] = useState("");
-  const [promoApplied, setPromoApplied] = useState<string | null>(null);
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number; promoCodeId: string } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoOpen, setPromoOpen] = useState(false);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const allSelected = cart.length > 0 && cart.every(i => selected.has(i.productId));
 
@@ -71,6 +75,10 @@ function CartViewInner({
     });
   };
 
+  const API_BASE = typeof window !== "undefined"
+    ? (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL ?? "/api"
+    : "/api";
+
   // Faqat tanlangan tovarlar hisobiga
   const selectedItems = cart.filter(i => selected.has(i.productId));
   const selectedSubtotal = selectedItems.reduce((s, i) => s + i.price * i.qty, 0);
@@ -85,8 +93,8 @@ function CartViewInner({
     [selectedItems]
   );
 
-  // Promo kod
-  const promoDiscount = promoApplied ? Math.round(selectedSubtotal * 0.05) : 0;
+  // Promo kod chegirmasi
+  const promoDiscount = promoApplied?.discount ?? 0;
 
   // Yetkazib berish
   const isFreeDelivery = selectedSubtotal >= FREE_DELIVERY_THRESHOLD;
@@ -95,19 +103,33 @@ function CartViewInner({
 
   const grandTotal = selectedSubtotal - promoDiscount + deliveryCost;
 
-  const applyPromo = () => {
+  const applyPromo = async () => {
     const code = promoInput.trim().toUpperCase();
     if (!code) return;
-    // Demo: SAVE5 → 5% chegirma
-    if (code === "SAVE5" || code === "SHOPFLOW") {
-      setPromoApplied(code);
-      setPromoError(null);
-      setPromoOpen(false);
-      setPromoInput("");
-      haptic.success();
-    } else {
-      setPromoError("Noto'g'ri promo kod");
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      const res = await fetch(`${API_BASE}/storefront/${storeSlug}/promo/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, total: selectedSubtotal, tgUserId }),
+      });
+      const body = await res.json().catch(() => ({})) as { discount?: number; promoCodeId?: string; error?: string };
+      if (!res.ok || !body.discount) {
+        setPromoError(body.error ?? "Noto'g'ri promo kod");
+        haptic.error();
+      } else {
+        setPromoApplied({ code, discount: body.discount, promoCodeId: body.promoCodeId! });
+        setPromoError(null);
+        setPromoOpen(false);
+        setPromoInput("");
+        haptic.success();
+      }
+    } catch {
+      setPromoError("Tarmoq xatosi — qaytadan urinib ko'ring");
       haptic.error();
+    } finally {
+      setPromoLoading(false);
     }
   };
 
@@ -410,7 +432,7 @@ function CartViewInner({
                 <Tag className="w-4 h-4" style={{ color: "#34d399" }} />
                 <div>
                   <p className="text-xs font-bold" style={{ color: "#34d399" }}>
-                    {promoApplied} — 5% chegirma
+                    {promoApplied?.code} — chegirma qo'llanildi
                   </p>
                   <p className="text-[11px]" style={{ color: "#52526a" }}>
                     -{fmt(promoDiscount, currency)} tejaysiz
@@ -444,9 +466,11 @@ function CartViewInner({
                 />
                 <button
                   onClick={applyPromo}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+                  disabled={promoLoading}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-transform flex items-center gap-1.5 disabled:opacity-70"
                   style={{ backgroundColor: primaryColor, color: "#fff" }}
                 >
+                  {promoLoading && <span className="w-3 h-3 border border-white/50 border-t-white rounded-full animate-spin" />}
                   Qo'llash
                 </button>
                 <button onClick={() => { setPromoOpen(false); setPromoError(null); }} style={{ color: "#52526a" }}>
@@ -507,7 +531,7 @@ function CartViewInner({
 
               {promoDiscount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#52526a" }}>Promo ({promoApplied})</span>
+                  <span className="text-sm" style={{ color: "#52526a" }}>Promo ({promoApplied?.code})</span>
                   <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
                     -{fmt(promoDiscount, currency)}
                   </span>
@@ -571,7 +595,7 @@ function CartViewInner({
           </button>
         ) : (
           <button
-            onClick={() => { haptic.light(); onCheckout(); }}
+            onClick={() => { haptic.light(); onCheckout(promoApplied?.promoCodeId, promoApplied?.discount); }}
             className="w-full py-4 rounded-2xl font-bold text-base active:scale-[0.98] transition-transform flex items-center justify-between px-5"
             style={{ backgroundColor: primaryColor, color: "#fff" }}
           >

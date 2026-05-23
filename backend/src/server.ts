@@ -33,6 +33,9 @@ import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
 import { reviewRoutes } from "./routes/reviews.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
+import { promoCodeRoutes } from "./routes/promo-codes.js";
+import { deliveryRoutes } from "./routes/delivery.js";
+import { exportRoutes } from "./routes/export.js";
 
 const app = Fastify({
   logger: {
@@ -129,6 +132,9 @@ await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(chatRoutes, { prefix: "/api/chats" });
 await app.register(segmentRoutes, { prefix: "/api/segments" });
 await app.register(reviewRoutes, { prefix: "/api/reviews" });
+await app.register(promoCodeRoutes, { prefix: "/api/promo-codes" });
+await app.register(deliveryRoutes, { prefix: "/api/delivery" });
+await app.register(exportRoutes, { prefix: "/api/export" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

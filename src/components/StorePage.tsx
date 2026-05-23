@@ -834,6 +834,8 @@ function StoreInner({ slug }: { slug: string }) {
         cartCount={cartCount}
         currency={data.tenant.currency}
         primaryColor={primaryColor}
+        storeSlug={slug}
+        tgUserId={twa?.initDataUnsafe?.user?.id}
         onBack={() => setView("home")}
         onCheckout={() => setView("checkout")}
         onUpdateQty={updateQty}
