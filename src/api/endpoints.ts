@@ -153,31 +153,47 @@ export const vitrinaApi = {
 
 // ===== Dashboard =====
 
+export type DashboardPeriod = "today" | "week" | "month" | "year" | "all";
+
 export const dashboardApi = {
-  kpis: () => api<DashboardKPIs>("/dashboard/kpis"),
+  kpis: (period?: DashboardPeriod) =>
+    api<DashboardKPIs & { returnRate?: { value: number; change: number }; avgOrder?: { value: number; change: number } }>(
+      "/dashboard/kpis",
+      { query: period ? { period } : {} },
+    ),
   revenueTrend: () => api<{ month: string; revenue: number; orders: number }[]>("/dashboard/revenue-trend"),
   weeklySales: () => api<{ day: string; sales: number }[]>("/dashboard/weekly-sales"),
-  topProducts: () =>
+  topProducts: (period?: DashboardPeriod) =>
     api<{ id: string; name: string; category: string | null; price: number; sold: number; stock: number }[]>(
       "/dashboard/top-products",
+      { query: period ? { period } : {} },
     ),
-  trafficSources: () =>
+  trafficSources: (period?: DashboardPeriod) =>
     api<{ channelId: string | null; source: string; type: string | null; visitors: number; percentage: number }[]>(
       "/dashboard/traffic-sources",
+      { query: period ? { period } : {} },
     ),
-  salesByCategory: () =>
-    api<{ name: string; sales: number; value: number }[]>("/dashboard/sales-by-category"),
+  salesByCategory: (period?: DashboardPeriod) =>
+    api<{ name: string; sales: number; value: number }[]>(
+      "/dashboard/sales-by-category",
+      { query: period ? { period } : {} },
+    ),
   recentOrders: () => api<Order[]>("/dashboard/recent-orders"),
-  // Analytics sahifasi uchun
   dailySales: (days = 30) =>
     api<{ day: string; date: string; sales: number; orders: number }[]>(
       "/dashboard/daily-sales",
       { query: { days } },
     ),
-  geography: () =>
-    api<{ name: string; orders: number; revenue: number }[]>("/dashboard/geography"),
-  funnel: () =>
-    api<{ stage: string; count: number; dropOff: number }[]>("/dashboard/funnel"),
+  geography: (period?: DashboardPeriod) =>
+    api<{ name: string; orders: number; revenue: number }[]>(
+      "/dashboard/geography",
+      { query: period ? { period } : {} },
+    ),
+  funnel: (period?: DashboardPeriod) =>
+    api<{ stage: string; count: number; dropOff: number }[]>(
+      "/dashboard/funnel",
+      { query: period ? { period } : {} },
+    ),
   customerSegments: () =>
     api<{ name: string; count: number; color: string }[]>("/dashboard/customer-segments"),
 };

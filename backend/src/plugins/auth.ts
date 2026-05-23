@@ -32,14 +32,14 @@ const plugin: FastifyPluginAsync = async (app) => {
       await req.jwtVerify();
       req.session = req.user;
     } catch {
-      reply.code(401).send({ error: "Unauthorized" });
+      return reply.code(401).send({ error: "Unauthorized" });
     }
   });
 
   app.decorate("requireRole", (...roles: UserRole[]) => {
     return async (req: FastifyRequest, reply: FastifyReply) => {
       if (!req.session || !roles.includes(req.session.role)) {
-        reply.code(403).send({ error: "Forbidden" });
+        return reply.code(403).send({ error: "Forbidden" });
       }
     };
   });

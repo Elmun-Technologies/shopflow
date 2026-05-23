@@ -18,7 +18,7 @@ const loginSchema = z.object({
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   // Register — yangi tenant + owner user yaratish
-  app.post("/register", async (req, reply) => {
+  app.post("/register", { config: { rateLimit: { max: 5, timeWindow: "15 minutes" } } }, async (req, reply) => {
     const data = registerSchema.parse(req.body);
 
     const existingTenant = await app.prisma.tenant.findUnique({ where: { slug: data.tenantSlug } });
@@ -58,7 +58,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  app.post("/login", async (req, reply) => {
+  app.post("/login", { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
     const data = loginSchema.parse(req.body);
 
     const users = await app.prisma.user.findMany({

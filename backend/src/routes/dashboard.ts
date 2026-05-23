@@ -1,38 +1,71 @@
 import type { FastifyPluginAsync } from "fastify";
 
+// Period → { from, prevFrom, prevTo } tartib bilan qaytaradi
+type Period = "today" | "week" | "month" | "year" | "all";
+
+function getPeriodRange(period: Period): { from: Date | null; prevFrom: Date | null; prevTo: Date | null } {
+  const now = new Date();
+  if (period === "today") {
+    const from = new Date(now); from.setHours(0, 0, 0, 0);
+    const prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 1);
+    const prevTo = new Date(from);
+    return { from, prevFrom, prevTo };
+  }
+  if (period === "week") {
+    const from = new Date(now); from.setDate(now.getDate() - 7); from.setHours(0, 0, 0, 0);
+    const prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 7);
+    const prevTo = new Date(from);
+    return { from, prevFrom, prevTo };
+  }
+  if (period === "month") {
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevTo = new Date(from);
+    return { from, prevFrom, prevTo };
+  }
+  if (period === "year") {
+    const from = new Date(now.getFullYear(), 0, 1);
+    const prevFrom = new Date(now.getFullYear() - 1, 0, 1);
+    const prevTo = new Date(from);
+    return { from, prevFrom, prevTo };
+  }
+  // "all" — barcha vaqt
+  return { from: null, prevFrom: null, prevTo: null };
+}
+
 export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.authenticate);
 
   // KPI: Total Revenue, Orders, Customers, Conversion Rate
-  app.get("/kpis", async (req) => {
+  // ?period=today|week|month|year|all
+  app.get<{ Querystring: { period?: string } }>("/kpis", async (req) => {
     const tenantId = req.session.tenantId;
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const period = (req.query.period ?? "month") as Period;
+    const { from, prevFrom, prevTo } = getPeriodRange(period);
 
-    const [revAgg, prevRevAgg, ordersThis, ordersPrev, customers, leadsTotal, leadsWon] =
+    const baseWhere = from ? { gte: from } : undefined;
+    const prevWhere = prevFrom ? { gte: prevFrom, lt: prevTo ?? new Date() } : undefined;
+
+    const [revAgg, prevRevAgg, ordersThis, ordersPrev, customers, leadsTotal, leadsWon, cancelledOrders] =
       await Promise.all([
         app.prisma.order.aggregate({
-          where: { tenantId, status: "COMPLETED", createdAt: { gte: monthStart } },
+          where: { tenantId, status: "COMPLETED", ...(baseWhere ? { createdAt: baseWhere } : {}) },
           _sum: { total: true },
         }),
         app.prisma.order.aggregate({
-          where: {
-            tenantId,
-            status: "COMPLETED",
-            createdAt: { gte: prevMonthStart, lt: monthStart },
-          },
+          where: { tenantId, status: "COMPLETED", ...(prevWhere ? { createdAt: prevWhere } : { id: "never" }) },
           _sum: { total: true },
         }),
         app.prisma.order.count({
-          where: { tenantId, createdAt: { gte: monthStart } },
+          where: { tenantId, ...(baseWhere ? { createdAt: baseWhere } : {}) },
         }),
         app.prisma.order.count({
-          where: { tenantId, createdAt: { gte: prevMonthStart, lt: monthStart } },
+          where: { tenantId, ...(prevWhere ? { createdAt: prevWhere } : { id: "never" }) },
         }),
-        app.prisma.customer.count({ where: { tenantId } }),
-        app.prisma.lead.count({ where: { tenantId } }),
-        app.prisma.lead.count({ where: { tenantId, status: "WON" } }),
+        app.prisma.customer.count({ where: { tenantId, ...(baseWhere ? { createdAt: baseWhere } : {}) } }),
+        app.prisma.lead.count({ where: { tenantId, ...(baseWhere ? { createdAt: baseWhere } : {}) } }),
+        app.prisma.lead.count({ where: { tenantId, status: "WON", ...(baseWhere ? { createdAt: baseWhere } : {}) } }),
+        app.prisma.order.count({ where: { tenantId, status: "CANCELLED", ...(baseWhere ? { createdAt: baseWhere } : {}) } }),
       ]);
 
     const revenue = Number(revAgg._sum.total ?? 0);
@@ -40,12 +73,16 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
     const revChange = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : 0;
     const ordersChange = ordersPrev > 0 ? ((ordersThis - ordersPrev) / ordersPrev) * 100 : 0;
     const conversion = leadsTotal > 0 ? (leadsWon / leadsTotal) * 100 : 0;
+    const returnRate = ordersThis > 0 ? (cancelledOrders / ordersThis) * 100 : 0;
+    const avgOrder = ordersThis > 0 ? revenue / ordersThis : 0;
 
     return {
       revenue: { value: revenue, change: revChange },
       orders: { value: ordersThis, change: ordersChange },
       customers: { value: customers, change: 0 },
       conversion: { value: conversion, change: 0 },
+      returnRate: { value: returnRate, change: 0 },
+      avgOrder: { value: avgOrder, change: 0 },
     };
   });
 
@@ -105,11 +142,13 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Top products
-  app.get("/top-products", async (req) => {
+  // ?period=today|week|month|year|all
+  app.get<{ Querystring: { period?: string } }>("/top-products", async (req) => {
     const tenantId = req.session.tenantId;
+    const { from } = getPeriodRange((req.query.period ?? "all") as Period);
     const items = await app.prisma.orderItem.groupBy({
       by: ["productId"],
-      where: { order: { tenantId, status: "COMPLETED" } },
+      where: { order: { tenantId, status: "COMPLETED", ...(from ? { createdAt: { gte: from } } : {}) } },
       _sum: { qty: true },
       orderBy: { _sum: { qty: "desc" } },
       take: 5,
@@ -132,11 +171,13 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Traffic sources — orders by channel
-  app.get("/traffic-sources", async (req) => {
+  // ?period=today|week|month|year|all
+  app.get<{ Querystring: { period?: string } }>("/traffic-sources", async (req) => {
     const tenantId = req.session.tenantId;
+    const { from } = getPeriodRange((req.query.period ?? "all") as Period);
     const grouped = await app.prisma.order.groupBy({
       by: ["channelId"],
-      where: { tenantId },
+      where: { tenantId, ...(from ? { createdAt: { gte: from } } : {}) },
       _count: true,
     });
     const total = grouped.reduce((s, g) => s + g._count, 0);
@@ -159,10 +200,12 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Sales by category
-  app.get("/sales-by-category", async (req) => {
+  // ?period=today|week|month|year|all
+  app.get<{ Querystring: { period?: string } }>("/sales-by-category", async (req) => {
     const tenantId = req.session.tenantId;
+    const { from } = getPeriodRange((req.query.period ?? "all") as Period);
     const items = await app.prisma.orderItem.findMany({
-      where: { order: { tenantId, status: "COMPLETED" } },
+      where: { order: { tenantId, status: "COMPLETED", ...(from ? { createdAt: { gte: from } } : {}) } },
       include: { product: { include: { category: true } } },
     });
     const byCat = new Map<string, { name: string; sales: number }>();
@@ -226,11 +269,13 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Geography — mijozlar joylashuvi bo'yicha buyurtmalar
-  app.get("/geography", async (req) => {
+  // ?period=today|week|month|year|all
+  app.get<{ Querystring: { period?: string } }>("/geography", async (req) => {
     const tenantId = req.session.tenantId;
+    const { from } = getPeriodRange((req.query.period ?? "all") as Period);
     // Order.shippingAddress yo'q bo'lsa Customer.location ishlatamiz
     const orders = await app.prisma.order.findMany({
-      where: { tenantId, status: "COMPLETED" },
+      where: { tenantId, status: "COMPLETED", ...(from ? { createdAt: { gte: from } } : {}) },
       select: {
         total: true,
         shippingAddress: true,
@@ -252,9 +297,11 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Conversion funnel — storefront → buyurtma → yakuniylash
-  app.get("/funnel", async (req) => {
+  // ?period=today|week|month|year|all
+  app.get<{ Querystring: { period?: string } }>("/funnel", async (req) => {
     const tenantId = req.session.tenantId;
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { from } = getPeriodRange((req.query.period ?? "month") as Period);
+    const since = from ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const [customers, ordersTotal, ordersCompleted, abandoned] = await Promise.all([
       app.prisma.customer.count({ where: { tenantId, createdAt: { gte: since } } }),
       app.prisma.order.count({ where: { tenantId, createdAt: { gte: since } } }),

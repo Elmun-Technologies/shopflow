@@ -5,12 +5,20 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { notifyCustomer } from "../lib/telegram-notify.js";
+import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
 
 export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Tenant'ning to'liq Vitrina ma'lumotlari:
   // layout (bloklar), brand, mahsulotlar, kategoriyalar
+  // ?page=1&limit=50&categoryId=xxx&q=search
   app.get("/:tenantSlug", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const query = z.object({
+      page: z.coerce.number().int().positive().default(1),
+      limit: z.coerce.number().int().min(1).max(200).default(100),
+      categoryId: z.string().optional(),
+      q: z.string().max(100).optional(),
+    }).parse(req.query);
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
@@ -18,12 +26,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    const [storefront, products, categories, weeklyOrderItems, ratingAggregates] = await Promise.all([
+    const productWhere = {
+      tenantId: tenant.id,
+      active: true,
+      ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+      ...(query.q ? { name: { contains: query.q, mode: "insensitive" as const } } : {}),
+    };
+
+    const [storefront, products, productTotal, categories, weeklyOrderItems, ratingAggregates] = await Promise.all([
       app.prisma.storefront.findUnique({
         where: { tenantId: tenant.id },
       }),
       app.prisma.product.findMany({
-        where: { tenantId: tenant.id, active: true },
+        where: productWhere,
         include: {
           category: { select: { id: true, name: true, slug: true } },
           saleCampaign: {
@@ -43,7 +58,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           },
         },
         orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
       }),
+      app.prisma.product.count({ where: productWhere }),
       app.prisma.category.findMany({
         where: { tenantId: tenant.id },
         orderBy: { name: "asc" },
@@ -100,6 +118,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         reviewCount: ratingMap.get(p.id)?.count ?? 0,
       })),
       categories,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total: productTotal,
+        pages: Math.ceil(productTotal / query.limit),
+      },
     };
   });
 
@@ -154,12 +178,25 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "Ba'zi mahsulotlar topilmadi yoki sotuvda emas" });
     }
 
+    // Stock tekshiruvi — null yoki undefined stock cheksiz deb hisoblanadi
+    const stockErrors: string[] = [];
+    for (const item of data.items) {
+      const p = products.find((pp) => pp.id === item.productId)!;
+      if (p.stock !== null && p.stock !== undefined && p.stock < item.qty) {
+        stockErrors.push(`"${p.name}" uchun yetarli tovar yo'q (mavjud: ${p.stock}, so'ralgan: ${item.qty})`);
+      }
+    }
+    if (stockErrors.length > 0) {
+      return reply.code(400).send({ error: "Yetarli tovar yo'q", details: stockErrors });
+    }
+
     const items = data.items.map((i) => {
       const p = products.find((pp) => pp.id === i.productId)!;
       return {
         productId: i.productId,
         qty: i.qty,
         price: Number(p.price),
+        stock: p.stock,
       };
     });
     const total = items.reduce((s, i) => s + i.qty * i.price, 0);
@@ -211,45 +248,58 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       if (channel) channelId = channel.id;
     }
 
-    // Order kodi
-    const prefix = "ORD-";
-    const last = await app.prisma.order.findFirst({
-      where: { tenantId: tenant.id, code: { startsWith: prefix } },
-      orderBy: { code: "desc" },
-      select: { code: true },
-    });
-    const lastNum = last ? Number(last.code.slice(prefix.length)) : 7000;
-    const code = `${prefix}${lastNum + 1}`;
-
     const noteParts = [
       data.customer.address && `Manzil: ${data.customer.address}`,
       data.customer.notes,
       data.telegram?.username && `Telegram: @${data.telegram.username}`,
     ].filter(Boolean);
 
-    const order = await app.prisma.order.create({
-      data: {
-        tenantId: tenant.id,
-        code,
-        status: "PENDING",
-        total,
-        currency: tenant.currency,
-        notes: noteParts.join(" | ") || null,
-        customerId: customer.id,
-        channelId,
-        // GPS koordinata mavjud bo'lsa yetkazib berish manzili sifatida saqlanadi
-        shippingAddress: data.customer.address || null,
-        shippingLat: data.customer.lat ?? null,
-        shippingLng: data.customer.lng ?? null,
-        items: {
-          create: items.map((i) => ({
-            productId: i.productId,
-            qty: i.qty,
-            price: i.price,
-          })),
+    // Order yaratish + stock kamaytirish — atomic transaction ichida.
+    // Order kodi ham shu transaction ichida hisoblanadi (race condition yo'q).
+    const order = await app.prisma.$transaction(async (tx) => {
+      // Order kodi — tenant uchun oxirgi ORD-NNNN ni LOCK bilan olamiz
+      const prefix = "ORD-";
+      const last = await tx.order.findFirst({
+        where: { tenantId: tenant.id, code: { startsWith: prefix } },
+        orderBy: { createdAt: "desc" },
+        select: { code: true },
+      });
+      const lastNum = last ? Number(last.code.slice(prefix.length)) || 7000 : 7000;
+      const code = `${prefix}${lastNum + 1}`;
+
+      // Stock kamaytirish — faqat track qilinadigan mahsulotlar uchun
+      for (const item of items) {
+        if (item.stock !== null && item.stock !== undefined) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.qty } },
+          });
+        }
+      }
+
+      return tx.order.create({
+        data: {
+          tenantId: tenant.id,
+          code,
+          status: "PENDING",
+          total,
+          currency: tenant.currency,
+          notes: noteParts.join(" | ") || null,
+          customerId: customer.id,
+          channelId,
+          shippingAddress: data.customer.address || null,
+          shippingLat: data.customer.lat ?? null,
+          shippingLng: data.customer.lng ?? null,
+          items: {
+            create: items.map((i) => ({
+              productId: i.productId,
+              qty: i.qty,
+              price: i.price,
+            })),
+          },
         },
-      },
-      include: { items: true },
+        include: { items: true },
+      });
     });
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
@@ -420,6 +470,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Mijoz profilini yangilash
   const profilePatchSchema = z.object({
     tgUserId: z.coerce.number().int().positive(),
+    // initData — Telegram Mini App dan keladi, HMAC tekshiruvi uchun
+    // Agar berilmasa — legacy rejim (pastroq xavfsizlik)
+    initData: z.string().optional(),
     firstName: z.string().max(80).optional().nullable(),
     lastName: z.string().max(80).optional().nullable(),
     patronymic: z.string().max(80).optional().nullable(),
@@ -428,7 +481,6 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal("")),
     gender: z.enum(["male", "female"]).optional().nullable().or(z.literal("")),
     language: z.enum(["uz", "ru"]).optional(),
-    // Notification preferences
     notifyOrderUpdates: z.boolean().optional(),
     notifyCartAbandonment: z.boolean().optional(),
     notifyPromotions: z.boolean().optional(),
@@ -442,6 +494,21 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    // initData berilgan bo'lsa — HMAC tekshiruvi
+    if (data.initData) {
+      const botToken = await getBotTokenForTenant(app.prisma as never, tenant.id);
+      if (botToken) {
+        const result = verifyTelegramInitData(data.initData, botToken);
+        if (!result.valid) {
+          return reply.code(401).send({ error: "Telegram autentifikatsiya muvaffaqiyatsiz" });
+        }
+        // initData dagi userId va so'rovdagi tgUserId mos kelishi shart
+        if (result.userId && result.userId !== data.tgUserId) {
+          return reply.code(403).send({ error: "Foydalanuvchi mos kelmadi" });
+        }
+      }
+    }
 
     const tgId = BigInt(data.tgUserId);
     const customer = await app.prisma.customer.findFirst({

@@ -3,6 +3,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
 
 // Provayder konfiguratsiya — frontend'da yashirin maydonlar (apiKey, secretKey)
@@ -269,28 +270,88 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Webhook qabuli — auth talab qilinmaydi (provayder o'zining imzosini yuboradi)
-  // Hozircha skeleton — provayder'ning real verify mantig'i keyingi PR'larda
   app.post<{ Params: { methodCode: string }; Body: unknown }>(
     "/webhook/:methodCode",
     async (req, reply) => {
       const { methodCode } = z.object({ methodCode: z.string() }).parse(req.params);
       const tenantId = (req.headers["x-shopflow-tenant"] as string | undefined) ?? "";
 
-      // Hech bo'lmaganda webhook event yozib qo'yamiz — keyin debug uchun
       const method = await app.prisma.paymentMethod.findFirst({
         where: { code: methodCode, ...(tenantId && { tenantId }) },
-        select: { id: true, tenantId: true, autoConfirm: true },
+        select: { id: true, tenantId: true, autoConfirm: true, config: true, testMode: true },
       });
       if (!method) {
         return reply.code(404).send({ error: "Payment method not found" });
       }
 
-      // TODO: provayder'ga xos signature verification
-      // - Click: x-click-sign header / merchant_prepare_id
-      // - Payme: x-auth basic + JSON-RPC
-      // - Uzum: HMAC sign
+      const cfg = (method.config ?? {}) as Record<string, string>;
+      const body = req.body as Record<string, unknown>;
+      const rawBody = JSON.stringify(req.body);
 
-      app.log.info({ methodCode, body: req.body }, "[payments] webhook received");
+      // Provayder'ga xos signature verification
+      if (methodCode === "click") {
+        // Click: x-click-sign header — MD5(service_id + secret_key)
+        const sign = req.headers["x-click-sign"] as string | undefined;
+        const secretKey = cfg.secretKey ?? "";
+        const serviceId = cfg.serviceId ?? "";
+        if (sign && secretKey && serviceId) {
+          const expected = createHash("md5").update(`${serviceId}${secretKey}`).digest("hex");
+          const provided = Buffer.from(sign, "hex");
+          const expectedBuf = Buffer.from(expected, "hex");
+          if (provided.length !== expectedBuf.length || !timingSafeEqual(provided, expectedBuf)) {
+            app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Click signature mismatch");
+            return reply.code(401).send({ error: "Invalid signature" });
+          }
+        } else if (!method.testMode) {
+          app.log.warn({ methodCode }, "[payments] Click webhook — signature tekshirilmadi (config to'liq emas)");
+        }
+      } else if (methodCode === "payme") {
+        // Payme: Basic auth header — login:key
+        const authHeader = req.headers["authorization"] as string | undefined;
+        const secretKey = cfg.secretKey ?? "";
+        if (authHeader && secretKey) {
+          const encoded = Buffer.from(`Paycom:${secretKey}`).toString("base64");
+          const expected = `Basic ${encoded}`;
+          const providedBuf = Buffer.from(authHeader);
+          const expectedBuf = Buffer.from(expected);
+          if (
+            providedBuf.length !== expectedBuf.length ||
+            !timingSafeEqual(providedBuf, expectedBuf)
+          ) {
+            app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Payme auth mismatch");
+            return reply.code(401).send({ error: "Invalid credentials" });
+          }
+        } else if (!method.testMode) {
+          app.log.warn({ methodCode }, "[payments] Payme webhook — auth tekshirilmadi");
+        }
+      } else if (methodCode === "uzum") {
+        // Uzum: X-Sign header — HMAC-SHA256(rawBody, secretKey)
+        const sign = req.headers["x-sign"] as string | undefined;
+        const secretKey = cfg.secretKey ?? "";
+        if (sign && secretKey) {
+          const expected = createHmac("sha256", secretKey).update(rawBody).digest("hex");
+          const providedBuf = Buffer.from(sign.toLowerCase(), "hex");
+          const expectedBuf = Buffer.from(expected, "hex");
+          if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
+            app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Uzum HMAC mismatch");
+            return reply.code(401).send({ error: "Invalid signature" });
+          }
+        } else if (!method.testMode) {
+          app.log.warn({ methodCode }, "[payments] Uzum webhook — sign tekshirilmadi");
+        }
+      }
+
+      app.log.info({ methodCode, tenantId: method.tenantId, event: (body as Record<string,unknown>).event }, "[payments] webhook received");
+
+      // Tranzaksiyani DB ga yozish (audit)
+      await logAudit({
+        prisma: app.prisma,
+        tenantId: method.tenantId,
+        action: `payment_webhook_${methodCode}`,
+        resourceType: "PaymentMethod",
+        resourceId: method.id,
+        changes: { body: req.body },
+      });
 
       return reply.code(200).send({ ok: true });
     },
