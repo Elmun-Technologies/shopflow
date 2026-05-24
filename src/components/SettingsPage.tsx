@@ -1,37 +1,26 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User, Store, Bell, Shield, Key, Puzzle, Save, Eye, EyeOff,
-  Send, CreditCard, Wallet, BarChart3, ShoppingBag, Calculator,
-  Globe, CheckCircle2, XCircle, AlertCircle, Copy, Plus,
+  Save, Eye, EyeOff,
+  Globe, CheckCircle2, AlertCircle, Copy, Plus,
   Trash2, RefreshCw, Clock, Monitor, Smartphone, ChevronRight, Loader2,
+  Key, User, Store, Bell, Puzzle, Shield,
 } from "lucide-react";
 import {
   settingsTabOrder,
   initialProfile, initialStore, initialNotifications,
-  initialIntegrations, loginHistory, initialSecurity, initialApiKeys,
+  loginHistory, initialSecurity, initialApiKeys,
 } from "../data/settingsData";
 import type {
   SettingsTab, ProfileSettings, StoreSettings, NotificationGroup,
-  Integration, SecuritySettings, ApiKey,
+  SecuritySettings, ApiKey,
 } from "../data/settingsData";
-import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
+import { IntegrationsHub } from "./IntegrationsHub";
 import { BrowserNotifSection } from "./BrowserNotifSection";
 import { api } from "../api/client";
 import { useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useT } from "../i18n";
-
-const integrationIconMap: Record<string, React.ElementType> = {
-  Send, CreditCard, Wallet, BarChart3, Instagram: Globe, ShoppingBag, Calculator,
-};
-
-// Faqat icon va stillar — labellar t() orqali
-const statusStyle = {
-  connected: { icon: CheckCircle2, color: "text-forest-700", bg: "bg-emerald-400/10" },
-  disconnected: { icon: XCircle, color: "text-slate-500", bg: "bg-slate-100" },
-  error: { icon: AlertCircle, color: "text-rose-600", bg: "bg-red-400/10" },
-};
 
 const deviceIcon: Record<string, React.ElementType> = {
   Chrome: Monitor, Safari: Smartphone, Firefox: Globe, Edge: Monitor,
@@ -66,7 +55,6 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState<NotificationGroup[]>(
     JSON.parse(JSON.stringify(initialNotifications))
   );
-  const [integrations] = useState<Integration[]>(JSON.parse(JSON.stringify(initialIntegrations)));
   const [security, setSecurity] = useState<SecuritySettings>({ ...initialSecurity });
   const [apiKeys, setApiKeys] = useState<ApiKey[]>(JSON.parse(JSON.stringify(initialApiKeys)));
   const [showPassword, setShowPassword] = useState(false);
@@ -315,50 +303,8 @@ export default function SettingsPage() {
   );
 
   const renderIntegrations = () => (
-    <div className="space-y-4">
-      <MoyskladIntegrationCard />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {integrations.map((int) => {
-        const Icon = integrationIconMap[int.icon] || Puzzle;
-        const st = statusStyle[int.status];
-        const StIcon = st.icon;
-        const statusLabel = t(`settings.int.status.${int.status}`);
-        const actionLabel = int.status === "connected" ? t("settings.int.action.setup")
-          : int.status === "error" ? t("settings.int.action.fix")
-          : t("settings.int.action.connect");
-        return (
-          <div key={int.id} className="bg-cream-100/50 border border-cream-300 rounded-xl p-4 hover:border-cream-300 transition-all">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: int.color + "20" }}>
-                  <Icon className="w-5 h-5" style={{ color: int.color }} />
-                </div>
-                <div>
-                  <h4 className="text-sm text-forest-800 font-semibold">{int.name}</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{int.description}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className={`flex items-center gap-1.5 text-xs ${st.color} ${st.bg} px-2.5 py-1 rounded-full`}>
-                <StIcon className="w-3 h-3" />
-                {statusLabel}
-              </div>
-              {int.connectedAt && (
-                <span className="text-[10px] text-slate-400">{int.connectedAt}</span>
-              )}
-              <button className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
-                int.status === "connected" ? "text-slate-500 hover:text-forest-900 hover:bg-cream-200" :
-                int.status === "error" ? "text-amber-500 bg-amber-100 hover:bg-amber-400/20" :
-                "text-forest-700 bg-emerald-400/10 hover:bg-emerald-400/20"
-              }`}>
-                {actionLabel}
-              </button>
-            </div>
-          </div>
-        );
-      })}
-      </div>
+    <div>
+      <IntegrationsHub />
     </div>
   );
 
