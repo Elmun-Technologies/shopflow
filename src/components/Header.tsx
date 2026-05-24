@@ -1,4 +1,4 @@
-import { Search, ChevronDown, Menu } from "lucide-react";
+import { Search, ChevronDown, Menu, LogOut, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,14 +19,10 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (profileRef.current && !profileRef.current.contains(target)) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node))
         setProfileOpen(false);
-      }
     };
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setProfileOpen(false);
-    };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setProfileOpen(false); };
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEsc);
     return () => {
@@ -36,40 +32,68 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
   }, []);
 
   const initials = (user?.name ?? "?")
-    .split(/\s+/)
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+    .split(/\s+/).map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+
+  const roleColor: Record<string, string> = {
+    OWNER: "#5FA340", ADMIN: "#3b82f6", MANAGER: "#8b5cf6", AGENT: "#f59e0b",
+  };
+  const accentColor = roleColor[user?.role ?? ""] ?? "#5FA340";
 
   return (
-    <header className="h-16 bg-cream-50/80 backdrop-blur-md border-b border-cream-300 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
-      {onMobileMenuOpen && (
-        <button
-          onClick={onMobileMenuOpen}
-          aria-label={t("header.menu")}
-          className="md:hidden mr-2 p-2 -ml-2 rounded-lg text-slate-700 hover:text-forest-900 hover:bg-cream-100"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      )}
-      <div className="flex items-center gap-4 flex-1 max-w-xl">
-        <label className="relative flex-1">
+    <header
+      className="h-16 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40"
+      style={{
+        backgroundColor: "rgba(250,250,245,0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid #E5E5DA",
+      }}
+    >
+      {/* Left: mobile menu + search */}
+      <div className="flex items-center gap-3 flex-1 max-w-md">
+        {onMobileMenuOpen && (
+          <button
+            onClick={onMobileMenuOpen}
+            aria-label={t("header.menu")}
+            className="md:hidden p-2 -ml-1 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Search */}
+        <label className="relative flex-1 group">
           <span className="sr-only">{t("header.search")}</span>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 transition-colors"
+            style={{ color: "#94a3b8" }}
+          />
           <input
             type="search"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder={t("header.searchPlaceholder")}
             aria-label={t("header.search")}
-            className="w-full bg-cream-100 border border-cream-300 rounded-lg pl-10 pr-4 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20 transition-all"
+            className="w-full rounded-xl pl-9 pr-4 py-2 text-sm transition-all focus:outline-none"
+            style={{
+              backgroundColor: "#F4F4ED",
+              border: "1px solid #E5E5DA",
+              color: "#1F3327",
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = "#7BC056";
+              e.target.style.boxShadow = "0 0 0 3px rgba(123,192,86,0.12)";
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = "#E5E5DA";
+              e.target.style.boxShadow = "none";
+            }}
           />
         </label>
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Right: notifs + profile */}
+      <div className="flex items-center gap-2">
         <NotificationsPanel onNavigate={onNotifNavigate} />
 
         <div className="relative" ref={profileRef}>
@@ -77,44 +101,106 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
             onClick={() => setProfileOpen(!profileOpen)}
             aria-label={t("header.profileMenu")}
             aria-expanded={profileOpen}
-            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-lg hover:bg-cream-100 transition-all"
+            className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl hover:bg-cream-100 transition-all group"
           >
-            <div className="w-8 h-8 bg-forest-700 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+            {/* Avatar */}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+              style={{ backgroundColor: accentColor }}
+            >
               {initials || "?"}
             </div>
+
+            {/* Name + tenant */}
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-forest-800">{user?.name ?? "—"}</p>
-              <p className="text-xs text-slate-500">{tenant?.name ?? user?.role ?? ""}</p>
+              <p className="text-sm font-semibold leading-tight" style={{ color: "#1F3327" }}>
+                {user?.name ?? "—"}
+              </p>
+              <p className="text-[10px] leading-tight" style={{ color: "#94a3b8" }}>
+                {tenant?.name ?? user?.role ?? ""}
+              </p>
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-500" />
+
+            <ChevronDown
+              className="w-3.5 h-3.5 transition-transform"
+              style={{
+                color: "#94a3b8",
+                transform: profileOpen ? "rotate(180deg)" : undefined,
+              }}
+            />
           </button>
 
+          {/* Dropdown */}
           <AnimatePresence>
             {profileOpen && (
               <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                transition={{ duration: 0.12 }}
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-56 bg-cream-100 border border-cream-300 rounded-xl shadow-2xl overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-60 rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: "#FAFAF5",
+                  border: "1px solid #E5E5DA",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                }}
               >
-                <div className="px-4 py-3 border-b border-cream-300">
-                  <p className="text-sm font-medium text-forest-800 truncate">{user?.name}</p>
-                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                  <p className="text-[10px] text-forest-700 mt-1">
-                    {tenant?.slug} · {user?.role}
-                  </p>
+                {/* User info */}
+                <div className="px-4 py-3.5" style={{ borderBottom: "1px solid #E5E5DA" }}>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ backgroundColor: accentColor }}
+                    >
+                      {initials || "?"}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: "#1F3327" }}>
+                        {user?.name}
+                      </p>
+                      <p className="text-xs truncate" style={{ color: "#94a3b8" }}>
+                        {user?.email}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: accentColor + "20", color: accentColor }}
+                        >
+                          {user?.role}
+                        </span>
+                        {tenant?.slug && (
+                          <span className="text-[10px]" style={{ color: "#cbd5e1" }}>
+                            /{tenant.slug}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Actions */}
                 <div className="py-1">
                   <button
                     type="button"
+                    role="menuitem"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-cream-100"
+                    style={{ color: "#475569" }}
+                  >
+                    <Settings className="w-4 h-4" style={{ color: "#94a3b8" }} />
+                    Sozlamalar
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     onClick={() => {
                       setProfileOpen(false);
                       logout();
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-cream-200/50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-red-50"
+                    style={{ color: "#ef4444" }}
                   >
+                    <LogOut className="w-4 h-4" />
                     {t("sidebar.logout")}
                   </button>
                 </div>

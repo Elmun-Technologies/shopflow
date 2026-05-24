@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { auth as authApi } from "../api/endpoints";
-import { setToken } from "../api/client";
+import { setToken, setRefreshToken, clearAuth } from "../api/client";
+import { api } from "../api/client";
 import type { User, Tenant } from "../types/api";
 
 interface AuthState {
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTenant(res.tenant);
       })
       .catch(() => {
-        setToken(null);
+        clearAuth();
       })
       .finally(() => setLoading(false));
   }, []);
@@ -62,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authApi.login(email, password, tenantSlug);
       setToken(res.token);
+      const extended = res as typeof res & { refreshToken?: string };
+      if (extended.refreshToken) setRefreshToken(extended.refreshToken);
       setUser(res.user);
       setTenant(res.tenant);
     } catch (err) {
@@ -76,6 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authApi.register(data);
       setToken(res.token);
+      const extended2 = res as typeof res & { refreshToken?: string };
+      if (extended2.refreshToken) setRefreshToken(extended2.refreshToken);
       setUser(res.user);
       setTenant(res.tenant);
     } catch (err) {
@@ -86,7 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
+    const refreshToken = localStorage.getItem("shopflow.refreshToken");
+    if (refreshToken) {
+      // Fonda — kutmaymiz
+      api("/auth/logout", { method: "POST", body: { refreshToken }, _skipRefresh: true } as never)
+        .catch(() => null);
+    }
+    clearAuth();
     setUser(null);
     setTenant(null);
   }, []);

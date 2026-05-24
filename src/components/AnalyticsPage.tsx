@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -13,13 +13,24 @@ import { timeRangeLabels } from "../data/analyticsData";
 import type { AnalyticsTimeRange } from "../data/analyticsData";
 import type { ChartTooltipProps } from "../utils/chart";
 import { dashboardApi } from "../api/endpoints";
+import type { DashboardPeriod } from "../api/endpoints";
 import { useT } from "../i18n";
+
+// AnalyticsTimeRange → DashboardPeriod konvertatsiya
+const toPeriod = (r: AnalyticsTimeRange): DashboardPeriod => {
+  const map: Record<AnalyticsTimeRange, DashboardPeriod> = {
+    today: "today", week: "week", month: "month", year: "year", all: "all",
+  };
+  return map[r] ?? "month";
+};
 
 interface KpiData {
   revenue: { value: number; change: number };
   orders: { value: number; change: number };
   customers: { value: number; change: number };
   conversion: { value: number; change: number };
+  returnRate?: { value: number; change: number };
+  avgOrder?: { value: number; change: number };
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -72,17 +83,24 @@ export default function AnalyticsPage() {
   const [conversionFunnel, setConversionFunnel] = useState<Array<{ stage: string; count: number; dropOff: number; percentage: number; color: string }>>([]);
   const [customerSegments, setCustomerSegments] = useState<Array<{ name: string; count: number; color: string; percentage: number; avgOrders: number }>>([]);
 
-  useEffect(() => {
+  const loadData = useCallback((range: AnalyticsTimeRange) => {
+    const period = toPeriod(range);
+    // Kunlar soni period ga mos
+    const daysMap: Record<AnalyticsTimeRange, number> = { today: 1, week: 7, month: 30, year: 365, all: 90 };
+    const days = daysMap[range];
+
     let cancelled = false;
+    setLoading(true);
+
     Promise.all([
-      dashboardApi.kpis(),
+      dashboardApi.kpis(period),
       dashboardApi.revenueTrend(),
-      dashboardApi.dailySales(30),
-      dashboardApi.topProducts(),
-      dashboardApi.trafficSources(),
-      dashboardApi.salesByCategory(),
-      dashboardApi.geography(),
-      dashboardApi.funnel(),
+      dashboardApi.dailySales(days),
+      dashboardApi.topProducts(period),
+      dashboardApi.trafficSources(period),
+      dashboardApi.salesByCategory(period),
+      dashboardApi.geography(period),
+      dashboardApi.funnel(period),
       dashboardApi.customerSegments(),
     ])
       .then(([k, mr, ds, tp, ts, cs, gd, fn, cseg]) => {
@@ -129,22 +147,29 @@ export default function AnalyticsPage() {
       })
       .catch(() => null)
       .finally(() => { if (!cancelled) setLoading(false); });
+
     return () => { cancelled = true; };
-  }, [timeRange]);
+  }, []);
+
+  useEffect(() => {
+    return loadData(timeRange);
+  }, [timeRange, loadData]);
 
   // Backend KPI'larni 6-kartochka shapega adapt qilamiz
   type AdaptedKpi = { id: string; label: string; value: string; change: number; trend: "up" | "down"; icon: string; color: string };
   const analyticsKPIs = useMemo<AdaptedKpi[]>(() => {
     if (!kpis) return [];
     const fmt = (n: number) => n >= 1e9 ? (n / 1e9).toFixed(1) + " mlrd" : n >= 1e6 ? (n / 1e6).toFixed(1) + " mln" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toLocaleString();
-    const avgOrder = kpis.orders.value > 0 ? kpis.revenue.value / kpis.orders.value : 0;
+    // API dan avgOrder va returnRate kelsa ularni ishlatamiz, aks holda hisoblaymiz
+    const avgOrderVal = kpis.avgOrder?.value ?? (kpis.orders.value > 0 ? kpis.revenue.value / kpis.orders.value : 0);
+    const returnRateVal = kpis.returnRate?.value ?? 0;
     return [
       { id: "revenue", label: "Daromad", value: fmt(kpis.revenue.value) + " so'm", change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
       { id: "orders", label: "Buyurtmalar", value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", icon: "ShoppingCart", color: "#3b82f6" },
       { id: "customers", label: "Mijozlar", value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", icon: "Users", color: "#8b5cf6" },
       { id: "conversion", label: "Konversiya", value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", icon: "Target", color: "#f59e0b" },
-      { id: "avg", label: "O'rtacha chek", value: fmt(avgOrder) + " so'm", change: 0, trend: "up", icon: "Receipt", color: "#06b6d4" },
-      { id: "returns", label: "Qaytarish", value: "0%", change: 0, trend: "down", icon: "RotateCcw", color: "#94a3b8" },
+      { id: "avg", label: "O'rtacha chek", value: fmt(avgOrderVal) + " so'm", change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", icon: "Receipt", color: "#06b6d4" },
+      { id: "returns", label: "Bekor qilish", value: returnRateVal.toFixed(1) + "%", change: Math.round(kpis.returnRate?.change ?? 0), trend: returnRateVal <= 5 ? "up" : "down", icon: "RotateCcw", color: "#94a3b8" },
     ];
   }, [kpis]);
 
@@ -186,7 +211,24 @@ export default function AnalyticsPage() {
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all">
+          <button
+            onClick={() => {
+              if (!kpis) return;
+              const rows = [
+                ["Ko'rsatkich", "Qiymat", "O'zgarish"],
+                ...analyticsKPIs.map(k => [k.label, k.value, `${k.change > 0 ? "+" : ""}${k.change}%`]),
+              ];
+              const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+              const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `shopflow-analytics-${timeRange}-${new Date().toISOString().slice(0,10)}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all"
+          >
             <Download className="w-4 h-4" />
             {t("analytics.export")}
           </button>
@@ -447,12 +489,12 @@ export default function AnalyticsPage() {
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
+                  const d = payload[0].payload as { name: string; visitors: number; percentage: number };
                   return (
                     <div className="bg-cream-100 border border-cream-300 rounded-xl px-4 py-3 shadow-2xl">
                       <p className="text-xs font-medium text-forest-800">{d.name}</p>
-                      <p className="text-xs text-slate-500">{d.visitors.toLocaleString()} tashrif</p>
-                      <p className="text-xs text-forest-700">{d.conversions} konversiya</p>
+                      <p className="text-xs text-slate-500">{d.visitors.toLocaleString()} buyurtma</p>
+                      <p className="text-xs text-forest-700">{d.percentage}% ulush</p>
                     </div>
                   );
                 }}
@@ -682,7 +724,7 @@ export default function AnalyticsPage() {
         className="mt-8 pt-6 border-t border-cream-300"
       >
         <p className="text-xs text-slate-400 text-center">
-          Barcha ma'lumotlar demo maqsadida ko'rsatilgan · ShopFlow Analytics
+          Ma'lumotlar real vaqtda bazadan olingan · ShopFlow Analytics · {new Date().toLocaleDateString("uz-UZ")}
         </p>
       </motion.div>
     </>

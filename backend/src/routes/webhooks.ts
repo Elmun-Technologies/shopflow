@@ -293,8 +293,14 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
   // keyingi iteratsiyada (queue + worker bilan).
   app.post<{ Params: { tenantId: string } }>("/moysklad/:tenantId", async (req, reply) => {
     const { tenantId } = req.params;
+    // Basic validatsiya — tenantId UUID formatida bo'lishi shart
+    if (!/^[0-9a-f-]{36}$/i.test(tenantId)) {
+      return reply.code(400).send({ error: "Noto'g'ri tenant ID" });
+    }
     const acc = await app.prisma.moyskladAccount.findUnique({ where: { tenantId } });
-    if (!acc) return reply.code(404).send({ error: "Tenant topilmadi" });
+    // Mavjud bo'lmasa yoki o'chirilgan bo'lsa — xato emas, shunchaki tashlaymiz
+    // (MoySklad'ga 200 qaytarmasak, qayta-qayta urinadi)
+    if (!acc || !acc.connectedAt) return reply.code(200).send({ ok: true, skipped: true });
 
     type Event = { meta?: { type?: string; href?: string }; action?: string; accountId?: string };
     const body = req.body as { events?: Event[]; requestId?: string } | undefined;

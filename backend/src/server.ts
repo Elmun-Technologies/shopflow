@@ -5,6 +5,18 @@ import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import { mkdir } from "node:fs/promises";
+import { ZodError } from "zod";
+import { Prisma } from "@prisma/client";
+import * as Sentry from "@sentry/node";
+
+// Sentry — ishga tushirishdan oldin init qilinishi shart
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? "development",
+    tracesSampleRate: 0.1, // 10% so'rovlarni trace qiladi
+  });
+}
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authPlugin } from "./plugins/auth.js";
 import { authRoutes } from "./routes/auth.js";
@@ -31,6 +43,12 @@ import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
 import { reviewRoutes } from "./routes/reviews.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
+import { promoCodeRoutes } from "./routes/promo-codes.js";
+import { deliveryRoutes } from "./routes/delivery.js";
+import { exportRoutes } from "./routes/export.js";
+import { settingsRoutes } from "./routes/settings.js";
+import { smsRoutes } from "./routes/sms.js";
+import { loyaltyRoutes } from "./routes/loyalty.js";
 
 const app = Fastify({
   logger: {
@@ -53,14 +71,55 @@ await mkdir(UPLOADS_DIR, { recursive: true });
 await app.register(multipart);
 
 await app.register(helmet, { contentSecurityPolicy: false });
+
+const corsOrigin = process.env.CORS_ORIGIN?.split(",");
+if (!corsOrigin && process.env.NODE_ENV === "production") {
+  app.log.warn("CORS_ORIGIN o'rnatilmagan — barcha originlarga ruxsat berilmoqda. Production uchun xavfli!");
+}
 await app.register(cors, {
-  origin: process.env.CORS_ORIGIN?.split(",") ?? true,
+  origin: corsOrigin ?? true,
   credentials: true,
 });
+
 await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 await app.register(jwt, { secret: JWT_SECRET });
 await app.register(prismaPlugin);
 await app.register(authPlugin);
+
+// Global error handler — Zod va Prisma xatolarini 400/409/500 ga moslashtirish
+app.setErrorHandler((err, req, reply) => {
+  if (err instanceof ZodError) {
+    return reply.code(400).send({
+      error: "Validation error",
+      details: err.errors.map((e) => ({ path: e.path.join("."), message: e.message })),
+    });
+  }
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2002") {
+      return reply.code(409).send({ error: "Bu ma'lumot allaqachon mavjud" });
+    }
+    if (err.code === "P2025") {
+      return reply.code(404).send({ error: "Yozuv topilmadi" });
+    }
+    app.log.error({ err, url: req.url }, "Prisma error");
+    return reply.code(500).send({ error: "Ma'lumotlar bazasi xatosi" });
+  }
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    app.log.warn({ err, url: req.url }, "Prisma validation error");
+    return reply.code(400).send({ error: "Noto'g'ri so'rov ma'lumotlari" });
+  }
+  const httpErr = err as { statusCode?: number; message?: string };
+  // Fastify rate limit xatosi
+  if (httpErr.statusCode === 429) {
+    return reply.code(429).send({ error: "Juda ko'p so'rov. Biroz kutib turing." });
+  }
+  app.log.error({ err, url: req.url, method: req.method }, "Unhandled error");
+  // Sentry'ga yuborish — faqat 500 darajadagi xatolar
+  if (!httpErr.statusCode || httpErr.statusCode >= 500) {
+    Sentry.captureException(err);
+  }
+  return reply.code(httpErr.statusCode ?? 500).send({ error: httpErr.message ?? "Server xatosi" });
+});
 
 app.get("/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
 // /api/health — Caddy /api/* ni backend'ga proxy qiladi, shu yo'l ham ishlashi uchun
@@ -90,6 +149,12 @@ await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(chatRoutes, { prefix: "/api/chats" });
 await app.register(segmentRoutes, { prefix: "/api/segments" });
 await app.register(reviewRoutes, { prefix: "/api/reviews" });
+await app.register(promoCodeRoutes, { prefix: "/api/promo-codes" });
+await app.register(deliveryRoutes, { prefix: "/api/delivery" });
+await app.register(exportRoutes, { prefix: "/api/export" });
+await app.register(settingsRoutes, { prefix: "/api/settings" });
+await app.register(smsRoutes, { prefix: "/api/sms" });
+await app.register(loyaltyRoutes, { prefix: "/api/loyalty" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

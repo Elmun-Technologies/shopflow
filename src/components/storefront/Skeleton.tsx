@@ -1,11 +1,32 @@
+function shimmer(w: string, h: string, radius = 12) {
+  return (
+    <div
+      className="animate-pulse"
+      style={{ width: w, height: h, borderRadius: radius, backgroundColor: "#1e1e2a" }}
+    />
+  );
+}
+
 export function ProductSkeleton() {
   return (
-    <div className="bg-slate-900 rounded-2xl overflow-hidden">
-      <div className="aspect-square bg-slate-800 animate-pulse" />
-      <div className="p-2.5 space-y-2">
-        <div className="h-3 bg-slate-800 rounded-full w-3/4 animate-pulse" />
-        <div className="h-3 bg-slate-800 rounded-full w-1/2 animate-pulse" />
-        <div className="h-4 bg-slate-800 rounded-full w-2/3 mt-2 animate-pulse" />
+    <div
+      style={{
+        backgroundColor: "#16161f",
+        borderRadius: 20,
+        border: "1px solid rgba(255,255,255,0.05)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Image placeholder 4:3 */}
+      <div
+        className="animate-pulse"
+        style={{ aspectRatio: "4/3", backgroundColor: "#1e1e2a" }}
+      />
+      <div className="p-3 flex flex-col gap-2">
+        {shimmer("60%", "13px", 8)}
+        {shimmer("85%", "11px", 8)}
+        {shimmer("40%", "11px", 8)}
+        {shimmer("100%", "30px", 10)}
       </div>
     </div>
   );
@@ -23,12 +44,12 @@ export function ProductGridSkeleton({ count = 4 }: { count?: number }) {
 
 export function CategoryChipsSkeleton() {
   return (
-    <div className="px-3 py-2 flex gap-2 overflow-hidden">
-      {Array.from({ length: 5 }).map((_, i) => (
+    <div className="px-4 py-2 flex gap-2 overflow-hidden">
+      {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="h-7 bg-slate-800 rounded-lg animate-pulse flex-shrink-0"
-          style={{ width: 60 + (i % 3) * 20 }}
+          className="animate-pulse flex-shrink-0 rounded-full"
+          style={{ width: 60 + (i % 3) * 24, height: 30, backgroundColor: "#1e1e2a" }}
         />
       ))}
     </div>

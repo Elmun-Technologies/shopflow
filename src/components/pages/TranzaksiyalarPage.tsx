@@ -1,168 +1,247 @@
-import { useMemo, useState } from "react";
+// Sodiqlik tranzaksiyalari — real /api/loyalty/transactions
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, Workflow } from "lucide-react";
-import type { LoyaltyTransaction, TransactionType } from "../../data/marketingData";
-import { initialTransactions, transactionTypeLabels } from "../../data/marketingData";
+import {
+  TrendingUp, TrendingDown, Award, Gift, Clock, Loader2,
+  Download, Search,
+} from "lucide-react";
+import { useAsync } from "../../hooks/useAsync";
+import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
 
-const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3";
-const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
-
-function TransactionTypeBadge({ type }: { type: TransactionType }) {
-  const map: Record<TransactionType, string> = {
-    earn: "bg-leaf-100 text-forest-700 border border-leaf-400/50",
-    spend: "bg-orange-500/15 text-orange-600 border border-orange-500/30",
-    expire: "bg-red-500/15 text-rose-600 border border-rose-300",
-    manual_add: "bg-sky-100 text-sky-600 border border-sky-300",
-    manual_remove: "bg-cream-200 text-slate-700",
+interface LoyaltyTx {
+  id: string;
+  type: string;
+  amount: number;
+  balance: number;
+  description: string | null;
+  orderId: string | null;
+  createdAt: string;
+  account: {
+    customer: { id: string; name: string; phone: string | null };
   };
-  return <span className={`text-xs px-2 py-0.5 rounded-full border ${map[type]}`}>{transactionTypeLabels[type]}</span>;
 }
 
+const TYPE_CONF: Record<string, { label: string; icon: typeof TrendingUp; color: string }> = {
+  EARN:   { label: "Ball to'plandi",  icon: TrendingUp,  color: "#10b981" },
+  SPEND:  { label: "Ball sarflandi",  icon: TrendingDown, color: "#ef4444" },
+  EXPIRE: { label: "Muddati tugadi",  icon: Clock,       color: "#94a3b8" },
+  ADJUST: { label: "Sozlash",         icon: Award,       color: "#3b82f6" },
+  BONUS:  { label: "Bonus",           icon: Gift,        color: "#8b5cf6" },
+};
+
 export default function TranzaksiyalarPage() {
-  const [transactions] = useState<LoyaltyTransaction[]>(initialTransactions);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<TransactionType | "all">("all");
+  const [filterType, setFilterType] = useState<string>("");
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return transactions.filter((t) => {
-      const matchesSearch = !q || t.customerName.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
-      const matchesType = filterType === "all" || t.type === filterType;
-      return matchesSearch && matchesType;
-    });
-  }, [transactions, search, filterType]);
+  const { data, loading, refetch } = useAsync<{
+    items: LoyaltyTx[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>(
+    () => api("/loyalty/transactions", {
+      query: { page, pageSize: 25, ...(filterType ? { type: filterType } : {}) },
+    }),
+    [page, filterType],
+  );
 
-  const stats = useMemo(() => {
-    const earned = transactions.filter((t) => t.type === "earn").reduce((s, t) => s + t.points, 0);
-    const spent = transactions.filter((t) => t.type === "spend").reduce((s, t) => s + Math.abs(t.points), 0);
-    const totalTransactions = transactions.length;
-    return { earned, spent, totalTransactions };
-  }, [transactions]);
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const pageSize = data?.pageSize ?? 25;
+  const totalPages = Math.ceil(total / pageSize);
 
-  const handleDownload = () => {
-    const header = "Foydalanuvchi,Turi,Balllar,Balans,Tavsifi,Buyurtma ID,Sana\n";
-    const rows = filtered
-      .map((t) => `"${t.customerName}",${t.type},${t.points},${t.balance},"${t.description.replace(/"/g, '""')}",${t.orderId ?? ""},${t.createdAt}`)
-      .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+  const filtered = search
+    ? items.filter((t) =>
+        t.account.customer.name.toLowerCase().includes(search.toLowerCase()) ||
+        (t.account.customer.phone ?? "").includes(search)
+      )
+    : items;
+
+  const exportCsv = () => {
+    const rows = [
+      ["Sana", "Mijoz", "Telefon", "Tur", "Ball", "Balans", "Izoh"].join(","),
+      ...items.map((t) => [
+        new Date(t.createdAt).toLocaleDateString("uz-UZ"),
+        `"${t.account.customer.name}"`,
+        t.account.customer.phone ?? "",
+        TYPE_CONF[t.type]?.label ?? t.type,
+        t.amount,
+        t.balance,
+        `"${t.description ?? ""}"`,
+      ].join(",")),
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + rows], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `tranzaksiyalar-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.href = URL.createObjectURL(blob);
+    a.download = `loyalty-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(a.href);
   };
+
+  void refetch;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-forest-800">Ball tranzaksiyalari</h1>
-          <p className="text-sm text-slate-500 mt-1">Sodiqlik ball movaffaqiyatlari va operatsiyalari</p>
+          <h1 className="text-2xl font-bold text-forest-900">Ball tranzaksiyalari</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Jami: {total.toLocaleString()} ta tranzaksiya
+          </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Jami operatsiyalar</p>
-            <p className="text-lg font-semibold text-forest-800">{stats.totalTransactions}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Olingan ball</p>
-            <p className="text-lg font-semibold text-forest-700">+{stats.earned}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Sarflangan ball</p>
-            <p className="text-lg font-semibold text-orange-600">-{stats.spent}</p>
-          </div>
-        </div>
-      </div>
+        <button
+          onClick={exportCsv}
+          className="flex items-center gap-2 px-4 py-2.5 bg-cream-100 hover:bg-cream-200 border border-cream-300 text-forest-800 rounded-xl text-sm font-medium transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          CSV yuklab olish
+        </button>
+      </motion.div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            type="search"
+            type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Qidirish..."
-            className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 pl-10 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20"
+            placeholder="Mijoz ismi yoki telefon bo'yicha..."
+            className="w-full bg-white border border-cream-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-leaf-500/60"
           />
         </div>
-        <div className="flex gap-2">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as TransactionType | "all")}
-            className="px-3 py-2 rounded-lg text-sm bg-cream-100 text-slate-700 border border-cream-300 focus:outline-none focus:border-leaf-500/60"
-          >
-            <option value="all">Barcha turlar</option>
-            <option value="earn">Olingan balllar</option>
-            <option value="spend">Sarflangan balllar</option>
-            <option value="expire">Muddati o'tgan</option>
-            <option value="manual_add">Qo'lda qo'shilgan</option>
-            <option value="manual_remove">Qo'lda ayirilgan</option>
-          </select>
-          <button onClick={handleDownload} className="px-4 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700 inline-flex items-center gap-2 font-medium">
-            <Download className="w-4 h-4" />
-            Yuklab olish
-          </button>
-        </div>
+        <select
+          value={filterType}
+          onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
+          className="bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none min-w-[160px]"
+        >
+          <option value="">Barcha turlar</option>
+          {Object.entries(TYPE_CONF).map(([key, conf]) => (
+            <option key={key} value={key}>{conf.label}</option>
+          ))}
+        </select>
       </div>
 
-      {transactions.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
-          <EmptyState
-            icon={Workflow}
-            title="Hali tranzaksiya yo'q"
-            description="Sodiqlik dasturi ball operatsiyalari bu yerda ko'rinadi. Qoidalar yarating va xaridorlarga ball bering."
-            buttonText="Yangilash"
-            onButtonClick={() => setSearch("")}
-            iconColor="text-indigo-400"
-          />
-        </motion.div>
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Award}
+          title="Tranzaksiyalar yo'q"
+          description="Hali sodiqlik tranzaksiyalari mavjud emas"
+          buttonText=""
+          onButtonClick={() => {}}
+        />
       ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-white/80">
-              <tr>
-                <th className={thClass}>Foydalanuvchi</th>
-                <th className={thClass}>Turi</th>
-                <th className={thClass}>Balllar</th>
-                <th className={thClass}>Balans</th>
-                <th className={thClass}>Tavsifi</th>
-                <th className={thClass}>Buyurtma ID</th>
-                <th className={thClass}>Sana</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500 text-sm">
-                    Ma'lumot topilmadi
-                  </td>
+        <div className="bg-white border border-cream-300/80 rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-cream-300">
+                  {["Sana", "Mijoz", "Tur", "Ball", "Balans", "Izoh"].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-cream-100/40">
-                    <td className={tdClass + " font-medium"}>{t.customerName}</td>
-                    <td className={tdClass}><TransactionTypeBadge type={t.type} /></td>
-                    <td className={tdClass + (t.points >= 0 ? " text-forest-700" : " text-orange-600")}>
-                      {t.points >= 0 ? "+" : ""}{t.points}
-                    </td>
-                    <td className={tdClass}>{t.balance}</td>
-                    <td className={tdClass + " text-xs max-w-xs truncate"}>{t.description}</td>
-                    <td className={tdClass + " text-xs text-slate-500"}>{t.orderId || "—"}</td>
-                    <td className={tdClass + " text-xs text-slate-500"}>{t.createdAt}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </motion.div>
-      )}
+              </thead>
+              <tbody>
+                {filtered.map((tx) => {
+                  const conf = TYPE_CONF[tx.type] ?? { label: tx.type, icon: Award, color: "#94a3b8" };
+                  const ConfIcon = conf.icon;
+                  const isEarn = tx.amount > 0;
+                  return (
+                    <tr
+                      key={tx.id}
+                      className="border-b border-cream-300/50 hover:bg-cream-50/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                        {new Date(tx.createdAt).toLocaleDateString("uz-UZ", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium text-forest-800">{tx.account.customer.name}</p>
+                        {tx.account.customer.phone && (
+                          <p className="text-xs text-slate-400">{tx.account.customer.phone}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                          style={{ backgroundColor: conf.color + "15", color: conf.color }}
+                        >
+                          <ConfIcon className="w-3 h-3" />
+                          {conf.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: isEarn ? "#10b981" : "#ef4444" }}
+                        >
+                          {isEarn ? "+" : ""}{tx.amount.toLocaleString()} ball
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-forest-800 font-medium">
+                          {tx.balance.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">
+                        {tx.description ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      {filtered.length > 0 && (
-        <div className="text-xs text-slate-500 text-center">
-          {filtered.length} ta operatsiya ko'rsatilmoqda
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-cream-300">
+              <p className="text-xs text-slate-500">
+                {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} / {total}
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-cream-100 disabled:opacity-40 transition-colors"
+                >
+                  Oldingi
+                </button>
+                <span className="px-3 py-1.5 text-xs font-medium text-forest-800">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-cream-100 disabled:opacity-40 transition-colors"
+                >
+                  Keyingi
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

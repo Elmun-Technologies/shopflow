@@ -43,6 +43,15 @@ model Tenant {
   conversations   Conversation[]
   segments        CustomerSegment[]
   reviews         Review[]
+  promoCodes      PromoCode[]
+  promoUsages     PromoUsage[]
+  deliveryZones   DeliveryZone[]
+  deliveryMethods DeliveryMethod[]
+  deliveryOrders  DeliveryOrder[]
+  apiKeys         ApiKey[]
+  notifSettings   TenantNotifSettings?
+  loyaltyAccounts LoyaltyAccount[]
+  loyaltyRules    LoyaltyRule[]
 }
 
 enum UserRole {
@@ -71,6 +80,7 @@ model User {
   assignedConversations Conversation[]        @relation("ConversationAssignee")
   conversationMessages  ConversationMessage[] @relation("ConversationMessageAuthor")
   moderatedReviews      Review[]              @relation("ReviewModerator")
+  refreshTokens  RefreshToken[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -356,6 +366,8 @@ model Customer {
   wishlist      WishlistItem[]
   conversations Conversation[]
   reviews       Review[]
+  promoUsages   PromoUsage[]
+  loyaltyAccount LoyaltyAccount?
 
   @@unique([tenantId, moyskladId])
   @@index([tenantId, email])
@@ -440,11 +452,18 @@ model Order {
   moyskladUpdated  DateTime?
   pushedToMoysklad Boolean   @default(false)
 
+  // Promo kod
+  promoCodeId    String?
+  promoCode      PromoCode? @relation("OrderPromo", fields: [promoCodeId], references: [id], onDelete: SetNull)
+  promoDiscount  Decimal?   @db.Decimal(14, 2)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items      OrderItem[]
-  orderNotes OrderNote[]
+  items          OrderItem[]
+  orderNotes     OrderNote[]
+  deliveryOrder  DeliveryOrder?
+  promoUsage     PromoUsage?
 
   @@unique([tenantId, code])
   @@unique([tenantId, moyskladId])
@@ -988,4 +1007,293 @@ model ProductAddon {
 
   @@unique([mainProductId, addonProductId])
   @@index([tenantId, mainProductId])
+}
+
+// ============== PROMO CODES ==============
+// Chegirma kodlari — foiz yoki belgilangan summa chegirma.
+// Storefront checkout'da qo'llaniladi.
+
+enum PromoDiscountType {
+  PERCENT   // foiz chegirma (5%, 10%, ...)
+  FIXED     // belgilangan summa (10000 so'm)
+}
+
+model PromoCode {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  code        String  // Unikal kod (SAVE10, SUMMER25, ...)
+  description String? // Admin uchun izoh
+
+  discountType  PromoDiscountType @default(PERCENT)
+  discountValue Decimal           @db.Decimal(10, 2) // foiz yoki summa
+  maxDiscount   Decimal?          @db.Decimal(14, 2) // foiz uchun maksimal chegirma summa
+
+  // Minimal buyurtma summasi
+  minOrderAmount Decimal? @db.Decimal(14, 2)
+
+  // Foydalanish limiti
+  usageLimit    Int?     // umumiy necha marta ishlatiladi (null = cheksiz)
+  usageCount    Int      @default(0)
+  perUserLimit  Int      @default(1) // bitta foydalanuvchi necha marta
+
+  // Amal qilish muddati
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usages PromoUsage[]
+  orders Order[]      @relation("OrderPromo")
+
+  @@unique([tenantId, code])
+  @@index([tenantId, active])
+}
+
+model PromoUsage {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  orderId     String?   @unique
+  order       Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  usedAt      DateTime  @default(now())
+
+  @@index([tenantId, promoCodeId])
+  @@index([customerId])
+}
+
+// ============== DELIVERY ==============
+// Yetkazib berish zonalari, usullari va buyurtma yetkazish
+
+model DeliveryZone {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name         String           // "Toshkent", "Toshkent viloyati", ...
+  regions      String[]         // viloyat/tuman nomlari
+  active       Boolean          @default(true)
+  position     Int              @default(0)
+
+  methods DeliveryMethod[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+enum DeliveryMethodType {
+  FREE         // bepul
+  FLAT_RATE    // belgilangan narx
+  BY_WEIGHT    // og'irlik bo'yicha
+  BY_DISTANCE  // masofa bo'yicha
+}
+
+model DeliveryMethod {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  zoneId String?
+  zone   DeliveryZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  name        String             // "Standart", "Tezkor", "Bepul"
+  description String?
+  type        DeliveryMethodType @default(FLAT_RATE)
+  price       Decimal            @default(0) @db.Decimal(14, 2)
+  // Bepul yetkazish uchun minimal summa (0 = doim bepul)
+  freeAbove   Decimal?           @db.Decimal(14, 2)
+  // Yetkazish vaqti (kun)
+  minDays     Int                @default(1)
+  maxDays     Int                @default(3)
+
+  active    Boolean  @default(true)
+  position  Int      @default(0)
+
+  deliveryOrders DeliveryOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+  @@index([zoneId])
+}
+
+enum DeliveryStatus {
+  PENDING     // Kutilmoqda
+  ASSIGNED    // Kuryer tayinlangan
+  PICKED_UP   // Olib ketildi
+  IN_TRANSIT  // Yo'lda
+  DELIVERED   // Yetkazildi
+  FAILED      // Yetkazib bo'lmadi
+  RETURNED    // Qaytarildi
+}
+
+model DeliveryOrder {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  orderId  String @unique
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  methodId String?
+  method   DeliveryMethod? @relation(fields: [methodId], references: [id], onDelete: SetNull)
+
+  status       DeliveryStatus @default(PENDING)
+  trackingCode String?
+  courierName  String?
+  courierPhone String?
+  notes        String?
+
+  // Narx
+  price    Decimal @default(0) @db.Decimal(14, 2)
+  currency String  @default("UZS")
+
+  // Sana va vaqt
+  scheduledAt DateTime?
+  pickedUpAt  DateTime?
+  deliveredAt DateTime?
+  failedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([orderId])
+}
+
+// ============== API KEYS ==============
+model ApiKey {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name       String
+  keyHash    String
+  prefix     String
+  scopes     String[] @default([])
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  active     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+  @@index([keyHash])
+}
+
+// ============== NOTIFICATION SETTINGS ==============
+model TenantNotifSettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  notifyOrdersGroupId     String?
+  notifyOrdersEnabled     Boolean @default(true)
+  notifyLeadsEnabled      Boolean @default(true)
+  notifyReviewsEnabled    Boolean @default(true)
+  notifyAbandonedEnabled  Boolean @default(true)
+  emailNotificationsEnabled Boolean @default(false)
+  emailRecipients         String[] @default([])
+
+  updatedAt DateTime @updatedAt
+}
+
+// ============== LOYALTY (BALL TIZIMI) ==============
+
+model LoyaltyAccount {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  balance    Int @default(0) // Joriy ball miqdori
+  totalEarned Int @default(0)
+  totalSpent  Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions LoyaltyTransaction[]
+
+  @@index([tenantId])
+  @@index([customerId])
+}
+
+enum LoyaltyTxType {
+  EARN    // Xariddan ball to'plash
+  SPEND   // Ballarni sarflash (chegirma)
+  EXPIRE  // Muddat o'tgan ballar
+  ADJUST  // Admin tomonidan qo'lda o'zgartirish
+  BONUS   // Bonus (tug'ilgan kun va h.k.)
+}
+
+model LoyaltyTransaction {
+  id        String            @id @default(cuid())
+  tenantId  String
+  accountId String
+  account   LoyaltyAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  type      LoyaltyTxType
+  amount    Int               // Musbat = qo'shildi, manfiy = ayirildi
+  balance   Int               // Bu operatsiyadan keyingi balans
+  description String?
+  orderId   String?           // Agar xariddan to'plangan bo'lsa
+
+  expiresAt DateTime?         // Ball qachon muddati tugaydi
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, accountId])
+  @@index([orderId])
+}
+
+model LoyaltyRule {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  type        String   // "purchase", "birthday", "referral", "first_order"
+
+  // Xariddan to'plash: har 1000 so'mga necha ball
+  earnPerAmount     Int?     // har earnPerThreshold so'mga earnPerAmount ball
+  earnPerThreshold  Int?     // default 1000
+
+  // Sarflash: necha ball = 1 so'm chegirma
+  redeemRate Int?     // 1 ball = redeemRate so'm
+
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
+}
+
+// ============== REFRESH TOKENS ==============
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+
+  @@index([userId])
+  @@index([tokenHash])
 }

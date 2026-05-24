@@ -1,9 +1,61 @@
 // Payments routes — admin panel uchun to'lov usullari va tranzaksiyalarni
 // boshqarish + provayder'lar (Click/Payme/Uzum/...) uchun webhook qabuli.
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
+
+function getPublicBaseUrl(): string {
+  const raw =
+    process.env.PUBLIC_URL ??
+    process.env.API_PUBLIC_URL ??
+    `https://${process.env.DOMAIN ?? "shop-flow.uz"}`;
+  return raw.replace(/\/$/, "");
+}
+
+/** Har bir tenant uchun noyob webhook URL (Click/Payme kabilar path orqali tenantni biladi). */
+export function paymentWebhookUrl(tenantSlug: string, methodCode: string): string {
+  return `${getPublicBaseUrl()}/api/payments/webhook/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(methodCode)}`;
+}
+
+async function resolveTenantId(prisma: PrismaClient, ref: string): Promise<string | null> {
+  const tenant = await prisma.tenant.findFirst({
+    where: { OR: [{ slug: ref }, { id: ref }] },
+    select: { id: true },
+  });
+  return tenant?.id ?? null;
+}
+
+type WebhookPaymentMethod = {
+  id: string;
+  tenantId: string;
+  autoConfirm: boolean;
+  config: unknown;
+  testMode: boolean;
+};
+
+async function loadPaymentMethodForWebhook(
+  prisma: PrismaClient,
+  tenantRef: string,
+  methodCode: string,
+): Promise<WebhookPaymentMethod | null> {
+  const tenantId = await resolveTenantId(prisma, tenantRef);
+  if (!tenantId) return null;
+  return prisma.paymentMethod.findUnique({
+    where: { tenantId_code: { tenantId, code: methodCode } },
+    select: { id: true, tenantId: true, autoConfirm: true, config: true, testMode: true },
+  });
+}
+
+function tenantRefFromRequest(req: FastifyRequest): string | undefined {
+  const header = req.headers["x-shopflow-tenant"];
+  if (typeof header === "string" && header.trim()) return header.trim();
+  const q = req.query as { tenant?: string };
+  if (typeof q.tenant === "string" && q.tenant.trim()) return q.tenant.trim();
+  return undefined;
+}
 
 // Provayder konfiguratsiya — frontend'da yashirin maydonlar (apiKey, secretKey)
 // faqat "configured: true/false" sifatida ko'rinadi.
@@ -48,6 +100,10 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
 
     // Barcha tenant to'lov usullari ro'yxati
     admin.get("/methods", async (req) => {
+      const tenant = await admin.prisma.tenant.findUnique({
+        where: { id: req.session.tenantId },
+        select: { slug: true },
+      });
       const items = await admin.prisma.paymentMethod.findMany({
         where: { tenantId: req.session.tenantId },
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
@@ -64,6 +120,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             type: m.type,
             configured: cfg.configured,
             configPreview: cfg.preview,
+            webhookUrl: tenant?.slug ? paymentWebhookUrl(tenant.slug, m.code) : undefined,
             minAmount: m.minAmount ? Number(m.minAmount) : null,
             maxAmount: m.maxAmount ? Number(m.maxAmount) : null,
             commissionPercent: m.commissionPercent ? Number(m.commissionPercent) : null,
@@ -269,30 +326,219 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Webhook qabuli — auth talab qilinmaydi (provayder o'zining imzosini yuboradi)
-  // Hozircha skeleton — provayder'ning real verify mantig'i keyingi PR'larda
-  app.post<{ Params: { methodCode: string }; Body: unknown }>(
-    "/webhook/:methodCode",
-    async (req, reply) => {
-      const { methodCode } = z.object({ methodCode: z.string() }).parse(req.params);
-      const tenantId = (req.headers["x-shopflow-tenant"] as string | undefined) ?? "";
-
-      // Hech bo'lmaganda webhook event yozib qo'yamiz — keyin debug uchun
-      const method = await app.prisma.paymentMethod.findFirst({
-        where: { code: methodCode, ...(tenantId && { tenantId }) },
-        select: { id: true, tenantId: true, autoConfirm: true },
-      });
+  const handlePaymentWebhook = async (
+    req: FastifyRequest,
+    reply: FastifyReply,
+    tenantRef: string,
+    methodCode: string,
+  ) => {
+      const method = await loadPaymentMethodForWebhook(app.prisma, tenantRef, methodCode);
       if (!method) {
         return reply.code(404).send({ error: "Payment method not found" });
       }
 
-      // TODO: provayder'ga xos signature verification
-      // - Click: x-click-sign header / merchant_prepare_id
-      // - Payme: x-auth basic + JSON-RPC
-      // - Uzum: HMAC sign
+      const cfg = (method.config ?? {}) as Record<string, string>;
+      const body = req.body as Record<string, unknown>;
+      const rawBody = JSON.stringify(req.body);
 
-      app.log.info({ methodCode, body: req.body }, "[payments] webhook received");
+      // ─── Click.uz signature verification ─────────────────────────────────
+      // Click to'liq protokoli: action=0 (Prepare), action=1 (Complete)
+      // sign_string = MD5(click_trans_id + service_id + secret_key +
+      //               merchant_trans_id + amount + action + error)
+      if (methodCode === "click") {
+        const b = body as {
+          click_trans_id?: string | number;
+          service_id?: string | number;
+          merchant_trans_id?: string;
+          amount?: string | number;
+          action?: string | number;
+          error?: string | number;
+          sign_string?: string;
+          sign_time?: string;
+        };
+
+        const secretKey = cfg.secretKey ?? "";
+        const serviceId = cfg.serviceId ?? String(b.service_id ?? "");
+
+        if (secretKey && b.sign_string && b.click_trans_id !== undefined) {
+          const signSource = [
+            b.click_trans_id,
+            serviceId,
+            secretKey,
+            b.merchant_trans_id ?? "",
+            b.amount ?? "",
+            b.action ?? "",
+            b.error ?? "0",
+          ].join("");
+
+          const expected = createHash("md5").update(signSource).digest("hex");
+
+          if (!timingSafeEqual(Buffer.from(b.sign_string), Buffer.from(expected))) {
+            app.log.warn({ methodCode, tenantId: method.tenantId, sign_string: b.sign_string, expected }, "[payments] Click sign mismatch");
+            return reply.code(200).send({ error: -1, error_note: "SIGN CHECK FAILED" });
+          }
+        } else if (!method.testMode && secretKey) {
+          app.log.warn({ methodCode }, "[payments] Click webhook — imzo tekshirilmadi");
+        }
+
+        // Click action'ga qarab javob
+        const action = Number(b.action ?? -1);
+        if (action === 0) {
+          // Prepare: buyurtma mavjudligini tekshirish
+          return reply.code(200).send({
+            click_trans_id: b.click_trans_id,
+            merchant_trans_id: b.merchant_trans_id,
+            merchant_prepare_id: Date.now(),
+            error: 0,
+            error_note: "Success",
+          });
+        } else if (action === 1) {
+          // Complete: to'lovni tasdiqlash
+          return reply.code(200).send({
+            click_trans_id: b.click_trans_id,
+            merchant_trans_id: b.merchant_trans_id,
+            merchant_confirm_id: Date.now(),
+            error: 0,
+            error_note: "Success",
+          });
+        }
+
+      // ─── Payme (Paycom) JSON-RPC protocol ────────────────────────────────
+      } else if (methodCode === "payme") {
+        // Payme: Basic auth — `Paycom:${cashierKey}`
+        const authHeader = req.headers["authorization"] as string | undefined;
+        const cashierKey = cfg.secretKey ?? cfg.cashierKey ?? "";
+
+        if (authHeader && cashierKey) {
+          const expectedAuth = `Basic ${Buffer.from(`Paycom:${cashierKey}`).toString("base64")}`;
+          const providedBuf = Buffer.from(authHeader.trim());
+          const expectedBuf = Buffer.from(expectedAuth.trim());
+          const match = providedBuf.length === expectedBuf.length
+            ? timingSafeEqual(providedBuf, expectedBuf)
+            : false;
+          if (!match) {
+            app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Payme auth mismatch");
+            // Payme JSON-RPC error format
+            return reply.code(200).send({
+              id: (body as { id?: unknown }).id,
+              error: { code: -32504, message: { ru: "Insufficient privilege to execute this method", en: "Insufficient privilege to execute this method", uz: "Usul bajarishga ruxsat yo'q" }, data: "auth" },
+            });
+          }
+        } else if (!method.testMode && cashierKey) {
+          app.log.warn({ methodCode }, "[payments] Payme webhook — auth tekshirilmadi");
+        }
+
+        // JSON-RPC method dispatch
+        const rpcMethod = (body as { method?: string }).method ?? "";
+        const rpcId = (body as { id?: unknown }).id;
+        const params = (body as { params?: Record<string, unknown> }).params ?? {};
+
+        if (rpcMethod === "CheckPerformTransaction") {
+          return reply.code(200).send({
+            id: rpcId,
+            result: { allow: true },
+          });
+        } else if (rpcMethod === "CreateTransaction") {
+          return reply.code(200).send({
+            id: rpcId,
+            result: {
+              create_time: Date.now(),
+              transaction: params.id,
+              state: 1,
+            },
+          });
+        } else if (rpcMethod === "PerformTransaction") {
+          return reply.code(200).send({
+            id: rpcId,
+            result: {
+              transaction: params.id,
+              perform_time: Date.now(),
+              state: 2,
+            },
+          });
+        } else if (rpcMethod === "CancelTransaction") {
+          return reply.code(200).send({
+            id: rpcId,
+            result: {
+              transaction: params.id,
+              cancel_time: Date.now(),
+              state: -2,
+            },
+          });
+        } else if (rpcMethod === "CheckTransaction") {
+          return reply.code(200).send({
+            id: rpcId,
+            result: {
+              create_time: 0,
+              perform_time: 0,
+              cancel_time: 0,
+              transaction: params.id,
+              state: 1,
+              reason: null,
+            },
+          });
+        } else if (rpcMethod === "GetStatement") {
+          return reply.code(200).send({ id: rpcId, result: { transactions: [] } });
+        }
+
+      // ─── Uzum Bank (HMAC-SHA256) ──────────────────────────────────────────
+      } else if (methodCode === "uzum") {
+        const signHeader = req.headers["x-hub-signature-256"] ?? req.headers["x-sign"];
+        const secretKey = cfg.secretKey ?? "";
+
+        if (signHeader && secretKey) {
+          const signValue = String(signHeader).replace(/^sha256=/, "");
+          const expected = createHmac("sha256", secretKey).update(rawBody).digest("hex");
+          const providedBuf = Buffer.from(signValue.toLowerCase(), "hex");
+          const expectedBuf = Buffer.from(expected, "hex");
+          if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
+            app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Uzum HMAC mismatch");
+            return reply.code(401).send({ error: "Invalid signature" });
+          }
+        } else if (!method.testMode && secretKey) {
+          app.log.warn({ methodCode }, "[payments] Uzum webhook — sign tekshirilmadi");
+        }
+      }
+
+      app.log.info({ methodCode, tenantId: method.tenantId, event: (body as Record<string,unknown>).event }, "[payments] webhook received");
+
+      // Tranzaksiyani DB ga yozish (audit)
+      await logAudit({
+        prisma: app.prisma,
+        tenantId: method.tenantId,
+        action: `payment_webhook_${methodCode}`,
+        resourceType: "PaymentMethod",
+        resourceId: method.id,
+        changes: { body: req.body },
+      });
 
       return reply.code(200).send({ ok: true });
+  };
+
+  // Asosiy URL: /api/payments/webhook/:tenantSlug/:methodCode
+  app.post<{ Params: { tenantSlug: string; methodCode: string }; Body: unknown }>(
+    "/webhook/:tenantSlug/:methodCode",
+    async (req, reply) => {
+      const { tenantSlug, methodCode } = z
+        .object({ tenantSlug: z.string().min(1), methodCode: z.string().min(1) })
+        .parse(req.params);
+      return handlePaymentWebhook(req, reply, tenantSlug, methodCode);
+    },
+  );
+
+  // Legacy: /api/payments/webhook/:methodCode?tenant=slug yoki x-shopflow-tenant header
+  app.post<{ Params: { methodCode: string }; Body: unknown }>(
+    "/webhook/:methodCode",
+    async (req, reply) => {
+      const { methodCode } = z.object({ methodCode: z.string().min(1) }).parse(req.params);
+      const tenantRef = tenantRefFromRequest(req);
+      if (!tenantRef) {
+        return reply.code(400).send({
+          error: "Tenant talab qilinadi",
+          hint: "Yangi URL: /api/payments/webhook/{tenantSlug}/{methodCode} yoki ?tenant=slug",
+        });
+      }
+      return handlePaymentWebhook(req, reply, tenantRef, methodCode);
     },
   );
 };

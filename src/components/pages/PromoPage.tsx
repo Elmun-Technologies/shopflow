@@ -1,272 +1,502 @@
-import { useMemo, useState } from "react";
+// Promo kodlar — real /api/promo-codes integratsiyasi
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Pencil, Trash2, ChevronLeft, Copy, Tag } from "lucide-react";
-import type { PromoCode, PromoDiscountType } from "../../data/marketingData";
-import { initialPromoCodes } from "../../data/marketingData";
+import {
+  Plus, Pencil, Trash2, Tag, Copy, CheckCircle2,
+  X, Loader2, AlertCircle, BarChart3,
+} from "lucide-react";
+import { useAsync } from "../../hooks/useAsync";
+import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
 
-const inputClass = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20";
-const labelClass = "block text-xs font-medium text-slate-500 mb-1.5";
-const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3";
-const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
-
-function DiscountBadge({ type, value }: { type: PromoDiscountType; value: number }) {
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-leaf-100 text-forest-700 text-sm font-medium">
-      {type === "percent" ? `${value}%` : `${value.toLocaleString()} so'm`}
-    </span>
-  );
+interface PromoCode {
+  id: string;
+  code: string;
+  description: string | null;
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+  maxDiscount: number | null;
+  minOrderAmount: number | null;
+  usageLimit: number | null;
+  usageCount: number;
+  perUserLimit: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  createdAt: string;
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button onClick={handleCopy} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100">
-      <Copy className={`w-4 h-4 ${copied ? "text-forest-700" : ""}`} />
-    </button>
-  );
+const cls = "w-full bg-cream-100 border border-cream-300 rounded-xl px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 transition-colors";
+
+function fmtPrice(v: number) {
+  return v.toLocaleString("uz-UZ") + " so'm";
 }
 
 export default function PromoPage() {
-  const [promos, setPromos] = useState<PromoCode[]>(initialPromoCodes);
-  const [search, setSearch] = useState("");
-  const [pageMode, setPageMode] = useState<"list" | "create" | "edit">("list");
-  const [editItem, setEditItem] = useState<PromoCode | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const { data: codes, loading, refetch } = useAsync<PromoCode[]>(
+    () => api("/promo-codes"), [],
+  );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return promos.filter((p) => !q || p.code.toLowerCase().includes(q));
-  }, [promos, search]);
+  const [showForm, setShowForm] = useState(false);
+  const [editCode, setEditCode] = useState<PromoCode | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const stats = useMemo(() => {
-    const totalActive = promos.filter((p) => p.active).length;
-    const totalUsed = promos.reduce((s, p) => s + p.usedCount, 0);
-    const totalMaxUses = promos.reduce((s, p) => s + p.maxUses, 0);
-    return {
-      totalPromos: promos.length,
-      activePromos: totalActive,
-      usagePercent: totalMaxUses > 0 ? ((totalUsed / totalMaxUses) * 100).toFixed(0) : "0",
-    };
-  }, [promos]);
-
-  const handleSave = (data: Omit<PromoCode, "id" | "usedCount">) => {
-    if (!data.code.trim()) {
-      setFormError("Promo kod bo'sh bo'lishi mumkin emas");
-      return;
-    }
-    if (editItem) {
-      setPromos((prev) => prev.map((p) => (p.id === editItem.id ? { ...editItem, ...data } : p)));
-    } else {
-      const newPromo: PromoCode = { id: `promo-${Date.now()}`, usedCount: 0, ...data };
-      setPromos((prev) => [newPromo, ...prev]);
-    }
-    setPageMode("list");
-    setEditItem(null);
-    setFormError(null);
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code).catch(() => null);
+    setCopied(code);
+    setTimeout(() => setCopied(null), 2000);
   };
 
-  if (pageMode !== "list") {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4 pb-4 border-b border-cream-300">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-cream-100" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
-          <h1 className="text-2xl font-bold text-forest-800">{editItem ? "Promo kodni tahrirlash" : "Yangi promo kod"}</h1>
-          <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
-            <button form="promo-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">Saqlash</button>
-          </div>
-        </div>
+  const handleDelete = async (id: string, code: string) => {
+    if (!confirm(`"${code}" promo kodini o'chirishni xohlaysizmi?`)) return;
+    await api(`/promo-codes/${id}`, { method: "DELETE" });
+    refetch();
+  };
 
-        <PromoForm initial={editItem} error={formError} onSave={handleSave} />
-      </div>
-    );
-  }
+  const handleToggle = async (id: string, active: boolean) => {
+    await api(`/promo-codes/${id}`, { method: "PATCH", body: { active } });
+    refetch();
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-forest-800">Promo kodlar</h1>
-          <p className="text-sm text-slate-500 mt-1">Chegirma kodlarini boshqaring</p>
+          <h1 className="text-2xl font-bold text-forest-900">Promo kodlar</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Chegirma kodlarini yarating va boshqaring
+          </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Jami kodlar</p>
-            <p className="text-lg font-semibold text-forest-800">{stats.totalPromos}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Faol kodlar</p>
-            <p className="text-lg font-semibold text-forest-700">{stats.activePromos}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Foydalaniش %</p>
-            <p className="text-lg font-semibold text-forest-800">{stats.usagePercent}%</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Qidirish..." className={inputClass + " pl-10"} />
-        </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
+        <button
+          onClick={() => { setEditCode(null); setShowForm(true); }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-forest-700 hover:bg-forest-800 text-white rounded-xl text-sm font-semibold transition-colors"
+        >
           <Plus className="w-4 h-4" />
           Yangi kod
         </button>
-      </div>
+      </motion.div>
 
-      {promos.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
-          <EmptyState
-            icon={Tag}
-            title="Promo kod yarating"
-            description="Hali promo kodi yaratilmagan. Xaridorlarga chegirma berish uchun birinchi promo kodini yarating."
-            buttonText="Yangi kod"
-            onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
-            iconColor="text-forest-700"
-          />
-        </motion.div>
-      ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
-          <table className="w-full min-w-[800px]">
-            <thead className="bg-white/80">
-              <tr>
-                <th className={thClass}>Kod</th>
-                <th className={thClass}>Chegirma</th>
-                <th className={thClass}>Min. buyurtma</th>
-                <th className={thClass}>Foydalanish</th>
-                <th className={thClass}>Muddati</th>
-                <th className={thClass}>Holat</th>
-                <th className={`${thClass} text-right`}>Amallar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-cream-100/40">
-                  <td className={tdClass + " font-mono font-medium"}>{p.code}</td>
-                  <td className={tdClass}><DiscountBadge type={p.discountType} value={p.value} /></td>
-                  <td className={tdClass + " text-xs text-slate-500"}>{p.minOrder.toLocaleString()} so'm</td>
-                  <td className={tdClass + " text-xs"}>{p.usedCount}/{p.maxUses}</td>
-                  <td className={tdClass + " text-xs text-slate-500"}>{p.validTo}</td>
-                  <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${p.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>{p.active ? "Faol" : "O'chiq"}</span></td>
-                  <td className={tdClass + " text-right whitespace-nowrap space-x-1"}>
-                    <CopyButton text={p.code} />
-                    <button onClick={() => { setEditItem(p); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => setPendingDelete(p.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && <div className="py-12 text-center text-slate-500 text-sm">Ma'lumot topilmadi</div>}
-        </motion.div>
+      {/* Stats */}
+      {codes && codes.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Jami kodlar", value: codes.length, color: "#475569" },
+            { label: "Faol", value: codes.filter(c => c.active).length, color: "#10b981" },
+            { label: "Ishlatilgan", value: codes.reduce((s, c) => s + c.usageCount, 0), color: "#3b82f6" },
+            { label: "Tugagan", value: codes.filter(c => c.endsAt && new Date(c.endsAt) < new Date()).length, color: "#f59e0b" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="bg-white border border-cream-300/80 rounded-2xl p-4"
+              style={{ borderTop: `2px solid ${s.color}` }}
+            >
+              <p className="text-2xl font-bold text-forest-800">{s.value}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
       )}
 
-      <AnimatePresence>
-        {pendingDelete && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70" onClick={() => setPendingDelete(null)}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white border border-cream-300 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-              <p className="text-forest-800 font-medium mb-2">O'chirishni tasdiqlang</p>
-              <p className="text-sm text-slate-500 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
-                <button onClick={() => { setPromos((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">O'chirish</button>
+      {/* List */}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      )}
+
+      {!loading && (!codes || codes.length === 0) && (
+        <EmptyState
+          icon={Tag}
+          title="Promo kodlar yo'q"
+          description="Birinchi promo kodni yarating"
+          buttonText="Yaratish"
+          onButtonClick={() => setShowForm(true)}
+        />
+      )}
+
+      <div className="space-y-3">
+        {codes?.map((code) => {
+          const isExpired = code.endsAt && new Date(code.endsAt) < new Date();
+          const usagePct = code.usageLimit ? Math.round((code.usageCount / code.usageLimit) * 100) : null;
+
+          return (
+            <motion.div
+              key={code.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-cream-300/80 rounded-2xl p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    code.active && !isExpired ? "bg-leaf-100" : "bg-slate-100"
+                  }`}>
+                    <Tag className={`w-5 h-5 ${code.active && !isExpired ? "text-forest-700" : "text-slate-400"}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => handleCopy(code.code)}
+                        className="flex items-center gap-1.5 font-mono font-bold text-forest-800 hover:text-forest-700 transition-colors text-sm"
+                        title="Nusxalash"
+                      >
+                        {code.code}
+                        {copied === code.code
+                          ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          : <Copy className="w-3 h-3 text-slate-400" />
+                        }
+                      </button>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                        !code.active
+                          ? "bg-slate-100 text-slate-500 border-slate-200"
+                          : isExpired
+                            ? "bg-amber-100 text-amber-600 border-amber-200"
+                            : "bg-leaf-100 text-forest-700 border-leaf-300/60"
+                      }`}>
+                        {!code.active ? "Nofaol" : isExpired ? "Tugagan" : "Faol"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
+                      <span className="font-semibold text-forest-700">
+                        {code.discountType === "PERCENT"
+                          ? `${code.discountValue}%`
+                          : fmtPrice(code.discountValue)
+                        } chegirma
+                      </span>
+                      {code.minOrderAmount && (
+                        <span>min: {fmtPrice(code.minOrderAmount)}</span>
+                      )}
+                      {code.usageLimit && (
+                        <span>{code.usageCount}/{code.usageLimit} ishlatildi</span>
+                      )}
+                      {!code.usageLimit && code.usageCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <BarChart3 className="w-3 h-3" />
+                          {code.usageCount} marta
+                        </span>
+                      )}
+                      {code.endsAt && (
+                        <span>
+                          {isExpired ? "Tugagan: " : "Tugaydi: "}
+                          {new Date(code.endsAt).toLocaleDateString("uz-UZ")}
+                        </span>
+                      )}
+                    </div>
+                    {/* Usage progress */}
+                    {usagePct !== null && (
+                      <div className="mt-2 h-1 bg-cream-200 rounded-full overflow-hidden w-32">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${usagePct}%`,
+                            backgroundColor: usagePct >= 90 ? "#ef4444" : usagePct >= 60 ? "#f59e0b" : "#10b981",
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => handleToggle(code.id, !code.active)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      code.active
+                        ? "text-slate-600 hover:bg-slate-100"
+                        : "text-forest-700 hover:bg-leaf-100"
+                    }`}
+                  >
+                    {code.active ? "O'chirish" : "Yoqish"}
+                  </button>
+                  <button
+                    onClick={() => { setEditCode(code); setShowForm(true); }}
+                    className="p-2 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(code.id, code.code)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </motion.div>
-          </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Form modal */}
+      <AnimatePresence>
+        {showForm && (
+          <PromoFormModal
+            code={editCode}
+            onClose={() => setShowForm(false)}
+            onSaved={() => { setShowForm(false); refetch(); }}
+          />
         )}
       </AnimatePresence>
     </div>
   );
 }
 
-interface PromoFormProps {
-  initial: PromoCode | null;
-  error: string | null;
-  onSave: (data: Omit<PromoCode, "id" | "usedCount">) => void;
-}
+// ─── Forma ───────────────────────────────────────────────────────────────────
 
-function PromoForm({ initial, error, onSave }: PromoFormProps) {
-  const [code, setCode] = useState(initial?.code ?? "");
-  const [discountType, setDiscountType] = useState<PromoDiscountType>(initial?.discountType ?? "percent");
-  const [value, setValue] = useState(initial?.value ?? 0);
-  const [minOrder, setMinOrder] = useState(initial?.minOrder ?? 0);
-  const [maxUses, setMaxUses] = useState(initial?.maxUses ?? 0);
-  const [validFrom, setValidFrom] = useState(initial?.validFrom ?? "");
-  const [validTo, setValidTo] = useState(initial?.validTo ?? "");
-  const [active, setActive] = useState(initial?.active ?? true);
+function PromoFormModal({
+  code, onClose, onSaved,
+}: { code: PromoCode | null; onClose: () => void; onSaved: () => void }) {
+  const isEdit = !!code;
+  const [form, setForm] = useState({
+    code: code?.code ?? "",
+    description: code?.description ?? "",
+    discountType: code?.discountType ?? "PERCENT" as "PERCENT" | "FIXED",
+    discountValue: code?.discountValue ?? 10,
+    maxDiscount: code?.maxDiscount ?? "",
+    minOrderAmount: code?.minOrderAmount ?? "",
+    usageLimit: code?.usageLimit ?? "",
+    perUserLimit: code?.perUserLimit ?? 1,
+    startsAt: code?.startsAt ? code.startsAt.slice(0, 10) : "",
+    endsAt: code?.endsAt ? code.endsAt.slice(0, 10) : "",
+    active: code?.active ?? true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({ code, discountType, value, minOrder, maxUses, validFrom, validTo, active });
+  const generateCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const code = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    setForm((f) => ({ ...f, code }));
+  };
+
+  const save = async () => {
+    if (!form.code.trim()) { setError("Kod kiritish shart"); return; }
+    if (!form.discountValue || form.discountValue <= 0) { setError("Chegirma miqdori kiritish shart"); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const body = {
+        code: form.code.trim().toUpperCase(),
+        description: form.description || null,
+        discountType: form.discountType,
+        discountValue: Number(form.discountValue),
+        maxDiscount: form.maxDiscount !== "" ? Number(form.maxDiscount) : null,
+        minOrderAmount: form.minOrderAmount !== "" ? Number(form.minOrderAmount) : null,
+        usageLimit: form.usageLimit !== "" ? Number(form.usageLimit) : null,
+        perUserLimit: Number(form.perUserLimit),
+        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+        endsAt: form.endsAt ? new Date(form.endsAt + "T23:59:59").toISOString() : null,
+        active: form.active,
+      };
+      if (isEdit) await api(`/promo-codes/${code!.id}`, { method: "PATCH", body });
+      else await api("/promo-codes", { method: "POST", body });
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Xato yuz berdi");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <form id="promo-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
-      <div className="col-span-2 space-y-4">
-        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-forest-800">Asosiy ma'lumotlar</h3>
-          <div>
-            <label className={labelClass}>Promo kod</label>
-            <input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} placeholder="SUMMER26" />
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }}
+        className="bg-cream-50 rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4 my-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-forest-800 text-lg">
+            {isEdit ? "Kodni tahrirlash" : "Yangi promo kod"}
+          </h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />{error}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+        )}
+
+        <div className="space-y-3">
+          {/* Kod */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Kod *</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.code}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="SUMMER25"
+                className={`${cls} font-mono flex-1`}
+                maxLength={40}
+              />
+              <button
+                type="button"
+                onClick={generateCode}
+                className="px-3 py-2 bg-cream-200 hover:bg-cream-300 rounded-xl text-xs font-medium text-slate-600 transition-colors whitespace-nowrap"
+              >
+                Tasodifiy
+              </button>
+            </div>
+          </div>
+
+          {/* Izoh */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Izoh</label>
+            <input
+              type="text"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="Yozgi chegirma kampaniyasi"
+              className={cls}
+            />
+          </div>
+
+          {/* Chegirma turi + miqdori */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Chegirma turi</label>
-              <select className={inputClass} value={discountType} onChange={(e) => setDiscountType(e.target.value as PromoDiscountType)}>
-                <option value="percent">Foiz (%)</option>
-                <option value="fixed">Soʻm (so'm)</option>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Tur</label>
+              <select
+                value={form.discountType}
+                onChange={(e) => setForm((f) => ({ ...f, discountType: e.target.value as "PERCENT" | "FIXED" }))}
+                className={cls}
+              >
+                <option value="PERCENT">Foiz (%)</option>
+                <option value="FIXED">Belgilangan (so'm)</option>
               </select>
             </div>
             <div>
-              <label className={labelClass}>Chegirma miqdori</label>
-              <input type="number" className={inputClass} value={value} onChange={(e) => setValue(Number(e.target.value))} />
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                {form.discountType === "PERCENT" ? "Foiz *" : "Summa (so'm) *"}
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={form.discountType === "PERCENT" ? 100 : undefined}
+                value={form.discountValue}
+                onChange={(e) => setForm((f) => ({ ...f, discountValue: Number(e.target.value) }))}
+                className={cls}
+              />
             </div>
           </div>
-          <div>
-            <label className={labelClass}>Minimal buyurtma summasi</label>
-            <input type="number" className={inputClass} value={minOrder} onChange={(e) => setMinOrder(Number(e.target.value))} />
-          </div>
-        </div>
-        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-forest-800">Muddati va cheklov</h3>
-          <div className="grid grid-cols-2 gap-4">
+
+          {/* Maksimal chegirma (foiz uchun) */}
+          {form.discountType === "PERCENT" && (
             <div>
-              <label className={labelClass}>Boshlanish sanasi</label>
-              <input type="date" className={inputClass} value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Maksimal chegirma (so'm, ixtiyoriy)
+              </label>
+              <input
+                type="number"
+                value={form.maxDiscount}
+                onChange={(e) => setForm((f) => ({ ...f, maxDiscount: e.target.value }))}
+                placeholder="50000"
+                className={cls}
+              />
+            </div>
+          )}
+
+          {/* Minimal summa */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Minimal buyurtma summasi (ixtiyoriy)
+            </label>
+            <input
+              type="number"
+              value={form.minOrderAmount}
+              onChange={(e) => setForm((f) => ({ ...f, minOrderAmount: e.target.value }))}
+              placeholder="100000"
+              className={cls}
+            />
+          </div>
+
+          {/* Foydalanish limiti */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Umumiy limit (ixtiyoriy)
+              </label>
+              <input
+                type="number"
+                value={form.usageLimit}
+                onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))}
+                placeholder="100"
+                className={cls}
+              />
             </div>
             <div>
-              <label className={labelClass}>Tugallanish sanasi</label>
-              <input type="date" className={inputClass} value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Bitta foydalanuvchi uchun
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={form.perUserLimit}
+                onChange={(e) => setForm((f) => ({ ...f, perUserLimit: Number(e.target.value) }))}
+                className={cls}
+              />
             </div>
           </div>
-          <div>
-            <label className={labelClass}>Maksimal foydalanishlar</label>
-            <input type="number" className={inputClass} value={maxUses} onChange={(e) => setMaxUses(Number(e.target.value))} />
-          </div>
-        </div>
-      </div>
-      <div className="space-y-4">
-        <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-forest-800">Holat</h3>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
-            <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
-              {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
+
+          {/* Sana */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Boshlanish sanasi</label>
+              <input
+                type="date"
+                value={form.startsAt}
+                onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
+                className={cls}
+              />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Tugash sanasi</label>
+              <input
+                type="date"
+                value={form.endsAt}
+                onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))}
+                className={cls}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+              className="rounded"
+            />
             <span className="text-sm text-slate-700">Faol</span>
           </label>
-          {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
         </div>
-      </div>
-    </form>
+
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-cream-100 hover:bg-cream-200 transition-colors">
+            Bekor
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+          >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isEdit ? "Saqlash" : "Yaratish"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
