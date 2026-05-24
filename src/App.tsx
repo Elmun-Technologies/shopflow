@@ -13,6 +13,7 @@ import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
 import TrafficSources from "./components/TrafficSources";
 import LowStockAlert from "./components/LowStockAlert";
+import { StorefrontStatusBanner } from "./components/StorefrontStatusBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
@@ -294,6 +295,7 @@ function AppShell() {
           onMobileMenuOpen={() => setMobileSidebarOpen(true)}
           onNotifNavigate={(page) => setCurrentPage(page)}
         />
+        <StorefrontStatusBanner onOpenVitrina={() => setCurrentPage("uibuilder")} />
         <main className="p-4 md:p-6">
           <AnimatePresence mode="wait">
             <motion.div
