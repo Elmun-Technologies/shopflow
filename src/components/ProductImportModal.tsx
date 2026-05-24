@@ -335,7 +335,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
               {/* Progress */}
               {importing && (
                 <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
-                  <div className="flex items-center justify-between text-xs text-slate-700 mb-1.5">
+                  <div className="flex items-center justify-between text-xs text-cream-300 mb-1.5">
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {t("import.progressLabel")}

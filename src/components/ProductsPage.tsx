@@ -245,7 +245,7 @@ export default function ProductsPage() {
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white border border-cream-300 rounded-xl">
-          <Package className="w-12 h-12 text-slate-700 mb-3" />
+          <Package className="w-12 h-12 text-cream-300 mb-3" />
           <p className="text-base font-semibold text-forest-800">
             {search ? t("products.empty.search") : t("products.empty.none")}
           </p>

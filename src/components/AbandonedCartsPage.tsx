@@ -154,7 +154,7 @@ export default function AbandonedCartsPage() {
         </div>
       ) : !data || data.carts.length === 0 ? (
         <div className="bg-white border border-cream-300 rounded-xl py-20 px-6 text-center">
-          <ShoppingCart className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+          <ShoppingCart className="w-12 h-12 text-cream-300 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-forest-800 mb-1">Tashlab ketilgan savatlar yo'q</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto">
             Mijoz savatga mahsulot qo'shsa va checkout qilmasa, shu yerda ko'rinadi.

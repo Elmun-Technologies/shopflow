@@ -346,7 +346,7 @@ export default function AnalyticsPage() {
                 yAxisId="orders"
                 type="monotone"
                 dataKey="orders"
-                stroke="#3b82f6"
+                stroke="#0EA5E9"
                 strokeWidth={2}
                 fill="url(#ordersGrad)"
                 name="Buyurtmalar"
@@ -374,7 +374,7 @@ export default function AnalyticsPage() {
                 dataKey="orders"
                 name="Buyurtmalar"
                 fill="#8b5cf6"
-                radius={[6, 6, 0, 0]}
+                radius={[12, 12, 12, 12]}
                 maxBarSize={32}
               />
             </BarChart>

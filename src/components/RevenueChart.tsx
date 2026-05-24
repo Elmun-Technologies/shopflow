@@ -111,7 +111,7 @@ export default function RevenueChart() {
                 tickFormatter={(value) => formatCompactCurrency(Number(value), currency)}
                 width={50}
               />
-              <Tooltip content={<Tip />} cursor={{ stroke: "#334155", strokeDasharray: "3 3" }} />
+              <Tooltip content={<Tip />} cursor={{ stroke: "#94A3B8", strokeDasharray: "3 3" }} />
               <Area
                 type="monotone"
                 dataKey="revenue"
@@ -119,7 +119,7 @@ export default function RevenueChart() {
                 strokeWidth={2.5}
                 fill="url(#revenueGradient)"
                 dot={false}
-                activeDot={{ r: 5, fill: "#10b981", stroke: "#0f172a", strokeWidth: 3 }}
+                activeDot={{ r: 5, fill: "#5FA340", stroke: "#FFFFFF", strokeWidth: 3 }}
               />
             </AreaChart>
           </ResponsiveContainer>

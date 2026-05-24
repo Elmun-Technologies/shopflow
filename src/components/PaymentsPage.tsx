@@ -359,11 +359,11 @@ export default function PaymentsPage() {
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 11 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="click" name="Click" fill="#0EA5E9" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="payme" name="Payme" fill="#5FA340" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="uzum" name="Uzum" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="alif" name="Alif" fill="#8b5cf6" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="cash" name="Naqd" fill="#64748b" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="click" name="Click" fill="#0EA5E9" radius={[12, 12, 12, 12]} maxBarSize={20} />
+                <Bar dataKey="payme" name="Payme" fill="#5FA340" radius={[12, 12, 12, 12]} maxBarSize={20} />
+                <Bar dataKey="uzum" name="Uzum" fill="#f59e0b" radius={[12, 12, 12, 12]} maxBarSize={20} />
+                <Bar dataKey="alif" name="Alif" fill="#8b5cf6" radius={[12, 12, 12, 12]} maxBarSize={20} />
+                <Bar dataKey="cash" name="Naqd" fill="#64748b" radius={[12, 12, 12, 12]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>

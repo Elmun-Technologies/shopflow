@@ -218,7 +218,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
             <div className="flex-1 overflow-y-auto">
               {items.length === 0 && !loading ? (
                 <div className="px-4 py-10 text-center">
-                  <Bell className="w-10 h-10 mx-auto text-slate-700 mb-2" />
+                  <Bell className="w-10 h-10 mx-auto text-cream-300 mb-2" />
                   <p className="text-sm text-slate-500">{t("notif.empty")}</p>
                 </div>
               ) : (

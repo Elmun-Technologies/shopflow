@@ -732,7 +732,7 @@ export default function UIBuilderPage() {
           <div className="flex-1 overflow-y-auto p-4">
             {blocks.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-cream-300 rounded-xl">
-                <Plus className="w-8 h-8 text-slate-700 mb-2" />
+                <Plus className="w-8 h-8 text-cream-300 mb-2" />
                 <p className="text-sm text-slate-500">Blok qo'shing</p>
                 <p className="text-xs text-slate-400 mt-1">Chap paneldan tanlang</p>
               </div>

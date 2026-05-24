@@ -22,7 +22,7 @@ const AVATAR_COLORS = [
   "bg-violet-100 text-violet-700",
   "bg-amber-100 text-amber-600",
   "bg-pink-100 text-pink-700",
-  "bg-cyan-500/15 text-cyan-700",
+  "bg-cyan-100 text-cyan-700",
 ];
 
 function avatarColor(name: string): string {
@@ -78,7 +78,7 @@ export default function RecentOrders() {
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Inbox className="w-10 h-10 text-slate-700 mb-2" />
+          <Inbox className="w-10 h-10 text-cream-300 mb-2" />
           <p className="text-sm text-slate-500">{t("orders.empty.none")}</p>
           <p className="text-xs text-slate-400 mt-1">{t("orders.empty.hint")}</p>
         </div>

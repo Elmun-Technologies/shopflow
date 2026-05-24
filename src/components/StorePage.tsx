@@ -3,10 +3,9 @@
 
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import {
-  ShoppingCart, Search, Package, ChevronRight,
-  X, CheckCircle2, Loader2, ArrowLeft,
-  Tag, Heart, Share2, ShieldCheck, BadgeCheck, Star, Send,
-  ShoppingBag, Truck, Plus, Minus,
+  ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
+  X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
+  Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck, Bell, Star, Send,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -15,11 +14,7 @@ import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
 import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
-import { ProductCard } from "./storefront/ProductCard";
-import { CartView } from "./storefront/CartView";
-import { CheckoutView } from "./storefront/CheckoutView";
-import { SuccessView } from "./storefront/SuccessView";
-import { useDebounce } from "../hooks/useDebounce";
+import { formatUzPhone, isValidUzPhone } from "../utils/phone";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -298,7 +293,6 @@ type CartItem = {
   qty: number;
   name: string;
   price: number;
-  oldPrice: number | null;
   imageUrl: string | null;
 };
 
@@ -333,6 +327,14 @@ function viewToTab(v: StoreView): StoreTab | null {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
+async function fetchStorefront(slug: string): Promise<StorefrontData> {
+  const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Server xatosi" }));
+    throw new Error((err as { error?: string }).error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
 
 async function submitCheckout(
   slug: string,
@@ -376,8 +378,6 @@ function StoreInner({ slug }: { slug: string }) {
   const [view, setView] = useState<StoreView>("home");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  // Debounced qidiruv — 250ms kechikish bilan filterlash (har keystroke emas)
-  const debouncedSearch = useDebounce(searchQuery, 250);
   const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart(slug));
   const [cartRemindShown, setCartRemindShown] = useState(false);
@@ -509,31 +509,10 @@ function StoreInner({ slug }: { slug: string }) {
   }, [data?.brand?.primaryColor]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}`, { signal });
-        if (signal.aborted) return;
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Server xatosi" }));
-          throw new Error((err as { error?: string }).error || `HTTP ${res.status}`);
-        }
-        const json = (await res.json()) as StorefrontData;
-        if (!signal.aborted) setData(json);
-      } catch (e) {
-        if (signal.aborted) return;
-        setError(e instanceof Error ? e.message : "Noma'lum xato");
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    }
-
-    load();
-    return () => controller.abort();
+    fetchStorefront(slug)
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [slug]);
 
   // Savatni localStorage'ga saqlash (mijoz Mini App'ni yopib qaytsa ham qoladi)
@@ -647,7 +626,6 @@ function StoreInner({ slug }: { slug: string }) {
         qty: 1,
         name: product.name,
         price: Number(product.price),
-        oldPrice: product.oldPrice != null ? Number(product.oldPrice) : null,
         imageUrl: product.imageUrl,
       }];
     });
@@ -704,8 +682,8 @@ function StoreInner({ slug }: { slug: string }) {
     if (!data) return [];
     let prods = data.products.slice();
     if (selectedCategoryId) prods = prods.filter((p) => p.categoryId === selectedCategoryId);
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       prods = prods.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
     }
     switch (sortBy) {
@@ -727,28 +705,28 @@ function StoreInner({ slug }: { slug: string }) {
         break;
     }
     return prods;
-  }, [data, selectedCategoryId, debouncedSearch, sortBy]);
+  }, [data, selectedCategoryId, searchQuery, sortBy]);
 
   // ---- LOADING ----
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
+      <div className="min-h-screen bg-slate-950">
         {/* Header skeleton */}
         <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-          <div className="animate-pulse rounded-xl flex-shrink-0" style={{ width: 34, height: 34, backgroundColor: "#1e1e2a" }} />
-          <div className="flex-1 space-y-2">
-            <div className="animate-pulse rounded-full w-1/2" style={{ height: 12, backgroundColor: "#1e1e2a" }} />
-            <div className="animate-pulse rounded-full w-1/3" style={{ height: 10, backgroundColor: "#1e1e2a" }} />
+          <div className="w-10 h-10 rounded-xl bg-slate-800 animate-pulse" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 bg-slate-800 rounded-full w-1/2 animate-pulse" />
+            <div className="h-2.5 bg-slate-800 rounded-full w-1/3 animate-pulse" />
           </div>
-          <div className="animate-pulse rounded-xl" style={{ width: 34, height: 34, backgroundColor: "#1e1e2a" }} />
         </div>
         {/* Category chips skeleton */}
-        <div className="px-4 pb-3 flex gap-2 overflow-hidden">
+        <div className="px-3 py-2 flex gap-2 overflow-hidden">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="animate-pulse rounded-full flex-shrink-0" style={{ width: 64 + (i % 3) * 22, height: 30, backgroundColor: "#1e1e2a" }} />
+            <div key={i} className="h-7 bg-slate-800 rounded-lg animate-pulse flex-shrink-0" style={{ width: 60 + (i % 3) * 20 }} />
           ))}
         </div>
-        <div className="p-4">
+        {/* Product grid skeleton */}
+        <div className="p-3">
           <ProductGridSkeleton count={6} />
         </div>
       </div>
@@ -758,16 +736,13 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- ERROR ----
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: "#0d0d14" }}>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
         <div className="text-center">
-          <div
-            className="flex items-center justify-center mx-auto mb-4"
-            style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: "rgba(239,68,68,0.1)" }}
-          >
-            <X className="w-7 h-7" style={{ color: "#ef4444" }} />
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-400" />
           </div>
-          <p className="text-base font-semibold mb-1" style={{ color: "#f4f4f8" }}>Do'kon topilmadi</p>
-          <p className="text-sm" style={{ color: "#52526a" }}>{error || "Noma'lum xato"}</p>
+          <p className="text-white font-semibold mb-1">Do'kon topilmadi</p>
+          <p className="text-sm text-slate-400">{error || "Noma'lum xato"}</p>
         </div>
       </div>
     );
@@ -785,61 +760,388 @@ function StoreInner({ slug }: { slug: string }) {
 
   // ---- SUCCESS ----
   if (view === "success" && orderResult) {
+    const deliveryDate = estimatedDeliveryDate();
+    const deliveryStr = formatUzDate(deliveryDate);
+    const hasTg = !!telegramUser?.userId;
     return (
-      <SuccessView
-        orderResult={orderResult}
-        primaryColor={primaryColor}
-        hasTelegram={!!telegramUser?.userId}
-        onViewOrders={() => {
-          setProfileInitialView("orders");
-          setView("profile");
-          setOrderResult(null);
-        }}
-        onContinueShopping={() => {
-          setProfileInitialView(undefined);
-          setView("home");
-          setOrderResult(null);
-        }}
-      />
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
+          <div className="max-w-md mx-auto">
+            {/* Hero — yashil belgi + sarlavha */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300" style={{ backgroundColor: primaryColor + "20" }}>
+                <CheckCircle2 className="w-11 h-11" style={{ color: primaryColor }} strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-1">{t("success.title")}</h2>
+              <p className="text-sm text-slate-400">{t("success.subtitle")}</p>
+            </div>
+
+            {/* Buyurtma kartochkasi */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wider">Buyurtma</p>
+                  <p className="text-lg font-bold text-white">#{orderResult.code}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wider">Jami</p>
+                  <p className="text-lg font-bold" style={{ color: primaryColor }}>
+                    {formatPrice(orderResult.total, orderResult.currency)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300">Yetkazib berish: <span className="font-medium text-white">{deliveryStr}</span></span>
+              </div>
+            </div>
+
+            {/* Status taymlayni — keyingi qadamlar */}
+            <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 mb-4">
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-3">Keyingi qadamlar</p>
+              <div className="space-y-3">
+                {[
+                  { label: t("success.step.received"), desc: t("success.step.receivedDesc"), done: true },
+                  { label: t("success.step.processing"), desc: t("success.step.processingDesc"), done: false, active: true },
+                  { label: t("success.step.shipping"), desc: t("success.step.shippingDesc"), done: false },
+                  { label: t("success.step.delivered"), desc: deliveryStr, done: false },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      s.done
+                        ? "bg-emerald-500 text-white"
+                        : s.active
+                          ? "bg-amber-500/20 text-amber-300 ring-2 ring-amber-500/40"
+                          : "bg-slate-800 text-slate-600"
+                    }`}>
+                      {s.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                    </div>
+                    <div className="flex-1 min-w-0 pb-0.5">
+                      <p className={`text-sm font-medium ${s.done || s.active ? "text-white" : "text-slate-500"}`}>{s.label}</p>
+                      <p className="text-[11px] text-slate-500">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bildirishnoma haqida eslatma */}
+            {hasTg ? (
+              <div className="flex items-start gap-2.5 p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-6">
+                <Bell className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-sky-200 leading-relaxed">
+                  {t("success.notify.tg")}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2.5 p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl mb-6">
+                <Bell className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Buyurtma raqamingizni <span className="font-semibold">#{orderResult.code}</span> saqlab qo'ying — kerak bo'lsa shu raqam orqali tekshiring.
+                </p>
+              </div>
+            )}
+
+            {/* Action tugmalari */}
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setProfileInitialView("orders");
+                  setView("profile");
+                  setOrderResult(null);
+                }}
+                className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <ShoppingBag className="w-5 h-5" />
+                {t("success.viewOrder")}
+              </button>
+              <button
+                onClick={() => {
+                  setProfileInitialView(undefined);
+                  setView("home");
+                  setOrderResult(null);
+                }}
+                className="w-full py-3 rounded-2xl font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-all"
+              >
+                {t("success.continueShopping")}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   // ---- CHECKOUT ----
   if (view === "checkout") {
     return (
-      <CheckoutView
-        cart={cart}
-        cartTotal={cartTotal}
-        currency={data.tenant.currency}
-        primaryColor={primaryColor}
-        form={form}
-        savedAddresses={savedAddresses}
-        gpsBusy={gpsBusy}
-        submitting={submitting}
-        submitError={submitError}
-        onBack={() => setView("cart")}
-        onFormChange={setForm}
-        onGpsBusy={setGpsBusy}
-        onSubmit={handleCheckout}
-      />
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
+          <button onClick={() => setView("cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-base font-semibold text-white">{t("checkout.title")}</h2>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Order summary */}
+          <div className="bg-slate-900 rounded-2xl p-4">
+            <h3 className="text-xs font-medium text-slate-400 mb-3">{t("checkout.orderSummary")}</h3>
+            {cart.map((item) => (
+              <div key={item.productId} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                <span className="text-sm text-white">{item.name} <span className="text-slate-500">×{item.qty}</span></span>
+                <span className="text-sm font-medium" style={{ color: primaryColor }}>
+                  {formatPrice(item.price * item.qty, data.tenant.currency)}
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between pt-3 mt-1">
+              <span className="text-sm font-semibold text-white">{t("checkout.total")}</span>
+              <span className="text-base font-bold" style={{ color: primaryColor }}>
+                {formatPrice(cartTotal, data.tenant.currency)}
+              </span>
+            </div>
+          </div>
+
+          {/* Customer form */}
+          <div className="bg-slate-900 rounded-2xl p-4 space-y-3">
+            <h3 className="text-xs font-medium text-slate-400 mb-1">{t("checkout.yourInfo")}</h3>
+
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.name")} *</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder={t("checkout.namePlaceholder")}
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.phone")} *</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="tel"
+                  placeholder="+998 90 123 45 67"
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: formatUzPhone(e.target.value) }))}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className={`w-full bg-slate-800 border rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none ${
+                    form.phone && !isValidUzPhone(form.phone)
+                      ? "border-rose-500/40 focus:border-rose-500/60"
+                      : "border-slate-700 focus:border-emerald-500/50"
+                  }`}
+                />
+              </div>
+              {form.phone && !isValidUzPhone(form.phone) && (
+                <p className="text-[11px] text-rose-300 mt-1">{t("checkout.phoneInvalid")}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.addressLabel")}</label>
+              {savedAddresses.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+                  {savedAddresses.map((a) => {
+                    const full = formatAddress(a);
+                    const isActive = form.address === full;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, address: full }))}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${
+                          isActive
+                            ? "text-white"
+                            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                        }`}
+                        style={isActive ? { backgroundColor: primaryColor } : {}}
+                      >
+                        📍 {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder={t("checkout.address")}
+                  value={form.address}
+                  onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                />
+              </div>
+              {/* GPS — joriy joylashuvni olish */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    alert(t("checkout.gpsUnsupported"));
+                    return;
+                  }
+                  setGpsBusy(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const { latitude, longitude } = pos.coords;
+                      const lat = Number(latitude.toFixed(6));
+                      const lng = Number(longitude.toFixed(6));
+                      // Address bo'sh bo'lsa, koordinatadan o'qiladigan label yasaymiz
+                      setForm((f) => ({
+                        ...f,
+                        lat,
+                        lng,
+                        address: f.address.trim() || `GPS: ${lat}, ${lng}`,
+                      }));
+                      haptic.medium();
+                      setGpsBusy(false);
+                    },
+                    (err) => {
+                      setGpsBusy(false);
+                      alert(err.code === err.PERMISSION_DENIED
+                        ? t("checkout.gpsDenied")
+                        : t("checkout.gpsError"));
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+                  );
+                }}
+                disabled={gpsBusy}
+                className="mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/15 disabled:opacity-50 rounded-xl text-sm text-sky-300 transition-colors"
+              >
+                {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="text-base leading-none">📍</span>}
+                {t("checkout.gps")}
+              </button>
+              {form.lat != null && form.lng != null && (
+                <p className="text-[11px] text-emerald-300 mt-1.5 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  {t("checkout.gpsDetected")}: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.note")}</label>
+              <textarea
+                placeholder={t("checkout.notePlaceholder")}
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                rows={2}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+              />
+            </div>
+          </div>
+
+          {submitError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+              <p className="text-sm text-red-400">{submitError}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-slate-800 bg-slate-950">
+          <button
+            onClick={handleCheckout}
+            disabled={submitting || !form.name.trim() || !isValidUzPhone(form.phone)}
+            className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ backgroundColor: primaryColor }}
+          >
+            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {submitting ? t("checkout.sending") : `${t("checkout.submit")} · ${formatPrice(cartTotal, data.tenant.currency)}`}
+          </button>
+        </div>
+      </div>
     );
   }
 
   // ---- CART ----
   if (view === "cart") {
     return (
-      <CartView
-        cart={cart}
-        cartTotal={cartTotal}
-        cartCount={cartCount}
-        currency={data.tenant.currency}
-        primaryColor={primaryColor}
-        storeSlug={slug}
-        tgUserId={twa?.initDataUnsafe?.user?.id}
-        onBack={() => setView("home")}
-        onCheckout={() => setView("checkout")}
-        onUpdateQty={updateQty}
-      />
+      <div className="min-h-screen bg-slate-950 flex flex-col">
+        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
+          <button onClick={() => setView("home")} className="p-2 rounded-xl text-slate-400 hover:text-white">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-base font-semibold text-white">{t("cart.title")}</h2>
+          <span className="ml-1 text-xs text-slate-400">{t("cart.items", { count: cartCount })}</span>
+        </div>
+
+        {cart.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-6">
+            <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mb-4">
+              <ShoppingCart className="w-8 h-8 text-slate-600" />
+            </div>
+            <p className="text-white font-medium mb-1">{t("cart.empty.title")}</p>
+            <p className="text-sm text-slate-400">{t("cart.addMore")}</p>
+            <button
+              onClick={() => setView("home")}
+              className="mt-4 px-6 py-2.5 rounded-2xl text-sm font-medium text-white"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {t("cart.shopNow")}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {cart.map((item) => (
+                <div key={item.productId} className="bg-slate-900 rounded-2xl p-3 flex items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-7 h-7 text-slate-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: primaryColor }}>
+                      {formatPrice(item.price, data.tenant.currency)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => updateQty(item.productId, -1)}
+                      className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 active:scale-90 transition-transform"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-sm font-semibold text-white w-5 text-center">{item.qty}</span>
+                    <button
+                      onClick={() => updateQty(item.productId, 1)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-slate-800 bg-slate-950">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-slate-400">{t("cart.totalItems", { count: cartCount })}</span>
+                <span className="text-lg font-bold text-white">{formatPrice(cartTotal, data.tenant.currency)}</span>
+              </div>
+              <button
+                onClick={() => setView("checkout")}
+                className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98]"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {t("cart.placeOrder")}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     );
   }
 
@@ -1501,41 +1803,121 @@ function StoreInner({ slug }: { slug: string }) {
   };
 
   // ---- HOME ----
-  // Memoized ProductCard wrapper — har mahsulot uchun alohida memo
-  const renderProductCard = useCallback((product: StoreProduct) => {
+  const renderProductCard = (product: StoreProduct) => {
+    const qty = cartQty(product.id);
     const price = Number(product.price);
     const oldPrice = product.oldPrice != null ? Number(product.oldPrice) : null;
     const discountPct = calcDiscountPct(price, oldPrice);
     const liveCampaign = isCampaignLive(product.saleCampaign);
+    const isFav = favorites.has(product.id);
+    const outOfStock = product.stock <= 0;
+    const lowStock = !outOfStock && product.stock > 0 && product.stock <= 5;
 
     return (
-      <ProductCard
+      <div
         key={product.id}
-        productId={product.id}
-        name={product.name}
-        price={price}
-        oldPrice={oldPrice}
-        imageUrl={product.imageUrl}
-        stock={product.stock}
-        featured={product.featured}
-        currency={data.tenant.currency}
-        primaryColor={primaryColor}
-        isFav={favorites.has(product.id)}
-        qty={cartQty(product.id)}
-        discountPct={discountPct}
-        liveCampaign={liveCampaign}
-        campaignLabel={product.saleCampaign?.label}
-        campaignBadgeColor={product.saleCampaign?.badgeColor as Parameters<typeof ProductCard>[0]["campaignBadgeColor"]}
-        avgRating={product.avgRating}
-        weeklyBuyers={product.weeklyBuyers}
-        onSelect={() => setSelectedProduct(product)}
-        onToggleFav={() => toggleFavorite(product.id)}
-        onAddToCart={() => addToCart(product)}
-        onIncrease={() => updateQty(product.id, 1)}
-        onDecrease={() => updateQty(product.id, -1)}
-      />
+        className={`bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group ${
+          outOfStock ? "opacity-70" : ""
+        }`}
+        onClick={() => setSelectedProduct(product)}
+      >
+        {/* Top-left badges (discount + campaign) */}
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+          {discountPct > 0 && (
+            <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+              −{discountPct}%
+            </span>
+          )}
+          {liveCampaign && product.saleCampaign && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${SALE_BADGE_STYLES[product.saleCampaign.badgeColor]}`}>
+              {product.saleCampaign.label}
+            </span>
+          )}
+        </div>
+
+        {/* Top-right heart (favorite) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+          aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+          className="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+        >
+          <Heart
+            className={`w-3.5 h-3.5 transition-colors ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`}
+            strokeWidth={2}
+          />
+        </button>
+
+        {/* Image */}
+        <div className="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden relative">
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            <Package className="w-10 h-10 text-slate-600" />
+          )}
+          {outOfStock && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="text-white text-xs font-bold px-3 py-1 bg-slate-800/80 rounded-md border border-slate-700">
+                Tugagan
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="p-2.5">
+          {/* Price line — WB-style: big bold + small struck */}
+          <div className="flex items-baseline gap-1.5 mb-1">
+            <span className="text-sm font-bold text-white">
+              {price.toLocaleString("uz-UZ")}
+              <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
+            </span>
+            {oldPrice != null && oldPrice > price && (
+              <span className="text-[10px] text-slate-500 line-through">
+                {oldPrice.toLocaleString("uz-UZ")}
+              </span>
+            )}
+          </div>
+
+          {/* Name */}
+          <p className="text-[11px] text-slate-300 line-clamp-2 leading-tight mb-2 min-h-[28px]">{product.name}</p>
+
+          {/* Low stock indicator */}
+          {lowStock && (
+            <p className="text-[10px] text-amber-300 mb-1 leading-tight">
+              ⚡ Faqat {product.stock} ta qoldi
+            </p>
+          )}
+
+          {/* Add to cart */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!outOfStock) addToCart(product);
+            }}
+            disabled={outOfStock}
+            className="w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+            style={{
+              backgroundColor: outOfStock ? "#475569" : qty > 0 ? "#10b981" : primaryColor,
+            }}
+          >
+            {outOfStock ? (
+              "Tugagan"
+            ) : qty > 0 ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Savatda · {qty} dona
+              </>
+            ) : (
+              <>
+                <Plus className="w-3.5 h-3.5" />
+                Savatga
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     );
-  }, [data, primaryColor, favorites, cartQty, toggleFavorite, addToCart, updateQty, setSelectedProduct]);
+  };
 
   // Render blocks from layout, or fall back to plain products grid
   // ---- PROFILE ----
@@ -1578,7 +1960,7 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {promotionProducts.length === 0 ? (
             <div className="py-16 text-center">
-              <Tag className="w-12 h-12 mx-auto text-slate-700 mb-3" />
+              <Tag className="w-12 h-12 mx-auto text-cream-300 mb-3" />
               <p className="text-sm text-slate-400">{t("promo.empty")}</p>
             </div>
           ) : (
@@ -1661,7 +2043,7 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {filteredProducts.length === 0 ? (
             <div className="py-16 text-center">
-              <Package className="w-12 h-12 mx-auto text-slate-700 mb-3" />
+              <Package className="w-12 h-12 mx-auto text-cream-300 mb-3" />
               <p className="text-sm text-slate-400">
                 {searchQuery ? t("catalog.empty.search", { q: searchQuery }) : t("catalog.empty.category")}
               </p>
@@ -1699,7 +2081,7 @@ function StoreInner({ slug }: { slug: string }) {
           </div>
           {filteredProducts.length === 0 && (
             <div className="py-12 text-center">
-              <Package className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+              <Package className="w-12 h-12 text-cream-300 mx-auto mb-3" />
               <p className="text-sm text-slate-400">Mahsulotlar topilmadi</p>
             </div>
           )}
@@ -1809,7 +2191,7 @@ function StoreInner({ slug }: { slug: string }) {
                       ? Array.from({ length: skeletonCount }, (_, i) => (
                           <div key={i} className="bg-slate-900 rounded-2xl overflow-hidden opacity-50">
                             <div className="aspect-square bg-slate-800 flex items-center justify-center">
-                              <Package className="w-10 h-10 text-slate-700" />
+                              <Package className="w-10 h-10 text-cream-300" />
                             </div>
                             <div className="p-2.5 space-y-1.5">
                               <div className="h-2.5 bg-slate-800 rounded-full w-3/4" />
@@ -1830,12 +2212,12 @@ function StoreInner({ slug }: { slug: string }) {
         })}
 
         {/* If category is selected or search query, show filtered products */}
-        {(selectedCategoryId || debouncedSearch) && (
+        {(selectedCategoryId || searchQuery) && (
           <div>
             <h3 className="text-sm font-semibold text-white mb-3">
               {selectedCategoryId
                 ? categories.find((c) => c.id === selectedCategoryId)?.name || "Mahsulotlar"
-                : `"${debouncedSearch}" qidiruv natijalari`}
+                : `"${searchQuery}" qidiruv natijalari`}
             </h3>
             <div className="grid grid-cols-2 gap-3">
               {filteredProducts.map(renderProductCard)}
@@ -1852,168 +2234,111 @@ function StoreInner({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
-
-      {/* ─── Header ─── */}
-      <div
-        className="sticky top-0 z-20 flex flex-col gap-0"
-        style={{
-          backgroundColor: "rgba(13,13,20,0.96)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-        }}
-      >
-        {/* Top bar: logo + actions */}
-        <div
-          className="flex items-center justify-between px-4 pb-3"
-          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            {brand.logo && (
-              <div
-                className="flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: primaryColor }}
-              >
-                {brand.logo}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-sm font-bold truncate" style={{ color: "#f4f4f8" }}>
-                {brand.name || data.tenant.name}
-              </p>
-              {brand.address && (
-                <p className="text-[10px] truncate" style={{ color: "#3a3a56" }}>{brand.address}</p>
-              )}
+    <div className="min-h-screen bg-slate-950 flex flex-col">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur border-b border-slate-800/50 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {brand.logo ? (
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}>
+              {brand.logo}
             </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="flex items-center justify-center active:scale-90 transition-transform"
-              style={{
-                width: 34, height: 34, borderRadius: 10,
-                backgroundColor: showSearch ? primaryColor + "20" : "#1e1e2a",
-                color: showSearch ? primaryColor : "#52526a",
-              }}
-            >
-              <Search className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setView("cart")}
-              className="relative flex items-center justify-center active:scale-90 transition-transform"
-              style={{
-                width: 34, height: 34, borderRadius: 10,
-                backgroundColor: cartCount > 0 ? primaryColor + "20" : "#1e1e2a",
-                color: cartCount > 0 ? primaryColor : "#52526a",
-              }}
-            >
-              <ShoppingCart className="w-4 h-4" />
-              {cartCount > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 flex items-center justify-center text-white text-[9px] font-bold rounded-full"
-                  style={{ minWidth: 16, height: 16, backgroundColor: primaryColor, padding: "0 3px" }}
-                >
-                  {cartCount > 9 ? "9+" : cartCount}
-                </span>
-              )}
-            </button>
-          </div>
+          ) : null}
+          <span className="text-sm font-semibold text-white">{brand.name || data.tenant.name}</span>
         </div>
-
-        {/* Search bar — slides in */}
-        {showSearch && (
-          <div className="px-4 pb-3">
-            <div
-              className="flex items-center gap-2 px-3 rounded-2xl"
-              style={{
-                height: 40,
-                backgroundColor: "#1e1e2a",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              <Search className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#3a3a56" }} />
-              <input
-                autoFocus
-                type="text"
-                placeholder={t("catalog.searchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent text-sm outline-none"
-                style={{ color: "#f4f4f8" }}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="flex-shrink-0">
-                  <X className="w-3.5 h-3.5" style={{ color: "#52526a" }} />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Category chips */}
-        {categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-3">
-            <button
-              onClick={() => setSelectedCategoryId(null)}
-              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
-              style={
-                selectedCategoryId === null
-                  ? { backgroundColor: primaryColor, color: "#fff" }
-                  : { backgroundColor: "#1e1e2a", color: "#52526a", border: "1px solid rgba(255,255,255,0.06)" }
-              }
-            >
-              Barchasi
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
-                className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
-                style={
-                  selectedCategoryId === cat.id
-                    ? { backgroundColor: primaryColor, color: "#fff" }
-                    : { backgroundColor: "#1e1e2a", color: "#52526a", border: "1px solid rgba(255,255,255,0.06)" }
-                }
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowSearch(!showSearch)} className="p-2 rounded-xl text-slate-400 hover:text-white">
+            <Search className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setView("cart")}
+            className="relative p-2 rounded-xl text-white"
+            style={{ backgroundColor: primaryColor + "20" }}
+          >
+            <ShoppingCart className="w-5 h-5" style={{ color: primaryColor }} />
+            {cartCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                style={{ backgroundColor: primaryColor }}
               >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        )}
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
+      {/* Search bar */}
+      {showSearch && (
+        <div className="px-4 py-2 bg-slate-950 border-b border-slate-800">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              autoFocus
+              type="text"
+              placeholder={t("catalog.searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-800 rounded-2xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Category chips */}
+      {categories.length > 0 && (
+        <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide border-b border-slate-800/50">
+          <button
+            onClick={() => setSelectedCategoryId(null)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              selectedCategoryId === null ? "text-white" : "bg-slate-900 text-slate-400"
+            }`}
+            style={selectedCategoryId === null ? { backgroundColor: primaryColor } : {}}
+          >
+            Barchasi
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                selectedCategoryId === cat.id ? "text-white" : "bg-slate-900 text-slate-400"
+              }`}
+              style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor } : {}}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto pb-24">
         {renderHomeContent()}
       </div>
 
-      {/* Floating cart bar */}
+      {/* Cart preview banner (Home — agar savatda mahsulot bo'lsa, total ko'rsatamiz) */}
       {cartCount > 0 && view === "home" && (
-        <div className="fixed left-4 right-4 z-30" style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}>
+        <div className="fixed bottom-16 left-4 right-4 z-30">
           <button
             onClick={() => setView("cart")}
-            className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-between px-4 active:scale-[0.98] transition-transform"
-            style={{
-              backgroundColor: primaryColor,
-              color: "#fff",
-            }}
+            className="w-full py-3 rounded-2xl font-semibold text-white text-sm flex items-center justify-between px-5 shadow-xl transition-all active:scale-[0.98]"
+            style={{ backgroundColor: primaryColor }}
           >
-            <span
-              className="flex items-center justify-center text-xs font-bold rounded-xl"
-              style={{ width: 26, height: 26, backgroundColor: "rgba(255,255,255,0.2)" }}
-            >
-              {cartCount}
-            </span>
-            <span className="font-semibold">Savatni ko'rish</span>
+            <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+              <span className="text-xs font-bold">{cartCount}</span>
+            </div>
+            <span>Savatga o'tish</span>
             <span className="font-bold">{formatPrice(cartTotal, data.tenant.currency)}</span>
           </button>
         </div>
       )}
 
-      {/* Bottom Nav */}
+      {/* Bottom navigation — Home, Katalog, Savat, Takliflar, Profile */}
       {currentTab && <BottomNav active={currentTab} cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />}
 
       {/* Marketing popups — admin paneldan boshqariladi */}
