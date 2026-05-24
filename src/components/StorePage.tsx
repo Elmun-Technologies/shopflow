@@ -6,6 +6,7 @@ import {
   ShoppingCart, Search, Package, ChevronRight, Minus, Plus,
   X, CheckCircle2, Loader2, ArrowLeft, Phone, MapPin, User,
   Tag, Heart, Share2, ShieldCheck, BadgeCheck, ShoppingBag, Truck, Bell, Star, Send,
+  Clock, Zap, Sun,
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
@@ -361,6 +362,29 @@ function formatPrice(price: string | number, currency: string): string {
   if (currency === "UZS") return n.toLocaleString("uz-UZ") + " so'm";
   if (currency === "USD") return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2 });
   return n.toLocaleString() + " " + currency;
+}
+
+// Flash sale uchun countdown — vitrina blokida endTime sozlanadi
+function FlashSaleTimer({ endTime }: { endTime?: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (!endTime) return null;
+  const end = new Date(endTime).getTime();
+  const diff = Math.max(0, end - now);
+  if (diff === 0) return <span className="text-[10px] text-white/80 font-mono">--:--:--</span>;
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor((diff % 3_600_000) / 60_000);
+  const sec = Math.floor((diff % 60_000) / 1000);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return (
+    <div className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded-lg">
+      <Clock className="w-3 h-3 text-white" />
+      <span className="text-[11px] text-white font-mono font-bold">{pad(h)}:{pad(m)}:{pad(sec)}</span>
+    </div>
+  );
 }
 
 export default function StorePage(props: { slug: string }) {
@@ -2161,6 +2185,224 @@ function StoreInner({ slug }: { slug: string }) {
               );
             }
 
+            case "banner":
+              return (
+                <div
+                  key={block.id}
+                  className="w-full rounded-2xl overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, ${(s.bgColor as string) || primaryColor}, ${brand.secondaryColor || "#6366f1"})` }}
+                >
+                  <div className="p-5">
+                    <h2 className="text-lg font-bold text-white">{String(s.title ?? block.title ?? "")}</h2>
+                    {!!s.subtitle && <p className="text-xs text-white/80 mt-1">{String(s.subtitle)}</p>}
+                    {!!s.buttonText && (
+                      <button className="mt-3 px-4 py-2 bg-white text-slate-900 text-xs font-semibold rounded-xl">
+                        {String(s.buttonText)}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+
+            case "stories": {
+              // Mavjud kategoriyalardan birinchi 6 tasini story-circle qilib ko'rsatamiz
+              const storyCats = categories.slice(0, 6);
+              const items = storyCats.length > 0
+                ? storyCats
+                : Array.from({ length: 6 }, (_, i) => ({ id: `ph-${i}`, name: `Hikoya ${i + 1}`, slug: "", parentId: null }));
+              return (
+                <div key={block.id}>
+                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+                    {items.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => storyCats.length > 0 && setSelectedCategoryId(cat.id)}
+                        className="flex-shrink-0 flex flex-col items-center gap-1.5"
+                      >
+                        <div
+                          className="w-16 h-16 rounded-full p-0.5"
+                          style={{ background: `linear-gradient(135deg, ${primaryColor}, #ec4899)` }}
+                        >
+                          <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-lg font-bold text-white">
+                            {cat.name[0]}
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-slate-300 max-w-[64px] truncate">{cat.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            case "categories_grid": {
+              const items = categories.length > 0
+                ? categories
+                : Array.from({ length: 5 }, (_, i) => ({ id: `ph-${i}`, name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }));
+              return (
+                <div key={block.id}>
+                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <div className="space-y-2">
+                    {items.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => categories.length > 0 && setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl ${selectedCategoryId === cat.id ? "ring-2" : "bg-slate-900"} ${categories.length === 0 ? "opacity-40 cursor-default" : ""}`}
+                        style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor + "20" } : {}}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: primaryColor + "25" }}>
+                            {cat.name[0]}
+                          </div>
+                          <span className="text-sm text-white">{cat.name}</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-500" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            case "categories_2x2": {
+              const count = (s.count as number) || 4;
+              const cats = categories.slice(0, count);
+              const items = cats.length > 0
+                ? cats
+                : Array.from({ length: count }, (_, i) => ({ id: `ph-${i}`, name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }));
+              return (
+                <div key={block.id}>
+                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {items.map((cat, i) => {
+                      const grad = [
+                        "linear-gradient(135deg,#3b82f6,#1e40af)",
+                        "linear-gradient(135deg,#ec4899,#a21caf)",
+                        "linear-gradient(135deg,#f59e0b,#b45309)",
+                        "linear-gradient(135deg,#10b981,#047857)",
+                        "linear-gradient(135deg,#8b5cf6,#5b21b6)",
+                        "linear-gradient(135deg,#ef4444,#991b1b)",
+                      ][i % 6];
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => cats.length > 0 && setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
+                          className={`aspect-square rounded-2xl p-4 flex flex-col justify-between text-left overflow-hidden relative ${cats.length === 0 ? "opacity-40 cursor-default" : ""}`}
+                          style={{ background: grad }}
+                        >
+                          <span className="text-2xl">{cat.name[0]}</span>
+                          <div>
+                            <p className="text-sm font-semibold text-white">{cat.name}</p>
+                            <p className="text-[10px] text-white/70 mt-0.5">Ko'rish →</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+
+            case "flash_sale": {
+              const count = (s.count as number) || 4;
+              // Eski narxi (oldPrice) bo'lgan mahsulotlar — chegirma
+              let blockProds = products.filter((p) => p.oldPrice && Number(p.oldPrice) > Number(p.price));
+              if (blockProds.length === 0) blockProds = products;
+              blockProds = blockProds.slice(0, count);
+              const showSkeleton = blockProds.length === 0;
+              return (
+                <div key={block.id} className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)" }}>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-yellow-300 fill-yellow-300" />
+                        <h3 className="text-sm font-bold text-white">{block.title}</h3>
+                      </div>
+                      <FlashSaleTimer endTime={s.endTime as string | undefined} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {showSkeleton
+                        ? Array.from({ length: count }, (_, i) => (
+                            <div key={i} className="bg-white/10 rounded-2xl aspect-square flex items-center justify-center">
+                              <Package className="w-8 h-8 text-white/40" />
+                            </div>
+                          ))
+                        : blockProds.map(renderProductCard)
+                      }
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            case "product_of_day": {
+              const featured = products.find((p) => p.featured) || products[0];
+              if (!featured) {
+                return (
+                  <div key={block.id} className="rounded-2xl bg-slate-900 p-6 text-center">
+                    <Sun className="w-10 h-10 text-cream-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-400">{block.title}</p>
+                    <p className="text-xs text-slate-500 mt-1">Mahsulot tanlanmagan</p>
+                  </div>
+                );
+              }
+              const price = Number(featured.price);
+              const oldPrice = featured.oldPrice ? Number(featured.oldPrice) : null;
+              const discount = calcDiscountPct(price, oldPrice);
+              const stockBar = s.showStockBar !== false;
+              const stockPct = Math.min(100, Math.max(0, (featured.stock / 20) * 100));
+              return (
+                <button
+                  key={block.id}
+                  onClick={() => setSelectedProduct(featured)}
+                  className="w-full rounded-2xl overflow-hidden bg-slate-900 text-left"
+                >
+                  <div className="flex items-center gap-1.5 px-4 pt-3 pb-2">
+                    <Sun className="w-3.5 h-3.5 text-yellow-400" />
+                    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: primaryColor }}>{block.title}</span>
+                  </div>
+                  <div className="flex gap-3 p-3 pt-0">
+                    <div className="w-28 h-28 rounded-xl bg-slate-800 flex-shrink-0 overflow-hidden">
+                      {featured.imageUrl ? (
+                        <img src={featured.imageUrl} alt={featured.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-10 h-10 text-slate-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-white line-clamp-2">{featured.name}</h4>
+                      <div className="mt-1.5 flex items-baseline gap-2">
+                        <span className="text-base font-bold text-white">{formatPrice(price, data.tenant.currency)}</span>
+                        {oldPrice && (
+                          <span className="text-xs text-slate-500 line-through">{formatPrice(oldPrice, data.tenant.currency)}</span>
+                        )}
+                      </div>
+                      {discount > 0 && (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                          -{discount}%
+                        </span>
+                      )}
+                      {stockBar && featured.stock > 0 && (
+                        <div className="mt-2">
+                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{ width: `${stockPct}%`, backgroundColor: stockPct < 30 ? "#ef4444" : primaryColor }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1">{featured.stock} ta qoldi</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            }
+
+            case "preorder":
             case "new_products":
             case "discounts":
             case "trending":
