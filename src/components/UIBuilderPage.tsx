@@ -184,6 +184,17 @@ export default function UIBuilderPage() {
   }, []);
 
   const handleSave = useCallback(async () => {
+    // Agar yashirin holatda saqlanmoqchi bo'lsa — operator'dan tasdiq so'rash.
+    // Aks holda mijoz Mini App'da "Do'kon yopiq" ko'radi va sabab tushunmaydi.
+    if (!published) {
+      const choice = window.confirm(
+        "⚠️ Vitrina yashirin holatda saqlanmoqda.\n\n" +
+        "Saqlasangiz mijozlar do'konni Telegram'da ochib ko'ra olmaydi (\"Do'kon yopiq\" xabari chiqadi).\n\n" +
+        "OK — yashirin holda saqlash\n" +
+        "Cancel — bekor qilish (so'ng \"Nashr\" tugmasini bosing)"
+      );
+      if (!choice) return;
+    }
     setSaving(true);
     try {
       await vitrinaApi.saveLayout({ blocks, brand: brand as unknown as Record<string, unknown>, published });
@@ -195,7 +206,7 @@ export default function UIBuilderPage() {
     } finally {
       setSaving(false);
     }
-  }, [blocks, brand, published]);
+  }, [blocks, brand, published, t]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -695,15 +706,18 @@ export default function UIBuilderPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {/* Published toggle */}
+            {/* Published toggle — yashirin holatni aniq ko'rinarli qiladi */}
             <button
               onClick={() => setPublished(!published)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                published ? "bg-leaf-100 text-forest-700 border border-leaf-300/60" : "bg-cream-100 text-slate-500 border border-cream-300"
+              title={published ? "Do'kon mijozlarga ko'rinadi — bossangiz yashiradi" : "⚠️ Do'kon mijozlarga ko'rinmaydi! Bossangiz nashr qiladi"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                published
+                  ? "bg-leaf-100 text-forest-700 border border-leaf-300/60"
+                  : "bg-amber-100 text-amber-700 border border-amber-400 animate-pulse"
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
-              {published ? t("ui.published") : t("ui.hidden")}
+              {published ? t("ui.published") : `⚠️ ${t("ui.hidden")}`}
             </button>
             <div className="flex items-center bg-cream-100 rounded-lg p-0.5">
               <button onClick={() => setPreviewMode("mobile")} className={`p-1.5 rounded-md transition-all ${previewMode === "mobile" ? "bg-cream-200 text-forest-800" : "text-slate-500"}`}>
@@ -726,6 +740,28 @@ export default function UIBuilderPage() {
             </button>
           </div>
         </div>
+
+        {/* Hidden state warning — operator sezmasdan qoldirmasligi uchun */}
+        {!published && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <Globe className="w-4 h-4 text-amber-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">Do'kon yashirin holatda</p>
+              <p className="text-xs text-amber-700">
+                Mijozlar hozir Mini App'ni ochsa "<strong>Do'kon yopiq</strong>" xabari chiqadi.
+                Mijozlar uchun ochish uchun yuqoridagi <strong>Yashirin</strong> tugmasini bosing.
+              </p>
+            </div>
+            <button
+              onClick={() => setPublished(true)}
+              className="flex-shrink-0 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-xs font-semibold rounded-lg transition-colors"
+            >
+              Nashr qilish
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 flex overflow-hidden">
           {/* Block List */}

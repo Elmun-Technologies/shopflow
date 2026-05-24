@@ -12,6 +12,7 @@ import WeeklySales from "./components/WeeklySales";
 import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
 import TrafficSources from "./components/TrafficSources";
+import LowStockAlert from "./components/LowStockAlert";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
@@ -74,7 +75,7 @@ function PageLoader() {
   );
 }
 
-function DashboardPage() {
+function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {}) {
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
@@ -151,6 +152,10 @@ function DashboardPage() {
           <TrafficSources />
         </div>
       </div>
+
+      <div className="mt-4">
+        <LowStockAlert onOpenProducts={() => onNavigate?.("products")} />
+      </div>
     </>
   );
 }
@@ -211,7 +216,7 @@ function AppShell() {
   const renderPage = () => {
     switch (currentPage) {
       case "dashboard":
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage} />;
       case "orders":
         return <OrdersPage />;
       case "products":
@@ -270,7 +275,7 @@ function AppShell() {
       case "settings":
         return <SettingsPage />;
       default:
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage} />;
     }
   };
 
