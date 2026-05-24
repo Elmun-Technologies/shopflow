@@ -22,16 +22,41 @@ veb-sayt va boshqa kanallardan webhook orqali avtomatik qabul qilinadi.
 
 ### ✨ Asosiy xususiyatlar
 
+#### Platforma
 - 🏢 **Multi-tenant** — har bir tashkilot uchun izolyatsiya qilingan ma'lumotlar
-- 🔐 **JWT auth** — argon2 parol hash + JWT token + role-based access (OWNER/ADMIN/MANAGER/AGENT)
-- 📥 **Kanal webhooklari** — Telegram bot, Instagram, web forma, WhatsApp va boshqalar uchun
-  tenantga xos webhook URL
-- 📊 **Real dashboard** — KPIlar, daromad trendi, kanal bo'yicha sotuvlar — barchasi DBdan
+- 🔐 **JWT auth + refresh tokens** — argon2 parol hash, role-based access (OWNER/ADMIN/MANAGER/AGENT)
+- 📱 **Telegram Mini App** — mijoz tomon `/store/:slug` route, Telegram WebApp integratsiyasi
+- 🌍 **i18n** — Uzbek + Russian (530+ kalit), istalgan paytda almashtirish
+- 🎨 **Commerly UI Kit dizayni** — light theme cream + leaf green, modern e-commerce look
+- 📲 **Mobile responsive** — desktop table → mobile card view avtomatik
+- ⚡ **Sentry** error tracking + structured logs
+
+#### Admin operatsiyalar
+- 📊 **Real dashboard** — KPI sparkline'lar, daromad trendi, kategoriya/kanal taqsimoti, recent orders avatar list, low-stock alert
 - 🎯 **Lidlar CRM** — status pipeline, interaksiyalar tarixi, tayinlash, filtrlash
-- 🛒 **Buyurtmalar** — items, status, kanal, mijoz aloqasi
-- 👥 **Mijozlar bazasi** — teglar, izohlar, sotib olishlar tarixi
-- 🛠️ **Mahsulot katalogi** — SKU, kategoriya, narx, ombor
-- 🚀 **Docker Compose** — Postgres + Backend + Frontend + Caddy (HTTPS) bir buyruqda
+- 🛒 **Buyurtmalar** — desktop table + mobile card view, status pills, print invoice (A4 PDF), CSV export
+- 👥 **Mijozlar** — teglar, izohlar, sotib olishlar tarixi, CSV export
+- 🛠️ **Mahsulotlar** — SKU/kategoriya/narx/ombor, **bulk import (CSV/Excel paste)**, bulk actions
+- 🔔 **Notifications** — Header bell panel, 15s polling, **audio "ding"** + browser notification, mute toggle
+- 🎵 **3 ovoz turi** — Ding / Bell / Chime, per-event prefs (orders/leads/chat alohida)
+- ⌨️ **Keyboard shortcuts** — `g d/o/p/c/l/h/m/a/v/s` vim-uslubida + `?` help + ⌘K palette
+- 🧩 **Integratsiyalar markazi** — 28 ta (Click, Payme, Uzum, Yandex Go, Eskiz SMS, Google Analytics, MoySklad...)
+
+#### Mijoz tomon (Telegram Mini App)
+- 🛍 **Premium dark UI** — Uzum-uslubidagi, smooth animatsiyalar
+- 🎁 **Combo addons** — har mahsulot uchun "Bularni ham qo'shing"
+- ⭐ **Sharhlar** — ✓ purchase qilgan mijoz yozadi, admin moderatsiyadan o'tkazadi
+- 📍 **GPS yetkazib berish** — joriy joylashuv olish + saqlangan manzillar
+- 💳 **Click / Payme / Uzum** webhook integratsiyalari (backend)
+- 🎟 **Promo kodlar** — checkout vaqtida avtomatik qo'llaniladi
+- 🤝 **Referral tizimi** — har do'st uchun bonus
+- 🔔 **Telegram bildirishnomalar** — buyurtma status'i o'zgarganda
+- 🛒 **Abandoned cart** eslatmalari — 1 soatdan keyin avtomatik
+
+#### Infratuzilma
+- 🚀 **Docker Compose** — Postgres 16 + Backend + Frontend + Caddy (HTTPS) bir buyruqda
+- 🛠 **VPS bootstrap** — `bash bootstrap.sh` bilan to'liq setup
+- 🔄 **DB backup** + restore
 
 ---
 
@@ -208,30 +233,62 @@ shopflow/
 
 ## 🛣 Yo'l xaritasi
 
-Ushbu PR'da bajarilgan:
+### Bajarilgan (27+ PR, 2026 may)
 
-- [x] Multi-tenant Prisma schema (Tenant, User, Lead, Order, Product, Customer, Channel, Interaction)
-- [x] JWT auth + role guards + tenant scoping
-- [x] CRUD: leads, orders, products, customers, channels
-- [x] Dashboard aggregatsiyalari (KPI, trendlar, kanal bo'yicha sotuvlar)
-- [x] Webhook endpointlar (umumiy lead + Telegram)
-- [x] Frontend: AuthContext, API client, Login sahifasi
-- [x] Frontend: Dashboard, Leads, Orders, Products, Customers, Platforms — barchasi API'dan
-- [x] Sidebar refactor — grupplangan, collapsible, localStorage state, user info, logout
-- [x] Demo raqamlar olib tashlandi — bo'sh holatlar va loading'lar bilan
-- [x] Docker Compose: Postgres + Backend
-- [x] Bootstrap skript: avto-generatsiya, seed
+**Platforma:**
+- [x] Multi-tenant Prisma schema + JWT (refresh tokens) + RBAC
+- [x] Docker Compose + Caddy HTTPS + VPS bootstrap
+- [x] Sentry error tracking
+- [x] DB backup/restore
 
-Kelajakda:
+**Dizayn:**
+- [x] **Commerly UI Kit light theme** (cream + leaf green)
+- [x] Mobile responsive (desktop table → mobile card)
+- [x] Loading skeletons (spinners o'rniga)
+- [x] Capsule-shape bar charts
+- [x] Avatar circles + status pills + sparklines
 
-- [ ] Marketing modullari (rassilka, promokod, sovgalar, sms va h.k.) API integratsiyasi
-- [ ] Analytics sahifasi — chuqurroq hisobotlar
-- [ ] Settings sahifasi — tenant sozlamalari (currency, timezone, foydalanuvchilarni boshqarish)
-- [ ] Chat: real-time WebSocket + kanal xabarlari
-- [ ] Instagram/Facebook/WhatsApp Cloud API to'liq webhook integratsiyalari
-- [ ] Payment provider'lar (Click, Payme, Uzcard)
-- [ ] Yetkazib berish API'lari (Yandex, BTS, Express24)
-- [ ] Export (CSV/Excel), email rassilka cron jobs
+**Funksiyalar:**
+- [x] **i18n** uz/ru (530+ kalit, har joyda)
+- [x] **Notifications panel** + audio ding + browser notification
+- [x] **3 ovoz turi** + per-event preferences (orders/leads/chat)
+- [x] **CSV export** Orders/Customers/Leads
+- [x] **Print invoice** A4 PDF
+- [x] **Bulk product import** CSV/Excel paste
+- [x] **Keyboard shortcuts** (vim-uslubida `g d/o/p/...` + `?` help)
+- [x] **⌘K command palette** (search + nav)
+- [x] **Integratsiyalar markazi** — 28 ta (Click/Payme/Uzum/Yandex Go/Eskiz/...)
+- [x] **MoySklad** real OAuth ulanish
+- [x] **Low Stock Alert** dashboard widget
+
+**Mini App:**
+- [x] Premium Uzum-uslubidagi dark UI
+- [x] Complete cart redesign
+- [x] Trust badges, sharhlar, referral graph
+- [x] GPS manzil + saqlangan manzillar
+- [x] Promo kodlar
+
+**Backend:**
+- [x] Click/Payme/Uzum webhook handlers
+- [x] Delivery module + tracking
+- [x] Multi-tenant webhook URLs (security)
+- [x] initData security (Telegram WebApp)
+
+### Kelajakda
+
+- [ ] Onboarding wizard (yangi tenant uchun)
+- [ ] Reports — Daily/weekly/monthly PDF + email
+- [ ] Real-time SSE/WebSocket (15s polling o'rniga)
+- [ ] Team management (Invite teammates)
+- [ ] Reviews moderation UI
+- [ ] Order timeline view (visual journey)
+- [ ] Customer segments — RFM analysis
+- [ ] Bulk actions on Orders
+- [ ] PWA + push notifications
+- [ ] Sales Overview half-donut gauge ("85% Sales Growth")
+- [ ] Backend real ulanish — Click/Payme setup UI bog'lash, Eskiz SMS API, Yandex Go delivery
+- [ ] Google Analytics / Yandex Metrika auto-injection
+- [ ] Custom Webhook (POST order.created)
 
 ---
 
