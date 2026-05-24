@@ -61,8 +61,8 @@ export default function WeeklySales() {
             <BarChart data={series} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="weeklyBarGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#5FA340" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#5FA340" stopOpacity={0.4} />
+                  <stop offset="0%" stopColor="#95D26F" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#5FA340" stopOpacity={1} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="2 6" stroke="#E5E5DA" vertical={false} />
@@ -75,7 +75,7 @@ export default function WeeklySales() {
                 width={42}
               />
               <Tooltip content={<Tip />} cursor={{ fill: "#1e293b40" }} />
-              <Bar dataKey="sales" fill="url(#weeklyBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={32} />
+              <Bar dataKey="sales" fill="url(#weeklyBarGrad)" radius={[16, 16, 16, 16]} maxBarSize={24} />
             </BarChart>
           </ResponsiveContainer>
         )}

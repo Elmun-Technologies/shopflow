@@ -38,7 +38,7 @@ export default function TopProducts() {
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <Package className="w-8 h-8 text-slate-700 mb-2" />
+          <Package className="w-8 h-8 text-cream-300 mb-2" />
           <p className="text-sm text-slate-500">{t("widget.topProducts.empty")}</p>
         </div>
       ) : (

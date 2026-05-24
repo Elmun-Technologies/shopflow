@@ -1960,7 +1960,7 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {promotionProducts.length === 0 ? (
             <div className="py-16 text-center">
-              <Tag className="w-12 h-12 mx-auto text-slate-700 mb-3" />
+              <Tag className="w-12 h-12 mx-auto text-cream-300 mb-3" />
               <p className="text-sm text-slate-400">{t("promo.empty")}</p>
             </div>
           ) : (
@@ -2043,7 +2043,7 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {filteredProducts.length === 0 ? (
             <div className="py-16 text-center">
-              <Package className="w-12 h-12 mx-auto text-slate-700 mb-3" />
+              <Package className="w-12 h-12 mx-auto text-cream-300 mb-3" />
               <p className="text-sm text-slate-400">
                 {searchQuery ? t("catalog.empty.search", { q: searchQuery }) : t("catalog.empty.category")}
               </p>
@@ -2081,7 +2081,7 @@ function StoreInner({ slug }: { slug: string }) {
           </div>
           {filteredProducts.length === 0 && (
             <div className="py-12 text-center">
-              <Package className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+              <Package className="w-12 h-12 text-cream-300 mx-auto mb-3" />
               <p className="text-sm text-slate-400">Mahsulotlar topilmadi</p>
             </div>
           )}
@@ -2191,7 +2191,7 @@ function StoreInner({ slug }: { slug: string }) {
                       ? Array.from({ length: skeletonCount }, (_, i) => (
                           <div key={i} className="bg-slate-900 rounded-2xl overflow-hidden opacity-50">
                             <div className="aspect-square bg-slate-800 flex items-center justify-center">
-                              <Package className="w-10 h-10 text-slate-700" />
+                              <Package className="w-10 h-10 text-cream-300" />
                             </div>
                             <div className="p-2.5 space-y-1.5">
                               <div className="h-2.5 bg-slate-800 rounded-full w-3/4" />

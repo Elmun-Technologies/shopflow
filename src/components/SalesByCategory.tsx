@@ -8,8 +8,8 @@ import { formatCompactCurrency } from "../utils/format";
 import type { ChartTooltipProps } from "../utils/chart";
 import { useT } from "../i18n";
 
-// Modern pastel-aksent ranglar — Commerly stilida
-const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4", "#ef4444"];
+// Commerly palette — yashil gradatsiyalar + yumshoq aksent
+const COLORS = ["#95D26F", "#5FA340", "#2D4938", "#A8E063", "#7BC056", "#C5E29F", "#4F6B53"];
 
 export default function SalesByCategory() {
   const { tenant } = useAuth();

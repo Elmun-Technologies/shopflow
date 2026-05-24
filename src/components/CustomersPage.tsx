@@ -107,7 +107,7 @@ export default function CustomersPage() {
           </div>
         ) : customers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <Users className="w-12 h-12 text-slate-700 mb-3" />
+            <Users className="w-12 h-12 text-cream-300 mb-3" />
             <p className="text-base font-semibold text-forest-800">
               {search ? t("customers.empty.search") : t("customers.empty.none")}
             </p>

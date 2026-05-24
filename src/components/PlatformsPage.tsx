@@ -95,7 +95,7 @@ export default function PlatformsPage() {
         </div>
       ) : channels.length === 0 ? (
         <div className="bg-white border border-cream-300 rounded-xl p-12 text-center">
-          <Layers className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+          <Layers className="w-12 h-12 text-cream-300 mx-auto mb-3" />
           <p className="text-base font-semibold text-forest-800">{t("platforms.empty.title")}</p>
           <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
             {t("platforms.empty.hint")}

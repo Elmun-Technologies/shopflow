@@ -276,9 +276,9 @@ export default function DeliveryPage() {
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94A3B8", fontSize: 11 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="pickup" name={t("delivery.legend.pickup")} fill="#5FA340" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="courier" name={t("delivery.legend.courier")} fill="#0EA5E9" radius={[3, 3, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="post" name={t("delivery.legend.post")} fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={20} />
+                <Bar dataKey="pickup" name={t("delivery.legend.pickup")} fill="#5FA340" radius={[12, 12, 12, 12]} maxBarSize={20} />
+                <Bar dataKey="courier" name={t("delivery.legend.courier")} fill="#0EA5E9" radius={[12, 12, 12, 12]} maxBarSize={20} />
+                <Bar dataKey="post" name={t("delivery.legend.post")} fill="#f59e0b" radius={[12, 12, 12, 12]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>

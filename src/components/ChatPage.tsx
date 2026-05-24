@@ -558,7 +558,7 @@ export default function ChatPage() {
             })}
             {filteredChats.length === 0 && (
               <div className="py-8 text-center">
-                <MessageSquare className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+                <MessageSquare className="w-8 h-8 text-cream-300 mx-auto mb-2" />
                 <p className="text-xs text-slate-500">
                   {loading ? t("common.loading") : t("chat.empty")}
                 </p>
@@ -780,7 +780,7 @@ export default function ChatPage() {
         ) : (
           <div className="flex-1 flex items-center justify-center bg-white border border-cream-300 rounded-xl">
             <div className="text-center">
-              <MessageSquare className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+              <MessageSquare className="w-12 h-12 text-cream-300 mx-auto mb-3" />
               <p className="text-sm text-slate-500">Chat tanlang</p>
             </div>
           </div>
