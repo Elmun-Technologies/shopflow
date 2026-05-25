@@ -108,6 +108,12 @@ export const productsApi = {
     api<Product>(`/products/${id}`, { method: "PATCH", body: data }),
 
   delete: (id: string) => api<{ ok: true }>(`/products/${id}`, { method: "DELETE" }),
+
+  restock: (id: string, body: { quantity: number; note?: string }) =>
+    api<{ id: string; stock: number; added: number }>(`/products/${id}/restock`, {
+      method: "POST",
+      body,
+    }),
 };
 
 // ===== Customers =====

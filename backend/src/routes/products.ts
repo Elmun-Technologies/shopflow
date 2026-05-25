@@ -206,4 +206,46 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
     return { ok: true };
   });
+
+  // Restock — kam qolgan mahsulot uchun tezkor stok qo'shish.
+  // Mavjud stockka qo'shadi (set emas, add). Audit log'da kim, qancha, sabab.
+  const restockSchema = z.object({
+    quantity: z.number().int().positive().max(100_000),
+    note: z.string().max(500).optional(),
+  });
+  app.post(
+    "/:id/restock",
+    { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
+    async (req, reply) => {
+      const { id } = z.object({ id: z.string() }).parse(req.params);
+      const data = restockSchema.parse(req.body);
+      const product = await app.prisma.product.findFirst({
+        where: { id, tenantId: req.session.tenantId },
+      });
+      if (!product) return reply.code(404).send({ error: "Not found" });
+
+      const updated = await app.prisma.product.update({
+        where: { id },
+        data: { stock: { increment: data.quantity } },
+      });
+
+      const actor = await app.prisma.user.findUnique({
+        where: { id: req.session.userId },
+        select: { name: true },
+      });
+      await logAudit({
+        prisma: app.prisma,
+        tenantId: req.session.tenantId,
+        actorId: req.session.userId,
+        actorName: actor?.name ?? null,
+        action: "RESTOCK",
+        resourceType: "product",
+        resourceId: id,
+        summary: `Stok qo'shildi: +${data.quantity} (${product.stock} → ${updated.stock})${data.note ? ` — ${data.note}` : ""}`,
+        changes: { from: product.stock, to: updated.stock, added: data.quantity, note: data.note ?? null },
+      });
+
+      return { id: updated.id, stock: updated.stock, added: data.quantity };
+    },
+  );
 };
