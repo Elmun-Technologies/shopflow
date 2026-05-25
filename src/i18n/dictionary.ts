@@ -302,6 +302,14 @@ export const dictionary: Record<string, Entry> = {
   "orders.action.hint": { uz: "{action} → mijozga Telegram xabar yuboriladi", ru: "{action} → клиенту отправится Telegram уведомление" },
   "orders.viewDetails": { uz: "Batafsil ko'rish", ru: "Подробнее" },
   "orders.export": { uz: "Eksport", ru: "Экспорт" },
+  "orders.bulk.selected": { uz: "{n} ta tanlandi", ru: "Выбрано: {n}" },
+  "orders.bulk.setStatus": { uz: "Statusni o'zgartirish", ru: "Изменить статус" },
+  "orders.bulk.clear": { uz: "Bekor qilish", ru: "Сбросить" },
+  "orders.bulk.confirmTitle": { uz: "Statusni o'zgartirilsinmi?", ru: "Изменить статус?" },
+  "orders.bulk.confirmDesc": { uz: "{n} ta buyurtma statusi → {status}. Mijozlarga avtomatik Telegram xabar yuboriladi.", ru: "{n} заказам будет установлен статус: {status}. Клиентам автоматически отправится уведомление." },
+  "orders.bulk.success": { uz: "{summary}", ru: "{summary}" },
+  "orders.bulk.failed": { uz: "Bulk operatsiya muvaffaqiyatsiz", ru: "Массовая операция не удалась" },
+  "orders.bulk.selectAll": { uz: "Hammasini tanlash", ru: "Выбрать все" },
 
   // ─── Admin: OrderDetailDrawer ─────────────────────────
   "orderDetail.customer": { uz: "Mijoz", ru: "Клиент" },

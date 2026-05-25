@@ -241,4 +241,74 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     await app.prisma.orderNote.delete({ where: { id: params.noteId } });
     return { ok: true };
   });
+
+  // Bulk operations — operator bir nechta buyurtmani bir vaqtda boshqaradi
+  // setStatus: tanlangan buyurtmalar statusini bir xil qiymatga o'zgartirish
+  const bulkSchema = z.object({
+    ids: z.array(z.string()).min(1).max(500),
+    action: z.enum(["setStatus"]),
+    status: statusEnum.optional(),
+  });
+  app.post(
+    "/bulk",
+    { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
+    async (req, reply) => {
+      const data = bulkSchema.parse(req.body);
+      if (data.action === "setStatus" && !data.status) {
+        return reply.code(400).send({ error: "status required for setStatus" });
+      }
+      const tenantId = req.session.tenantId;
+      const owned = await app.prisma.order.findMany({
+        where: { id: { in: data.ids }, tenantId },
+        select: { id: true, status: true, code: true },
+      });
+      if (owned.length === 0) return reply.send({ affected: 0, summary: "Hech narsa topilmadi" });
+
+      const actor = await app.prisma.user.findUnique({
+        where: { id: req.session.userId },
+        select: { name: true },
+      });
+      const actorName = actor?.name ?? null;
+
+      let affected = 0;
+      let summary = "";
+
+      if (data.action === "setStatus" && data.status) {
+        const toStatus = data.status;
+        // Faqat haqiqatda o'zgaradiganlarni yangilaymiz, audit/notify spam emas
+        const targets = owned.filter((o) => o.status !== toStatus);
+        if (targets.length === 0) {
+          return reply.send({ affected: 0, summary: "Status allaqachon o'rnatilgan" });
+        }
+        const res = await app.prisma.order.updateMany({
+          where: { id: { in: targets.map((t) => t.id) }, tenantId },
+          data: { status: toStatus },
+        });
+        affected = res.count;
+        const toLabel = STATUS_LABEL[toStatus] ?? toStatus;
+        summary = `${affected} ta buyurtma → ${toLabel}`;
+
+        // Audit — bitta umumiy bulk yozuv
+        await logAudit({
+          prisma: app.prisma,
+          tenantId,
+          actorId: req.session.userId,
+          actorName,
+          action: "BULK_STATUS_CHANGE",
+          resourceType: "order",
+          resourceId: targets[0].id,
+          summary,
+          changes: { ids: targets.map((t) => t.id), to: toStatus },
+        });
+
+        // Mijozlarga Telegram push (fonda)
+        for (const tgt of targets) {
+          notifyOrderStatusChange(app.prisma, tenantId, tgt.id, tgt.status, toStatus)
+            .catch((err) => app.log.warn({ err, orderId: tgt.id }, "TG push failed"));
+        }
+      }
+
+      return reply.send({ affected, summary });
+    },
+  );
 };

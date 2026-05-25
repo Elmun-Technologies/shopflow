@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check, Download } from "lucide-react";
+import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check, Download, X } from "lucide-react";
 import { exportToCsv } from "../utils/exportCsv";
 import { useAsync } from "../hooks/useAsync";
 import { ordersApi } from "../api/endpoints";
@@ -8,6 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Order, OrderStatus } from "../types/api";
 import { useAppToast } from "./ui/Toast";
+import { useConfirm } from "./ui/ConfirmDialog";
 import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useT } from "../i18n";
 import OrderDetailDrawer from "./OrderDetailDrawer";
@@ -24,6 +25,8 @@ const statusStyle: Record<OrderStatus, { color: string; bg: string }> = {
 export default function OrdersPage() {
   const { tenant } = useAuth();
   const { t } = useT();
+  const toast = useAppToast();
+  const confirm = useConfirm();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
@@ -31,6 +34,9 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [exporting, setExporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
 
   const handleExport = async () => {
     setExporting(true);
@@ -89,6 +95,63 @@ export default function OrdersPage() {
   const orders = data?.items ?? [];
   const total = data?.total ?? 0;
 
+  const resetSelection = () => {
+    setSelected(new Set());
+    setBulkMenuOpen(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnPage = () => {
+    setSelected((prev) => {
+      const allOnPage = orders.every((o) => prev.has(o.id));
+      if (allOnPage) {
+        const next = new Set(prev);
+        orders.forEach((o) => next.delete(o.id));
+        return next;
+      }
+      const next = new Set(prev);
+      orders.forEach((o) => next.add(o.id));
+      return next;
+    });
+  };
+
+  const runBulkStatus = async (status: OrderStatus) => {
+    if (selected.size === 0) return;
+    setBulkMenuOpen(false);
+    const ok = await confirm({
+      title: t("orders.bulk.confirmTitle"),
+      description: t("orders.bulk.confirmDesc", {
+        n: selected.size,
+        status: t(`order.adminStatus.${status}`),
+      }),
+      confirmText: t("orders.bulk.setStatus"),
+    });
+    if (!ok) return;
+    setBulkBusy(true);
+    try {
+      const res = await ordersApi.bulk({
+        ids: Array.from(selected),
+        action: "setStatus",
+        status,
+      });
+      toast.success(t("orders.bulk.success", { summary: res.summary }));
+      resetSelection();
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("orders.bulk.failed"));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const tabs: { key: OrderStatus | "all"; label: string }[] = [
     { key: "all", label: t("orders.tab.all") },
     { key: "PENDING", label: t("order.adminStatus.PENDING") },
@@ -114,6 +177,7 @@ export default function OrdersPage() {
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
+              resetSelection();
             }}
             placeholder={t("orders.searchPlaceholder")}
             className="w-full bg-white border border-cream-300 rounded-lg pl-10 pr-4 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
@@ -146,6 +210,7 @@ export default function OrdersPage() {
             onClick={() => {
               setStatusFilter(tab.key);
               setPage(1);
+              resetSelection();
             }}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
               statusFilter === tab.key
@@ -157,6 +222,59 @@ export default function OrdersPage() {
           </button>
         ))}
       </div>
+
+      {selected.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap items-center gap-2 mb-4 px-3 py-2 bg-leaf-100 border border-leaf-300/60 rounded-xl"
+        >
+          <span className="text-sm font-medium text-forest-800 mr-1">
+            {t("orders.bulk.selected", { n: selected.size })}
+          </span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setBulkMenuOpen((v) => !v)}
+              disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-xs font-medium text-forest-800 transition-colors"
+            >
+              {bulkBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {t("orders.bulk.setStatus")}
+              <ChevronDown className="w-3 h-3 opacity-70" />
+            </button>
+            {bulkMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setBulkMenuOpen(false)} />
+                <div className="absolute top-full left-0 mt-1 z-30 bg-white border border-cream-300 rounded-xl shadow-xl py-1 min-w-[180px]">
+                  {(Object.keys(statusStyle) as OrderStatus[]).map((s) => {
+                    const sc = statusStyle[s];
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => runBulkStatus(s)}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-cream-100 transition-colors flex items-center gap-2"
+                      >
+                        <span className={`w-2 h-2 rounded-full ${sc.bg.split(" ")[0]}`} />
+                        <span className={sc.color}>{t(`order.adminStatus.${s}`)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={resetSelection}
+            disabled={bulkBusy}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 hover:text-forest-900 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+            {t("orders.bulk.clear")}
+          </button>
+        </motion.div>
+      )}
 
       <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
         {loading ? (
@@ -180,7 +298,15 @@ export default function OrdersPage() {
             </p>
           </div>
         ) : (
-          <OrderTable orders={orders} currency={currency} onChanged={refetch} onOpen={setOpenOrderId} />
+          <OrderTable
+            orders={orders}
+            currency={currency}
+            onChanged={refetch}
+            onOpen={setOpenOrderId}
+            selected={selected}
+            onToggle={toggleSelect}
+            onToggleAll={toggleSelectAllOnPage}
+          />
         )}
 
         {total > pageSize && (
@@ -190,14 +316,14 @@ export default function OrdersPage() {
             </span>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => { setPage((p) => Math.max(1, p - 1)); resetSelection(); }}
                 disabled={page === 1}
                 className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
                 {t("orders.prev")}
               </button>
               <button
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => { setPage((p) => p + 1); resetSelection(); }}
                 disabled={page * pageSize >= total}
                 className="px-3 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 disabled:opacity-30"
               >
@@ -218,14 +344,22 @@ export default function OrdersPage() {
 }
 
 function OrderTable({
-  orders, currency, onChanged, onOpen,
+  orders, currency, onChanged, onOpen, selected, onToggle, onToggleAll,
 }: {
-  orders: Order[]; currency: string; onChanged: () => void; onOpen: (id: string) => void;
+  orders: Order[];
+  currency: string;
+  onChanged: () => void;
+  onOpen: (id: string) => void;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: () => void;
 }) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const toast = useAppToast();
   const { t } = useT();
+  const allOnPageSelected = orders.length > 0 && orders.every((o) => selected.has(o.id));
+  const someOnPageSelected = orders.some((o) => selected.has(o.id));
 
   const handleChangeStatus = async (orderId: string, status: OrderStatus, code: string) => {
     setOpenMenuId(null);
@@ -248,6 +382,18 @@ function OrderTable({
         <table className="w-full">
           <thead>
             <tr className="border-b border-cream-300">
+              <th className="py-3 pl-4 pr-2 w-10">
+                <input
+                  type="checkbox"
+                  checked={allOnPageSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected;
+                  }}
+                  onChange={onToggleAll}
+                  aria-label={t("orders.bulk.selectAll")}
+                  className="w-4 h-4 rounded border-cream-300 text-leaf-500 focus:ring-leaf-400 cursor-pointer"
+                />
+              </th>
               <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.code")}</th>
               <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.customer")}</th>
               <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider py-3 px-4">{t("orders.col.channel")}</th>
@@ -265,12 +411,24 @@ function OrderTable({
                 order.status === "PENDING" ? { next: "PROCESSING", label: t("orders.action.accept") }
                 : order.status === "PROCESSING" ? { next: "COMPLETED", label: t("orders.action.delivered") }
                 : null;
+              const isSelected = selected.has(order.id);
               return (
                 <tr
                   key={order.id}
                   onClick={() => onOpen(order.id)}
-                  className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors cursor-pointer"
+                  className={`border-b border-cream-300/50 transition-colors cursor-pointer ${
+                    isSelected ? "bg-leaf-100/40" : "hover:bg-cream-100/30"
+                  }`}
                 >
+                  <td className="py-3 pl-4 pr-2 w-10" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggle(order.id)}
+                      aria-label={`#${order.code}`}
+                      className="w-4 h-4 rounded border-cream-300 text-leaf-500 focus:ring-leaf-400 cursor-pointer"
+                    />
+                  </td>
                   <td className="py-3 px-4">
                     <span className="text-sm font-medium text-forest-800">#{order.code}</span>
                   </td>
@@ -359,17 +517,30 @@ function OrderTable({
       <div className="md:hidden divide-y divide-cream-300/50">
         {orders.map((order) => {
           const style = statusStyle[order.status];
+          const isSelected = selected.has(order.id);
           const quickAction: { next: OrderStatus; label: string } | null =
             order.status === "PENDING" ? { next: "PROCESSING", label: t("orders.action.accept") }
             : order.status === "PROCESSING" ? { next: "COMPLETED", label: t("orders.action.delivered") }
             : null;
           return (
-            <button
+            <div
               key={order.id}
-              type="button"
-              onClick={() => onOpen(order.id)}
-              className="w-full text-left p-4 hover:bg-cream-100/30 active:bg-cream-100/50 transition-colors"
+              className={`flex w-full text-left transition-colors ${isSelected ? "bg-leaf-100/40" : "hover:bg-cream-100/30 active:bg-cream-100/50"}`}
             >
+              <div className="flex items-start pt-4 pl-4" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onToggle(order.id)}
+                  aria-label={`#${order.code}`}
+                  className="w-4 h-4 rounded border-cream-300 text-leaf-500 focus:ring-leaf-400 cursor-pointer"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpen(order.id)}
+                className="flex-1 text-left p-4"
+              >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-forest-800">#{order.code}</p>
@@ -399,7 +570,8 @@ function OrderTable({
                   </button>
                 )}
               </div>
-            </button>
+              </button>
+            </div>
           );
         })}
       </div>
