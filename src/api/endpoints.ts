@@ -91,6 +91,9 @@ export const ordersApi = {
 
   update: (id: string, data: Partial<{ status: OrderStatus; notes: string; assigneeId: string }>) =>
     api<Order>(`/orders/${id}`, { method: "PATCH", body: data }),
+
+  bulk: (data: { ids: string[]; action: "setStatus"; status?: OrderStatus }) =>
+    api<{ affected: number; summary: string }>("/orders/bulk", { method: "POST", body: data }),
 };
 
 // ===== Products =====
