@@ -18,9 +18,11 @@ import {
   Eye,
   EyeOff,
   Upload,
+  PackagePlus,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
 import { Skeleton } from "./ui/Skeleton";
+import { useAppToast } from "./ui/Toast";
 
 const MAX_IMAGES = 10;
 import { useAsync } from "../hooks/useAsync";
@@ -58,6 +60,7 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
+  const [restocking, setRestocking] = useState<Product | null>(null);
 
   const params = useMemo(
     () => ({
@@ -352,6 +355,7 @@ export default function ProductsPage() {
               onToggleSelect={() => toggleSelected(p.id)}
               onEdit={() => setEditing(p)}
               onDelete={() => handleDelete(p)}
+              onRestock={() => setRestocking(p)}
             />
           ))}
         </div>
@@ -417,7 +421,148 @@ export default function ProductsPage() {
           onDone={() => refetch()}
         />
       )}
+
+      {restocking && (
+        <RestockModal
+          product={restocking}
+          onClose={() => setRestocking(null)}
+          onDone={() => {
+            setRestocking(null);
+            refetch();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function RestockModal({
+  product,
+  onClose,
+  onDone,
+}: {
+  product: Product;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const toast = useAppToast();
+  const [quantity, setQuantity] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const qty = parseInt(quantity, 10);
+    if (!qty || qty <= 0) {
+      toast.error("Miqdor 1 dan katta bo'lishi kerak");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await productsApi.restock(product.id, {
+        quantity: qty,
+        note: note.trim() || undefined,
+      });
+      toast.success(`+${res.added} qo'shildi. Yangi stok: ${res.stock}`);
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Stok qo'shilmadi");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const newStock = parseInt(quantity, 10) > 0 ? product.stock + parseInt(quantity, 10) : product.stock;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <motion.form
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white border border-cream-300 rounded-2xl p-5 max-w-md w-full"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-cream-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {product.imageUrl ? (
+              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            ) : (
+              <Package className="w-5 h-5 text-slate-400" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-forest-800 truncate">{product.name}</h3>
+            <p className="text-xs text-slate-500 truncate">{product.sku}</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-xl bg-cream-100/60 mb-4">
+          <div className="text-center flex-1">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Hozir</p>
+            <p className="text-xl font-bold text-forest-800">{product.stock}</p>
+          </div>
+          <div className="text-center px-3">
+            <p className="text-xs text-slate-500">+{parseInt(quantity, 10) > 0 ? parseInt(quantity, 10) : 0}</p>
+            <PackagePlus className="w-5 h-5 text-leaf-500 mx-auto" />
+          </div>
+          <div className="text-center flex-1">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Yangi</p>
+            <p className={`text-xl font-bold ${newStock > product.stock ? "text-leaf-500" : "text-forest-800"}`}>
+              {newStock}
+            </p>
+          </div>
+        </div>
+
+        <label className="block mb-3">
+          <span className="text-xs text-slate-500 mb-1.5 block">Qo'shimcha miqdor</span>
+          <input
+            type="number"
+            min="1"
+            required
+            autoFocus
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="Masalan: 50"
+            className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-lg font-semibold text-forest-800 focus:outline-none focus:border-leaf-500/60"
+          />
+        </label>
+
+        <label className="block mb-4">
+          <span className="text-xs text-slate-500 mb-1.5 block">Izoh (ixtiyoriy)</span>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Masalan: Yetkazib beruvchi X, partiya №123"
+            maxLength={500}
+            className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+          />
+          <p className="text-[10px] text-slate-400 mt-1">Audit log'da yodda qolar — qaerdan kelganini yozib qo'ying.</p>
+        </label>
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
+          >
+            Bekor qilish
+          </button>
+          <button
+            type="submit"
+            disabled={busy || !quantity}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
+            Stok qo'shish
+          </button>
+        </div>
+      </motion.form>
+    </div>
   );
 }
 
@@ -428,6 +573,7 @@ function ProductCard({
   onToggleSelect,
   onEdit,
   onDelete,
+  onRestock,
 }: {
   product: Product;
   currency: string;
@@ -435,8 +581,10 @@ function ProductCard({
   onToggleSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onRestock: () => void;
 }) {
   const { t } = useT();
+  const lowStock = product.stock <= 5;
   return (
     <div className={`bg-white border rounded-xl p-4 transition-colors group ${
       selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-cream-300 hover:border-cream-300"
@@ -467,6 +615,13 @@ function ProductCard({
         )}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
+            onClick={onRestock}
+            className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900"
+            title="Stok qo'shish"
+          >
+            <PackagePlus className="w-3.5 h-3.5" />
+          </button>
+          <button
             onClick={onEdit}
             className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900"
             title={t("products.card.edit")}
@@ -496,13 +651,24 @@ function ProductCard({
             </span>
           )}
         </div>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-md ${
-            product.stock > 0 ? "bg-leaf-100 text-forest-700" : "bg-rose-100 text-rose-600"
-          }`}
-        >
-          {t("products.card.stock", { n: product.stock })}
-        </span>
+        {lowStock ? (
+          <button
+            onClick={onRestock}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md font-medium transition-colors ${
+              product.stock === 0
+                ? "bg-rose-100 text-rose-600 hover:bg-rose-200"
+                : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+            }`}
+            title="Stok qo'shish"
+          >
+            <PackagePlus className="w-3 h-3" />
+            {t("products.card.stock", { n: product.stock })}
+          </button>
+        ) : (
+          <span className="text-xs px-2 py-0.5 rounded-md bg-leaf-100 text-forest-700">
+            {t("products.card.stock", { n: product.stock })}
+          </span>
+        )}
       </div>
     </div>
   );

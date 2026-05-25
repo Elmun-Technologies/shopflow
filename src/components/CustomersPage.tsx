@@ -1,13 +1,59 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle, Download } from "lucide-react";
+import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle, Download, Crown, Heart, Sparkles, AlertTriangle, Moon, Snowflake } from "lucide-react";
 import { exportToCsv } from "../utils/exportCsv";
 import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useAsync } from "../hooks/useAsync";
-import { customersApi } from "../api/endpoints";
+import { customersApi, type RfmSegment } from "../api/endpoints";
 import { formatDate } from "../utils/format";
 import { useT } from "../i18n";
 import CustomerDetailDrawer from "./CustomerDetailDrawer";
+
+const RFM_META: Record<Exclude<RfmSegment, "nobody">, {
+  label: string;
+  description: string;
+  icon: typeof Crown;
+  color: string;
+}> = {
+  champion: {
+    label: "Chempionlar",
+    description: "So'nggi 30 kunda 5+ buyurtma",
+    icon: Crown,
+    color: "bg-purple-100 text-purple-700 border-purple-300",
+  },
+  loyal: {
+    label: "Sodiq mijozlar",
+    description: "So'nggi 90 kunda 3+ buyurtma",
+    icon: Heart,
+    color: "bg-leaf-100 text-forest-700 border-leaf-300/60",
+  },
+  new: {
+    label: "Yangi mijozlar",
+    description: "Birinchi buyurtma so'nggi 30 kunda",
+    icon: Sparkles,
+    color: "bg-sky-100 text-sky-700 border-sky-300",
+  },
+  atRisk: {
+    label: "Xavf ostida",
+    description: "60-180 kun ko'rinmagan",
+    icon: AlertTriangle,
+    color: "bg-amber-100 text-amber-700 border-amber-300",
+  },
+  hibernating: {
+    label: "Uyqudagilar",
+    description: "1 ta buyurtma, 90+ kun yo'q",
+    icon: Moon,
+    color: "bg-cream-200 text-slate-600 border-cream-300",
+  },
+  lost: {
+    label: "Yo'qolganlar",
+    description: "180+ kun ko'rinmagan",
+    icon: Snowflake,
+    color: "bg-rose-100 text-rose-600 border-rose-300",
+  },
+};
+
+const RFM_ORDER: Exclude<RfmSegment, "nobody">[] = ["champion", "loyal", "new", "atRisk", "hibernating", "lost"];
 
 export default function CustomersPage() {
   const { t } = useT();
@@ -15,14 +61,27 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const pageSize = 30;
   const [openCustomerId, setOpenCustomerId] = useState<string | null>(null);
+  const [segmentFilter, setSegmentFilter] = useState<RfmSegment | "all">("all");
 
   const params = useMemo(
     () => ({ page, pageSize, search: search || undefined }),
     [page, search],
   );
   const { data, loading, error, refetch } = useAsync(() => customersApi.list(params), [page, search]);
+  const { data: rfm } = useAsync(() => customersApi.rfm(), []);
 
-  const customers = data?.items ?? [];
+  // RFM segmentlarini mijoz ID bo'yicha mapping — jadval'da badge ko'rsatish uchun
+  const segmentById = useMemo(() => {
+    const map = new Map<string, RfmSegment>();
+    if (rfm) rfm.customers.forEach((c) => map.set(c.id, c.segment));
+    return map;
+  }, [rfm]);
+
+  const customers = useMemo(() => {
+    const all = data?.items ?? [];
+    if (segmentFilter === "all") return all;
+    return all.filter((c) => segmentById.get(c.id) === segmentFilter);
+  }, [data, segmentFilter, segmentById]);
   const total = data?.total ?? 0;
   const [exporting, setExporting] = useState(false);
 
@@ -94,6 +153,51 @@ export default function CustomersPage() {
         </button>
       </div>
 
+      {rfm && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-forest-800">RFM segmentlar</h3>
+            {segmentFilter !== "all" && (
+              <button
+                type="button"
+                onClick={() => setSegmentFilter("all")}
+                className="text-xs text-slate-500 hover:text-forest-800"
+              >
+                Filterni tozalash
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {RFM_ORDER.map((seg) => {
+              const meta = RFM_META[seg];
+              const Icon = meta.icon;
+              const count = rfm.counts[seg] ?? 0;
+              const isActive = segmentFilter === seg;
+              return (
+                <button
+                  key={seg}
+                  type="button"
+                  onClick={() => setSegmentFilter((prev) => (prev === seg ? "all" : seg))}
+                  disabled={count === 0}
+                  className={`text-left p-3 rounded-xl border transition-all ${
+                    isActive
+                      ? "border-leaf-500 ring-2 ring-leaf-500/30 bg-white"
+                      : "bg-white border-cream-300 hover:border-cream-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                  }`}
+                  title={meta.description}
+                >
+                  <div className={`inline-flex items-center justify-center w-7 h-7 rounded-lg border ${meta.color} mb-2`}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <p className="text-lg font-bold text-forest-800 leading-tight">{count}</p>
+                  <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">{meta.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
         {loading ? (
           <TableRowsSkeleton rows={8} cols={4} />
@@ -136,7 +240,21 @@ export default function CustomersPage() {
                       onClick={() => setOpenCustomerId(c.id)}
                     >
                       <td className="py-3 px-4">
-                        <p className="text-sm font-medium text-forest-800">{c.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-forest-800">{c.name}</p>
+                          {(() => {
+                            const seg = segmentById.get(c.id);
+                            if (!seg || seg === "nobody") return null;
+                            const meta = RFM_META[seg];
+                            const Icon = meta.icon;
+                            return (
+                              <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border ${meta.color}`}>
+                                <Icon className="w-3 h-3" />
+                                {meta.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         {c.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {c.tags.slice(0, 3).map((tag) => (
@@ -188,7 +306,21 @@ export default function CustomersPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-forest-800 truncate">{c.name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-forest-800 truncate">{c.name}</p>
+                        {(() => {
+                          const seg = segmentById.get(c.id);
+                          if (!seg || seg === "nobody") return null;
+                          const meta = RFM_META[seg];
+                          const Icon = meta.icon;
+                          return (
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border ${meta.color}`}>
+                              <Icon className="w-2.5 h-2.5" />
+                              {meta.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                       {c.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {c.tags.slice(0, 3).map((tag) => (

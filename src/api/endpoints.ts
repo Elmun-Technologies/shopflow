@@ -108,9 +108,28 @@ export const productsApi = {
     api<Product>(`/products/${id}`, { method: "PATCH", body: data }),
 
   delete: (id: string) => api<{ ok: true }>(`/products/${id}`, { method: "DELETE" }),
+
+  restock: (id: string, body: { quantity: number; note?: string }) =>
+    api<{ id: string; stock: number; added: number }>(`/products/${id}/restock`, {
+      method: "POST",
+      body,
+    }),
 };
 
 // ===== Customers =====
+
+export type RfmSegment = "champion" | "loyal" | "new" | "atRisk" | "lost" | "hibernating" | "nobody";
+
+export interface RfmCustomer {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  orderCount: number;
+  totalSpent: number;
+  daysSinceLast: number | null;
+  segment: RfmSegment;
+}
 
 export const customersApi = {
   list: (params: { search?: string; page?: number; pageSize?: number } = {}) =>
@@ -122,6 +141,13 @@ export const customersApi = {
     api<Customer>(`/customers/${id}`, { method: "PATCH", body: data }),
 
   delete: (id: string) => api<{ ok: true }>(`/customers/${id}`, { method: "DELETE" }),
+
+  rfm: () =>
+    api<{
+      customers: RfmCustomer[];
+      counts: Record<RfmSegment, number>;
+      total: number;
+    }>("/customers/rfm"),
 };
 
 // ===== Channels =====
