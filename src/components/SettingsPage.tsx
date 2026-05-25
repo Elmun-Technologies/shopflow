@@ -4,7 +4,7 @@ import {
   Save, Eye, EyeOff,
   Globe, CheckCircle2, AlertCircle, Copy, Plus,
   Trash2, RefreshCw, Clock, Monitor, Smartphone, ChevronRight, Loader2,
-  Key, User, Store, Bell, Puzzle, Shield,
+  Key, User, Store, Bell, Puzzle, Shield, Users,
 } from "lucide-react";
 import {
   settingsTabOrder,
@@ -17,6 +17,7 @@ import type {
 } from "../data/settingsData";
 import { IntegrationsHub } from "./IntegrationsHub";
 import { BrowserNotifSection } from "./BrowserNotifSection";
+import { TeamSection } from "./TeamSection";
 import { api } from "../api/client";
 import { useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
@@ -308,6 +309,13 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderTeam = () => (
+    <TeamSection
+      currentUserId={user?.id}
+      currentUserRole={user?.role as "OWNER" | "ADMIN" | "MANAGER" | "AGENT" | undefined}
+    />
+  );
+
   const renderSecurity = () => (
     <div className="space-y-6">
       {/* 2FA */}
@@ -473,6 +481,7 @@ export default function SettingsPage() {
   const tabRenderers: Record<SettingsTab, () => React.ReactNode> = {
     profile: renderProfile,
     store: renderStore,
+    team: renderTeam,
     notifications: renderNotifications,
     integrations: renderIntegrations,
     security: renderSecurity,
@@ -480,7 +489,7 @@ export default function SettingsPage() {
   };
 
   const tabIcons: Record<SettingsTab, React.ElementType> = {
-    profile: User, store: Store, notifications: Bell,
+    profile: User, store: Store, team: Users, notifications: Bell,
     integrations: Puzzle, security: Shield, api: Key,
   };
 

@@ -5,6 +5,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { createHash, randomBytes } from "node:crypto";
+import argon2 from "argon2";
 
 function generateApiKey(): { key: string; prefix: string; hash: string } {
   const raw = `sf_${randomBytes(28).toString("hex")}`;
@@ -184,5 +185,67 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       data,
       select: { id: true, name: true, email: true, role: true, active: true },
     });
+  });
+
+  // POST /settings/users — yangi xodimni taklif qilish.
+  // Hozircha SMTP yo'q — random parol generatsiya qilinadi va response'da qaytariladi.
+  // Admin parolni xodimga o'zi qo'lda yuboradi (Telegram, hisobga olinadigan kanal).
+  app.post("/users", {
+    preHandler: [app.requireRole("OWNER", "ADMIN")],
+  }, async (req, reply) => {
+    const data = z.object({
+      email: z.string().email(),
+      name: z.string().min(1).max(80),
+      role: z.enum(["ADMIN", "MANAGER", "AGENT"]),
+    }).parse(req.body);
+
+    // Email tenant ichida unique
+    const existing = await app.prisma.user.findFirst({
+      where: { email: data.email.toLowerCase(), tenantId: req.session.tenantId },
+      select: { id: true },
+    });
+    if (existing) return reply.code(409).send({ error: "Bu email allaqachon ro'yxatda" });
+
+    // 12 belgili o'qiladigan parol — ambiguous belgilarsiz (0/O/1/l)
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    const tempPassword = Array.from({ length: 12 }, () =>
+      alphabet[Math.floor(Math.random() * alphabet.length)],
+    ).join("");
+    const passwordHash = await argon2.hash(tempPassword);
+
+    const user = await app.prisma.user.create({
+      data: {
+        tenantId: req.session.tenantId,
+        email: data.email.toLowerCase(),
+        name: data.name,
+        passwordHash,
+        role: data.role,
+        active: true,
+      },
+      select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+    });
+
+    // Response'da tempPassword — admin xodimga yuboradi. Bir martalik.
+    return reply.code(201).send({ user, tempPassword });
+  });
+
+  // DELETE /settings/users/:userId — xodimni o'chirish.
+  // OWNER o'zini ham, boshqa OWNER ni ham o'chira olmaydi.
+  app.delete<{ Params: { userId: string } }>("/users/:userId", {
+    preHandler: [app.requireRole("OWNER", "ADMIN")],
+  }, async (req, reply) => {
+    const target = await app.prisma.user.findFirst({
+      where: { id: req.params.userId, tenantId: req.session.tenantId },
+    });
+    if (!target) return reply.code(404).send({ error: "Foydalanuvchi topilmadi" });
+    if (target.id === req.session.userId) {
+      return reply.code(400).send({ error: "O'zingizni o'chira olmaysiz" });
+    }
+    if (target.role === "OWNER") {
+      return reply.code(403).send({ error: "OWNER rolini o'chirib bo'lmaydi" });
+    }
+
+    await app.prisma.user.delete({ where: { id: req.params.userId } });
+    return { ok: true };
   });
 };

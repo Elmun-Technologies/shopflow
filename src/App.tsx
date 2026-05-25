@@ -14,6 +14,7 @@ import TopProducts from "./components/TopProducts";
 import TrafficSources from "./components/TrafficSources";
 import LowStockAlert from "./components/LowStockAlert";
 import { StorefrontStatusBanner } from "./components/StorefrontStatusBanner";
+import { OnboardingWizard } from "./components/OnboardingWizard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
@@ -314,6 +315,15 @@ function AppShell() {
       </div>
 
       <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+
+      <OnboardingWizard
+        onNavigate={(page) => {
+          if (page === "products") setCurrentPage("products");
+          else if (page === "settings") setCurrentPage("settings");
+          else if (page === "platforms") setCurrentPage("platforms");
+          else if (page === "uibuilder") setCurrentPage("uibuilder");
+        }}
+      />
     </div>
   );
 }
