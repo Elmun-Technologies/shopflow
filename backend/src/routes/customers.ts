@@ -147,7 +147,7 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
 
     type Segment = "champion" | "loyal" | "new" | "atRisk" | "lost" | "hibernating" | "nobody";
 
-    const classify = (orderCount: number, totalSpent: number, daysSinceLast: number | null, daysSinceJoin: number): Segment => {
+    const classify = (orderCount: number, daysSinceLast: number | null, daysSinceJoin: number): Segment => {
       if (orderCount === 0) return "nobody";
       // Champions — recent + frequent
       if (daysSinceLast !== null && daysSinceLast <= 30 && orderCount >= 5) return "champion";
@@ -172,7 +172,7 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
         : null;
       const daysSinceLast = lastOrderTs !== null ? Math.floor((now - lastOrderTs) / DAY) : null;
       const daysSinceJoin = Math.floor((now - c.createdAt.getTime()) / DAY);
-      const segment = classify(orderCount, totalSpent, daysSinceLast, daysSinceJoin);
+      const segment = classify(orderCount, daysSinceLast, daysSinceJoin);
       return {
         id: c.id,
         name: c.name,
