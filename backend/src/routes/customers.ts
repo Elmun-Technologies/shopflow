@@ -118,4 +118,79 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     await app.prisma.customer.delete({ where: { id } });
     return { ok: true };
   });
+
+  /**
+   * RFM analysis — Recency, Frequency, Monetary.
+   * Har bir mijozni segmentga ajratadi: champion / loyal / new / atRisk / lost / hibernating.
+   * Marketing rassilka uchun: "Xavf ostidagilarga -20% taklif" kabi.
+   */
+  app.get("/rfm", async (req) => {
+    const tenantId = req.session.tenantId;
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+
+    // Bitta query — barcha mijoz + buyurtma agregati
+    const data = await app.prisma.customer.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        createdAt: true,
+        orders: {
+          where: { status: { in: ["COMPLETED", "PROCESSING", "PENDING"] } },
+          select: { total: true, createdAt: true },
+        },
+      },
+    });
+
+    type Segment = "champion" | "loyal" | "new" | "atRisk" | "lost" | "hibernating" | "nobody";
+
+    const classify = (orderCount: number, totalSpent: number, daysSinceLast: number | null, daysSinceJoin: number): Segment => {
+      if (orderCount === 0) return "nobody";
+      // Champions — recent + frequent
+      if (daysSinceLast !== null && daysSinceLast <= 30 && orderCount >= 5) return "champion";
+      // Loyal — recent + 3+ orders
+      if (daysSinceLast !== null && daysSinceLast <= 90 && orderCount >= 3) return "loyal";
+      // New — birinchi buyurtma so'nggi 30 kunda
+      if (daysSinceLast !== null && daysSinceLast <= 30 && orderCount <= 2 && daysSinceJoin <= 30) return "new";
+      // Lost — 180+ kun yo'q
+      if (daysSinceLast !== null && daysSinceLast > 180) return "lost";
+      // Hibernating — 1 ta buyurtma, 90+ kun yo'q
+      if (orderCount === 1 && daysSinceLast !== null && daysSinceLast > 90) return "hibernating";
+      // At risk — 60-180 kun ichida ko'rinmagan, lekin 2+ buyurtma
+      if (daysSinceLast !== null && daysSinceLast > 60 && orderCount >= 2) return "atRisk";
+      return "loyal";
+    };
+
+    const customers = data.map((c) => {
+      const orderCount = c.orders.length;
+      const totalSpent = c.orders.reduce((s, o) => s + Number(o.total), 0);
+      const lastOrderTs = c.orders.length > 0
+        ? Math.max(...c.orders.map((o) => o.createdAt.getTime()))
+        : null;
+      const daysSinceLast = lastOrderTs !== null ? Math.floor((now - lastOrderTs) / DAY) : null;
+      const daysSinceJoin = Math.floor((now - c.createdAt.getTime()) / DAY);
+      const segment = classify(orderCount, totalSpent, daysSinceLast, daysSinceJoin);
+      return {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+        orderCount,
+        totalSpent,
+        daysSinceLast,
+        segment,
+      };
+    });
+
+    // Statistika — segment hisoblari
+    const counts: Record<Segment, number> = {
+      champion: 0, loyal: 0, new: 0, atRisk: 0, lost: 0, hibernating: 0, nobody: 0,
+    };
+    for (const c of customers) counts[c.segment]++;
+
+    return { customers, counts, total: customers.length };
+  });
 };
