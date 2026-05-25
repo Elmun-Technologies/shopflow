@@ -16,7 +16,67 @@ import { useAuth } from "../contexts/AuthContext";
 
 interface TeamMember { id: string; name: string; role: string; active: boolean }
 interface OrderNote { id: string; content: string; authorId: string | null; authorName: string | null; createdAt: string }
-interface AuditEntry { id: string; action: string; summary: string | null; actorName: string | null; createdAt: string }
+interface AuditEntry {
+  id: string;
+  action: string;
+  summary: string | null;
+  actorName: string | null;
+  createdAt: string;
+  changes?: Record<string, unknown> | null;
+}
+
+// Timeline'da bosqichlar — CANCELLED/REFUNDED branch sifatida alohida render
+const TIMELINE_FLOW: OrderStatus[] = ["PENDING", "PROCESSING", "COMPLETED"];
+
+interface TimelineStep {
+  status: OrderStatus;
+  reachedAt: string | null;
+  actorName: string | null;
+}
+
+// Audit log'dan har bir status uchun "qachon yetdi va kim tomonidan" ni topish
+function buildTimeline(
+  currentStatus: OrderStatus,
+  createdAt: string,
+  audit: AuditEntry[],
+): { main: TimelineStep[]; terminal: TimelineStep | null } {
+  // PENDING — har doim createdAt
+  const reached: Partial<Record<OrderStatus, { at: string; actor: string | null }>> = {
+    PENDING: { at: createdAt, actor: null },
+  };
+
+  // Audit changes.to dan status o'zgarishini olamiz, eng birinchi marta yetilgan vaqtni
+  // saqlaymiz (audit DESC tartibda, shuning uchun teskari yuramiz)
+  const ascending = [...audit].reverse();
+  for (const a of ascending) {
+    const to = (a.changes as { to?: string } | undefined)?.to;
+    if (typeof to === "string" && (to in STATUS_STYLE) && !reached[to as OrderStatus]) {
+      reached[to as OrderStatus] = { at: a.createdAt, actor: a.actorName };
+    }
+  }
+
+  // Hozirgi status ham yetilgan deb belgilanadi (audit yo'q bo'lsa ham)
+  if (!reached[currentStatus]) {
+    reached[currentStatus] = { at: createdAt, actor: null };
+  }
+
+  const main: TimelineStep[] = TIMELINE_FLOW.map((s) => ({
+    status: s,
+    reachedAt: reached[s]?.at ?? null,
+    actorName: reached[s]?.actor ?? null,
+  }));
+
+  const terminal: TimelineStep | null =
+    currentStatus === "CANCELLED" || currentStatus === "REFUNDED"
+      ? {
+          status: currentStatus,
+          reachedAt: reached[currentStatus]?.at ?? null,
+          actorName: reached[currentStatus]?.actor ?? null,
+        }
+      : null;
+
+  return { main, terminal };
+}
 
 interface OrderDetailResponse {
   id: string;
@@ -617,6 +677,15 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
               </Section>
 
               {/* Tarix / audit timeline */}
+              <Section title={t("orderDetail.timeline")} icon={Clock}>
+                <OrderStatusTimeline
+                  currentStatus={order.status}
+                  createdAt={order.createdAt}
+                  audit={auditLog}
+                  t={t}
+                />
+              </Section>
+
               <Section title={t("orderDetail.history")} icon={Clock}>
                 {auditLog.length === 0 ? (
                   <p className="text-xs text-slate-500">Hozircha yozuv yo'q</p>
@@ -679,6 +748,114 @@ function Section({
       <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
         {children}
       </div>
+    </div>
+  );
+}
+
+// Buyurtmaning bosqichlarini vizual stepper sifatida ko'rsatadi.
+// PENDING → PROCESSING → COMPLETED — asosiy yo'l (har biri yashil yoki kulrang).
+// CANCELLED / REFUNDED — alohida qizil/kulrang branch.
+function OrderStatusTimeline({
+  currentStatus,
+  createdAt,
+  audit,
+  t,
+}: {
+  currentStatus: OrderStatus;
+  createdAt: string;
+  audit: AuditEntry[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const { main, terminal } = buildTimeline(currentStatus, createdAt, audit);
+  const currentIndex = TIMELINE_FLOW.indexOf(currentStatus);
+  const isTerminal = terminal !== null;
+
+  const stepLabel = (s: OrderStatus): string => {
+    if (s === "PENDING") return t("orderDetail.timeline.pending");
+    if (s === "PROCESSING") return t("orderDetail.timeline.processing");
+    if (s === "COMPLETED") return t("orderDetail.timeline.completed");
+    if (s === "CANCELLED") return t("orderDetail.timeline.cancelled");
+    return t("orderDetail.timeline.refunded");
+  };
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-1">
+        {main.map((step, i) => {
+          const reached = step.reachedAt !== null;
+          const isCurrent = !isTerminal && currentIndex === i;
+          const isPast = !isTerminal && i < currentIndex;
+          const dotColor = isTerminal
+            ? (reached ? "bg-slate-400" : "bg-cream-300")
+            : isCurrent
+            ? "bg-leaf-500 ring-4 ring-leaf-100 animate-pulse"
+            : isPast
+            ? "bg-leaf-500"
+            : "bg-cream-300";
+          const labelColor = isTerminal
+            ? "text-slate-500"
+            : isCurrent || isPast
+            ? "text-forest-800"
+            : "text-slate-400";
+          return (
+            <div key={step.status} className="flex-1 flex flex-col items-center text-center relative">
+              {i > 0 && (
+                <div
+                  className={`absolute top-2 right-1/2 w-full h-0.5 ${
+                    isTerminal
+                      ? "bg-cream-300"
+                      : i <= currentIndex
+                      ? "bg-leaf-500"
+                      : "bg-cream-300"
+                  }`}
+                  aria-hidden
+                />
+              )}
+              <div className={`relative z-10 w-4 h-4 rounded-full flex items-center justify-center ${dotColor}`}>
+                {isPast && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+              </div>
+              <p className={`text-[11px] font-medium mt-1.5 leading-tight ${labelColor}`}>
+                {stepLabel(step.status)}
+              </p>
+              <p className="text-[9px] text-slate-500 mt-0.5 leading-tight">
+                {reached
+                  ? formatDateTime(step.reachedAt!)
+                  : isCurrent
+                  ? t("orderDetail.timeline.pendingNow")
+                  : t("orderDetail.timeline.notReached")}
+              </p>
+              {reached && step.actorName && (
+                <p className="text-[9px] text-slate-400 mt-0.5 leading-tight truncate max-w-[80px]">
+                  {t("orderDetail.timeline.byActor", { name: step.actorName })}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {isTerminal && terminal && (
+        <div className="mt-3 pt-3 border-t border-cream-300">
+          <div className="flex items-center gap-2">
+            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+              terminal.status === "CANCELLED" ? "bg-rose-500" : "bg-slate-500"
+            }`}>
+              <X className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium ${
+                terminal.status === "CANCELLED" ? "text-rose-600" : "text-slate-700"
+              }`}>
+                {stepLabel(terminal.status)}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {terminal.reachedAt ? formatDateTime(terminal.reachedAt) : ""}
+                {terminal.actorName ? ` · ${t("orderDetail.timeline.byActor", { name: terminal.actorName })}` : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
