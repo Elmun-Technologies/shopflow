@@ -129,11 +129,12 @@ shopflow/
 │   │   ├── NotificationsPanel.tsx # 15s polling + audio ding + mute
 │   │   ├── BrowserNotifSection.tsx# Settings → per-event prefs + 3 sounds
 │   │   ├── ShortcutsHelp.tsx      # ? overlay listing g-shortcuts
-│   │   ├── IntegrationsHub.tsx    # 28 ta integration markaz
+│   │   ├── IntegrationsHub.tsx    # 29 ta integration markaz (+ CRM kategoriya)
 │   │   ├── MoyskladIntegrationCard.tsx # Real OAuth flow
-│   │   ├── OrdersPage.tsx         # Desktop table + mobile card view
-│   │   ├── OrderDetailDrawer.tsx  # + print invoice button
-│   │   ├── ProductsPage.tsx       # Bulk actions + import + form modal
+│   │   ├── SalesDoctorIntegrationCard.tsx # SD CRM — connect/defaults/pull/retry
+│   │   ├── OrdersPage.tsx         # Desktop table + mobile card + bulk status
+│   │   ├── OrderDetailDrawer.tsx  # + print invoice + status timeline stepper
+│   │   ├── ProductsPage.tsx       # Bulk actions + import + restock modal
 │   │   ├── ProductImportModal.tsx # CSV/Excel paste import
 │   │   ├── CustomersPage.tsx      # Card view mobile
 │   │   ├── CustomerDetailDrawer.tsx
@@ -145,7 +146,9 @@ shopflow/
 │   │   ├── PaymentsPage.tsx       # Payment methods + transactions
 │   │   ├── PlatformsPage.tsx      # Channel CRUD + AddChannelModal
 │   │   ├── UIBuilderPage.tsx      # Vitrina editor (drag/drop blocks)
-│   │   ├── SettingsPage.tsx       # 6 tab: profile/store/notify/integrations/security/api
+│   │   ├── SettingsPage.tsx       # 7 tab: profile/store/team/notify/integrations/security/api
+│   │   ├── TeamSection.tsx        # Jamoa — invite + rol + deaktiv
+│   │   ├── OnboardingWizard.tsx   # 5 qadamli sehrgar (yangi tenant)
 │   │   ├── LoginPage.tsx
 │   │   ├── pages/                 # Marketing sub-pages (12 ta)
 │   │   │   ├── RassilkaPage.tsx
@@ -177,8 +180,11 @@ shopflow/
 │   │   ├── schema.prisma          # Tenant, User, Lead, Order, Product, Customer, Channel, ...
 │   │   └── seed.ts
 │   └── src/
-│       └── routes/                # auth, leads, orders, products, customers, channels,
-│                                  # dashboard, webhooks, payments, delivery, vitrina, ...
+│       ├── routes/                # auth, leads, orders, products, customers, channels,
+│       │                          # dashboard, webhooks, payments, delivery, vitrina,
+│       │                          # moysklad, salesdoctor, ...
+│       └── lib/                   # audit, telegram-notify, secret-cipher,
+│                                  # cart-abandonment, salesdoctor-client/push/worker
 ├── docker-compose.yml             # Postgres + Backend + Frontend + Caddy
 ├── Caddyfile
 ├── scripts/bootstrap.sh           # VPS one-shot setup
@@ -224,11 +230,19 @@ shopflow/
 - ✅ **Bulk product import** — CSV/Excel paste orqali
 - ✅ **Keyboard shortcuts** — `g d/o/p/c/l/h/m/a/v/s` + `?` help + `Esc`
 - ✅ **Global ⌘K palette** (allaqachon bor edi)
-- ✅ **Integratsiyalar markazi** — 28 ta (Click/Payme/Uzum/Yandex Go/Eskiz/...)
+- ✅ **Integratsiyalar markazi** — 29 ta (Click/Payme/Uzum/Yandex Go/Eskiz/...)
 - ✅ **MoySklad** real OAuth integration
+- ✅ **Sales Doctor CRM** — two-way sync (push order/status, pull catalog, retry worker)
 - ✅ **Low Stock Alert** — Dashboard widget
 - ✅ **Click/Payme/Uzum** webhook handlers (backend)
 - ✅ Promo codes, loyalty, SMS admin pages
+- ✅ **Bulk order status** — OrdersPage'da bir vaqtda N ta buyurtma
+- ✅ **Order status timeline** — OrderDetailDrawer'da vizual stepper
+- ✅ **Reviews moderation** — photos, reject reason, bulk, rejected tab
+- ✅ **Team management** — Settings → Jamoa (invite + rol + deaktiv)
+- ✅ **Onboarding wizard** — yangi tenant uchun 5 qadam
+- ✅ **Inventory restock** — kam qolgan mahsulotga tezkor stok
+- ✅ **RFM segments** — CustomersPage (champion/loyal/atRisk/lost/...)
 
 ### Marketing
 - ✅ Sale campaigns (aksiyalar)
