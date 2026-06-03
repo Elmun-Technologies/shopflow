@@ -60,6 +60,13 @@ jobs:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
         run: npx tsc --noEmit
 
+      - name: Backend tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          SECRETS_ENCRYPTION_KEY: ci-test-encryption-key-32-chars-minimum
+        run: npm run test
+
       - name: Backend Prisma schema validate
         working-directory: backend
         env:
