@@ -85,6 +85,8 @@ interface OrderDetailResponse {
   total: string | number;
   currency: string;
   notes: string | null;
+  paid?: boolean;
+  paidAt?: string | null;
   assigneeId: string | null;
   shippingAddress: string | null;
   shippingLat: string | number | null;
@@ -361,7 +363,14 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
             <div className="sticky top-0 bg-white border-b border-cream-300 px-5 py-3 flex items-center justify-between z-10">
               <div>
                 <div className="text-[11px] text-slate-500">{t("invoice.code")}</div>
-                <h2 className="text-lg font-bold text-forest-800">#{order.code}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-forest-800">#{order.code}</h2>
+                  {order.paid && (
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-leaf-100 text-forest-700">
+                      <Check className="w-3 h-3" /> To'langan
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1">
                 <button

@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, X, Loader2 } from "lucide-react";
 import { vitrinaApi } from "../api/endpoints";
+import { useAppToast } from "./ui/Toast";
 
 const DISMISSED_KEY = "shopflow.storefrontBannerDismissed";
 
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function StorefrontStatusBanner({ onOpenVitrina }: Props) {
+  const toast = useAppToast();
   const [published, setPublished] = useState<boolean | null>(null);
   const [layout, setLayout] = useState<{ blocks: unknown[]; brand?: Record<string, unknown> } | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -51,8 +53,9 @@ export function StorefrontStatusBanner({ onOpenVitrina }: Props) {
         published: true,
       });
       setPublished(true);
+      toast.success("Do'kon nashr qilindi");
     } catch {
-      alert("Nashr qilishda xato. Qayta urinib ko'ring.");
+      toast.error("Nashr qilishda xato. Qayta urinib ko'ring.");
     } finally {
       setPublishing(false);
     }

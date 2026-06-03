@@ -34,6 +34,7 @@ import {
 import type { ChatConversation, FunnelStage, ChatMessage } from "../data/chatData";
 import { api } from "../api/client";
 import { useT } from "../i18n";
+import { useAppToast } from "./ui/Toast";
 
 // Backend'dan keladigan format
 interface ApiConvListItem {
@@ -132,6 +133,7 @@ function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
 
 export default function ChatPage() {
   const { t } = useT();
+  const toast = useAppToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -252,7 +254,7 @@ export default function ChatPage() {
       );
       if (res.deliveryReason) {
         // Yuborildi (DB'da), lekin mijozga yetib bormadi — diagnostika xabari
-        alert(`Saqlandi, lekin mijozga yetib bormadi: ${res.deliveryReason}`);
+        toast.info(`Saqlandi, lekin mijozga yetib bormadi: ${res.deliveryReason}`);
       }
     } catch (err) {
       // Optimistic xabarni qaytarish
@@ -260,7 +262,7 @@ export default function ChatPage() {
         prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) } : null,
       );
       setMessageText(content);
-      alert(err instanceof Error ? err.message : t("chat.sendFailed"));
+      toast.error(err instanceof Error ? err.message : t("chat.sendFailed"));
     } finally {
       setSendBusy(false);
     }
