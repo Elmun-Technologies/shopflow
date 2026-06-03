@@ -7,10 +7,11 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2, Plus, Settings as SettingsIcon, X, Search, Sparkles, ExternalLink,
-  CreditCard, MessageSquare, Truck, BarChart3, Boxes, Megaphone, Wrench,
+  CreditCard, MessageSquare, Truck, BarChart3, Boxes, Megaphone, Wrench, Briefcase,
 } from "lucide-react";
 import { integrations, integrationCategories, type IntegrationItem, type IntegrationCategory } from "../data/integrationsData";
 import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
+import { SalesDoctorIntegrationCard } from "./SalesDoctorIntegrationCard";
 
 const CATEGORY_ICONS: Record<IntegrationCategory, React.ElementType> = {
   payments: CreditCard,
@@ -18,6 +19,7 @@ const CATEGORY_ICONS: Record<IntegrationCategory, React.ElementType> = {
   delivery: Truck,
   analytics: BarChart3,
   erp: Boxes,
+  crm: Briefcase,
   marketing: Megaphone,
   other: Wrench,
 };
@@ -30,6 +32,8 @@ export function IntegrationsHub() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return integrations.filter((i) => {
+      // MoySklad va Sales Doctor uchun maxsus hero kartochkalar bor — duplicate render qilmaslik
+      if (i.id === "moysklad" || i.id === "salesdoctor") return false;
       if (activeCategory !== "all" && i.category !== activeCategory) return false;
       if (!q) return true;
       return i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q);
@@ -139,11 +143,19 @@ export function IntegrationsHub() {
         })}
       </div>
 
-      {/* MoySklad — alohida hero card (real implementation) */}
+      {/* Alohida hero kartochkalar — real integratsiyalar */}
       {(activeCategory === "all" || activeCategory === "erp") && search === "" && (
         <div>
           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Faol integratsiyalar</h4>
           <MoyskladIntegrationCard />
+        </div>
+      )}
+      {(activeCategory === "all" || activeCategory === "crm") && search === "" && (
+        <div className="space-y-3">
+          {activeCategory === "crm" && (
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Faol integratsiyalar</h4>
+          )}
+          <SalesDoctorIntegrationCard />
         </div>
       )}
 

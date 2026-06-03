@@ -7,6 +7,7 @@ import { z } from "zod";
 import { notifyCustomer } from "../lib/telegram-notify.js";
 import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
+import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
 import type { PrismaClient } from "@prisma/client";
 
 // Promo kodni inline tekshirish (import tsikli oldini olish)
@@ -411,6 +412,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     grantOrderPoints(app.prisma, tenant.id, customer.id, order.id, subtotal)
       .then((pts) => { if (pts > 0) app.log.info({ orderId: order.id, points: pts }, "[loyalty] points granted"); })
       .catch((e) => app.log.warn({ err: e }, "[loyalty] grant failed"));
+
+    // Sales Doctor'ga buyurtmani push qilish (fonda)
+    pushOrderToSalesDoctor(app.prisma, tenant.id, order.id)
+      .catch((err) => app.log.warn({ err, orderId: order.id }, "SD push failed"));
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
     if (customer.telegramUserId) {

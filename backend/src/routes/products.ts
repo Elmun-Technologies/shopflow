@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { logAudit } from "../lib/audit.js";
+import { pushProductToSD } from "../lib/salesdoctor-push.js";
 
 const productSchema = z.object({
   sku: z.string().min(1).max(60),
@@ -75,6 +76,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       resourceId: created.id,
       summary: `Mahsulot yaratildi: ${created.name}`,
     });
+    pushProductToSD(app.prisma, req.session.tenantId, created.id)
+      .catch((err) => app.log.warn({ err, productId: created.id }, "SD push failed"));
     return created;
   });
 
@@ -105,6 +108,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       resourceId: id,
       summary: `Tahrirlandi: ${changedKeys.length ? changedKeys.join(", ") : "—"}`,
     });
+    pushProductToSD(app.prisma, req.session.tenantId, id)
+      .catch((err) => app.log.warn({ err, productId: id }, "SD push failed"));
     return updated;
   });
 

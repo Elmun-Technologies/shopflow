@@ -274,3 +274,79 @@ export const moyskladApi = {
   subscribeWebhooks: () =>
     api<{ ok: boolean; registered: number; errors: string[] }>("/moysklad/webhooks/subscribe", { method: "POST" }),
 };
+
+// ===== Sales Doctor =====
+
+export interface SalesDoctorStatus {
+  status: "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ERROR";
+  domain?: string;
+  login?: string;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  defaults?: {
+    agentSdId: string | null;
+    priceTypeSdId: string | null;
+    warehouseSdId: string | null;
+  };
+  statusMap?: Record<string, number> | null;
+  pendingRetries?: number;
+  failedRetries?: number;
+}
+
+export interface SalesDoctorReference {
+  id: string;
+  name: string;
+}
+
+export const salesDoctorApi = {
+  status: () => api<SalesDoctorStatus>("/salesdoctor/status"),
+
+  connect: (data: { domain: string; login: string; password: string }) =>
+    api<{ ok: boolean; status: string; domain: string }>("/salesdoctor/connect", {
+      method: "POST",
+      body: data,
+    }),
+
+  test: () => api<{ ok: boolean; agentCount: number }>("/salesdoctor/test", { method: "POST" }),
+
+  references: () =>
+    api<{
+      agents: SalesDoctorReference[];
+      priceTypes: SalesDoctorReference[];
+      warehouses: SalesDoctorReference[];
+    }>("/salesdoctor/references"),
+
+  saveDefaults: (data: {
+    defaultAgentSdId: string;
+    defaultPriceTypeSdId: string;
+    defaultWarehouseSdId: string;
+    statusMap?: Record<string, number> | null;
+  }) => api<{ ok: boolean }>("/salesdoctor/defaults", { method: "POST", body: data }),
+
+  disconnect: () => api<{ ok: boolean }>("/salesdoctor/disconnect", { method: "POST" }),
+
+  pushOrder: (orderId: string) =>
+    api<{ ok: boolean }>(`/salesdoctor/push-order/${orderId}`, { method: "POST" }),
+
+  pullCatalog: () =>
+    api<{
+      ok: boolean;
+      customers: { linked: number; created: number };
+      products: { linked: number; created: number };
+    }>("/salesdoctor/pull-catalog", { method: "POST" }),
+
+  retries: () =>
+    api<{
+      items: Array<{
+        id: string;
+        resourceType: string;
+        resourceId: string;
+        method: string;
+        status: string;
+        attempts: number;
+        lastError: string | null;
+        nextAttemptAt: string;
+        createdAt: string;
+      }>;
+    }>("/salesdoctor/retries"),
+};

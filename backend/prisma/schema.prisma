@@ -33,6 +33,8 @@ model Tenant {
   categories      Category[]
   storefront      Storefront?
   moyskladAccount MoyskladAccount?
+  salesDoctorAccount SalesDoctorAccount?
+  salesDoctorRetries SalesDoctorRetry[]
   syncJobs        SyncJob[]
   webhookEvents   WebhookEvent[]
   popups          Popup[]
@@ -232,10 +234,14 @@ model Category {
   moyskladId      String?
   moyskladUpdated DateTime?
 
+  // Sales Doctor sync uchun (productCategory)
+  salesDoctorId String?
+
   products Product[]
 
   @@unique([tenantId, slug])
   @@unique([tenantId, moyskladId])
+  @@unique([tenantId, salesDoctorId])
   @@index([tenantId])
 }
 
@@ -267,6 +273,9 @@ model Product {
   moyskladUpdated DateTime?
   source          ProductSource @default(MANUAL)
 
+  // Sales Doctor sync uchun
+  salesDoctorId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -283,6 +292,7 @@ model Product {
 
   @@unique([tenantId, sku])
   @@unique([tenantId, moyskladId])
+  @@unique([tenantId, salesDoctorId])
   @@index([tenantId, active])
   @@index([tenantId, featured])
   @@index([tenantId, saleCampaignId])
@@ -361,6 +371,9 @@ model Customer {
   moyskladId      String?
   moyskladUpdated DateTime?
 
+  // Sales Doctor sync uchun
+  salesDoctorId String?
+
   orders        Order[]
   addresses     CustomerAddress[]
   wishlist      WishlistItem[]
@@ -370,6 +383,7 @@ model Customer {
   loyaltyAccount LoyaltyAccount?
 
   @@unique([tenantId, moyskladId])
+  @@unique([tenantId, salesDoctorId])
   @@index([tenantId, email])
   @@index([tenantId, phone])
   @@index([tenantId, telegramUserId])
@@ -451,6 +465,10 @@ model Order {
   moyskladId       String?
   moyskladUpdated  DateTime?
   pushedToMoysklad Boolean   @default(false)
+
+  // Sales Doctor sync uchun (push qilingach SD_id saqlanadi)
+  salesDoctorId      String?
+  pushedToSalesDoctor Boolean @default(false)
 
   // Promo kod
   promoCodeId    String?
@@ -839,6 +857,76 @@ model SyncJob {
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+}
+
+// ============== Sales Doctor Integration ==============
+
+enum SalesDoctorStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  ERROR
+}
+
+model SalesDoctorAccount {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Sales Doctor instance domain — har tenant'da o'z subdomeni (`mijoz.salesdoctor.uz`)
+  domain            String
+  login             String
+  encryptedPassword String  // re-login uchun AES-256-GCM shifrlangan
+  encryptedToken    String? // joriy session token, har qurilma uchun unique
+  userId            String? // SD foydalanuvchi ID
+
+  status SalesDoctorStatus @default(DISCONNECTED)
+
+  // Setup paytida operator tanlaydigan default SD reference'lar — `setOrder` da kerak
+  defaultAgentSdId     String?
+  defaultPriceTypeSdId String?
+  defaultWarehouseSdId String?
+
+  // Status mapping override: { "PENDING": 1, "PROCESSING": 2, ... }
+  // Default null — backend default mapping ishlatadi.
+  statusMap Json?
+
+  lastSyncAt DateTime?
+  lastError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum SalesDoctorRetryStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+// Sales Doctor xato bo'lganda push'larni qayta urinish navbati.
+// Worker har daqiqada PENDING + nextAttemptAt<=now ni topib qayta chaqiradi.
+model SalesDoctorRetry {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  resourceType String // "order" | "customer" | "product"
+  resourceId   String
+  method       String // SD API method nomi (setOrder, setStatus, setClient, setProduct)
+  payload      Json   // chaqiriqning full request body — qayta ishlatish uchun
+
+  status        SalesDoctorRetryStatus @default(PENDING)
+  attempts      Int                    @default(0)
+  lastError     String?
+  nextAttemptAt DateTime               @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status, nextAttemptAt])
+  @@index([resourceType, resourceId])
 }
 
 // MoySklad webhook'lardan keladigan event'lar idempotentlik uchun
