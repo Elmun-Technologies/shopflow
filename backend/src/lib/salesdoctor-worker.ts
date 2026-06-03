@@ -4,7 +4,7 @@
 // 5 ta urinishdan keyin FAILED bo'ladi.
 
 import type { PrismaClient } from "@prisma/client";
-import { pushOrderToSalesDoctor, pushOrderStatus, pushProductToSD, pushCustomerToSD } from "./salesdoctor-push.js";
+import { pushOrderToSalesDoctor, pushOrderStatus, pushOrderRefund, pushProductToSD, pushCustomerToSD } from "./salesdoctor-push.js";
 
 const SCAN_INTERVAL_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -39,6 +39,8 @@ async function processOne(prisma: PrismaClient, row: RetryRow): Promise<{ ok: bo
       if (order) {
         await pushOrderStatus(prisma, row.tenantId, row.resourceId, order.status as "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED" | "REFUNDED");
       }
+    } else if (row.method === "setOrderDefect") {
+      await pushOrderRefund(prisma, row.tenantId, row.resourceId);
     } else if (row.method === "setProduct") {
       await pushProductToSD(prisma, row.tenantId, row.resourceId);
     } else if (row.method === "setClient") {

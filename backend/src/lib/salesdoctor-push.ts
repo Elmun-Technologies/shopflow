@@ -14,7 +14,7 @@ const DEFAULT_STATUS_MAP: Record<OrderStatus, number> = {
   PROCESSING: 2, // Sent
   COMPLETED: 3,  // Delivered
   CANCELLED: 5,  // Cancelled
-  REFUNDED: 5,   // Cancelled + setOrderDefect alohida chaqirilishi mumkin
+  REFUNDED: 5,   // Faqat fallback — REFUNDED odatda pushOrderRefund() (setOrderDefect) bilan ketadi
 };
 
 function mapStatus(status: OrderStatus, override: Prisma.JsonValue | null): number {
@@ -345,6 +345,12 @@ export async function pushOrderStatus(
       return pushOrderToSalesDoctor(prisma, tenantId, orderId);
     }
 
+    // REFUNDED — oddiy status o'zgartirish emas, balki vozvrat hujjati (setOrderDefect):
+    // tovar SD omboriga qaytadi, qoldiq tiklanadi.
+    if (newStatus === "REFUNDED") {
+      return pushOrderRefund(prisma, tenantId, orderId);
+    }
+
     const client = await getClient(prisma, account);
     const sdStatus = mapStatus(newStatus, account.statusMap);
 
@@ -371,6 +377,131 @@ export async function pushOrderStatus(
       { orderId, newStatus } as Prisma.InputJsonValue,
       err,
     );
+  }
+}
+
+// Vozvrat hujjati uchun SD status — "New" (1): SD operatori qabul qiladi.
+// statusMap'da "REFUND_DEFECT" kaliti bilan o'zgartirish mumkin (masalan 4 = Closed).
+const DEFAULT_DEFECT_STATUS = 1;
+
+/**
+ * Buyurtma REFUNDED bo'lganda SD'ga vozvrat (setOrderDefect) yuboramiz.
+ * Buyurtma asl holatida qoladi (masalan Delivered), defect hujjati esa
+ * tovarni omborga qaytaradi — qoldiq tiklanadi. setOrder bilan bir xil
+ * client/agent/priceType/warehouse ishlatiladi.
+ */
+export async function pushOrderRefund(
+  prisma: PrismaClient,
+  tenantId: string,
+  orderId: string,
+): Promise<void> {
+  let account: SalesDoctorAccountRow | null = null;
+  try {
+    account = await getAccount(prisma, tenantId);
+    if (!account) return;
+
+    if (!account.defaultAgentSdId || !account.defaultPriceTypeSdId || !account.defaultWarehouseSdId) {
+      await logAudit({
+        prisma,
+        tenantId,
+        action: "SD_REFUND_SKIPPED",
+        resourceType: "order",
+        resourceId: orderId,
+        summary: "Default agent/priceType/warehouse tanlanmagan — Settings'da sozlang",
+      });
+      return;
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, tenantId },
+      include: {
+        customer: { select: { id: true, name: true, phone: true, salesDoctorId: true } },
+        items: { include: { product: { select: { id: true, name: true, sku: true, salesDoctorId: true } } } },
+      },
+    });
+    if (!order) return;
+    if (!order.customer) {
+      await logAudit({
+        prisma,
+        tenantId,
+        action: "SD_REFUND_SKIPPED",
+        resourceType: "order",
+        resourceId: orderId,
+        summary: "Buyurtmada mijoz yo'q — vozvrat yuborilmadi",
+      });
+      return;
+    }
+
+    const client = await getClient(prisma, account);
+
+    // Mijoz va mahsulotlar SD'da mavjudligini ta'minlaymiz (odatda allaqachon bor)
+    await ensureCustomerInSD(client, prisma, order.customer.id);
+    for (const item of order.items) {
+      if (item.product) {
+        await ensureProductInSD(client, prisma, item.product.id);
+      }
+    }
+
+    // Vozvrat status — statusMap'da "REFUND_DEFECT" kaliti bo'lsa undan, aks holda default (1)
+    let defectStatus = DEFAULT_DEFECT_STATUS;
+    const sm = account.statusMap;
+    if (sm && typeof sm === "object" && !Array.isArray(sm)) {
+      const v = (sm as Record<string, unknown>)["REFUND_DEFECT"];
+      if (typeof v === "number") defectStatus = v;
+    }
+
+    const defectProducts = order.items.map((item) => ({
+      product: item.product?.salesDoctorId
+        ? { SD_id: item.product.salesDoctorId }
+        : { code_1C: item.product?.sku ?? item.productId },
+      quantity: item.qty,
+      price: Number(item.price),
+    }));
+
+    await client.setOrderDefect({
+      code_1C: `${order.code}-RET`, // Vozvrat hujjati — buyurtma kodidan alohida
+      status: defectStatus,
+      dateCreate: new Date().toISOString().replace("T", " ").slice(0, 19),
+      dateDefect: new Date().toISOString().slice(0, 10),
+      comment: `Vozvrat: buyurtma #${order.code}${order.notes ? ` — ${order.notes}` : ""}`,
+      client: order.customer.salesDoctorId
+        ? { SD_id: order.customer.salesDoctorId }
+        : { code_1C: order.customer.id },
+      agent: { SD_id: account.defaultAgentSdId },
+      priceType: { SD_id: account.defaultPriceTypeSdId },
+      warehouse: { SD_id: account.defaultWarehouseSdId },
+      defectProducts,
+    });
+
+    await prisma.salesDoctorAccount.update({
+      where: { id: account.id },
+      data: { lastSyncAt: new Date(), lastError: null },
+    });
+
+    await logAudit({
+      prisma,
+      tenantId,
+      action: "SD_REFUND_SUCCESS",
+      resourceType: "order",
+      resourceId: orderId,
+      summary: `Vozvrat Sales Doctor'ga yuborildi (${order.items.length} ta tovar omborga qaytdi)`,
+    });
+  } catch (err) {
+    await queueRetry(
+      prisma,
+      tenantId,
+      "order",
+      orderId,
+      "setOrderDefect",
+      { orderId } as Prisma.InputJsonValue,
+      err,
+    );
+    if (account && err instanceof SalesDoctorError && err.httpStatus === 401) {
+      await prisma.salesDoctorAccount.update({
+        where: { id: account.id },
+        data: { encryptedToken: null, lastError: err.message },
+      });
+    }
   }
 }
 
