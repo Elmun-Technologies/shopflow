@@ -197,4 +197,25 @@ export class SalesDoctorClient {
   async setDeletedOrder(order: { code_1C?: string; SD_id?: string }): Promise<unknown> {
     return this.call("setDeletedOrder", { deletedOrder: [order] });
   }
+
+  /** Mijoz vozvrati (qaytarilgan tovar omborga qaytadi). */
+  async setOrderDefect(orderDefect: {
+    code_1C: string;
+    status: number;
+    dateCreate?: string;
+    dateDefect?: string;
+    comment?: string;
+    client: { code_1C?: string; SD_id?: string; CS_id?: string };
+    agent: { code_1C?: string; SD_id?: string; CS_id?: string };
+    expeditor?: { code_1C?: string; SD_id?: string; CS_id?: string };
+    priceType: { code_1C?: string; SD_id?: string; CS_id?: string };
+    warehouse: { code_1C?: string; SD_id?: string; CS_id?: string };
+    defectProducts: Array<{
+      product: { code_1C?: string; SD_id?: string; CS_id?: string };
+      quantity: number;
+      price: number;
+    }>;
+  }): Promise<unknown> {
+    return this.call("setOrderDefect", { orderDefect: [orderDefect] });
+  }
 }
