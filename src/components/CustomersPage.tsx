@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle, Download, Crown, Heart, Sparkles, AlertTriangle, Moon, Snowflake } from "lucide-react";
+import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle, Download, Crown, Heart, Sparkles, AlertTriangle, Moon, Snowflake, X } from "lucide-react";
 import { exportToCsv } from "../utils/exportCsv";
 import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useAsync } from "../hooks/useAsync";
 import { customersApi, type RfmSegment } from "../api/endpoints";
+import { useAppToast } from "./ui/Toast";
 import { formatDate } from "../utils/format";
 import { useT } from "../i18n";
 import CustomerDetailDrawer from "./CustomerDetailDrawer";
@@ -57,10 +58,12 @@ const RFM_ORDER: Exclude<RfmSegment, "nobody">[] = ["champion", "loyal", "new", 
 
 export default function CustomersPage() {
   const { t } = useT();
+  const toast = useAppToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 30;
   const [openCustomerId, setOpenCustomerId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [segmentFilter, setSegmentFilter] = useState<RfmSegment | "all">("all");
 
   const params = useMemo(
@@ -146,6 +149,7 @@ export default function CustomersPage() {
         </button>
         <button
           type="button"
+          onClick={() => setShowCreate(true)}
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -375,6 +379,96 @@ export default function CustomersPage() {
         onClose={() => setOpenCustomerId(null)}
         onChanged={refetch}
       />
+
+      {showCreate && (
+        <CustomerCreateModal
+          onClose={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            toast.success("Mijoz qo'shildi");
+            refetch();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function CustomerCreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useT();
+  const toast = useAppToast();
+  const [form, setForm] = useState({ name: "", phone: "", email: "", location: "", notes: "" });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    setBusy(true);
+    try {
+      await customersApi.create({
+        name: form.name.trim(),
+        phone: form.phone.trim() || undefined,
+        email: form.email.trim() || undefined,
+        location: form.location.trim() || undefined,
+        notes: form.notes.trim() || undefined,
+      });
+      onCreated();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Mijoz qo'shilmadi");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <motion.form
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white border border-cream-300 rounded-2xl p-5 max-w-md w-full"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-forest-800">{t("customers.newCustomer")}</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1 block">{t("customers.col.customer")} *</span>
+            <input type="text" required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ism familiya" className={field} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs text-slate-500 mb-1 block">Telefon</span>
+              <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" className={field} />
+            </label>
+            <label className="block">
+              <span className="text-xs text-slate-500 mb-1 block">Email</span>
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@…" className={field} />
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1 block">{t("customers.col.location")}</span>
+            <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Shahar / manzil" className={field} />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1 block">Izoh</span>
+            <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={`${field} resize-none`} />
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">Bekor qilish</button>
+          <button type="submit" disabled={busy || !form.name.trim()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium">
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            Qo'shish
+          </button>
+        </div>
+      </motion.form>
+    </div>
   );
 }

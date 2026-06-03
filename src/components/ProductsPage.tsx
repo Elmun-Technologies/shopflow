@@ -48,6 +48,7 @@ function unformatGrouped(formatted: string): string {
 export default function ProductsPage() {
   const { tenant } = useAuth();
   const { t } = useT();
+  const toast = useAppToast();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -129,9 +130,9 @@ export default function ProductsPage() {
       });
       clearSelection();
       refetch();
-      alert(res.summary || `${res.affected} ta yangilandi`);
+      toast.success(res.summary || `${res.affected} ta yangilandi`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Bulk operatsiya muvaffaqiyatsiz");
+      toast.error(err instanceof Error ? err.message : "Bulk operatsiya muvaffaqiyatsiz");
     } finally {
       setBulkBusy(false);
     }

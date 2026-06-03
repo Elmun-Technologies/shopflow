@@ -573,6 +573,9 @@ export const dictionary: Record<string, Entry> = {
   "leads.status.NEGOTIATION": { uz: "Muzokara", ru: "Переговоры" },
   "leads.status.WON": { uz: "Yutuq", ru: "Выиграно" },
   "leads.status.LOST": { uz: "Yoqotildi", ru: "Проиграно" },
+  "leads.priority.HIGH": { uz: "Yuqori", ru: "Высокий" },
+  "leads.priority.MEDIUM": { uz: "O'rta", ru: "Средний" },
+  "leads.priority.LOW": { uz: "Past", ru: "Низкий" },
   "leads.tab.all": { uz: "Hammasi", ru: "Все" },
 
   // Channel types

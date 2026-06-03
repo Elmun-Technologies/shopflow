@@ -12,6 +12,7 @@ import {
 import { integrations, integrationCategories, type IntegrationItem, type IntegrationCategory } from "../data/integrationsData";
 import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
 import { SalesDoctorIntegrationCard } from "./SalesDoctorIntegrationCard";
+import { useAppToast } from "./ui/Toast";
 
 const CATEGORY_ICONS: Record<IntegrationCategory, React.ElementType> = {
   payments: CreditCard,
@@ -281,6 +282,7 @@ function IntegrationCard({
 }
 
 function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => void }) {
+  const toast = useAppToast();
   const [apiKey, setApiKey] = useState("");
   const [secondField, setSecondField] = useState("");
 
@@ -398,8 +400,9 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
             </button>
             <button
               onClick={() => {
-                // MVP: backend endpoint yo'q — alert
-                alert(`${item.name} sozlamalari saqlandi (backend integratsiyasi keyingi PR'larda)`);
+                // Maxsus kartochkali integratsiyalar (Click/Payme/Uzum/MoySklad/Sales Doctor)
+                // real backend bilan ishlaydi. Bu yerda — katalogdagi umumiy provayderlar.
+                toast.info(`${item.name} uchun maxsus kartochkadan foydalaning yoki keyinroq ulanadi`);
                 onClose();
               }}
               disabled={!apiKey.trim() && item.status !== "connected"}

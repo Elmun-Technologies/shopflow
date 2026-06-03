@@ -1009,7 +1009,7 @@ function StoreInner({ slug }: { slug: string }) {
                 type="button"
                 onClick={() => {
                   if (!navigator.geolocation) {
-                    alert(t("checkout.gpsUnsupported"));
+                    toast.show(t("checkout.gpsUnsupported"), "error");
                     return;
                   }
                   setGpsBusy(true);
@@ -1030,9 +1030,10 @@ function StoreInner({ slug }: { slug: string }) {
                     },
                     (err) => {
                       setGpsBusy(false);
-                      alert(err.code === err.PERMISSION_DENIED
-                        ? t("checkout.gpsDenied")
-                        : t("checkout.gpsError"));
+                      toast.show(
+                        err.code === err.PERMISSION_DENIED ? t("checkout.gpsDenied") : t("checkout.gpsError"),
+                        "error",
+                      );
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
                   );
@@ -1806,9 +1807,9 @@ function StoreInner({ slug }: { slug: string }) {
                       if (!res.ok) throw new Error((body as { error?: string }).error || t("pdp.review.error"));
                       haptic.success();
                       setReviewForm({ open: false, rating: 5, text: "", busy: false });
-                      alert(t("pdp.review.success"));
+                      toast.show(t("pdp.review.success"), "success");
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : t("pdp.review.error"));
+                      toast.show(err instanceof Error ? err.message : t("pdp.review.error"), "error");
                       setReviewForm((f) => ({ ...f, busy: false }));
                     }
                   }}

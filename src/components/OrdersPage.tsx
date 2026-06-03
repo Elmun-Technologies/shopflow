@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check, Download, X } from "lucide-react";
 import { exportToCsv } from "../utils/exportCsv";
 import { useAsync } from "../hooks/useAsync";
-import { ordersApi } from "../api/endpoints";
+import { ordersApi, productsApi, customersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
 import type { Order, OrderStatus } from "../types/api";
@@ -30,6 +30,7 @@ export default function OrdersPage() {
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -195,6 +196,7 @@ export default function OrdersPage() {
         </button>
         <button
           type="button"
+          onClick={() => setShowCreate(true)}
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -339,7 +341,163 @@ export default function OrdersPage() {
         onClose={() => setOpenOrderId(null)}
         onChanged={refetch}
       />
+
+      {showCreate && (
+        <OrderCreateModal
+          currency={currency}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            toast.success("Buyurtma yaratildi");
+            refetch();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; onClose: () => void; onCreated: () => void }) {
+  const { t } = useT();
+  const toast = useAppToast();
+  const { data: customersData } = useAsync(() => customersApi.list({ pageSize: 200 }), []);
+  const { data: productsData } = useAsync(() => productsApi.list({ pageSize: 200 }), []);
+  const customers = customersData?.items ?? [];
+  const products = productsData?.items ?? [];
+
+  const [customerId, setCustomerId] = useState("");
+  const [lines, setLines] = useState<{ productId: string; qty: number; price: number }[]>([]);
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const addLine = () => setLines((ls) => [...ls, { productId: "", qty: 1, price: 0 }]);
+  const removeLine = (i: number) => setLines((ls) => ls.filter((_, idx) => idx !== i));
+  const updateLine = (i: number, patch: Partial<{ productId: string; qty: number; price: number }>) => {
+    setLines((ls) => ls.map((l, idx) => {
+      if (idx !== i) return l;
+      const next = { ...l, ...patch };
+      // Mahsulot tanlanganda narxni avtomatik to'ldiramiz
+      if (patch.productId) {
+        const p = products.find((pr) => pr.id === patch.productId);
+        if (p) next.price = Number(p.price);
+      }
+      return next;
+    }));
+  };
+
+  const validLines = lines.filter((l) => l.productId && l.qty > 0);
+  const total = validLines.reduce((s, l) => s + l.qty * l.price, 0);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validLines.length === 0) {
+      toast.error("Kamida bitta mahsulot qo'shing");
+      return;
+    }
+    setBusy(true);
+    try {
+      await ordersApi.create({
+        customerId: customerId || undefined,
+        notes: notes.trim() || undefined,
+        currency,
+        items: validLines.map((l) => ({ productId: l.productId, qty: l.qty, price: l.price })),
+      });
+      onCreated();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Buyurtma yaratilmadi");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <motion.form
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white border border-cream-300 rounded-2xl p-5 max-w-lg w-full max-h-[88vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-forest-800">{t("orders.newOrder")}</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+        <label className="block mb-3">
+          <span className="text-xs text-slate-500 mb-1 block">{t("orders.col.customer")}</span>
+          <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={field}>
+            <option value="">— Mijozsiz —</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
+            ))}
+          </select>
+        </label>
+
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-slate-500">Mahsulotlar</span>
+            <button type="button" onClick={addLine} className="inline-flex items-center gap-1 text-xs text-forest-700 hover:text-forest-900 font-medium">
+              <Plus className="w-3.5 h-3.5" /> Qo'shish
+            </button>
+          </div>
+          {lines.length === 0 ? (
+            <div className="text-center py-4 text-xs text-slate-400 bg-cream-50 rounded-lg border border-dashed border-cream-300">
+              Mahsulot qo'shilmagan
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {lines.map((line, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <select
+                    value={line.productId}
+                    onChange={(e) => updateLine(i, { productId: e.target.value })}
+                    className={`${field} flex-1`}
+                  >
+                    <option value="">Mahsulot tanlang</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={line.qty}
+                    onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value)) })}
+                    className="w-16 bg-cream-100 border border-cream-300 rounded-lg px-2 py-2.5 text-sm text-center text-forest-800 focus:outline-none focus:border-leaf-500/60"
+                  />
+                  <button type="button" onClick={() => removeLine(i)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex-shrink-0" aria-label="O'chirish">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <label className="block mb-4">
+          <span className="text-xs text-slate-500 mb-1 block">Izoh</span>
+          <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Yetkazib berish manzili, izoh…" className={field} />
+        </label>
+
+        <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-xl bg-cream-100">
+          <span className="text-sm text-slate-600">Jami</span>
+          <span className="text-lg font-bold text-forest-800">{formatCurrency(total, currency)}</span>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">Bekor qilish</button>
+          <button type="submit" disabled={busy || validLines.length === 0} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium">
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            Yaratish
+          </button>
+        </div>
+      </motion.form>
+    </div>
   );
 }
 

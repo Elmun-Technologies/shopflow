@@ -11,6 +11,7 @@ import {
   Eye,
   AlertCircle,
   Download,
+  X,
 } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { leadsApi } from "../api/endpoints";
@@ -18,9 +19,10 @@ import { exportToCsv } from "../utils/exportCsv";
 import { TableRowsSkeleton } from "./ui/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency, formatRelative } from "../utils/format";
-import type { Lead, LeadStatus, ChannelType } from "../types/api";
+import type { Lead, LeadStatus, LeadPriority, ChannelType } from "../types/api";
 import { useT } from "../i18n";
 import LeadDetailModal from "./LeadDetailModal";
+import { useAppToast } from "./ui/Toast";
 
 // Faqat rangli stillar — label'lar t() orqali olinadi
 const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
@@ -36,8 +38,10 @@ const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
 export default function LeadsPage() {
   const { tenant } = useAuth();
   const { t } = useT();
+  const toast = useAppToast();
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -190,6 +194,7 @@ export default function LeadsPage() {
         </button>
         <button
           type="button"
+          onClick={() => setShowCreate(true)}
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -278,7 +283,120 @@ export default function LeadsPage() {
           onUpdated={refetch}
         />
       )}
+
+      {showCreate && (
+        <LeadCreateModal
+          currency={currency}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            toast.success("Lead qo'shildi");
+            refetch();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function LeadCreateModal({ currency, onClose, onCreated }: { currency: string; onClose: () => void; onCreated: () => void }) {
+  const { t } = useT();
+  const toast = useAppToast();
+  const [form, setForm] = useState({
+    name: "", phone: "", email: "", company: "",
+    status: "NEW" as LeadStatus, priority: "MEDIUM" as LeadPriority, value: "",
+  });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    setBusy(true);
+    try {
+      await leadsApi.create({
+        name: form.name.trim(),
+        phone: form.phone.trim() || undefined,
+        email: form.email.trim() || undefined,
+        company: form.company.trim() || undefined,
+        status: form.status,
+        priority: form.priority,
+        value: form.value ? Number(form.value.replace(/\D/g, "")) : undefined,
+        currency,
+      });
+      onCreated();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Lead qo'shilmadi");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60";
+  const STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "WON", "LOST"];
+  const PRIORITIES: LeadPriority[] = ["HIGH", "MEDIUM", "LOW"];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <motion.form
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white border border-cream-300 rounded-2xl p-5 max-w-md w-full"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-forest-800">{t("leads.newLead")}</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1 block">Ism *</span>
+            <input type="text" required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ism familiya" className={field} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs text-slate-500 mb-1 block">Telefon</span>
+              <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" className={field} />
+            </label>
+            <label className="block">
+              <span className="text-xs text-slate-500 mb-1 block">Email</span>
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@…" className={field} />
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1 block">Kompaniya</span>
+            <input type="text" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={field} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs text-slate-500 mb-1 block">Status</span>
+              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })} className={field}>
+                {STATUSES.map((s) => <option key={s} value={s}>{t(`leads.status.${s}`)}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-slate-500 mb-1 block">Prioritet</span>
+              <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as LeadPriority })} className={field}>
+                {PRIORITIES.map((p) => <option key={p} value={p}>{t(`leads.priority.${p}`)}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-xs text-slate-500 mb-1 block">Qiymat ({currency})</span>
+            <input inputMode="numeric" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} placeholder="0" className={field} />
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">Bekor qilish</button>
+          <button type="submit" disabled={busy || !form.name.trim()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium">
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            Qo'shish
+          </button>
+        </div>
+      </motion.form>
+    </div>
   );
 }
 

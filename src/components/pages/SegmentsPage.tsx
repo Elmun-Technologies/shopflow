@@ -4,6 +4,7 @@ import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, Users, Filter, AlertCirc
 import type { CustomerSegment, SegmentType, SegmentCondition } from "../../data/customersData";
 import { segmentTypeLabels, segmentConditionFields, customers } from "../../data/customersData";
 import { api } from "../../api/client";
+import { useAppToast } from "../ui/Toast";
 
 // Backend'dan keladigan format (uppercase enum)
 interface ApiSegment {
@@ -62,6 +63,7 @@ function ConditionsList({ conditions }: { conditions: SegmentCondition[] }) {
 }
 
 export default function SegmentsPage() {
+  const toast = useAppToast();
   const [segments, setSegments] = useState<CustomerSegment[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -116,8 +118,9 @@ export default function SegmentsPage() {
       await reload();
       setPageMode("list");
       setEditItem(null);
+      toast.success("Segment saqlandi");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Saqlanmadi");
+      toast.error(err instanceof Error ? err.message : "Saqlanmadi");
     } finally {
       setBusy(false);
     }
@@ -129,8 +132,9 @@ export default function SegmentsPage() {
     try {
       await api(`/segments/${id}`, { method: "DELETE" });
       await reload();
+      toast.success("Segment o'chirildi");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "O'chirilmadi");
+      toast.error(err instanceof Error ? err.message : "O'chirilmadi");
     } finally {
       setBusy(false);
     }
@@ -144,9 +148,9 @@ export default function SegmentsPage() {
         `/segments/${segment.id}/broadcast`,
         { method: "POST", body: { text } },
       );
-      alert(`Rassilka yakunlandi: ${res.sent}/${res.total} ta yetkazildi, ${res.skipped} ta o'tkazib yuborildi`);
+      toast.success(`Rassilka yakunlandi: ${res.sent}/${res.total} ta yetkazildi, ${res.skipped} ta o'tkazib yuborildi`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Rassilka yuborilmadi");
+      toast.error(err instanceof Error ? err.message : "Rassilka yuborilmadi");
     } finally {
       setBusy(false);
     }

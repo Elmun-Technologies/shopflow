@@ -7,6 +7,7 @@ import {
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../api/client";
 import { useT } from "../i18n";
+import { useAppToast } from "./ui/Toast";
 
 // ─── Tiplar ──────────────────────────────────────────────────────────────────
 
@@ -707,6 +708,7 @@ function OrderDetailModal({
 }: { order: DeliveryOrder; onClose: () => void; onStatusUpdate: () => void }) {
   const conf = STATUS_CONF[order.status] ?? STATUS_CONF.PENDING;
   const [updating, setUpdating] = useState(false);
+  const toast = useAppToast();
 
   const NEXT_STATUS: Record<string, string> = {
     PENDING: "ASSIGNED",
@@ -723,7 +725,7 @@ function OrderDetailModal({
       await api(`/delivery/orders/${order.id}/status`, { method: "PATCH", body: { status } });
       onStatusUpdate();
     } catch {
-      alert("Holatni yangilashda xato");
+      toast.error("Holatni yangilashda xato");
     } finally {
       setUpdating(false);
     }
