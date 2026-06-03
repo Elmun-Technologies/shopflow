@@ -3,6 +3,7 @@ import { z } from "zod";
 import { nextOrderCode } from "../lib/codes.js";
 import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
 import { logAudit } from "../lib/audit.js";
+import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Yangi",
@@ -89,7 +90,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     const code = await nextOrderCode(app.prisma, req.session.tenantId);
     const total = data.items.reduce((s, i) => s + i.qty * i.price, 0);
 
-    return app.prisma.order.create({
+    const order = await app.prisma.order.create({
       data: {
         tenantId: req.session.tenantId,
         code,
@@ -109,6 +110,12 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       },
       include: { items: true },
     });
+
+    // Sales Doctor'ga avtomatik push — fire-and-forget
+    pushOrderToSalesDoctor(app.prisma, req.session.tenantId, order.id)
+      .catch((err) => app.log.warn({ err, orderId: order.id }, "SD push failed"));
+
+    return order;
   });
 
   app.patch("/:id", async (req, reply) => {
@@ -154,6 +161,10 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
           }
         })
         .catch((err) => app.log.warn({ err, orderId: id }, "TG push failed"));
+
+      // Sales Doctor'ga status sync
+      pushOrderStatus(app.prisma, tenantId, id, data.status)
+        .catch((err) => app.log.warn({ err, orderId: id }, "SD status push failed"));
     }
 
     // Audit — assignee o'zgarishi
@@ -305,6 +316,9 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         for (const tgt of targets) {
           notifyOrderStatusChange(app.prisma, tenantId, tgt.id, tgt.status, toStatus)
             .catch((err) => app.log.warn({ err, orderId: tgt.id }, "TG push failed"));
+          // Sales Doctor'ga status sync (fonda)
+          pushOrderStatus(app.prisma, tenantId, tgt.id, toStatus)
+            .catch((err) => app.log.warn({ err, orderId: tgt.id }, "SD status push failed"));
         }
       }
 

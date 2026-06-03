@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { pushCustomerToSD } from "../lib/salesdoctor-push.js";
 
 const customerSchema = z.object({
   name: z.string().min(1).max(120),
@@ -91,9 +92,12 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/", async (req) => {
     const data = customerSchema.parse(req.body);
-    return app.prisma.customer.create({
+    const created = await app.prisma.customer.create({
       data: { ...data, email: data.email || null, tenantId: req.session.tenantId },
     });
+    pushCustomerToSD(app.prisma, req.session.tenantId, created.id)
+      .catch((err) => app.log.warn({ err, customerId: created.id }, "SD push failed"));
+    return created;
   });
 
   app.patch("/:id", async (req, reply) => {
@@ -103,10 +107,13 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!c) return reply.code(404).send({ error: "Not found" });
-    return app.prisma.customer.update({
+    const updated = await app.prisma.customer.update({
       where: { id },
       data: { ...data, email: data.email || undefined },
     });
+    pushCustomerToSD(app.prisma, req.session.tenantId, id)
+      .catch((err) => app.log.warn({ err, customerId: id }, "SD push failed"));
+    return updated;
   });
 
   app.delete("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {

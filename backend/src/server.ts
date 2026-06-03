@@ -33,6 +33,7 @@ import { storefrontRoutes } from "./routes/storefront.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { uploadRoutes } from "./routes/upload.js";
 import { moyskladRoutes } from "./routes/moysklad.js";
+import { salesDoctorRoutes } from "./routes/salesdoctor.js";
 import { popupRoutes } from "./routes/popups.js";
 import { saleCampaignRoutes } from "./routes/sale-campaigns.js";
 import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
@@ -43,6 +44,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
 import { reviewRoutes } from "./routes/reviews.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
+import { startSalesDoctorWorker, stopSalesDoctorWorker } from "./lib/salesdoctor-worker.js";
 import { promoCodeRoutes } from "./routes/promo-codes.js";
 import { deliveryRoutes } from "./routes/delivery.js";
 import { exportRoutes } from "./routes/export.js";
@@ -139,6 +141,7 @@ await app.register(vitrinaRoutes, { prefix: "/api/vitrina" });
 await app.register(storefrontRoutes, { prefix: "/api/storefront" });
 await app.register(uploadRoutes, { prefix: "/api/upload" });
 await app.register(moyskladRoutes, { prefix: "/api/moysklad" });
+await app.register(salesDoctorRoutes, { prefix: "/api/salesdoctor" });
 await app.register(popupRoutes, { prefix: "/api/popups" });
 await app.register(saleCampaignRoutes, { prefix: "/api/sale-campaigns" });
 await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
@@ -163,8 +166,10 @@ const host = process.env.HOST ?? "0.0.0.0";
 // Telegram orqali "savatingiz kutmoqda" eslatma yuboradi. Har 5 daqiqada skanlaydi.
 // addHook listen'dan oldin ro'yxatdan o'tishi shart (Fastify cheklovi).
 const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
+startSalesDoctorWorker(app.prisma, app.log);
 app.addHook("onClose", async () => {
   stopScheduler();
+  stopSalesDoctorWorker();
 });
 
 try {

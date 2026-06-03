@@ -12,6 +12,7 @@ export type IntegrationCategory =
   | "delivery"
   | "analytics"
   | "erp"
+  | "crm"
   | "marketing"
   | "other";
 
@@ -39,6 +40,7 @@ export const integrationCategories: Array<{ id: IntegrationCategory; label: stri
   { id: "delivery", label: "Yetkazib berish", subtitle: "Kuryer xizmatlari va logistika" },
   { id: "analytics", label: "Analitika va piksellar", subtitle: "Traffic va kampaniyani kuzatish" },
   { id: "erp", label: "ERP va Ombor", subtitle: "Mahsulot va omborni sinxronlash" },
+  { id: "crm", label: "CRM va savdo", subtitle: "Buyurtma va mijoz sinxronizatsiyasi" },
   { id: "marketing", label: "Marketing", subtitle: "Email, SMS va xabarnomalar" },
   { id: "other", label: "Boshqa vositalar", subtitle: "Avtomatlashtirish va eksport" },
 ];
@@ -275,6 +277,18 @@ export const integrations: IntegrationItem[] = [
     status: "available",
     recommended: true,
     setupHint: "OAuth orqali ulanish — alohida panelga o'tasiz.",
+  },
+  {
+    id: "salesdoctor",
+    name: "Sales Doctor",
+    description: "Sotuv CRM — buyurtmalar avtomatik tushadi, status sync",
+    category: "crm",
+    color: "#0066CC",
+    initials: "SD",
+    status: "available",
+    recommended: true,
+    region: "UZ",
+    setupHint: "Domain + login/parol bilan ulanish.",
   },
   {
     id: "1c",
