@@ -475,6 +475,10 @@ model Order {
   promoCode      PromoCode? @relation("OrderPromo", fields: [promoCodeId], references: [id], onDelete: SetNull)
   promoDiscount  Decimal?   @db.Decimal(14, 2)
 
+  // To'lov holati — payment webhook tasdiqlaganda yangilanadi
+  paid   Boolean   @default(false)
+  paidAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -111,6 +111,8 @@ export interface Order {
   total: string | number;
   currency: string;
   notes: string | null;
+  paid?: boolean;
+  paidAt?: string | null;
   customerId: string | null;
   customer?: { id: string; name: string; email: string | null; phone: string | null } | null;
   channelId: string | null;

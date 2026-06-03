@@ -603,6 +603,11 @@ function OrderTable({
                     <span className="text-sm font-medium text-forest-800">
                       {formatCurrency(Number(order.total), order.currency || currency)}
                     </span>
+                    {order.paid && (
+                      <span className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-leaf-100 text-forest-700 align-middle">
+                        <Check className="w-2.5 h-2.5" /> To'langan
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4 relative" onClick={(e) => e.stopPropagation()}>
                     <button
@@ -709,6 +714,11 @@ function OrderTable({
                   <p className="text-sm font-bold text-forest-800 whitespace-nowrap">
                     {formatCurrency(Number(order.total), order.currency || currency)}
                   </p>
+                  {order.paid && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mt-0.5 rounded-full text-[10px] font-medium bg-leaf-100 text-forest-700">
+                      <Check className="w-2.5 h-2.5" /> To'langan
+                    </span>
+                  )}
                   <p className="text-[10px] text-slate-500 mt-0.5">{formatDate(order.createdAt)}</p>
                 </div>
               </div>

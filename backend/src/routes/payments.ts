@@ -2,7 +2,8 @@
 // boshqarish + provayder'lar (Click/Payme/Uzum/...) uchun webhook qabuli.
 
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient, Prisma } from "@prisma/client";
+import { PaymentTxStatus } from "@prisma/client";
 import { z } from "zod";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
@@ -47,6 +48,73 @@ async function loadPaymentMethodForWebhook(
     where: { tenantId_code: { tenantId, code: methodCode } },
     select: { id: true, tenantId: true, autoConfirm: true, config: true, testMode: true },
   });
+}
+
+/**
+ * To'lov natijasini DB'ga yozadi: PaymentTransaction yaratadi/yangilaydi
+ * (externalId bo'yicha idempotent — webhook qayta kelsa duplikat bo'lmaydi)
+ * va muvaffaqiyatli to'lovda bog'liq buyurtmani "paid" deb belgilaydi.
+ */
+async function recordPaymentResult(
+  prisma: PrismaClient,
+  method: { id: string; tenantId: string },
+  args: {
+    orderRef?: string | null; // merchant_trans_id — odatda order.code
+    externalId?: string | null; // provayder transaction id
+    amount: number;
+    currency?: string;
+    status: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+    payload: unknown;
+    errorMessage?: string | null;
+  },
+): Promise<{ orderId: string | null }> {
+  const { tenantId } = method;
+
+  // Buyurtmani topamiz (order.code yoki id bo'yicha)
+  let order: { id: string } | null = null;
+  if (args.orderRef) {
+    order = await prisma.order.findFirst({
+      where: { tenantId, OR: [{ code: args.orderRef }, { id: args.orderRef }] },
+      select: { id: true },
+    });
+  }
+
+  const status = args.status as PaymentTxStatus;
+  const completedAt = args.status === "SUCCESS" ? new Date() : null;
+  const baseData = {
+    tenantId,
+    methodId: method.id,
+    orderId: order?.id ?? null,
+    amount: args.amount,
+    currency: args.currency ?? "UZS",
+    status,
+    payload: (args.payload ?? null) as Prisma.InputJsonValue,
+    errorMessage: args.errorMessage ?? null,
+    completedAt,
+  };
+
+  // externalId bor → idempotent upsert; yo'q → oddiy create
+  if (args.externalId) {
+    await prisma.paymentTransaction.upsert({
+      where: {
+        tenantId_methodId_externalId: { tenantId, methodId: method.id, externalId: args.externalId },
+      },
+      create: { ...baseData, externalId: args.externalId },
+      update: { status, completedAt, errorMessage: baseData.errorMessage, orderId: baseData.orderId },
+    });
+  } else {
+    await prisma.paymentTransaction.create({ data: baseData });
+  }
+
+  // Muvaffaqiyatli to'lov → buyurtmani paid deb belgilaymiz
+  if (args.status === "SUCCESS" && order) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paid: true, paidAt: new Date() },
+    });
+  }
+
+  return { orderId: order?.id ?? null };
 }
 
 function tenantRefFromRequest(req: FastifyRequest): string | undefined {
@@ -393,7 +461,18 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             error_note: "Success",
           });
         } else if (action === 1) {
-          // Complete: to'lovni tasdiqlash
+          // Complete: to'lovni tasdiqlash. error < 0 — bekor/muvaffaqiyatsiz.
+          const clickError = Number(b.error ?? 0);
+          await recordPaymentResult(app.prisma, method, {
+            orderRef: b.merchant_trans_id ?? null,
+            externalId: b.click_trans_id !== undefined ? String(b.click_trans_id) : null,
+            amount: Number(b.amount ?? 0),
+            currency: "UZS",
+            status: clickError < 0 ? "FAILED" : "SUCCESS",
+            payload: req.body,
+            errorMessage: clickError < 0 ? `Click error ${clickError}` : null,
+          }).catch((err) => app.log.error({ err, methodCode }, "[payments] Click tx persist failed"));
+
           return reply.code(200).send({
             click_trans_id: b.click_trans_id,
             merchant_trans_id: b.merchant_trans_id,
@@ -433,34 +512,70 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         const rpcId = (body as { id?: unknown }).id;
         const params = (body as { params?: Record<string, unknown> }).params ?? {};
 
+        // Payme account'dan buyurtma referensi (sozlama bo'yicha turli nom bo'lishi mumkin)
+        const pmAccount = (params.account ?? {}) as Record<string, unknown>;
+        const pmOrderRef =
+          (pmAccount.order_id ?? pmAccount.order ?? pmAccount.code ?? pmAccount.orderId) as string | undefined;
+        const pmTxId = params.id !== undefined ? String(params.id) : null;
+        const pmAmount = Number(params.amount ?? 0) / 100; // Payme tiyin'da yuboradi
+
         if (rpcMethod === "CheckPerformTransaction") {
           return reply.code(200).send({
             id: rpcId,
             result: { allow: true },
           });
         } else if (rpcMethod === "CreateTransaction") {
+          // PENDING tranzaksiya yaratamiz — order bilan bog'laymiz (idempotent)
+          await recordPaymentResult(app.prisma, method, {
+            orderRef: pmOrderRef ?? null,
+            externalId: pmTxId,
+            amount: pmAmount,
+            currency: "UZS",
+            status: "PENDING",
+            payload: req.body,
+          }).catch((err) => app.log.error({ err }, "[payments] Payme create persist failed"));
+
           return reply.code(200).send({
             id: rpcId,
             result: {
               create_time: Date.now(),
-              transaction: params.id,
+              transaction: pmTxId,
               state: 1,
             },
           });
         } else if (rpcMethod === "PerformTransaction") {
+          // To'lov tasdiqlandi → SUCCESS + buyurtma paid
+          await recordPaymentResult(app.prisma, method, {
+            orderRef: pmOrderRef ?? null,
+            externalId: pmTxId,
+            amount: pmAmount,
+            currency: "UZS",
+            status: "SUCCESS",
+            payload: req.body,
+          }).catch((err) => app.log.error({ err }, "[payments] Payme perform persist failed"));
+
           return reply.code(200).send({
             id: rpcId,
             result: {
-              transaction: params.id,
+              transaction: pmTxId,
               perform_time: Date.now(),
               state: 2,
             },
           });
         } else if (rpcMethod === "CancelTransaction") {
+          await recordPaymentResult(app.prisma, method, {
+            orderRef: pmOrderRef ?? null,
+            externalId: pmTxId,
+            amount: pmAmount,
+            currency: "UZS",
+            status: "CANCELLED",
+            payload: req.body,
+          }).catch((err) => app.log.error({ err }, "[payments] Payme cancel persist failed"));
+
           return reply.code(200).send({
             id: rpcId,
             result: {
-              transaction: params.id,
+              transaction: pmTxId,
               cancel_time: Date.now(),
               state: -2,
             },
@@ -497,6 +612,24 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
           }
         } else if (!method.testMode && secretKey) {
           app.log.warn({ methodCode }, "[payments] Uzum webhook — sign tekshirilmadi");
+        }
+
+        // Uzum payload'idan buyurtma va status — defensiv o'qish (nom turlanishi mumkin)
+        const uz = body as Record<string, unknown>;
+        const uzOrderRef = (uz.orderId ?? uz.order_id ?? uz.merchant_trans_id ?? uz.orderNumber) as string | undefined;
+        const uzTxId = (uz.transactionId ?? uz.transaction_id ?? uz.paymentId ?? uz.id) as string | number | undefined;
+        const uzStatusRaw = String(uz.status ?? uz.event ?? uz.paymentStatus ?? "").toUpperCase();
+        const uzSuccess = /SUCCESS|PAID|CONFIRM|COMPLETE|APPROVE/.test(uzStatusRaw);
+        const uzFailed = /FAIL|CANCEL|DECLINE|REVERS|REFUND/.test(uzStatusRaw);
+        if (uzOrderRef && (uzSuccess || uzFailed)) {
+          await recordPaymentResult(app.prisma, method, {
+            orderRef: String(uzOrderRef),
+            externalId: uzTxId !== undefined ? String(uzTxId) : null,
+            amount: Number(uz.amount ?? 0),
+            currency: "UZS",
+            status: uzSuccess ? "SUCCESS" : "CANCELLED",
+            payload: req.body,
+          }).catch((err) => app.log.error({ err, methodCode }, "[payments] Uzum tx persist failed"));
         }
       }
 
