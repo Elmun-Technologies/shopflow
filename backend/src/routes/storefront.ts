@@ -348,7 +348,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
 
     // Order yaratish + stock kamaytirish — atomic transaction ichida.
     // Order kodi ham shu transaction ichida hisoblanadi (race condition yo'q).
-    const order = await app.prisma.$transaction(async (tx) => {
+    let order;
+    try {
+      order = await app.prisma.$transaction(async (tx) => {
       // Order kodi — tenant uchun oxirgi ORD-NNNN ni LOCK bilan olamiz
       const prefix = "ORD-";
       const last = await tx.order.findFirst({
@@ -359,13 +361,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       const lastNum = last ? Number(last.code.slice(prefix.length)) || 7000 : 7000;
       const code = `${prefix}${lastNum + 1}`;
 
-      // Stock kamaytirish — faqat track qilinadigan mahsulotlar uchun
+      // Stock kamaytirish — atomic SQL: faqat stock >= qty bo'lganda
+      // muvaffaqiyatli o'tadi. Concurrent checkout'larda oversell oldini oladi
+      // (updateMany count=0 → transaction qaytariladi).
       for (const item of items) {
         if (item.stock !== null && item.stock !== undefined) {
-          await tx.product.update({
-            where: { id: item.productId },
+          const res = await tx.product.updateMany({
+            where: { id: item.productId, tenantId: tenant.id, stock: { gte: item.qty } },
             data: { stock: { decrement: item.qty } },
           });
+          if (res.count === 0) {
+            // Concurrent boshqa checkout stockni nolga tushirgan — buyurtmani bekor qilamiz
+            throw new Error(`OUT_OF_STOCK:${item.productId}`);
+          }
         }
       }
 
@@ -412,7 +420,23 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return order;
-    });
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith("OUT_OF_STOCK:")) {
+        const productId = msg.slice("OUT_OF_STOCK:".length);
+        const product = await app.prisma.product.findFirst({
+          where: { id: productId, tenantId: tenant.id },
+          select: { name: true, stock: true },
+        });
+        return reply.code(409).send({
+          error: "Mahsulot zaxiradan tugadi",
+          code: "OUT_OF_STOCK",
+          product: product ? { id: productId, name: product.name, stock: product.stock } : { id: productId },
+        });
+      }
+      throw err;
+    }
 
     // Sodiqlik ballari — xariddan ball berish (fonda)
     grantOrderPoints(app.prisma, tenant.id, customer.id, order.id, subtotal)

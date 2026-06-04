@@ -43,9 +43,11 @@ function initOnFirstGesture(): void {
     document.removeEventListener("keydown", resume);
     document.removeEventListener("touchstart", resume);
   };
-  document.addEventListener("click", resume, { once: false });
-  document.addEventListener("keydown", resume, { once: false });
-  document.addEventListener("touchstart", resume, { once: false });
+  // once: true — listener avtomatik o'chiriladi, defense-in-depth uchun
+  // resume() o'zi ham removeEventListener chaqiradi (multi-gesture'da bezovta etmasin).
+  document.addEventListener("click", resume, { once: true });
+  document.addEventListener("keydown", resume, { once: true });
+  document.addEventListener("touchstart", resume, { once: true });
 }
 
 if (typeof window !== "undefined") {

@@ -35,12 +35,9 @@ function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] ?? c));
 }
 
-export function openReportPrint(input: ReportInput): void {
+export function openReportPrint(input: ReportInput): boolean {
   const w = window.open("", "_blank", "width=820,height=900");
-  if (!w) {
-    alert("Pop-up bloklangan. Brauzer sozlamalaridan ruxsat bering.");
-    return;
-  }
+  if (!w) return false; // Caller toast bilan xabar qiladi
 
   const dateStr = input.generatedAt.toLocaleString("uz-UZ", { dateStyle: "long", timeStyle: "short" });
   const maxCat = Math.max(1, ...input.categorySales.map((c) => c.value));
@@ -135,4 +132,5 @@ export function openReportPrint(input: ReportInput): void {
 
   w.document.write(html);
   w.document.close();
+  return true;
 }
