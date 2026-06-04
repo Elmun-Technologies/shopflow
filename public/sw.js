@@ -21,6 +21,40 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Web Push — backend yuborgan xabarni OS notification sifatida ko'rsatish
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  let payload = { title: "ShopFlow", body: "Yangi xabar", url: "/" };
+  try {
+    payload = { ...payload, ...event.data.json() };
+  } catch {
+    payload.body = event.data.text();
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icon-192.svg",
+      badge: "/icon-192.svg",
+      tag: "shopflow-notif",
+      data: { url: payload.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      // Mavjud tab bo'lsa — uni faollashtirish, yo'q bo'lsa yangi tab
+      for (const c of clients) {
+        if (c.url.endsWith(url) && "focus" in c) return c.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    }),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);

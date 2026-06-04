@@ -17,6 +17,7 @@ import type {
 } from "../data/settingsData";
 import { IntegrationsHub } from "./IntegrationsHub";
 import { BrowserNotifSection } from "./BrowserNotifSection";
+import { PushNotificationManager } from "./PushNotificationManager";
 import { TeamSection } from "./TeamSection";
 import { api, API_BASE } from "../api/client";
 import { useContext } from "react";
@@ -269,6 +270,9 @@ export default function SettingsPage() {
 
   const renderNotifications = () => (
     <div className="space-y-6">
+      {/* OS darajasidagi push notifikatsiyalar (tab yopiq bo'lsa ham) */}
+      <PushNotificationManager />
+
       {/* Admin browser notifikatsiyalar — operator paneli uchun */}
       <BrowserNotifSection />
 

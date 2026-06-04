@@ -6,6 +6,7 @@ import { logAudit } from "../lib/audit.js";
 import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
 import { publishToTenant } from "../lib/sse-bus.js";
+import { pushToTenantAdmins } from "../lib/web-push.js";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Yangi",
@@ -127,6 +128,13 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       type: "order.created", orderId: order.id, code: order.code,
       total: Number(order.total), currency: order.currency,
     });
+
+    // Brauzer/OS push notification — tab yopiq bo'lsa ham keladi
+    pushToTenantAdmins(app.prisma, req.session.tenantId, {
+      title: "Yangi buyurtma",
+      body: `#${order.code} · ${Number(order.total).toLocaleString("uz-UZ")} ${order.currency}`,
+      url: "/",
+    }).catch(() => null);
 
     return order;
   });
