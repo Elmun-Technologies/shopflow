@@ -13,6 +13,7 @@ import {
 import { integrations, integrationCategories, type IntegrationItem, type IntegrationCategory } from "../data/integrationsData";
 import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
 import { SalesDoctorIntegrationCard } from "./SalesDoctorIntegrationCard";
+import { WebhookIntegrationCard } from "./WebhookIntegrationCard";
 import { useAppToast } from "./ui/Toast";
 
 const CATEGORY_ICONS: Record<IntegrationCategory, React.ElementType> = {
@@ -158,6 +159,14 @@ export function IntegrationsHub() {
             <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Faol integratsiyalar</h4>
           )}
           <SalesDoctorIntegrationCard />
+        </div>
+      )}
+      {(activeCategory === "all" || activeCategory === "other") && search === "" && (
+        <div className="space-y-3">
+          {activeCategory === "other" && (
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Faol integratsiyalar</h4>
+          )}
+          <WebhookIntegrationCard />
         </div>
       )}
 

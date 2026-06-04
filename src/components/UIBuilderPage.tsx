@@ -680,6 +680,31 @@ export default function UIBuilderPage() {
                   <label className="text-xs text-slate-500 mb-1.5 block">Manzil</label>
                   <input value={brand.address} onChange={(e) => setBrand({ ...brand, address: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
+
+                <div className="pt-3 mt-1 border-t border-cream-300">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Web analitika</p>
+                  <div className="space-y-2.5">
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1.5 block">Google Analytics (GA4)</label>
+                      <input
+                        value={brand.gaId ?? ""}
+                        onChange={(e) => setBrand({ ...brand, gaId: e.target.value })}
+                        placeholder="G-XXXXXXXXXX"
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 font-mono focus:outline-none focus:border-leaf-500/60"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1.5 block">Yandex Metrika</label>
+                      <input
+                        value={brand.yandexMetrikaId ?? ""}
+                        onChange={(e) => setBrand({ ...brand, yandexMetrikaId: e.target.value })}
+                        placeholder="12345678"
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 font-mono focus:outline-none focus:border-leaf-500/60"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400">Saqlangach Mini App'ga avtomatik ulanadi — qo'shimcha kod kerak emas.</p>
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

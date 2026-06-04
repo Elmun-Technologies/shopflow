@@ -7,6 +7,7 @@ import { PaymentTxStatus } from "@prisma/client";
 import { z } from "zod";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
+import { fireWebhookEvent } from "../lib/outbound-webhook.js";
 
 function getPublicBaseUrl(): string {
   const raw =
@@ -112,6 +113,10 @@ async function recordPaymentResult(
       where: { id: order.id },
       data: { paid: true, paidAt: new Date() },
     });
+    // Outbound webhook — order.paid
+    fireWebhookEvent(prisma, tenantId, "order.paid", {
+      order: { id: order.id, amount: args.amount, currency: args.currency ?? "UZS" },
+    }).catch(() => null);
   }
 
   return { orderId: order?.id ?? null };

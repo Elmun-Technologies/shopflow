@@ -64,6 +64,9 @@ export interface BrandSettings {
   phone: string;
   email: string;
   address: string;
+  // Web analitika — storefront'ga avtomatik inject qilinadi
+  gaId?: string; // Google Analytics 4 — "G-XXXXXXX"
+  yandexMetrikaId?: string; // Yandex Metrika raqami — "12345678"
 }
 
 export const blockDefinitions: BlockDefinition[] = [

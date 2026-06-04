@@ -9,6 +9,7 @@ import KPICards from "./components/KPICards";
 import RevenueChart from "./components/RevenueChart";
 import SalesByCategory from "./components/SalesByCategory";
 import WeeklySales from "./components/WeeklySales";
+import SalesGauge from "./components/SalesGauge";
 import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
 import TrafficSources from "./components/TrafficSources";
@@ -140,6 +141,7 @@ function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {
           <RevenueChart />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+          <SalesGauge />
           <SalesByCategory />
           <WeeklySales />
         </div>

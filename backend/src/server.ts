@@ -39,6 +39,7 @@ import { saleCampaignRoutes } from "./routes/sale-campaigns.js";
 import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
 import { productAddonRoutes } from "./routes/product-addons.js";
 import { auditRoutes } from "./routes/audit.js";
+import { outboundWebhookRoutes } from "./routes/outbound-webhooks.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
@@ -157,6 +158,7 @@ await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
 // Combo / product addons — mahsulotga qo'shimcha tovarlar (Amazon-style)
 await app.register(productAddonRoutes, { prefix: "/api/products" });
 await app.register(auditRoutes, { prefix: "/api/audit" });
+await app.register(outboundWebhookRoutes, { prefix: "/api/outbound-webhooks" });
 await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(chatRoutes, { prefix: "/api/chats" });
 await app.register(segmentRoutes, { prefix: "/api/segments" });

@@ -7,13 +7,15 @@ import {
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users,
   Target, RotateCcw, ArrowUpRight, ArrowDownRight, ChevronRight,
-  Download, Receipt, Loader2,
+  Download, Receipt, Loader2, FileText,
 } from "lucide-react";
 import { timeRangeLabels } from "../data/analyticsData";
 import type { AnalyticsTimeRange } from "../data/analyticsData";
 import type { ChartTooltipProps } from "../utils/chart";
 import { dashboardApi } from "../api/endpoints";
 import type { DashboardPeriod } from "../api/endpoints";
+import { useAuth } from "../contexts/AuthContext";
+import { openReportPrint } from "../utils/printReport";
 import { useT } from "../i18n";
 
 // AnalyticsTimeRange → DashboardPeriod konvertatsiya
@@ -71,6 +73,7 @@ const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
 
 export default function AnalyticsPage() {
   const { t } = useT();
+  const { tenant } = useAuth();
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>("month");
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<KpiData | null>(null);
@@ -231,6 +234,31 @@ export default function AnalyticsPage() {
           >
             <Download className="w-4 h-4" />
             {t("analytics.export")}
+          </button>
+          <button
+            onClick={() => {
+              if (!kpis) return;
+              openReportPrint({
+                storeName: tenant?.name ?? "ShopFlow",
+                periodLabel: timeRangeLabels[timeRange],
+                generatedAt: new Date(),
+                currency: tenant?.currency ?? "UZS",
+                kpis: {
+                  revenue: kpis.revenue,
+                  orders: kpis.orders,
+                  customers: kpis.customers,
+                  conversion: kpis.conversion,
+                  avgOrder: kpis.avgOrder,
+                },
+                topProducts: topProducts.map((p) => ({ name: p.name, sold: p.sold, revenue: p.revenue })),
+                categorySales: categorySales.map((c) => ({ name: c.name, value: c.value })),
+                trafficSources: trafficSources.map((s) => ({ name: s.name, percentage: s.percentage })),
+              });
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-forest-700 hover:bg-forest-800 rounded-lg text-sm font-medium text-white transition-all"
+          >
+            <FileText className="w-4 h-4" />
+            {t("analytics.report")}
           </button>
         </div>
       </motion.div>
