@@ -775,6 +775,7 @@ export const dictionary: Record<string, Entry> = {
   "analytics.title": { uz: "Analitika", ru: "Аналитика" },
   "analytics.subtitle": { uz: "Savdo va mijozlar statistikasi", ru: "Статистика продаж и клиентов" },
   "analytics.export": { uz: "Export", ru: "Экспорт" },
+  "analytics.report": { uz: "Hisobot (PDF)", ru: "Отчёт (PDF)" },
   "analytics.revenueTrend.title": { uz: "Daromad trendi", ru: "Тренд выручки" },
   "analytics.revenueTrend.subtitle": { uz: "Oylik daromad va buyurtmalar", ru: "Месячная выручка и заказы" },
   "analytics.legend.revenue": { uz: "Daromad", ru: "Выручка" },
