@@ -40,6 +40,7 @@ import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
 import { productAddonRoutes } from "./routes/product-addons.js";
 import { auditRoutes } from "./routes/audit.js";
 import { outboundWebhookRoutes } from "./routes/outbound-webhooks.js";
+import { eventsRoutes } from "./routes/events.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
@@ -155,9 +156,27 @@ app.setErrorHandler((err, req, reply) => {
   return reply.code(httpErr.statusCode ?? 500).send({ error: httpErr.message ?? "Server xatosi" });
 });
 
-app.get("/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
+// Chuqur health check — DB ping ham qilamiz (Caddy/Docker shu endpoint bilan
+// container'ni "healthy" deb tan oladi). DB yo'q bo'lsa 503 qaytaramiz.
+async function deepHealthCheck(): Promise<{ status: string; db: "ok" | "fail"; ts: string }> {
+  let db: "ok" | "fail" = "fail";
+  try {
+    await app.prisma.$queryRaw`SELECT 1`;
+    db = "ok";
+  } catch {
+    /* ignore */
+  }
+  return { status: db === "ok" ? "ok" : "degraded", db, ts: new Date().toISOString() };
+}
+app.get("/health", async (_req, reply) => {
+  const r = await deepHealthCheck();
+  return reply.code(r.db === "ok" ? 200 : 503).send(r);
+});
 // /api/health — Caddy /api/* ni backend'ga proxy qiladi, shu yo'l ham ishlashi uchun
-app.get("/api/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
+app.get("/api/health", async (_req, reply) => {
+  const r = await deepHealthCheck();
+  return reply.code(r.db === "ok" ? 200 : 503).send(r);
+});
 
 await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(tenantRoutes, { prefix: "/api/tenant" });
@@ -181,6 +200,7 @@ await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
 await app.register(productAddonRoutes, { prefix: "/api/products" });
 await app.register(auditRoutes, { prefix: "/api/audit" });
 await app.register(outboundWebhookRoutes, { prefix: "/api/outbound-webhooks" });
+await app.register(eventsRoutes, { prefix: "/api/events" });
 await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(chatRoutes, { prefix: "/api/chats" });
 await app.register(segmentRoutes, { prefix: "/api/segments" });

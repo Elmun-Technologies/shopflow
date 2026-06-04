@@ -5,6 +5,7 @@ import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
 import { logAudit } from "../lib/audit.js";
 import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
+import { publishToTenant } from "../lib/sse-bus.js";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Yangi",
@@ -121,6 +122,12 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       order: { id: order.id, code: order.code, total: Number(order.total), currency: order.currency, status: order.status },
     }).catch((err) => app.log.warn({ err, orderId: order.id }, "webhook fire failed"));
 
+    // SSE real-time push admin paneliga
+    publishToTenant(req.session.tenantId, {
+      type: "order.created", orderId: order.id, code: order.code,
+      total: Number(order.total), currency: order.currency,
+    });
+
     return order;
   });
 
@@ -184,6 +191,10 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       fireWebhookEvent(app.prisma, tenantId, "order.status_changed", {
         order: { id, code: order.code, status: data.status, previousStatus: order.status },
       }).catch((err) => app.log.warn({ err, orderId: id }, "webhook fire failed"));
+
+      publishToTenant(tenantId, {
+        type: "order.status_changed", orderId: id, code: order.code, status: data.status,
+      });
     }
 
     // Audit — assignee o'zgarishi
