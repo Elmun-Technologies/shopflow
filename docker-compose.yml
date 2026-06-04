@@ -61,6 +61,10 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
+      # Eskiz SMS (ixtiyoriy)
+      ESKIZ_LOGIN: ${ESKIZ_LOGIN:-}
+      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
+      ESKIZ_FROM: ${ESKIZ_FROM:-4546}
     volumes:
       - uploads_data:/app/uploads
     expose:
