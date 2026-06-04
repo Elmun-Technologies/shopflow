@@ -9,6 +9,7 @@ import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-au
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
+import { publishToTenant } from "../lib/sse-bus.js";
 import { buildClickPaymentUrl } from "../lib/click-client.js";
 import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
 import type { PrismaClient } from "@prisma/client";
@@ -451,6 +452,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     fireWebhookEvent(app.prisma, tenant.id, "order.created", {
       order: { id: order.id, code: order.code, total, currency: tenant.currency, status: order.status, source: "storefront" },
     }).catch((err) => app.log.warn({ err, orderId: order.id }, "webhook fire failed"));
+
+    // SSE — admin paneliga real-time push
+    publishToTenant(tenant.id, {
+      type: "order.created", orderId: order.id, code: order.code,
+      total, currency: tenant.currency,
+    });
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
     if (customer.telegramUserId) {

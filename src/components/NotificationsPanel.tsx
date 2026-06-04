@@ -146,8 +146,27 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
       }
     };
     void fetchAll();
-    const id = setInterval(() => { void fetchAll(); }, POLL_INTERVAL_MS);
-    return () => { cancelled = true; clearInterval(id); };
+    // Real-time SSE — yangi event kelganda darhol fetchAll, polling sekinroq fallback
+    const token = localStorage.getItem("shopflow.token");
+    const apiBase = (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? "/api";
+    let es: EventSource | null = null;
+    if (token) {
+      try {
+        // EventSource Bearer header'ni qo'llamaydi — query param ishlatamiz
+        es = new EventSource(`${apiBase}/events/stream?token=${encodeURIComponent(token)}`);
+        es.addEventListener("order.created", () => void fetchAll());
+        es.addEventListener("order.status_changed", () => void fetchAll());
+        es.addEventListener("lead.created", () => void fetchAll());
+        es.onerror = () => { /* keep-alive yo'qolsa polling fallback uchun ulanish qaytadi */ };
+      } catch { /* SSE qo'llab-quvvatlanmasa polling'da qoladi */ }
+    }
+    // Fallback polling — SSE'siz brauzerlar/proxy uchun (60s — chastota kamaytirildi)
+    const id = setInterval(() => { void fetchAll(); }, POLL_INTERVAL_MS * 4);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      if (es) es.close();
+    };
   }, []);
 
   const unseenCount = useMemo(

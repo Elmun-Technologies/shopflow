@@ -441,7 +441,7 @@ export default function IzohlarPage() {
               <div className="flex items-start justify-between mb-4 gap-3">
                 <div className="flex gap-3 min-w-0">
                   {detail.productImage && (
-                    <img src={detail.productImage} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                    <img src={detail.productImage} alt={detail.productName} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
                   )}
                   <div className="min-w-0">
                     <h3 className="text-lg font-semibold text-forest-800 truncate">{detail.customerName}</h3>

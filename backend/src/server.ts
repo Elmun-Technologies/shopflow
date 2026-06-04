@@ -40,6 +40,8 @@ import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
 import { productAddonRoutes } from "./routes/product-addons.js";
 import { auditRoutes } from "./routes/audit.js";
 import { outboundWebhookRoutes } from "./routes/outbound-webhooks.js";
+import { eventsRoutes } from "./routes/events.js";
+import { tenantExportRoutes } from "./routes/tenant-export.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
@@ -85,9 +87,23 @@ const app = Fastify({
   },
 });
 
+// Env validation — production'da kritik o'zgaruvchilar tekshiriladi
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error("JWT_SECRET kerak (kamida 32 belgi).");
+  throw new Error("JWT_SECRET kerak (kamida 32 belgi). `openssl rand -hex 32` yarating.");
+}
+const isProd = process.env.NODE_ENV === "production";
+if (isProd) {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL production'da majburiy.");
+  if (!process.env.CORS_ORIGIN) app.log.warn("CORS_ORIGIN o'rnatilmagan — frontend so'rovlari rad etilishi mumkin.");
+  // SECRETS_ENCRYPTION_KEY ixtiyoriy — JWT_SECRET fallback. Lekin tavsiya
+  // qilamiz, ayniqsa JWT rotatsiyasi rejalashtirilgan bo'lsa.
+  if (!process.env.SECRETS_ENCRYPTION_KEY) {
+    app.log.warn("SECRETS_ENCRYPTION_KEY o'rnatilmagan — JWT_SECRET ishlatiladi. Bu kalit aylantirilsa, shifrlangan 3rd-party tokenlar ochilmasligi mumkin.");
+  }
+  if (process.env.JWT_SECRET === process.env.SECRETS_ENCRYPTION_KEY) {
+    app.log.warn("SECRETS_ENCRYPTION_KEY JWT_SECRET'ga teng — alohida qiymatlar tavsiya qilinadi.");
+  }
 }
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "/app/uploads";
@@ -155,9 +171,27 @@ app.setErrorHandler((err, req, reply) => {
   return reply.code(httpErr.statusCode ?? 500).send({ error: httpErr.message ?? "Server xatosi" });
 });
 
-app.get("/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
+// Chuqur health check — DB ping ham qilamiz (Caddy/Docker shu endpoint bilan
+// container'ni "healthy" deb tan oladi). DB yo'q bo'lsa 503 qaytaramiz.
+async function deepHealthCheck(): Promise<{ status: string; db: "ok" | "fail"; ts: string }> {
+  let db: "ok" | "fail" = "fail";
+  try {
+    await app.prisma.$queryRaw`SELECT 1`;
+    db = "ok";
+  } catch {
+    /* ignore */
+  }
+  return { status: db === "ok" ? "ok" : "degraded", db, ts: new Date().toISOString() };
+}
+app.get("/health", async (_req, reply) => {
+  const r = await deepHealthCheck();
+  return reply.code(r.db === "ok" ? 200 : 503).send(r);
+});
 // /api/health — Caddy /api/* ni backend'ga proxy qiladi, shu yo'l ham ishlashi uchun
-app.get("/api/health", async () => ({ status: "ok", ts: new Date().toISOString() }));
+app.get("/api/health", async (_req, reply) => {
+  const r = await deepHealthCheck();
+  return reply.code(r.db === "ok" ? 200 : 503).send(r);
+});
 
 await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(tenantRoutes, { prefix: "/api/tenant" });
@@ -181,6 +215,8 @@ await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
 await app.register(productAddonRoutes, { prefix: "/api/products" });
 await app.register(auditRoutes, { prefix: "/api/audit" });
 await app.register(outboundWebhookRoutes, { prefix: "/api/outbound-webhooks" });
+await app.register(eventsRoutes, { prefix: "/api/events" });
+await app.register(tenantExportRoutes, { prefix: "/api/tenant-export" });
 await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(chatRoutes, { prefix: "/api/chats" });
 await app.register(segmentRoutes, { prefix: "/api/segments" });

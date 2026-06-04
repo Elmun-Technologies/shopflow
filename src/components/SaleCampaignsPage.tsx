@@ -407,7 +407,7 @@ function CampaignEditor({
                         className="w-4 h-4 rounded bg-cream-100 border-cream-300 text-emerald-500"
                       />
                       {p.imageUrl ? (
-                        <img src={p.imageUrl} alt="" className="w-8 h-8 rounded-md object-cover" />
+                        <img src={p.imageUrl} alt={p.name} className="w-8 h-8 rounded-md object-cover" />
                       ) : (
                         <div className="w-8 h-8 rounded-md bg-cream-100 flex items-center justify-center">
                           <PackageIcon className="w-3.5 h-3.5 text-slate-400" />

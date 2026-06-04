@@ -200,7 +200,7 @@ export default function AbandonedCartsPage() {
                           className="flex items-center gap-1.5 bg-cream-100 rounded-md pr-2 max-w-[180px]"
                         >
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                            <img src={item.imageUrl} alt={item.name ?? ""} className="w-6 h-6 rounded object-cover flex-shrink-0" />
                           ) : (
                             <div className="w-6 h-6 rounded bg-cream-200 flex items-center justify-center flex-shrink-0">
                               <PackageIcon className="w-3 h-3 text-slate-500" />

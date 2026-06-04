@@ -104,6 +104,44 @@ services:
     networks:
       - shopflow-net
 
+  # Avtomatik kunlik DB backup. Postgres image'da pg_dump bor — engil shell loop
+  # cron o'rniga (cron docker'da murakkab). 24 soat kutadi, keyin dump, gzip,
+  # eski (>7 kun) backuplarni o'chiradi.
+  backup:
+    image: postgres:16-alpine
+    container_name: shopflow-backup
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shopflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopflow}
+      RETENTION_DAYS: "7"
+    volumes:
+      - backup_data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopflow-net
+    mem_limit: 256m
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "[backup] kunlik backup loop boshlandi"
+        while true; do
+          DATE=$$(date +%Y%m%d_%H%M%S)
+          FILE="/backups/shopflow_$$DATE.sql.gz"
+          echo "[backup] $$DATE: pg_dump boshlandi"
+          if pg_dump "$$DATABASE_URL" | gzip > "$$FILE"; then
+            echo "[backup] $$DATE: yakunlandi → $$FILE"
+          else
+            echo "[backup] $$DATE: XATO" >&2
+            rm -f "$$FILE"
+          fi
+          # Eski backuplarni o'chirish
+          find /backups -type f -name 'shopflow_*.sql.gz' -mtime +$$RETENTION_DAYS -delete 2>/dev/null || true
+          sleep 86400
+        done
+
 networks:
   shopflow-net:
     driver: bridge
@@ -113,3 +151,4 @@ volumes:
   caddy_config:
   postgres_data:
   uploads_data:
+  backup_data:

@@ -190,7 +190,7 @@ function PopupCard({
     <div className="bg-white border border-cream-300 rounded-2xl p-4 hover:border-cream-300 transition-colors">
       <div className="flex items-start gap-3 mb-3">
         {popup.imageUrl ? (
-          <img src={popup.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+          <img src={popup.imageUrl} alt={popup.title ?? ""} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
         ) : (
           <div className="w-14 h-14 rounded-xl bg-cream-100 flex items-center justify-center flex-shrink-0">
             <ImageIcon className="w-5 h-5 text-slate-400" />
