@@ -1009,7 +1009,7 @@ function ProductFormModal({
                 {comboAddons.map((addon, i) => (
                   <div key={addon.addonProductId} className="flex items-center gap-2 bg-cream-100/50 border border-cream-300 rounded-lg p-2">
                     {addon.productImage ? (
-                      <img src={addon.productImage} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                      <img src={addon.productImage} alt={addon.productName ?? ""} className="w-10 h-10 rounded object-cover flex-shrink-0" />
                     ) : (
                       <div className="w-10 h-10 rounded bg-cream-100 flex items-center justify-center flex-shrink-0">
                         <Package className="w-4 h-4 text-slate-400" />
@@ -1129,7 +1129,7 @@ function ProductFormModal({
                       className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-cream-100/60 text-left"
                     >
                       {p.imageUrl ? (
-                        <img src={p.imageUrl} alt="" className="w-9 h-9 rounded object-cover" />
+                        <img src={p.imageUrl} alt={p.name} className="w-9 h-9 rounded object-cover" />
                       ) : (
                         <div className="w-9 h-9 rounded bg-cream-100 flex items-center justify-center">
                           <Package className="w-4 h-4 text-slate-400" />

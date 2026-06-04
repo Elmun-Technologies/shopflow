@@ -502,7 +502,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                       {item.product.imageUrl ? (
-                        <img src={item.product.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                        <img src={item.product.imageUrl} alt={item.product.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                       ) : (
                         <div className="w-12 h-12 rounded-lg bg-cream-100 flex items-center justify-center flex-shrink-0">
                           <PackageIcon className="w-5 h-5 text-slate-400" />
