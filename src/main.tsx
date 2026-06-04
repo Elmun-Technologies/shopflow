@@ -25,6 +25,14 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
+// PWA Service Worker — faqat production'da ro'yxatdan o'tkazamiz
+// (dev'da Vite HMR bilan to'qnashmaslik uchun)
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => null);
+  });
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />

@@ -1,0 +1,25 @@
+{
+  "name": "ShopFlow — E-commerce Dashboard",
+  "short_name": "ShopFlow",
+  "description": "Buyurtmalar, mijozlar, mahsulotlar va marketing boshqaruvi",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FAFAF5",
+  "theme_color": "#5FA340",
+  "lang": "uz",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
