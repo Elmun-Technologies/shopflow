@@ -216,7 +216,14 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!conv) return reply.code(404).send({ error: "Not found" });
-    const updated = await app.prisma.conversation.update({ where: { id }, data });
+    const affected = await app.prisma.conversation.updateMany({
+      where: { id, tenantId: req.session.tenantId },
+      data,
+    });
+    if (affected.count === 0) return reply.code(404).send({ error: "Not found" });
+    const updated = await app.prisma.conversation.findFirstOrThrow({
+      where: { id, tenantId: req.session.tenantId },
+    });
 
     const actor = await app.prisma.user.findUnique({
       where: { id: req.session.userId },

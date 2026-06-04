@@ -64,8 +64,14 @@ export const uploadRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const ext = EXT_MAP[detectedMime] ?? ".jpg";
+    // Defense-in-depth: tenant subdirektoriya. Path traversal'dan himoya uchun
+    // tenantId'ni filtrlaymiz (CUID — faqat alfanumerik, lekin xavfsizroq bo'lsin).
+    const tenantSeg = String(req.session.tenantId).replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!tenantSeg) return reply.code(403).send({ error: "Tenant kontekst yo'q" });
+    const tenantDir = path.join(UPLOADS_DIR, tenantSeg);
+    await mkdir(tenantDir, { recursive: true });
     const filename = `${crypto.randomUUID()}${ext}`;
-    const filepath = path.join(UPLOADS_DIR, filename);
+    const filepath = path.join(tenantDir, filename);
 
     // Header qismi + qolgan stream ni birlashtirish
     const headStream = Readable.from(header);
@@ -87,6 +93,6 @@ export const uploadRoutes: FastifyPluginAsync = async (app) => {
       throw err;
     }
 
-    return { url: `/uploads/${filename}` };
+    return { url: `/uploads/${tenantSeg}/${filename}` };
   });
 };

@@ -68,7 +68,14 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Zona topilmadi" });
-    return app.prisma.deliveryZone.update({ where: { id: req.params.id }, data });
+    const affected = await app.prisma.deliveryZone.updateMany({
+      where: { id: req.params.id, tenantId: req.session.tenantId },
+      data,
+    });
+    if (affected.count === 0) return reply.code(404).send({ error: "Zona topilmadi" });
+    return app.prisma.deliveryZone.findFirstOrThrow({
+      where: { id: req.params.id, tenantId: req.session.tenantId },
+    });
   });
 
   app.delete<{ Params: { id: string } }>("/zones/:id", {
