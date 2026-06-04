@@ -123,7 +123,7 @@ export const promoCodeRoutes: FastifyPluginAsync = async (app) => {
         where: { id: req.params.id, tenantId: req.session.tenantId },
       });
       if (!existing) return reply.code(404).send({ error: "Topilmadi" });
-      await app.prisma.promoCode.delete({ where: { id: req.params.id } });
+      await app.prisma.promoCode.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
       return { ok: true };
     });
 

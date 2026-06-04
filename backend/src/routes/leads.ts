@@ -158,9 +158,13 @@ export const leadRoutes: FastifyPluginAsync = async (app) => {
     if (!lead) return reply.code(404).send({ error: "Not found" });
 
     return app.prisma.$transaction(async (tx) => {
-      const updated = await tx.lead.update({
-        where: { id },
+      const affected = await tx.lead.updateMany({
+        where: { id, tenantId: req.session.tenantId },
         data: { ...data, email: data.email || undefined },
+      });
+      if (affected.count === 0) return reply.code(404).send({ error: "Not found" });
+      const updated = await tx.lead.findFirstOrThrow({
+        where: { id, tenantId: req.session.tenantId },
       });
       if (data.status && data.status !== lead.status) {
         await tx.interaction.create({
@@ -184,7 +188,7 @@ export const leadRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!lead) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.lead.delete({ where: { id } });
+    await app.prisma.lead.deleteMany({ where: { id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 

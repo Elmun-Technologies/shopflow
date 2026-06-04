@@ -107,9 +107,14 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!c) return reply.code(404).send({ error: "Not found" });
-    const updated = await app.prisma.customer.update({
-      where: { id },
+    // Defense-in-depth: update where ham tenantId bilan filter
+    const affected = await app.prisma.customer.updateMany({
+      where: { id, tenantId: req.session.tenantId },
       data: { ...data, email: data.email || undefined },
+    });
+    if (affected.count === 0) return reply.code(404).send({ error: "Not found" });
+    const updated = await app.prisma.customer.findFirstOrThrow({
+      where: { id, tenantId: req.session.tenantId },
     });
     pushCustomerToSD(app.prisma, req.session.tenantId, id)
       .catch((err) => app.log.warn({ err, customerId: id }, "SD push failed"));
@@ -122,7 +127,7 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!c) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.customer.delete({ where: { id } });
+    await app.prisma.customer.deleteMany({ where: { id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 

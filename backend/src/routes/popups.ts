@@ -61,13 +61,16 @@ export const popupRoutes: FastifyPluginAsync = async (app) => {
         where: { id: req.params.id, tenantId: req.session.tenantId },
       });
       if (!existing) return reply.code(404).send({ error: "Popup topilmadi" });
-      return app.prisma.popup.update({
-        where: { id: req.params.id },
+      await app.prisma.popup.updateMany({
+        where: { id: req.params.id, tenantId: req.session.tenantId },
         data: {
           ...data,
           startsAt: data.startsAt === undefined ? undefined : data.startsAt ? new Date(data.startsAt) : null,
           endsAt: data.endsAt === undefined ? undefined : data.endsAt ? new Date(data.endsAt) : null,
         },
+      });
+      return app.prisma.popup.findFirstOrThrow({
+        where: { id: req.params.id, tenantId: req.session.tenantId },
       });
     },
   );
@@ -81,7 +84,7 @@ export const popupRoutes: FastifyPluginAsync = async (app) => {
         where: { id: req.params.id, tenantId: req.session.tenantId },
       });
       if (!existing) return reply.code(404).send({ error: "Popup topilmadi" });
-      await app.prisma.popup.delete({ where: { id: req.params.id } });
+      await app.prisma.popup.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
       return reply.code(204).send();
     },
   );

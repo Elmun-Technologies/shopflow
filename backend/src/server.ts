@@ -83,7 +83,16 @@ await app.register(cors, {
   credentials: true,
 });
 
-await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+// Per-tenant rate limit: token bor bo'lsa session.tenantId, yo'q bo'lsa IP'ga
+// fallback. Shu tariqa bir tenant'ning ko'p so'rovi boshqalarni cheklamaydi.
+await app.register(rateLimit, {
+  max: 300,
+  timeWindow: "1 minute",
+  keyGenerator: (req) => {
+    const tenantId = (req as { session?: { tenantId?: string } }).session?.tenantId;
+    return tenantId ? `t:${tenantId}` : `ip:${req.ip}`;
+  },
+});
 await app.register(jwt, { secret: JWT_SECRET });
 await app.register(prismaPlugin);
 await app.register(authPlugin);

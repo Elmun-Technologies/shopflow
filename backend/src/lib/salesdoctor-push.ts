@@ -127,9 +127,12 @@ export async function ensureCustomerInSD(
   client: SalesDoctorClient,
   prisma: PrismaClient,
   customerId: string,
+  tenantId: string,
 ): Promise<string | null> {
-  const customer = await prisma.customer.findUnique({
-    where: { id: customerId },
+  // Defense-in-depth: tenantId bilan birga qidiramiz — caller'lar har doim
+  // tenant-validatsiya qilingan id beradi, lekin bu qatlam yana himoya beradi
+  const customer = await prisma.customer.findFirst({
+    where: { id: customerId, tenantId },
     select: { id: true, name: true, phone: true, location: true, salesDoctorId: true, tenantId: true },
   });
   if (!customer) return null;
@@ -171,9 +174,10 @@ export async function ensureProductInSD(
   client: SalesDoctorClient,
   prisma: PrismaClient,
   productId: string,
+  tenantId: string,
 ): Promise<string | null> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
+  const product = await prisma.product.findFirst({
+    where: { id: productId, tenantId },
     select: { id: true, name: true, sku: true, salesDoctorId: true },
   });
   if (!product) return null;
@@ -249,12 +253,12 @@ export async function pushOrderToSalesDoctor(
     const client = await getClient(prisma, account);
 
     // 1. Customer ensure
-    await ensureCustomerInSD(client, prisma, order.customer.id);
+    await ensureCustomerInSD(client, prisma, order.customer.id, tenantId);
 
     // 2. Har bir product ensure
     for (const item of order.items) {
       if (item.product) {
-        await ensureProductInSD(client, prisma, item.product.id);
+        await ensureProductInSD(client, prisma, item.product.id, tenantId);
       }
     }
 
@@ -435,10 +439,10 @@ export async function pushOrderRefund(
     const client = await getClient(prisma, account);
 
     // Mijoz va mahsulotlar SD'da mavjudligini ta'minlaymiz (odatda allaqachon bor)
-    await ensureCustomerInSD(client, prisma, order.customer.id);
+    await ensureCustomerInSD(client, prisma, order.customer.id, tenantId);
     for (const item of order.items) {
       if (item.product) {
-        await ensureProductInSD(client, prisma, item.product.id);
+        await ensureProductInSD(client, prisma, item.product.id, tenantId);
       }
     }
 
@@ -558,7 +562,7 @@ export async function pushCustomerToSD(
     const account = await getAccount(prisma, tenantId);
     if (!account) return;
     const client = await getClient(prisma, account);
-    await ensureCustomerInSD(client, prisma, customerId);
+    await ensureCustomerInSD(client, prisma, customerId, tenantId);
   } catch (err) {
     await queueRetry(
       prisma,

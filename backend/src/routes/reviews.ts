@@ -102,8 +102,8 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!review) return reply.code(404).send({ error: "Not found" });
 
-      const updated = await app.prisma.review.update({
-        where: { id },
+      await app.prisma.review.updateMany({
+        where: { id, tenantId: req.session.tenantId },
         data: {
           ...(data.status !== undefined && { status: data.status }),
           ...(data.rejectReason !== undefined && { rejectReason: data.rejectReason || null }),
@@ -112,6 +112,9 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
             moderatedAt: new Date(),
           }),
         },
+      });
+      const updated = await app.prisma.review.findFirstOrThrow({
+        where: { id, tenantId: req.session.tenantId },
       });
 
       const actor = await app.prisma.user.findUnique({
@@ -143,7 +146,7 @@ export const reviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id, tenantId: req.session.tenantId },
       });
       if (!review) return reply.code(404).send({ error: "Not found" });
-      await app.prisma.review.delete({ where: { id } });
+      await app.prisma.review.deleteMany({ where: { id, tenantId: req.session.tenantId } });
       const actor = await app.prisma.user.findUnique({
         where: { id: req.session.userId },
         select: { name: true },

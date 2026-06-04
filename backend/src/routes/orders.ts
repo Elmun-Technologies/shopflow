@@ -131,7 +131,15 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!order) return reply.code(404).send({ error: "Not found" });
-    const updated = await app.prisma.order.update({ where: { id }, data });
+    // Defense-in-depth: update where ham tenantId bilan filter qilamiz (TOCTOU oldini olish)
+    const affected = await app.prisma.order.updateMany({
+      where: { id, tenantId: req.session.tenantId },
+      data,
+    });
+    if (affected.count === 0) return reply.code(404).send({ error: "Not found" });
+    const updated = await app.prisma.order.findFirstOrThrow({
+      where: { id, tenantId: req.session.tenantId },
+    });
 
     const tenantId = req.session.tenantId;
     const actorId = req.session.userId;
@@ -249,7 +257,10 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       where: { id: params.noteId, orderId: params.id, tenantId: req.session.tenantId },
     });
     if (!note) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.orderNote.delete({ where: { id: params.noteId } });
+    // Defense-in-depth: tenantId bilan filter
+    await app.prisma.orderNote.deleteMany({
+      where: { id: params.noteId, tenantId: req.session.tenantId },
+    });
     return { ok: true };
   });
 

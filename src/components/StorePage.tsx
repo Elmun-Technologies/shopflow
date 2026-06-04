@@ -337,14 +337,33 @@ async function fetchStorefront(slug: string): Promise<StorefrontData> {
   return res.json();
 }
 
+interface PublicPaymentMethod {
+  code: string;
+  name: string;
+  minAmount?: string | number | null;
+  maxAmount?: string | number | null;
+}
+
+async function fetchPaymentMethods(slug: string): Promise<PublicPaymentMethod[]> {
+  try {
+    const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}/payment-methods`);
+    if (!res.ok) return [];
+    const data = await res.json() as { methods?: PublicPaymentMethod[] };
+    return data.methods ?? [];
+  } catch {
+    return [];
+  }
+}
+
 async function submitCheckout(
   slug: string,
   payload: {
     customer: CheckoutForm;
     items: { productId: string; qty: number }[];
     telegram?: { userId?: number; username?: string; firstName?: string; lastName?: string };
+    paymentMethod?: string;
   }
-): Promise<{ id: string; code: string; total: number; currency: string }> {
+): Promise<{ id: string; code: string; total: number; currency: string; paymentUrl?: string | null; paymentMethodLabel?: string | null }> {
   const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -411,7 +430,9 @@ function StoreInner({ slug }: { slug: string }) {
   const [gpsBusy, setGpsBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string } | null>(null);
+  const [orderResult, setOrderResult] = useState<{ code: string; total: number; currency: string; paymentUrl?: string | null; paymentMethodLabel?: string | null } | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<string>(""); // "" = naqd / yetkazib berishda
   const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites(slug));
   const [savedAddresses] = useState<StoredAddress[]>(() => loadStoredAddresses(slug));
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
@@ -537,6 +558,8 @@ function StoreInner({ slug }: { slug: string }) {
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+    // To'lov usullarini ham yuklaymiz — checkout'da ko'rsatish uchun
+    fetchPaymentMethods(slug).then(setPaymentMethods);
   }, [slug]);
 
   // Savatni localStorage'ga saqlash (mijoz Mini App'ni yopib qaytsa ham qoladi)
@@ -689,18 +712,24 @@ function StoreInner({ slug }: { slug: string }) {
           firstName: tgUser.first_name,
           lastName: tgUser.last_name,
         } : undefined,
+        paymentMethod: selectedPayment || undefined,
       });
       setOrderResult(result);
       setCart([]);
       setView("success");
       twa?.HapticFeedback?.notificationOccurred("success");
+      // Online to'lov tanlangan bo'lsa — provayder sahifasiga yo'naltiramiz
+      if (result.paymentUrl) {
+        if (twa?.openLink) twa.openLink(result.paymentUrl, { try_instant_view: false });
+        else window.open(result.paymentUrl, "_blank");
+      }
     } catch (e: unknown) {
       setSubmitError(e instanceof Error ? e.message : t("common.error"));
       twa?.HapticFeedback?.notificationOccurred("error");
     } finally {
       setSubmitting(false);
     }
-  }, [data, form, cart, slug, twa]);
+  }, [data, form, cart, slug, twa, selectedPayment]);
 
   const filteredProducts = useMemo(() => {
     if (!data) return [];
@@ -868,6 +897,16 @@ function StoreInner({ slug }: { slug: string }) {
 
             {/* Action tugmalari */}
             <div className="space-y-2">
+              {orderResult.paymentUrl && (
+                <a
+                  href={orderResult.paymentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600"
+                >
+                  {orderResult.paymentMethodLabel ? `${orderResult.paymentMethodLabel} bilan to'lash` : "To'lov sahifasiga o'tish"}
+                </a>
+              )}
               <button
                 onClick={() => {
                   setProfileInitialView("orders");
@@ -1063,6 +1102,39 @@ function StoreInner({ slug }: { slug: string }) {
               />
             </div>
           </div>
+
+          {paymentMethods.length > 0 && (
+            <div className="bg-slate-900 rounded-2xl p-4 space-y-2">
+              <h3 className="text-xs font-medium text-slate-400 mb-2">To'lov usuli</h3>
+              <button
+                type="button"
+                onClick={() => setSelectedPayment("")}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                  selectedPayment === ""
+                    ? "border-emerald-500/60 bg-emerald-500/10"
+                    : "border-slate-700 bg-slate-800/50"
+                }`}
+              >
+                <span className="text-sm font-medium text-white">Yetkazib berishda naqd</span>
+                {selectedPayment === "" && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+              </button>
+              {paymentMethods.map((m) => (
+                <button
+                  key={m.code}
+                  type="button"
+                  onClick={() => setSelectedPayment(m.code)}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                    selectedPayment === m.code
+                      ? "border-emerald-500/60 bg-emerald-500/10"
+                      : "border-slate-700 bg-slate-800/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium text-white">{m.name}</span>
+                  {selectedPayment === m.code && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                </button>
+              ))}
+            </div>
+          )}
 
           {submitError && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">

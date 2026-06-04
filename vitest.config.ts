@@ -19,6 +19,10 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // Faqat frontend testlari — backend'ning o'z vitest'i bor (@prisma/client
+    // import'lari frontend muhitida resolve bo'lmaydi)
+    include: ["src/**/*.test.{ts,tsx}"],
+    exclude: ["node_modules", "dist", "backend/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],

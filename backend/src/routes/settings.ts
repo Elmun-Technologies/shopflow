@@ -128,7 +128,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Topilmadi" });
-    await app.prisma.apiKey.delete({ where: { id: req.params.id } });
+    await app.prisma.apiKey.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 
@@ -245,7 +245,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: "OWNER rolini o'chirib bo'lmaydi" });
     }
 
-    await app.prisma.user.delete({ where: { id: req.params.userId } });
+    await app.prisma.user.deleteMany({ where: { id: req.params.userId, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 };

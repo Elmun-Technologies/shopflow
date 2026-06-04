@@ -8,6 +8,8 @@ import { notifyCustomer } from "../lib/telegram-notify.js";
 import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
+import { buildClickPaymentUrl } from "../lib/click-client.js";
+import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
 import type { PrismaClient } from "@prisma/client";
 
 // Promo kodni inline tekshirish (import tsikli oldini olish)
@@ -227,6 +229,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       .optional(),
     // Kanal — qaysi kanal orqali kelgan (Mini App link UTM'ida bo'lishi mumkin)
     channelSlug: z.string().optional(),
+    // To'lov usuli — buyurtma yaratilgandan keyin shu usul URL'i qaytariladi
+    // (masalan "click", "payme"). Bo'sh bo'lsa naqd to'lov hisoblanadi.
+    paymentMethod: z.string().max(40).optional(),
   });
 
   app.post("/:tenantSlug/checkout", async (req, reply) => {
@@ -431,6 +436,50 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         .catch((err) => app.log.warn({ err, orderId: order.id }, "Checkout TG notify failed"));
     }
 
+    // Agar mijoz to'lov usulini tanlagan bo'lsa, mos URL'ini yasaymiz
+    let paymentUrl: string | null = null;
+    let paymentMethodLabel: string | null = null;
+    if (data.paymentMethod) {
+      const method = await app.prisma.paymentMethod.findUnique({
+        where: { tenantId_code: { tenantId: tenant.id, code: data.paymentMethod } },
+        select: { id: true, name: true, status: true, config: true },
+      });
+      if (method && method.status === "ACTIVE") {
+        const cfg = (method.config ?? {}) as Record<string, string>;
+        const returnUrl = `https://${process.env.DOMAIN ?? "shop-flow.uz"}/store/${tenant.slug}`;
+        try {
+          if (data.paymentMethod === "click") {
+            const merchantId = cfg.merchantId ?? "";
+            const serviceId = cfg.serviceId ?? "";
+            if (merchantId && serviceId) {
+              paymentUrl = buildClickPaymentUrl({
+                merchantId, serviceId,
+                amount: total,
+                transactionParam: order.code,
+                returnUrl,
+              });
+              paymentMethodLabel = method.name;
+            }
+          } else if (data.paymentMethod === "payme") {
+            const paymeMerchantId = cfg.merchantId ?? "";
+            if (paymeMerchantId) {
+              paymentUrl = buildPaymeCheckoutUrl({
+                merchantId: paymeMerchantId,
+                orderRef: order.code,
+                amountSom: total,
+                accountField: cfg.accountField ?? "order_id",
+                callbackUrl: returnUrl,
+                language: "uz",
+              });
+              paymentMethodLabel = method.name;
+            }
+          }
+        } catch (err) {
+          app.log.warn({ err, methodCode: data.paymentMethod, orderId: order.id }, "payment url build failed");
+        }
+      }
+    }
+
     return reply.code(201).send({
       id: order.id,
       code: order.code,
@@ -438,7 +487,26 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       promoDiscount: promoDiscount > 0 ? promoDiscount : null,
       total,
       currency: tenant.currency,
+      paymentUrl,
+      paymentMethodLabel,
     });
+  });
+
+  // Public payment methods — Mini App checkout'da mijozga ko'rsatish uchun.
+  // Faqat ACTIVE usullarni qaytaradi, secret config'ni qaytarmaydi.
+  app.get("/:tenantSlug/payment-methods", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+    const methods = await app.prisma.paymentMethod.findMany({
+      where: { tenantId: tenant.id, status: "ACTIVE" },
+      orderBy: { position: "asc" },
+      select: { code: true, name: true, minAmount: true, maxAmount: true, position: true },
+    });
+    return { methods };
   });
 
   // Mijozning shu do'kondagi buyurtmalari — Telegram userId orqali aniqlanadi.

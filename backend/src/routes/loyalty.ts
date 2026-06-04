@@ -110,7 +110,14 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!existing) return reply.code(404).send({ error: "Topilmadi" });
 
-      return app.prisma.loyaltyRule.update({ where: { id: req.params.id }, data });
+      const affected = await app.prisma.loyaltyRule.updateMany({
+        where: { id: req.params.id, tenantId: req.session.tenantId },
+        data,
+      });
+      if (affected.count === 0) return reply.code(404).send({ error: "Topilmadi" });
+      return app.prisma.loyaltyRule.findFirstOrThrow({
+        where: { id: req.params.id, tenantId: req.session.tenantId },
+      });
     });
 
     // Tranzaksiyalar tarixi (barcha mijozlar)

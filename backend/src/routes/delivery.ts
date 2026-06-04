@@ -68,7 +68,14 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Zona topilmadi" });
-    return app.prisma.deliveryZone.update({ where: { id: req.params.id }, data });
+    const affected = await app.prisma.deliveryZone.updateMany({
+      where: { id: req.params.id, tenantId: req.session.tenantId },
+      data,
+    });
+    if (affected.count === 0) return reply.code(404).send({ error: "Zona topilmadi" });
+    return app.prisma.deliveryZone.findFirstOrThrow({
+      where: { id: req.params.id, tenantId: req.session.tenantId },
+    });
   });
 
   app.delete<{ Params: { id: string } }>("/zones/:id", {
@@ -78,7 +85,7 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Zona topilmadi" });
-    await app.prisma.deliveryZone.delete({ where: { id: req.params.id } });
+    await app.prisma.deliveryZone.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 
@@ -134,7 +141,7 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Usul topilmadi" });
-    await app.prisma.deliveryMethod.delete({ where: { id: req.params.id } });
+    await app.prisma.deliveryMethod.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 
