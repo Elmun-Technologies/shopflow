@@ -754,6 +754,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Manzillar kitobi — CRUD (telegramUserId orqali identifikatsiya)
   const addressSchema = z.object({
     tgUserId: z.coerce.number().int().positive(),
+    initData: z.string().optional(),
     label: z.string().min(1).max(40),
     city: z.string().max(80).optional().nullable(),
     street: z.string().min(1).max(200),
@@ -761,6 +762,23 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     notes: z.string().max(500).optional().nullable(),
     isDefault: z.boolean().optional(),
   });
+
+  // Helper: address endpoint'larida tgUserId forge bo'lmasligini ta'minlash uchun
+  // initData HMAC tekshiruvi (bot token bo'lsa). initData kelmasa, eski kabi
+  // qoldiramiz (backward compat) — lekin yangi mijoz Mini App'lari uni yuboradi.
+  async function verifyAddressOwner(
+    tenantId: string,
+    tgUserId: number,
+    initData: string | undefined,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    if (!initData) return { ok: true };
+    const botToken = await getBotTokenForTenant(app.prisma as never, tenantId);
+    if (!botToken) return { ok: true };
+    const check = verifyTelegramInitData(initData, botToken);
+    if (!check.valid) return { ok: false, error: "Telegram autentifikatsiya muvaffaqiyatsiz" };
+    if (check.userId && check.userId !== tgUserId) return { ok: false, error: "Telegram foydalanuvchi mos kelmadi" };
+    return { ok: true };
+  }
 
   app.post("/:tenantSlug/addresses", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
@@ -770,6 +788,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await verifyAddressOwner(tenant.id, data.tgUserId, data.initData);
+    if (!auth.ok) return reply.code(401).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
@@ -814,6 +835,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     const tgUserId = data.tgUserId;
     if (tgUserId == null) return reply.code(400).send({ error: "tgUserId kerak" });
 
+    const auth = await verifyAddressOwner(tenant.id, tgUserId, data.initData);
+    if (!auth.ok) return reply.code(401).send({ error: auth.error });
+
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
       select: { id: true },
@@ -849,13 +873,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete("/:tenantSlug/addresses/:id", async (req, reply) => {
     const params = z.object({ tenantSlug: z.string(), id: z.string() }).parse(req.params);
-    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+    const { tgUserId, initData } = z.object({
+      tgUserId: z.coerce.number().int().positive(),
+      initData: z.string().optional(),
+    }).parse(req.query);
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: params.tenantSlug },
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await verifyAddressOwner(tenant.id, tgUserId, initData);
+    if (!auth.ok) return reply.code(401).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },

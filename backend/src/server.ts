@@ -183,6 +183,21 @@ app.addHook("onClose", async () => {
   stopSalesDoctorWorker();
 });
 
+// Graceful shutdown — Docker SIGTERM, Ctrl+C SIGINT. onClose hook'ini ishga tushiradi
+// (workers/timers tozalanadi, mavjud so'rovlar yakunlanadi).
+const shutdown = async (signal: string) => {
+  app.log.info({ signal }, "shutdown signal qabul qilindi");
+  try {
+    await app.close();
+  } catch (err) {
+    app.log.error({ err }, "shutdown xatosi");
+  } finally {
+    process.exit(0);
+  }
+};
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
+
 try {
   await app.listen({ port, host });
   app.log.info(`ShopFlow backend ${host}:${port} da ishlamoqda`);

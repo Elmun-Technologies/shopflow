@@ -25,6 +25,8 @@ services:
       retries: 5
     networks:
       - shopflow-net
+    mem_limit: 1g
+    mem_reservation: 256m
 
   backend:
     build:
@@ -53,6 +55,11 @@ services:
         condition: service_healthy
     networks:
       - shopflow-net
+    # OOM himoyasi — bir tenant cheksiz ko'p so'rov bo'lsa ham host
+    # to'liq egallanmaydi. VPS RAM'ga qarab moslash mumkin.
+    mem_limit: 1g
+    mem_reservation: 256m
+    cpus: 1.5
 
   shopflow:
     build:

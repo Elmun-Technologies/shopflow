@@ -23,6 +23,8 @@ async function sendTelegramMessage(
   text: string,
   options?: Record<string, unknown>,
 ): Promise<TelegramSendResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
@@ -34,6 +36,7 @@ async function sendTelegramMessage(
         disable_web_page_preview: true,
         ...options,
       }),
+      signal: controller.signal,
     });
     const body = (await res.json().catch(() => ({}))) as {
       ok?: boolean;
@@ -49,6 +52,8 @@ async function sendTelegramMessage(
     const description = err instanceof Error ? err.message : String(err);
     console.warn("[tg-notify] network error", err);
     return { ok: false, description };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
