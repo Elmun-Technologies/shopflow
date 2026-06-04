@@ -196,12 +196,18 @@ shopflow/
 ## 🚀 Bajarilgan ishlar (chronological)
 
 ### Texnik infratuzilma
-- ✅ Multi-tenant Prisma schema + JWT auth + RBAC
-- ✅ Docker Compose: Postgres + Backend + Frontend + Caddy (HTTPS)
-- ✅ VPS bootstrap skripti
-- ✅ Sentry error tracking
-- ✅ JWT refresh tokens + API keys
-- ✅ initData security (Telegram WebApp)
+- ✅ Multi-tenant Prisma schema + JWT auth + RBAC + integration tests
+- ✅ Docker Compose: Postgres + Backend + Frontend + Caddy (HTTPS) + Backup
+- ✅ VPS bootstrap skripti + OPS.md / SECURITY.md
+- ✅ Sentry error tracking + Pino log redaction
+- ✅ JWT refresh tokens + API keys + AES-256-GCM secret encryption
+- ✅ initData security (Telegram WebApp + storefront mutation endpoints)
+- ✅ SSRF himoyasi (outbound webhooks)
+- ✅ Per-tenant rate limit, mem_limit, deep healthcheck (DB ping)
+- ✅ Real-time SSE (15s polling o'rniga)
+- ✅ PWA — installable + offline shell (Service Worker, manifest)
+- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention)
+- ✅ Graceful shutdown (SIGTERM → workers stop)
 - ✅ Multi-tenant webhook URLs
 
 ### Admin panel UI
@@ -243,6 +249,13 @@ shopflow/
 - ✅ **Onboarding wizard** — yangi tenant uchun 5 qadam
 - ✅ **Inventory restock** — kam qolgan mahsulotga tezkor stok
 - ✅ **RFM segments** — CustomersPage (champion/loyal/atRisk/lost/...)
+- ✅ **Click + Payme** full checkout (admin one-click setup, webhook URL ko'rsatish)
+- ✅ **To'lov persistence** — webhook → PaymentTransaction + order.paid
+- ✅ **Custom Outbound Webhooks** — HMAC, SSRF himoyasi, auto-disable
+- ✅ **GA4 + Yandex Metrika** — Vitrina brand'dan auto-inject
+- ✅ **Sales Overview gauge** — yarim doira growth chart
+- ✅ **Reports PDF** — AnalyticsPage'dan hisobot generatori
+- ✅ **Order/Customer/Lead create modallari** (admin tugmalari)
 
 ### Marketing
 - ✅ Sale campaigns (aksiyalar)
@@ -255,29 +268,16 @@ shopflow/
 
 ## 🛣 Kelajakda (TODO / ideas)
 
-### Yuqori prioritet
-- [ ] **Onboarding wizard** — yangi tenant uchun (welcome → store → product → integrations)
-- [ ] **Reports** — Daily/weekly/monthly PDF/Email
-- [ ] **Real-time SSE/WebSocket** — 15s polling o'rniga
-- [ ] **Team management** — Invite teammates, role assign
-- [ ] **Reviews moderation UI** — Approve/reject pending reviews
-- [ ] **Order timeline view** — Visual journey for one order
-- [ ] **Inventory management** — Stock alerts, restock orders
-
-### O'rta prioritet
-- [ ] **Customer segments** — RFM analysis (Recency/Frequency/Monetary)
-- [ ] **Bulk actions on Orders** (Products'da bor, Orders'da yo'q)
-- [ ] **API access logs** — Audit
-- [ ] **Backups/data export** — Tenant full export
-- [ ] **PWA + push notifications** (browser tab notif emas)
-- [ ] Polish: Sales Overview half-donut gauge ("85% Sales Growth")
-
-### Backend integratsiyalari (UI tayyor, real API kerak)
-- [ ] Click/Payme/Uzum real ulanish (webhooklar bor, setup UI bog'lanish)
-- [ ] Eskiz SMS real API
-- [ ] Yandex Go delivery integration
-- [ ] Google Analytics / Yandex Metrika auto-injection
-- [ ] Custom Webhook (POST order.created)
+### Qolgan
+- [ ] **Prisma migrations folder** — hozir `db push` (production risk, alohida coordinated migration)
+- [ ] **Push notifications** — Service Worker bor, VAPID setup qoldi
+- [ ] **Email reports** — PDF tayyor, SMTP credentials kerak
+- [ ] **Eskiz SMS real API** — tenant credential kerak
+- [ ] **Yandex Go delivery** — tashqi hisob kerak
+- [ ] **API access logs UI** — Settings → API tab'da audit ko'rsatish
+- [ ] **Tenant data export** — Settings'da "Yuklab olish" tugmasi (JSON/CSV)
+- [ ] **List virtualization** — agar 1000+ qator sekin scroll bo'lsa (hozir pagination 20)
+- [ ] **Bundle size optimization** — recharts vendor 395kb (lazy chunk yoki light chart lib)
 
 ---
 
