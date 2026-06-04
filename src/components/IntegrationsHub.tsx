@@ -4,6 +4,7 @@
 // tugmasi bilan — bosilganda setup modal ochiladi.
 
 import { useMemo, useState } from "react";
+import { api } from "../api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2, Plus, Settings as SettingsIcon, X, Search, Sparkles, ExternalLink,
@@ -285,9 +286,50 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
   const toast = useAppToast();
   const [apiKey, setApiKey] = useState("");
   const [secondField, setSecondField] = useState("");
+  const [thirdField, setThirdField] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Field count: ba'zi providerlar 2 ta key kerak (Click — Merchant ID + Service ID)
   const needsSecondField = ["click", "payme", "uzum-pay", "alif", "google-analytics", "yandex-metrika"].includes(item.id);
+  // Click qo'shimcha — secret key kerak (signature uchun)
+  const needsThirdField = item.id === "click";
+
+  // To'lov provayderlari (Click/Payme/Uzum) — to'g'ridan-to'g'ri PaymentMethod
+  // jadvaliga yoziladi va shu zahoti faollashadi
+  const isPaymentProvider = item.id === "click" || item.id === "payme" || item.id === "uzum-pay";
+
+  const handleSave = async () => {
+    if (!isPaymentProvider) {
+      toast.info(`${item.name} uchun maxsus kartochkadan foydalaning yoki keyinroq ulanadi`);
+      onClose();
+      return;
+    }
+    setSaving(true);
+    try {
+      // Kod xaritalash — IntegrationItem.id → PaymentMethod.code
+      const code = item.id === "uzum-pay" ? "uzum" : item.id;
+      // Mavjud usulni topish (PATCH) yoki yangi yaratish (POST)
+      const list = await api<Array<{ id: string; code: string }>>("/payments/methods");
+      const existing = list.find((m) => m.code === code);
+      const config =
+        item.id === "click"
+          ? { merchantId: apiKey, serviceId: secondField, secretKey: thirdField }
+          : item.id === "payme"
+          ? { merchantId: apiKey, secretKey: secondField }
+          : { secretKey: apiKey, merchantId: secondField };
+      if (existing) {
+        await api(`/payments/methods/${existing.id}`, { method: "PATCH", body: { config, status: "ACTIVE" } });
+      } else {
+        await api("/payments/methods", { method: "POST", body: { code, name: item.name, config, status: "ACTIVE" } });
+      }
+      toast.success(`${item.name} ulandi va Mini App checkout'da ko'rinadi`);
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Saqlash muvaffaqiyatsiz");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <motion.div
@@ -364,7 +406,7 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1.5">
                     {item.id === "click" ? "Service ID" :
-                     item.id === "payme" ? "Cashbox ID" :
+                     item.id === "payme" ? "Cashbox ID (Key)" :
                      item.id === "google-analytics" ? "Measurement ID" :
                      "Secret Key"}
                   </label>
@@ -373,6 +415,20 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
                     value={secondField}
                     onChange={(e) => setSecondField(e.target.value)}
                     placeholder="•••••••••••••••"
+                    className="w-full bg-white border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
+                  />
+                </div>
+              )}
+              {needsThirdField && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                    Secret Key
+                  </label>
+                  <input
+                    type="password"
+                    value={thirdField}
+                    onChange={(e) => setThirdField(e.target.value)}
+                    placeholder="Webhook imzosi uchun"
                     className="w-full bg-white border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
                   />
                 </div>
@@ -399,13 +455,8 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
               Bekor
             </button>
             <button
-              onClick={() => {
-                // Maxsus kartochkali integratsiyalar (Click/Payme/Uzum/MoySklad/Sales Doctor)
-                // real backend bilan ishlaydi. Bu yerda — katalogdagi umumiy provayderlar.
-                toast.info(`${item.name} uchun maxsus kartochkadan foydalaning yoki keyinroq ulanadi`);
-                onClose();
-              }}
-              disabled={!apiKey.trim() && item.status !== "connected"}
+              onClick={handleSave}
+              disabled={saving || (!apiKey.trim() && item.status !== "connected")}
               className="px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-semibold text-forest-800"
             >
               {item.status === "connected" ? "Yangilash" : "Ulash"}
