@@ -56,6 +56,28 @@ import { loyaltyRoutes } from "./routes/loyalty.js";
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL ?? "info",
+    // Sensitive maydonlarni log'ga tushmasligi uchun pino redact
+    redact: {
+      paths: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        "req.headers['x-auth']",
+        "req.headers['x-api-key']",
+        "req.body.password",
+        "req.body.currentPassword",
+        "req.body.newPassword",
+        "req.body.secret",
+        "req.body.secretKey",
+        "req.body.token",
+        "req.body.encryptedSecret",
+        "req.body.initData",
+        "*.password",
+        "*.secretKey",
+        "*.cashierKey",
+        "*.token",
+      ],
+      censor: "[REDACTED]",
+    },
     transport:
       process.env.NODE_ENV === "production"
         ? undefined
