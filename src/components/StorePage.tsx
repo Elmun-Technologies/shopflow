@@ -279,7 +279,41 @@ type StoreBrand = {
   phone?: string;
   email?: string;
   address?: string;
+  // Web analitika — admin Vitrina brand sozlamalarida kiritadi
+  gaId?: string; // Google Analytics 4 — "G-XXXXXXX"
+  yandexMetrikaId?: string; // Yandex Metrika — "12345678"
 };
+
+// Storefront'ga GA4 / Yandex Metrika trekerlarini bir marta inject qiladi.
+// Tenant brand.gaId / brand.yandexMetrikaId kiritgan bo'lsa ishlaydi.
+function injectAnalytics(brand: StoreBrand) {
+  if (typeof document === "undefined") return;
+  const gaId = brand.gaId?.trim();
+  const ymId = brand.yandexMetrikaId?.trim();
+
+  if (gaId && /^G-[A-Z0-9]+$/i.test(gaId) && !document.getElementById("sf-ga4")) {
+    const s = document.createElement("script");
+    s.id = "sf-ga4";
+    s.async = true;
+    s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}`;
+    document.head.appendChild(s);
+    const inline = document.createElement("script");
+    inline.id = "sf-ga4-init";
+    inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId.replace(/'/g, "")}');`;
+    document.head.appendChild(inline);
+  }
+
+  if (ymId && /^\d+$/.test(ymId) && !document.getElementById("sf-ym")) {
+    const inline = document.createElement("script");
+    inline.id = "sf-ym";
+    inline.textContent =
+      `(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();` +
+      `k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})` +
+      `(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");` +
+      `ym(${ymId},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true});`;
+    document.head.appendChild(inline);
+  }
+}
 
 type StorefrontData = {
   tenant: { id: string; name: string; slug: string; currency: string };
@@ -555,7 +589,11 @@ function StoreInner({ slug }: { slug: string }) {
 
   useEffect(() => {
     fetchStorefront(slug)
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        // GA4 / Yandex Metrika — tenant sozlagan bo'lsa inject qilamiz
+        injectAnalytics((d.brand ?? {}) as StoreBrand);
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
     // To'lov usullarini ham yuklaymiz — checkout'da ko'rsatish uchun
