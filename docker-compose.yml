@@ -56,10 +56,9 @@ services:
     networks:
       - shopflow-net
     # OOM himoyasi — bir tenant cheksiz ko'p so'rov bo'lsa ham host
-    # to'liq egallanmaydi. VPS RAM'ga qarab moslash mumkin.
+    # to'liq egallanmaydi. VPS RAM/CPU'ga qarab moslash mumkin.
     mem_limit: 1g
     mem_reservation: 256m
-    cpus: 1.5
 
   shopflow:
     build:
