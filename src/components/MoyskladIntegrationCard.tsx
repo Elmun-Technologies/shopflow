@@ -39,8 +39,8 @@ export function MoyskladIntegrationCard() {
     try {
       const s = await moyskladApi.status();
       setStatus(s);
-    } catch (err) {
-      console.error("MoySklad status:", err);
+    } catch {
+      // sokin — kartochka bo'sh status bilan qoladi
     } finally {
       setLoading(false);
     }
@@ -61,8 +61,8 @@ export function MoyskladIntegrationCard() {
           setSyncing(false);
           refreshStatus();
         }
-      } catch (err) {
-        console.error("Sync job poll:", err);
+      } catch {
+        // poll xatosi — sokin, keyingi interval'da qayta urinamiz
       }
     }, 2000);
     return () => clearInterval(t);

@@ -4,6 +4,8 @@
 
 import type { PrismaClient } from "@prisma/client";
 import { createHmac } from "node:crypto";
+import { isIP } from "node:net";
+import { lookup } from "node:dns/promises";
 import { decryptSecret } from "./secret-cipher.js";
 
 export type WebhookEventType =
@@ -13,6 +15,72 @@ export type WebhookEventType =
   | "lead.created";
 
 const TIMEOUT_MS = 8000;
+
+/**
+ * Private/internal IP yoki host blok-listidagi manzilmi tekshiradi (SSRF himoyasi).
+ * IPv4 + IPv6 private ranges, link-local, loopback va cloud metadata endpointi.
+ */
+function isPrivateIPv4(ip: string): boolean {
+  const p = ip.split(".").map(Number);
+  if (p.length !== 4 || p.some((x) => Number.isNaN(x))) return false;
+  // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 169.254.0.0/16,
+  // 0.0.0.0/8, 100.64.0.0/10 (CGNAT)
+  return (
+    p[0] === 10 ||
+    (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
+    (p[0] === 192 && p[1] === 168) ||
+    p[0] === 127 ||
+    (p[0] === 169 && p[1] === 254) ||
+    p[0] === 0 ||
+    (p[0] === 100 && p[1] >= 64 && p[1] <= 127)
+  );
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  const s = ip.toLowerCase();
+  return (
+    s === "::1" || // loopback
+    s.startsWith("fc") || s.startsWith("fd") || // ULA (fc00::/7)
+    s.startsWith("fe80:") || // link-local
+    s === "::" ||
+    s.startsWith("::ffff:") // IPv4-mapped — alohida tekshirilishi kerak
+  );
+}
+
+async function isUrlSafe(url: URL): Promise<boolean> {
+  // Faqat http(s)
+  if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+  const host = url.hostname.toLowerCase();
+  // Aniq blok-list (cloud metadata, loopback variantlari)
+  if (host === "localhost" || host === "metadata.google.internal") return false;
+  // Agar IP bo'lsa, to'g'ridan-to'g'ri tekshiramiz
+  const ipKind = isIP(host);
+  if (ipKind === 4) return !isPrivateIPv4(host);
+  if (ipKind === 6) {
+    if (host.startsWith("::ffff:")) {
+      const v4 = host.slice(7);
+      return isIP(v4) === 4 ? !isPrivateIPv4(v4) : false;
+    }
+    return !isPrivateIPv6(host);
+  }
+  // Hostname — DNS resolve qilamiz va barcha javoblar tashqi ekanini tekshiramiz
+  try {
+    const resolved = await lookup(host, { all: true });
+    return resolved.every((r) => {
+      if (r.family === 4) return !isPrivateIPv4(r.address);
+      if (r.family === 6) {
+        if (r.address.startsWith("::ffff:")) {
+          const v4 = r.address.slice(7);
+          return isIP(v4) === 4 ? !isPrivateIPv4(v4) : false;
+        }
+        return !isPrivateIPv6(r.address);
+      }
+      return false;
+    });
+  } catch {
+    return false; // DNS xato → xavfsizlik tomon
+  }
+}
 const MAX_FAILURES_BEFORE_DISABLE = 20;
 
 /**
@@ -68,6 +136,25 @@ async function deliverOne(
     } catch {
       /* kalit ochilmadi — imzosiz yuboramiz */
     }
+  }
+
+  // SSRF himoyasi — private/internal manzillarni rad qilamiz
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(hook.url);
+  } catch {
+    await prisma.outboundWebhook.update({
+      where: { id: hook.id },
+      data: { lastError: "Noto'g'ri URL formati", failureCount: { increment: 1 } },
+    }).catch(() => null);
+    return;
+  }
+  if (!(await isUrlSafe(parsedUrl))) {
+    await prisma.outboundWebhook.update({
+      where: { id: hook.id },
+      data: { active: false, lastError: "Ichki/private manzil rad etildi (SSRF himoyasi)", failureCount: { increment: 1 } },
+    }).catch(() => null);
+    return;
   }
 
   const controller = new AbortController();

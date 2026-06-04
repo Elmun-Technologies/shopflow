@@ -56,6 +56,28 @@ import { loyaltyRoutes } from "./routes/loyalty.js";
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL ?? "info",
+    // Sensitive maydonlarni log'ga tushmasligi uchun pino redact
+    redact: {
+      paths: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        "req.headers['x-auth']",
+        "req.headers['x-api-key']",
+        "req.body.password",
+        "req.body.currentPassword",
+        "req.body.newPassword",
+        "req.body.secret",
+        "req.body.secretKey",
+        "req.body.token",
+        "req.body.encryptedSecret",
+        "req.body.initData",
+        "*.password",
+        "*.secretKey",
+        "*.cashierKey",
+        "*.token",
+      ],
+      censor: "[REDACTED]",
+    },
     transport:
       process.env.NODE_ENV === "production"
         ? undefined
@@ -182,6 +204,21 @@ app.addHook("onClose", async () => {
   stopScheduler();
   stopSalesDoctorWorker();
 });
+
+// Graceful shutdown — Docker SIGTERM, Ctrl+C SIGINT. onClose hook'ini ishga tushiradi
+// (workers/timers tozalanadi, mavjud so'rovlar yakunlanadi).
+const shutdown = async (signal: string) => {
+  app.log.info({ signal }, "shutdown signal qabul qilindi");
+  try {
+    await app.close();
+  } catch (err) {
+    app.log.error({ err }, "shutdown xatosi");
+  } finally {
+    process.exit(0);
+  }
+};
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
 
 try {
   await app.listen({ port, host });

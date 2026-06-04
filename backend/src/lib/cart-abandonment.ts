@@ -47,6 +47,14 @@ function buildReminderText(args: {
 }
 
 async function processOnce(prisma: PrismaClient, log: (msg: string, ...rest: unknown[]) => void): Promise<void> {
+  // TTL cleanup — 30 kundan eski abandonedCart yozuvlarini o'chiramiz
+  // (jadval cheksiz o'smasin). Customer va order'ga bog'lanmagan.
+  const TTL_DAYS = 30;
+  const ttlCutoff = new Date(Date.now() - TTL_DAYS * 24 * 60 * 60 * 1000);
+  await prisma.abandonedCart.deleteMany({
+    where: { lastActiveAt: { lt: ttlCutoff } },
+  }).catch((err) => log("[cart-abandonment] TTL cleanup failed", err));
+
   const cutoff = new Date(Date.now() - ABANDONMENT_THRESHOLD_MS);
 
   const candidates = await prisma.abandonedCart.findMany({

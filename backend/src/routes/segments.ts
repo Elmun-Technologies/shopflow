@@ -408,15 +408,21 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
       }
       if (customerIds.length === 0) return { sent: 0, skipped: 0 };
 
-      // Telegram orqali tenant bot tokeni bilan yuborish — async, kutmaymiz
-      // Bu yerda oddiy implementation, kelajakda queue'ga o'tkazish kerak
+      // Telegram orqali tenant bot tokeni bilan yuborish — batch'lab (concurrency = 10)
+      // ketma-ket await emas; aks holda 1000 mijoz uchun so'rov hang bo'lardi.
       const { notifyCustomer } = await import("../lib/telegram-notify.js");
       let sent = 0;
       let skipped = 0;
-      for (const cid of customerIds) {
-        const result = await notifyCustomer(app.prisma, req.session.tenantId, cid, data.text);
-        if (result.sent) sent++;
-        else skipped++;
+      const BATCH = 10;
+      for (let i = 0; i < customerIds.length; i += BATCH) {
+        const slice = customerIds.slice(i, i + BATCH);
+        const results = await Promise.allSettled(
+          slice.map((cid) => notifyCustomer(app.prisma, req.session.tenantId, cid, data.text)),
+        );
+        for (const r of results) {
+          if (r.status === "fulfilled" && r.value.sent) sent++;
+          else skipped++;
+        }
       }
 
       const actor = await app.prisma.user.findUnique({

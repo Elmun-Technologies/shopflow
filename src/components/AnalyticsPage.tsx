@@ -16,6 +16,7 @@ import { dashboardApi } from "../api/endpoints";
 import type { DashboardPeriod } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { openReportPrint } from "../utils/printReport";
+import { useAppToast } from "./ui/Toast";
 import { useT } from "../i18n";
 
 // AnalyticsTimeRange → DashboardPeriod konvertatsiya
@@ -74,6 +75,7 @@ const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
 export default function AnalyticsPage() {
   const { t } = useT();
   const { tenant } = useAuth();
+  const toast = useAppToast();
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>("month");
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<KpiData | null>(null);
@@ -238,7 +240,7 @@ export default function AnalyticsPage() {
           <button
             onClick={() => {
               if (!kpis) return;
-              openReportPrint({
+              const ok = openReportPrint({
                 storeName: tenant?.name ?? "ShopFlow",
                 periodLabel: timeRangeLabels[timeRange],
                 generatedAt: new Date(),
@@ -254,6 +256,7 @@ export default function AnalyticsPage() {
                 categorySales: categorySales.map((c) => ({ name: c.name, value: c.value })),
                 trafficSources: trafficSources.map((s) => ({ name: s.name, percentage: s.percentage })),
               });
+              if (!ok) toast.error("Pop-up bloklangan. Brauzer sozlamalaridan ruxsat bering.");
             }}
             className="flex items-center gap-2 px-4 py-2 bg-forest-700 hover:bg-forest-800 rounded-lg text-sm font-medium text-white transition-all"
           >

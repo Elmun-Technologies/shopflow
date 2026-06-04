@@ -450,12 +450,15 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             app.log.warn({ methodCode, tenantId: method.tenantId, sign_string: b.sign_string, expected }, "[payments] Click sign mismatch");
             return reply.code(200).send({ error: -1, error_note: "SIGN CHECK FAILED" });
           }
-        } else if (!method.testMode && secretKey) {
-          app.log.warn({ methodCode }, "[payments] Click webhook — imzo tekshirilmadi");
+        } else if (!method.testMode) {
+          // Production'da imzo majburiy — yo'q bo'lsa rad etamiz
+          app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Click signature missing/key not set in non-test mode — rejected");
+          return reply.code(200).send({ error: -1, error_note: secretKey ? "SIGN REQUIRED" : "PROVIDER NOT CONFIGURED" });
         }
 
-        // Click action'ga qarab javob
-        const action = Number(b.action ?? -1);
+        // Click action — string yoki number bo'lishi mumkin; faqat "0" va "1" qabul qilinadi
+        const actionRaw = b.action;
+        const action = (actionRaw === 0 || actionRaw === "0") ? 0 : (actionRaw === 1 || actionRaw === "1") ? 1 : -1;
         if (action === 0) {
           // Prepare: buyurtma mavjudligini tekshirish
           return reply.code(200).send({
@@ -509,7 +512,19 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             });
           }
         } else if (!method.testMode && cashierKey) {
-          app.log.warn({ methodCode }, "[payments] Payme webhook — auth tekshirilmadi");
+          // Production'da imzo majburiy — Authorization yo'q bo'lsa rad etamiz
+          app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Payme auth missing in non-test mode — rejected");
+          return reply.code(200).send({
+            id: (body as { id?: unknown }).id,
+            error: { code: -32504, message: { en: "Authorization required" }, data: "auth" },
+          });
+        } else if (!method.testMode && !cashierKey) {
+          // Production'da kalit ham sozlanmagan — sozlash kerakligini xabar qilamiz
+          app.log.error({ methodCode, tenantId: method.tenantId }, "[payments] Payme cashierKey not configured");
+          return reply.code(200).send({
+            id: (body as { id?: unknown }).id,
+            error: { code: -32504, message: { en: "Payment provider not configured" } },
+          });
         }
 
         // JSON-RPC method dispatch
@@ -615,8 +630,10 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Uzum HMAC mismatch");
             return reply.code(401).send({ error: "Invalid signature" });
           }
-        } else if (!method.testMode && secretKey) {
-          app.log.warn({ methodCode }, "[payments] Uzum webhook — sign tekshirilmadi");
+        } else if (!method.testMode) {
+          // Production'da imzo majburiy
+          app.log.warn({ methodCode, tenantId: method.tenantId }, "[payments] Uzum signature missing/key not set in non-test mode — rejected");
+          return reply.code(401).send({ error: secretKey ? "SIGN REQUIRED" : "PROVIDER NOT CONFIGURED" });
         }
 
         // Uzum payload'idan buyurtma va status — defensiv o'qish (nom turlanishi mumkin)
