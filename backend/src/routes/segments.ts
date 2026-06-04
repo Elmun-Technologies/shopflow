@@ -243,8 +243,8 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!seg) return reply.code(404).send({ error: "Not found" });
-    const updated = await app.prisma.customerSegment.update({
-      where: { id },
+    await app.prisma.customerSegment.updateMany({
+      where: { id, tenantId: req.session.tenantId },
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
@@ -253,6 +253,9 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
         ...(data.conditions !== undefined && { conditions: data.conditions as never }),
         ...(data.tags !== undefined && { tags: data.tags }),
       },
+    });
+    const updated = await app.prisma.customerSegment.findFirstOrThrow({
+      where: { id, tenantId: req.session.tenantId },
     });
     // Conditions o'zgargan bo'lsa, count'ni qayta hisoblaymiz
     if (data.conditions !== undefined || data.type !== undefined) {
@@ -292,7 +295,7 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!seg) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.customerSegment.delete({ where: { id } });
+    await app.prisma.customerSegment.deleteMany({ where: { id, tenantId: req.session.tenantId } });
 
     const actor = await app.prisma.user.findUnique({
       where: { id: req.session.userId },

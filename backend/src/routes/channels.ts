@@ -102,14 +102,17 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!ch) return reply.code(404).send({ error: "Not found" });
-    const updated = await app.prisma.channel.update({
-      where: { id },
+    await app.prisma.channel.updateMany({
+      where: { id, tenantId: req.session.tenantId },
       data: {
         type: data.type,
         name: data.name,
         active: data.active,
         ...(data.config !== undefined && { config: mergeConfig(ch.config, data.config) }),
       },
+    });
+    const updated = await app.prisma.channel.findFirstOrThrow({
+      where: { id, tenantId: req.session.tenantId },
     });
     return { ...updated, config: maskConfig(updated.config) };
   });
@@ -120,7 +123,7 @@ export const channelRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!ch) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.channel.delete({ where: { id } });
+    await app.prisma.channel.deleteMany({ where: { id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 

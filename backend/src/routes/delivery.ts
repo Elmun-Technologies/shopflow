@@ -85,7 +85,7 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Zona topilmadi" });
-    await app.prisma.deliveryZone.delete({ where: { id: req.params.id } });
+    await app.prisma.deliveryZone.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 
@@ -141,7 +141,7 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Usul topilmadi" });
-    await app.prisma.deliveryMethod.delete({ where: { id: req.params.id } });
+    await app.prisma.deliveryMethod.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 

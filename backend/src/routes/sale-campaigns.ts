@@ -141,7 +141,7 @@ export const saleCampaignRoutes: FastifyPluginAsync = async (app) => {
         where: { id: req.params.id, tenantId: req.session.tenantId },
       });
       if (!existing) return reply.code(404).send({ error: "Aksiya topilmadi" });
-      await app.prisma.saleCampaign.delete({ where: { id: req.params.id } });
+      await app.prisma.saleCampaign.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
       return reply.code(204).send();
     },
   );

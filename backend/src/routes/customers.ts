@@ -127,7 +127,7 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!c) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.customer.delete({ where: { id } });
+    await app.prisma.customer.deleteMany({ where: { id, tenantId: req.session.tenantId } });
     return { ok: true };
   });
 

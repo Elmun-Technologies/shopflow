@@ -88,13 +88,16 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
-    const updated = await app.prisma.product.update({
-      where: { id },
+    await app.prisma.product.updateMany({
+      where: { id, tenantId: req.session.tenantId },
       data: {
         ...data,
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
         ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
       },
+    });
+    const updated = await app.prisma.product.findFirstOrThrow({
+      where: { id, tenantId: req.session.tenantId },
     });
     const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
     const changedKeys = (Object.keys(data) as Array<keyof typeof data>).filter((k) => data[k] !== undefined);
@@ -197,7 +200,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
-    await app.prisma.product.delete({ where: { id } });
+    await app.prisma.product.deleteMany({ where: { id, tenantId: req.session.tenantId } });
     const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
     await logAudit({
       prisma: app.prisma,
