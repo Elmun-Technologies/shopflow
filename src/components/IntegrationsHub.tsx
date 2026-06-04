@@ -288,6 +288,8 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
   const [secondField, setSecondField] = useState("");
   const [thirdField, setThirdField] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savedWebhookUrl, setSavedWebhookUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Field count: ba'zi providerlar 2 ta key kerak (Click — Merchant ID + Service ID)
   const needsSecondField = ["click", "payme", "uzum-pay", "alif", "google-analytics", "yandex-metrika"].includes(item.id);
@@ -309,7 +311,7 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
       // Kod xaritalash — IntegrationItem.id → PaymentMethod.code
       const code = item.id === "uzum-pay" ? "uzum" : item.id;
       // Mavjud usulni topish (PATCH) yoki yangi yaratish (POST)
-      const list = await api<Array<{ id: string; code: string }>>("/payments/methods");
+      const list = await api<Array<{ id: string; code: string; webhookUrl?: string }>>("/payments/methods");
       const existing = list.find((m) => m.code === code);
       const config =
         item.id === "click"
@@ -322,8 +324,16 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
       } else {
         await api("/payments/methods", { method: "POST", body: { code, name: item.name, config, status: "ACTIVE" } });
       }
-      toast.success(`${item.name} ulandi va Mini App checkout'da ko'rinadi`);
-      onClose();
+      // Webhook URL'ni qaytadan olamiz — provayder partner panel'ida shu URL kerak
+      const refreshed = await api<Array<{ code: string; webhookUrl?: string }>>("/payments/methods");
+      const me = refreshed.find((m) => m.code === code);
+      if (me?.webhookUrl) {
+        setSavedWebhookUrl(me.webhookUrl);
+        toast.success(`${item.name} ulandi — webhook URL'ni partner panel'ga ko'chiring`);
+      } else {
+        toast.success(`${item.name} ulandi va Mini App checkout'da ko'rinadi`);
+        onClose();
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Saqlash muvaffaqiyatsiz");
     } finally {
@@ -434,6 +444,34 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
                 </div>
               )}
             </>
+          )}
+
+          {savedWebhookUrl && (
+            <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+              <p className="text-xs font-medium text-amber-800 mb-1.5">
+                ⚠️ Bu URL'ni provayder partner panelida "Notify URL" / "Callback URL" maydoniga kiriting:
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-white border border-amber-300 rounded-md px-2.5 py-1.5 text-[11px] font-mono text-amber-900 truncate select-all">
+                  {savedWebhookUrl}
+                </code>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(savedWebhookUrl);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    } catch {
+                      toast.error("Ko'chirib bo'lmadi");
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-md bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-medium flex items-center gap-1"
+                >
+                  {copied ? "✓ Olindi" : "Ko'chirish"}
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
