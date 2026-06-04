@@ -38,6 +38,7 @@ model Tenant {
   syncJobs        SyncJob[]
   webhookEvents   WebhookEvent[]
   outboundWebhooks OutboundWebhook[]
+  pushSubscriptions PushSubscription[]
   popups          Popup[]
   saleCampaigns   SaleCampaign[]
   abandonedCarts  AbandonedCart[]
@@ -84,6 +85,7 @@ model User {
   conversationMessages  ConversationMessage[] @relation("ConversationMessageAuthor")
   moderatedReviews      Review[]              @relation("ReviewModerator")
   refreshTokens  RefreshToken[]
+  pushSubscriptions PushSubscription[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -949,6 +951,25 @@ model WebhookEvent {
 
   @@unique([tenantId, source, externalId])
   @@index([tenantId, processed])
+}
+
+// Push notifikatsiya obunalari — admin paneli yopiq bo'lsa ham yangi
+// buyurtma haqida brauzer/OS push xabar oladi (Service Worker + Web Push).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @db.Text
+  p256dh    String
+  authKey   String
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+
+  @@unique([userId, endpoint])
+  @@index([tenantId])
 }
 
 // ============== Outbound (chiquvchi) webhooklar ==============

@@ -10,6 +10,7 @@ import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
 import { publishToTenant } from "../lib/sse-bus.js";
+import { pushToTenantAdmins } from "../lib/web-push.js";
 import { buildClickPaymentUrl } from "../lib/click-client.js";
 import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
 import type { PrismaClient } from "@prisma/client";
@@ -458,6 +459,13 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       type: "order.created", orderId: order.id, code: order.code,
       total, currency: tenant.currency,
     });
+
+    // Web Push — admin tabi yopiq bo'lsa ham OS xabari
+    pushToTenantAdmins(app.prisma, tenant.id, {
+      title: "Mini App'dan yangi buyurtma",
+      body: `#${order.code} · ${total.toLocaleString("uz-UZ")} ${tenant.currency}`,
+      url: "/",
+    }).catch(() => null);
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
     if (customer.telegramUserId) {

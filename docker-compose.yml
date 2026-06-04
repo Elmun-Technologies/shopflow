@@ -46,6 +46,14 @@ services:
       UPLOADS_DIR: /app/uploads
       # AI yordamchi — ixtiyoriy. Sozlansa Telegram'da mijoz xabarlariga AI javob beradi
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Web Push (ixtiyoriy — kalit yo'q bo'lsa push silent skip)
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@shop-flow.uz}
+      # Sentry (ixtiyoriy)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      # Sezgir 3rd-party tokenlar shifrlash kaliti (alohida, JWT'dan farqli)
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
     volumes:
       - uploads_data:/app/uploads
     expose:
