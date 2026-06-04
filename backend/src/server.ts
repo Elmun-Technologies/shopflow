@@ -86,9 +86,23 @@ const app = Fastify({
   },
 });
 
+// Env validation — production'da kritik o'zgaruvchilar tekshiriladi
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error("JWT_SECRET kerak (kamida 32 belgi).");
+  throw new Error("JWT_SECRET kerak (kamida 32 belgi). `openssl rand -hex 32` yarating.");
+}
+const isProd = process.env.NODE_ENV === "production";
+if (isProd) {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL production'da majburiy.");
+  if (!process.env.CORS_ORIGIN) app.log.warn("CORS_ORIGIN o'rnatilmagan — frontend so'rovlari rad etilishi mumkin.");
+  // SECRETS_ENCRYPTION_KEY ixtiyoriy — JWT_SECRET fallback. Lekin tavsiya
+  // qilamiz, ayniqsa JWT rotatsiyasi rejalashtirilgan bo'lsa.
+  if (!process.env.SECRETS_ENCRYPTION_KEY) {
+    app.log.warn("SECRETS_ENCRYPTION_KEY o'rnatilmagan — JWT_SECRET ishlatiladi. Bu kalit aylantirilsa, shifrlangan 3rd-party tokenlar ochilmasligi mumkin.");
+  }
+  if (process.env.JWT_SECRET === process.env.SECRETS_ENCRYPTION_KEY) {
+    app.log.warn("SECRETS_ENCRYPTION_KEY JWT_SECRET'ga teng — alohida qiymatlar tavsiya qilinadi.");
+  }
 }
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "/app/uploads";
