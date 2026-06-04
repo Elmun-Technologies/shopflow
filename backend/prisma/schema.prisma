@@ -1346,6 +1346,10 @@ model TenantNotifSettings {
   emailNotificationsEnabled Boolean @default(false)
   emailRecipients         String[] @default([])
 
+  // Avtomatik email hisobotlar
+  reportFrequency    String?   // "daily" | "weekly" | "monthly" | null = off
+  lastReportSentAt   DateTime?
+
   updatedAt DateTime @updatedAt
 }
 
