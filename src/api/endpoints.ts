@@ -298,6 +298,33 @@ export interface SalesDoctorReference {
   name: string;
 }
 
+export interface OutboundWebhook {
+  id: string;
+  url: string;
+  events: string[];
+  description: string | null;
+  active: boolean;
+  hasSecret: boolean;
+  lastStatus: number | null;
+  lastFiredAt: string | null;
+  lastError: string | null;
+  failureCount: number;
+  createdAt: string;
+}
+
+export const webhooksApi = {
+  list: () =>
+    api<{ items: OutboundWebhook[]; availableEvents: string[] }>("/outbound-webhooks"),
+  create: (data: { url: string; events: string[]; secret?: string; description?: string }) =>
+    api<OutboundWebhook>("/outbound-webhooks", { method: "POST", body: data }),
+  update: (id: string, data: Partial<{ url: string; events: string[]; secret: string | null; description: string; active: boolean }>) =>
+    api<OutboundWebhook>(`/outbound-webhooks/${id}`, { method: "PATCH", body: data }),
+  remove: (id: string) =>
+    api<{ ok: true }>(`/outbound-webhooks/${id}`, { method: "DELETE" }),
+  test: (id: string) =>
+    api<{ ok: boolean; lastStatus: number | null; lastError: string | null }>(`/outbound-webhooks/${id}/test`, { method: "POST" }),
+};
+
 export const salesDoctorApi = {
   status: () => api<SalesDoctorStatus>("/salesdoctor/status"),
 

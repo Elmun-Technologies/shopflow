@@ -8,6 +8,7 @@ import { notifyCustomer } from "../lib/telegram-notify.js";
 import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
+import { fireWebhookEvent } from "../lib/outbound-webhook.js";
 import { buildClickPaymentUrl } from "../lib/click-client.js";
 import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
 import type { PrismaClient } from "@prisma/client";
@@ -421,6 +422,11 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     // Sales Doctor'ga buyurtmani push qilish (fonda)
     pushOrderToSalesDoctor(app.prisma, tenant.id, order.id)
       .catch((err) => app.log.warn({ err, orderId: order.id }, "SD push failed"));
+
+    // Outbound webhook — order.created (Mini App checkout'dan)
+    fireWebhookEvent(app.prisma, tenant.id, "order.created", {
+      order: { id: order.id, code: order.code, total, currency: tenant.currency, status: order.status, source: "storefront" },
+    }).catch((err) => app.log.warn({ err, orderId: order.id }, "webhook fire failed"));
 
     // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
     if (customer.telegramUserId) {

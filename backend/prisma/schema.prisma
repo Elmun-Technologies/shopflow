@@ -37,6 +37,7 @@ model Tenant {
   salesDoctorRetries SalesDoctorRetry[]
   syncJobs        SyncJob[]
   webhookEvents   WebhookEvent[]
+  outboundWebhooks OutboundWebhook[]
   popups          Popup[]
   saleCampaigns   SaleCampaign[]
   abandonedCarts  AbandonedCart[]
@@ -948,6 +949,32 @@ model WebhookEvent {
 
   @@unique([tenantId, source, externalId])
   @@index([tenantId, processed])
+}
+
+// ============== Outbound (chiquvchi) webhooklar ==============
+// Tenant istalgan tashqi tizimga event yuborishi mumkin: order.created,
+// order.status_changed, lead.created. Har biri HMAC-SHA256 imzo bilan.
+model OutboundWebhook {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  url         String
+  events      String[] // ["order.created", "order.status_changed", "lead.created"]
+  // HMAC imzo uchun maxfiy kalit (shifrlangan) — ixtiyoriy
+  encryptedSecret String?
+  description String?
+  active      Boolean  @default(true)
+
+  // Diagnostika
+  lastStatus   Int?
+  lastFiredAt  DateTime?
+  lastError    String?
+  failureCount Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, active])
 }
 
 // ============== Sale campaign / Aksiya ==============

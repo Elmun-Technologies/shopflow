@@ -4,6 +4,7 @@ import { nextOrderCode } from "../lib/codes.js";
 import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
 import { logAudit } from "../lib/audit.js";
 import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
+import { fireWebhookEvent } from "../lib/outbound-webhook.js";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Yangi",
@@ -115,6 +116,11 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     pushOrderToSalesDoctor(app.prisma, req.session.tenantId, order.id)
       .catch((err) => app.log.warn({ err, orderId: order.id }, "SD push failed"));
 
+    // Outbound webhook — order.created
+    fireWebhookEvent(app.prisma, req.session.tenantId, "order.created", {
+      order: { id: order.id, code: order.code, total: Number(order.total), currency: order.currency, status: order.status },
+    }).catch((err) => app.log.warn({ err, orderId: order.id }, "webhook fire failed"));
+
     return order;
   });
 
@@ -173,6 +179,11 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       // Sales Doctor'ga status sync
       pushOrderStatus(app.prisma, tenantId, id, data.status)
         .catch((err) => app.log.warn({ err, orderId: id }, "SD status push failed"));
+
+      // Outbound webhook — order.status_changed
+      fireWebhookEvent(app.prisma, tenantId, "order.status_changed", {
+        order: { id, code: order.code, status: data.status, previousStatus: order.status },
+      }).catch((err) => app.log.warn({ err, orderId: id }, "webhook fire failed"));
     }
 
     // Audit — assignee o'zgarishi
