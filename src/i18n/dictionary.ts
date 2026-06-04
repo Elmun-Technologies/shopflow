@@ -673,6 +673,10 @@ export const dictionary: Record<string, Entry> = {
   "settings.sec.loginSuccess": { uz: "Muvaffaqiyatli", ru: "Успешно" },
   "settings.sec.loginFailed": { uz: "Rad etildi", ru: "Отклонено" },
 
+  "settings.export.title": { uz: "Ma'lumotlar eksporti", ru: "Экспорт данных" },
+  "settings.export.desc": { uz: "Do'koningiz barcha ma'lumotlarini JSON faylda yuklab oling (mijozlar, mahsulotlar, buyurtmalar, lidlar).", ru: "Загрузите все данные магазина в JSON (клиенты, товары, заказы, лиды)." },
+  "settings.export.button": { uz: "JSON yuklab olish", ru: "Скачать JSON" },
+
   // API section
   "settings.api.title": { uz: "API kalitlari", ru: "API ключи" },
   "settings.api.hint": { uz: "Tashqi xizmatlar uchun API kalitlar", ru: "API-ключи для внешних сервисов" },

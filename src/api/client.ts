@@ -28,7 +28,7 @@ export function clearAuth(): void {
   setRefreshToken(null);
 }
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+export const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public data?: unknown) {

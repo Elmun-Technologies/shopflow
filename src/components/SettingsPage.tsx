@@ -18,7 +18,7 @@ import type {
 import { IntegrationsHub } from "./IntegrationsHub";
 import { BrowserNotifSection } from "./BrowserNotifSection";
 import { TeamSection } from "./TeamSection";
-import { api } from "../api/client";
+import { api, API_BASE } from "../api/client";
 import { useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useT } from "../i18n";
@@ -416,6 +416,19 @@ export default function SettingsPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Tenant data export — JSON yuklab olish */}
+      <div className="bg-white rounded-2xl border border-cream-300 p-5">
+        <h3 className="text-base font-semibold text-forest-800 mb-1">{t("settings.export.title")}</h3>
+        <p className="text-xs text-slate-500 mb-3">{t("settings.export.desc")}</p>
+        <a
+          href={`${API_BASE}/tenant-export?token=${encodeURIComponent(typeof window !== "undefined" ? localStorage.getItem("shopflow.token") ?? "" : "")}`}
+          download
+          className="inline-flex items-center gap-2 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
+        >
+          {t("settings.export.button")}
+        </a>
       </div>
     </div>
   );
