@@ -473,6 +473,10 @@ export const dictionary: Record<string, Entry> = {
   "productForm.create": { uz: "Yaratish", ru: "Создать" },
 
   // ─── Admin: Dashboard KPI cards ───────────────────────
+  "gauge.title": { uz: "Savdo o'sishi", ru: "Рост продаж" },
+  "gauge.growth": { uz: "o'sish", ru: "рост" },
+  "gauge.thisPeriod": { uz: "Shu davr daromadi", ru: "Выручка за период" },
+  "gauge.currency": { uz: "so'm", ru: "сум" },
   "kpi.revenue": { uz: "Daromad (oy)", ru: "Выручка (мес)" },
   "kpi.orders": { uz: "Buyurtmalar (oy)", ru: "Заказы (мес)" },
   "kpi.customers": { uz: "Mijozlar (jami)", ru: "Клиенты (всего)" },
