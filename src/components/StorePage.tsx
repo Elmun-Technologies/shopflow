@@ -16,6 +16,7 @@ import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
 import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
 import { formatUzPhone, isValidUzPhone } from "../utils/phone";
+import { normalizeSingleConfig, type SingleSectionKey } from "../data/uiBuilderData";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -282,6 +283,8 @@ type StoreBrand = {
   // Web analitika — admin Vitrina brand sozlamalarida kiritadi
   gaId?: string; // Google Analytics 4 — "G-XXXXXXX"
   yandexMetrikaId?: string; // Yandex Metrika — "12345678"
+  // Single-product landing konstruktori (storeMode === "single")
+  singleConfig?: unknown;
 };
 
 // Storefront'ga GA4 / Yandex Metrika trekerlarini bir marta inject qiladi.
@@ -313,6 +316,39 @@ function injectAnalytics(brand: StoreBrand) {
       `ym(${ymId},"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true});`;
     document.head.appendChild(inline);
   }
+}
+
+// Bugun yarim tunigacha qolgan millisekund.
+function msUntilMidnight(): number {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return Math.max(0, midnight.getTime() - now.getTime());
+}
+
+// Single-product landing aksiya taymeri — kun oxirigacha ortga hisob (FOMO).
+// Persistsiz: har kuni yarim tunda yangilanadi.
+function CountdownBanner({ label, color }: { label: string; color: string }) {
+  const [remaining, setRemaining] = useState(msUntilMidnight);
+  useEffect(() => {
+    const id = setInterval(() => setRemaining(msUntilMidnight()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const h = Math.floor(remaining / 3_600_000);
+  const m = Math.floor((remaining % 3_600_000) / 60_000);
+  const s = Math.floor((remaining % 60_000) / 1000);
+  return (
+    <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 border border-rose-500/30 bg-rose-500/10">
+      <div className="flex items-center gap-2 text-rose-300">
+        <Clock className="w-4 h-4 flex-shrink-0" />
+        <span className="text-sm font-medium">{label}</span>
+      </div>
+      <span className="text-lg font-bold font-mono tracking-wider text-white" style={{ color }}>
+        {pad(h)}:{pad(m)}:{pad(s)}
+      </span>
+    </div>
+  );
 }
 
 type StorefrontData = {
@@ -1355,6 +1391,272 @@ function StoreInner({ slug }: { slug: string }) {
       }
     };
 
+    // ---- Single-product landing konstruktor tartibi ----
+    // Admin Vitrina'da saqlangan bo'lim tartibi/holatiga qarab body bo'limlari
+    // chiziladi. Multi rejimda (oddiy PDP) tartib o'zgarmaydi.
+    const singleSectionList = isSingle ? normalizeSingleConfig(data.brand?.singleConfig).sections : [];
+    const singleEnabled = (k: SingleSectionKey) => singleSectionList.some((s) => s.key === k && s.enabled);
+
+    // Reyting chipi — sarlavha ostida (har ikki rejimda). Single'da "reviews"
+    // bo'limi o'chirilgan bo'lsa yashiriladi.
+    const ratingChipEl =
+      (selectedProduct.reviewCount ?? 0) > 0 && (!isSingle || singleEnabled("reviews")) ? (
+        <div className="flex items-center gap-1.5 mb-3">
+          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+          <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
+          <span className="text-xs text-slate-500">·</span>
+          <span className="text-xs text-slate-400">{t("pdp.totalReviews", { count: selectedProduct.reviewCount ?? 0 })}</span>
+        </div>
+      ) : null;
+
+    // Ishonch belgilari
+    const trustBadgesEl = (
+      <div className="flex gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => { haptic.light(); setTrustSheet("original"); }}
+          className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
+        >
+          <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+        </button>
+        <button
+          type="button"
+          onClick={() => { haptic.light(); setTrustSheet("warranty"); }}
+          className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
+        >
+          <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
+          <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+        </button>
+      </div>
+    );
+
+    // Tezkor ma'lumot (kategoriya, mavjudlik, bestseller)
+    const statsEl = (
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {selectedProduct.category && (
+          <span className="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-1 rounded-md">
+            {selectedProduct.category.name}
+          </span>
+        )}
+        {selectedProduct.stock > 0 ? (
+          <span className="text-[11px] text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded-md">
+            {t("pdp.available")}
+          </span>
+        ) : (
+          <span className="text-[11px] text-rose-300 bg-rose-500/10 px-2 py-1 rounded-md">
+            {t("pdp.outOfStock")}
+          </span>
+        )}
+        {selectedProduct.featured && (
+          <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md">{t("pdp.bestseller")}</span>
+        )}
+      </div>
+    );
+
+    // Social proof — haftalik xaridorlar
+    const weeklyBuyersEl = weeklyBuyers > 0 ? (
+      <div className="flex items-center gap-1.5 text-xs text-slate-300 mb-4">
+        <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
+        <span>{t("pdp.weeklyBuyers", { count: weeklyBuyers })}</span>
+      </div>
+    ) : null;
+
+    // Aksiya taymeri — faqat single rejim konstruktorida
+    const timerEl = <CountdownBanner label={t("single.timerLabel")} color={primaryColor} />;
+
+    // Tavsif
+    const descriptionEl = desc ? (
+      <div className="relative">
+        <p
+          className={`text-sm text-slate-300 leading-relaxed whitespace-pre-wrap ${
+            !descExpanded && descIsLong ? "line-clamp-4" : ""
+          }`}
+        >
+          {desc}
+        </p>
+        {descIsLong && (
+          <button
+            type="button"
+            onClick={() => { haptic.light(); setDescExpanded((v) => !v); }}
+            className="mt-2 text-sm font-medium text-sky-400 active:opacity-70"
+          >
+            {descExpanded ? t("pdp.readLess") : t("pdp.readMore")}
+          </button>
+        )}
+      </div>
+    ) : null;
+
+    // Yetkazib berish
+    const deliveryEl = (
+      <div className="mt-5 pt-5 border-t border-slate-800 flex items-start gap-3">
+        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
+          <Truck className="w-5 h-5 text-sky-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-white">{t("pdp.delivery", { date: deliveryStr })}</div>
+          <div className="text-xs text-slate-400 mt-0.5">{t("pdp.deliveryNote")}</div>
+        </div>
+      </div>
+    );
+
+    // Sharhlar (to'liq ro'yxat)
+    const reviewsEl = (
+      <div className="mt-5 pt-5 border-t border-slate-800">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
+            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+            {t("pdp.reviews")}
+            {(selectedProduct.reviewCount ?? 0) > 0 && (
+              <span className="text-slate-500">({selectedProduct.reviewCount})</span>
+            )}
+          </h3>
+          {telegramUser?.userId && (
+            <button
+              type="button"
+              onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
+              className="text-xs font-medium text-sky-400 hover:text-sky-300"
+            >
+              {t("pdp.writeReview")}
+            </button>
+          )}
+        </div>
+        {productReviews.length === 0 ? (
+          <p className="text-xs text-slate-500 italic">
+            {t("pdp.noReviews")} {telegramUser?.userId ? t("pdp.beFirst") : ""}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {productReviews.slice(0, 5).map((rv) => (
+              <div key={rv.id} className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-3.5 h-3.5 ${i < rv.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">{rv.customerName}</span>
+                  <span className="text-[10px] text-slate-600 ml-auto">
+                    {new Date(rv.createdAt).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" })}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">{rv.text}</p>
+              </div>
+            ))}
+            {productReviews.length > 5 && (
+              <p className="text-xs text-slate-500 text-center">Va yana {productReviews.length - 5} ta</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+
+    // Combo / qo'shimcha mahsulotlar
+    const comboEl = selectedProduct.comboAddons && selectedProduct.comboAddons.length > 0 ? (
+      <div className="mt-5 pt-5 border-t border-slate-800">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
+            {t("pdp.comboTitle")}
+          </h3>
+          <span className="text-[10px] text-slate-500">
+            {selectedAddons.size} / {selectedProduct.comboAddons.length}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {selectedProduct.comboAddons.map((addon) => {
+            const ap = addon.addonProduct;
+            if (!ap.active) return null;
+            const isSelected = selectedAddons.has(ap.id);
+            const origPrice = Number(ap.price);
+            const finalPrice = addon.discountPct > 0
+              ? Math.round(origPrice * (1 - addon.discountPct / 100))
+              : origPrice;
+            const isOut = ap.stock <= 0;
+            return (
+              <button
+                key={addon.id}
+                onClick={() => {
+                  if (isOut) return;
+                  haptic.light();
+                  setSelectedAddons((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(ap.id)) next.delete(ap.id);
+                    else next.add(ap.id);
+                    return next;
+                  });
+                }}
+                disabled={isOut}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left ${
+                  isSelected
+                    ? "bg-emerald-500/10 border-emerald-500/40"
+                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                } ${isOut ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {/* Checkbox */}
+                <div
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                    isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-600"
+                  }`}
+                >
+                  {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </div>
+                {/* Image */}
+                {ap.imageUrl ? (
+                  <img src={ap.imageUrl} alt={ap.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-5 h-5 text-slate-600" />
+                  </div>
+                )}
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-white font-medium line-clamp-2">{ap.name}</div>
+                  {isOut ? (
+                    <div className="text-[10px] text-rose-400 mt-0.5">Tugagan</div>
+                  ) : (
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <span className="text-sm font-bold text-white">
+                        {finalPrice.toLocaleString("uz-UZ")}
+                        <span className="text-[10px] font-normal text-slate-400 ml-0.5">
+                          {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                        </span>
+                      </span>
+                      {addon.discountPct > 0 && (
+                        <>
+                          <span className="text-[10px] text-slate-500 line-through">{origPrice.toLocaleString("uz-UZ")}</span>
+                          <span className="text-[10px] font-bold text-rose-300">−{addon.discountPct}%</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+    // Single rejim: kalit → bo'lim JSX
+    const singleSectionEl = (key: SingleSectionKey) => {
+      switch (key) {
+        case "trustBadges": return trustBadgesEl;
+        case "reviews": return reviewsEl;
+        case "weeklyBuyers": return weeklyBuyersEl;
+        case "stats": return statsEl;
+        case "timer": return timerEl;
+        case "description": return descriptionEl;
+        case "delivery": return deliveryEl;
+        case "combo": return comboEl;
+        default: return null;
+      }
+    };
+
     return (
       <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col animate-in fade-in duration-150">
         {/* Compact sticky header — scroll'da paydo bo'ladi (Uzum uslubi) */}
@@ -1476,239 +1778,31 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Trust badges — Uzum uslubidagi tappable rivojlangan kafolat belgilari */}
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => { haptic.light(); setTrustSheet("original"); }}
-                className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
-              >
-                <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
-              </button>
-              <button
-                type="button"
-                onClick={() => { haptic.light(); setTrustSheet("warranty"); }}
-                className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
-              >
-                <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
-                <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
-              </button>
-            </div>
+            {/* Ishonch belgilari — multi rejimda sarlavhadan tepada.
+                Single rejimda konstruktor tartibida (pastda) chiziladi. */}
+            {!isSingle && trustBadgesEl}
 
             {/* Title */}
             <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
 
-            {/* Rating chip — sharhlar bo'lsa Uzum/WB uslubida */}
-            {(selectedProduct.reviewCount ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5 mb-3">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
-                <span className="text-xs text-slate-500">·</span>
-                <span className="text-xs text-slate-400">{t("pdp.totalReviews", { count: selectedProduct.reviewCount ?? 0 })}</span>
-              </div>
-            )}
+            {/* Rating chip — sarlavha ostida (single rejimda "reviews" bo'limiga bog'liq) */}
+            {ratingChipEl}
 
-            {/* Quick stats */}
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              {selectedProduct.category && (
-                <span className="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-1 rounded-md">
-                  {selectedProduct.category.name}
-                </span>
-              )}
-              {selectedProduct.stock > 0 ? (
-                <span className="text-[11px] text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded-md">
-                  {t("pdp.available")}
-                </span>
-              ) : (
-                <span className="text-[11px] text-rose-300 bg-rose-500/10 px-2 py-1 rounded-md">
-                  {t("pdp.outOfStock")}
-                </span>
-              )}
-              {selectedProduct.featured && (
-                <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md">{t("pdp.bestseller")}</span>
-              )}
-            </div>
-
-            {/* Social proof — haftalik xaridorlar soni */}
-            {weeklyBuyers > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-300 mb-4">
-                <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{t("pdp.weeklyBuyers", { count: weeklyBuyers })}</span>
-              </div>
-            )}
-
-            {/* Description — Uzum uslubidagi expand/collapse */}
-            {desc && (
-              <div className="relative">
-                <p
-                  className={`text-sm text-slate-300 leading-relaxed whitespace-pre-wrap ${
-                    !descExpanded && descIsLong ? "line-clamp-4" : ""
-                  }`}
-                >
-                  {desc}
-                </p>
-                {descIsLong && (
-                  <button
-                    type="button"
-                    onClick={() => { haptic.light(); setDescExpanded((v) => !v); }}
-                    className="mt-2 text-sm font-medium text-sky-400 active:opacity-70"
-                  >
-                    {descExpanded ? t("pdp.readLess") : t("pdp.readMore")}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Yetkazib berish ma'lumotlari */}
-            <div className="mt-5 pt-5 border-t border-slate-800 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
-                <Truck className="w-5 h-5 text-sky-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white">{t("pdp.delivery", { date: deliveryStr })}</div>
-                <div className="text-xs text-slate-400 mt-0.5">{t("pdp.deliveryNote")}</div>
-              </div>
-            </div>
-
-            {/* Sharhlar — Uzum/WB uslubida ✓ purchase qilgan mijoz yozadi */}
-            <div className="mt-5 pt-5 border-t border-slate-800">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  {t("pdp.reviews")}
-                  {(selectedProduct.reviewCount ?? 0) > 0 && (
-                    <span className="text-slate-500">({selectedProduct.reviewCount})</span>
-                  )}
-                </h3>
-                {telegramUser?.userId && (
-                  <button
-                    type="button"
-                    onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
-                    className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                  >
-                    {t("pdp.writeReview")}
-                  </button>
-                )}
-              </div>
-              {productReviews.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">
-                  {t("pdp.noReviews")} {telegramUser?.userId ? t("pdp.beFirst") : ""}
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {productReviews.slice(0, 5).map((rv) => (
-                    <div key={rv.id} className="bg-slate-900 rounded-xl p-3 border border-slate-800">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="flex">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-3.5 h-3.5 ${i < rv.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs text-slate-400 font-medium">{rv.customerName}</span>
-                        <span className="text-[10px] text-slate-600 ml-auto">
-                          {new Date(rv.createdAt).toLocaleDateString("uz-UZ", { day: "numeric", month: "short" })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-300 whitespace-pre-wrap">{rv.text}</p>
-                    </div>
-                  ))}
-                  {productReviews.length > 5 && (
-                    <p className="text-xs text-slate-500 text-center">Va yana {productReviews.length - 5} ta</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Combo / qo'shimcha mahsulotlar */}
-            {selectedProduct.comboAddons && selectedProduct.comboAddons.length > 0 && (
-              <div className="mt-5 pt-5 border-t border-slate-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                    {t("pdp.comboTitle")}
-                  </h3>
-                  <span className="text-[10px] text-slate-500">
-                    {selectedAddons.size} / {selectedProduct.comboAddons.length}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {selectedProduct.comboAddons.map((addon) => {
-                    const ap = addon.addonProduct;
-                    if (!ap.active) return null;
-                    const isSelected = selectedAddons.has(ap.id);
-                    const origPrice = Number(ap.price);
-                    const finalPrice = addon.discountPct > 0
-                      ? Math.round(origPrice * (1 - addon.discountPct / 100))
-                      : origPrice;
-                    const isOut = ap.stock <= 0;
-                    return (
-                      <button
-                        key={addon.id}
-                        onClick={() => {
-                          if (isOut) return;
-                          haptic.light();
-                          setSelectedAddons((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(ap.id)) next.delete(ap.id);
-                            else next.add(ap.id);
-                            return next;
-                          });
-                        }}
-                        disabled={isOut}
-                        className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left ${
-                          isSelected
-                            ? "bg-emerald-500/10 border-emerald-500/40"
-                            : "bg-slate-900 border-slate-800 hover:border-slate-700"
-                        } ${isOut ? "opacity-50 cursor-not-allowed" : ""}`}
-                      >
-                        {/* Checkbox */}
-                        <div
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                            isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-600"
-                          }`}
-                        >
-                          {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
-                        </div>
-                        {/* Image */}
-                        {ap.imageUrl ? (
-                          <img src={ap.imageUrl} alt={ap.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                            <Package className="w-5 h-5 text-slate-600" />
-                          </div>
-                        )}
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs text-white font-medium line-clamp-2">{ap.name}</div>
-                          {isOut ? (
-                            <div className="text-[10px] text-rose-400 mt-0.5">Tugagan</div>
-                          ) : (
-                            <div className="flex items-baseline gap-1.5 mt-1">
-                              <span className="text-sm font-bold text-white">
-                                {finalPrice.toLocaleString("uz-UZ")}
-                                <span className="text-[10px] font-normal text-slate-400 ml-0.5">
-                                  {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
-                                </span>
-                              </span>
-                              {addon.discountPct > 0 && (
-                                <>
-                                  <span className="text-[10px] text-slate-500 line-through">{origPrice.toLocaleString("uz-UZ")}</span>
-                                  <span className="text-[10px] font-bold text-rose-300">−{addon.discountPct}%</span>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Body bo'limlari — single rejimda konstruktor tartibida (yoqilganlari),
+                multi rejimda standart tartibda */}
+            {isSingle ? (
+              singleSectionList
+                .filter((s) => s.enabled)
+                .map((s) => <div key={s.key}>{singleSectionEl(s.key)}</div>)
+            ) : (
+              <>
+                {statsEl}
+                {weeklyBuyersEl}
+                {descriptionEl}
+                {deliveryEl}
+                {reviewsEl}
+                {comboEl}
+              </>
             )}
           </div>
         </div>
