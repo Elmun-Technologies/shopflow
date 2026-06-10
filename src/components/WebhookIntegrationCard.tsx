@@ -36,7 +36,7 @@ export function WebhookIntegrationCard() {
       setLoading(false);
     }
   };
-  useEffect(() => { reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void reload(); }, []);
 
   const toggleActive = async (h: OutboundWebhook) => {
     setBusyId(h.id);

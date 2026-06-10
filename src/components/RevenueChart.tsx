@@ -17,6 +17,26 @@ import { formatCompactCurrency } from "../utils/format";
 import type { ChartTooltipProps } from "../utils/chart";
 import { useT } from "../i18n";
 
+// Tooltip — komponent tashqarisida, har render'da qayta yaratilmasligi uchun
+function makeTipComponent(currency: string) {
+  return function Tip({ active, payload, label }: ChartTooltipProps) {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-cream-100/95 backdrop-blur border border-cream-300 rounded-xl px-3.5 py-2.5 shadow-2xl">
+          <p className="text-xs text-slate-500 mb-1">{label}</p>
+          <p className="text-base font-bold text-forest-800">
+            {formatCompactCurrency(payload[0].value as number, currency)}
+          </p>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            {String((payload[0].payload as { orders?: number } | undefined)?.orders ?? 0)} buyurtma
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+}
+
 export default function RevenueChart() {
   const { tenant } = useAuth();
   const { t } = useT();
@@ -33,22 +53,7 @@ export default function RevenueChart() {
     return { current: last, change };
   }, [series]);
 
-  const Tip = ({ active, payload, label }: ChartTooltipProps) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-cream-100/95 backdrop-blur border border-cream-300 rounded-xl px-3.5 py-2.5 shadow-2xl">
-          <p className="text-xs text-slate-500 mb-1">{label}</p>
-          <p className="text-base font-bold text-forest-800">
-            {formatCompactCurrency(payload[0].value as number, currency)}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            {String((payload[0].payload as { orders?: number } | undefined)?.orders ?? 0)} buyurtma
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  const Tip = useMemo(() => makeTipComponent(currency), [currency]);
 
   return (
     <motion.div
