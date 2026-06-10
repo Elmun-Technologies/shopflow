@@ -45,6 +45,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       notifyAbandonedEnabled: z.boolean().optional(),
       emailNotificationsEnabled: z.boolean().optional(),
       emailRecipients: z.array(z.string().email()).max(10).optional(),
+      reportFrequency: z.enum(["daily", "weekly", "monthly"]).nullable().optional(),
     }).parse(req.body);
 
     const tenantId = req.session.tenantId;

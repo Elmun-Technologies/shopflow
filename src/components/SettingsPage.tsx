@@ -18,6 +18,7 @@ import type {
 import { IntegrationsHub } from "./IntegrationsHub";
 import { BrowserNotifSection } from "./BrowserNotifSection";
 import { PushNotificationManager } from "./PushNotificationManager";
+import { EmailReportsSection } from "./EmailReportsSection";
 import { TeamSection } from "./TeamSection";
 import { api, API_BASE } from "../api/client";
 import { useContext } from "react";
@@ -272,6 +273,9 @@ export default function SettingsPage() {
     <div className="space-y-6">
       {/* OS darajasidagi push notifikatsiyalar (tab yopiq bo'lsa ham) */}
       <PushNotificationManager />
+
+      {/* Avtomatik email hisobotlar */}
+      <EmailReportsSection />
 
       {/* Admin browser notifikatsiyalar — operator paneli uchun */}
       <BrowserNotifSection />

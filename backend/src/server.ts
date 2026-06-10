@@ -43,11 +43,13 @@ import { outboundWebhookRoutes } from "./routes/outbound-webhooks.js";
 import { eventsRoutes } from "./routes/events.js";
 import { tenantExportRoutes } from "./routes/tenant-export.js";
 import { pushRoutes } from "./routes/push.js";
+import { reportsRoutes } from "./routes/reports.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { chatRoutes } from "./routes/chat.js";
 import { segmentRoutes } from "./routes/segments.js";
 import { reviewRoutes } from "./routes/reviews.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
+import { startEmailReportsScheduler } from "./lib/email-reports.js";
 import { startSalesDoctorWorker, stopSalesDoctorWorker } from "./lib/salesdoctor-worker.js";
 import { promoCodeRoutes } from "./routes/promo-codes.js";
 import { deliveryRoutes } from "./routes/delivery.js";
@@ -219,6 +221,7 @@ await app.register(outboundWebhookRoutes, { prefix: "/api/outbound-webhooks" });
 await app.register(eventsRoutes, { prefix: "/api/events" });
 await app.register(tenantExportRoutes, { prefix: "/api/tenant-export" });
 await app.register(pushRoutes, { prefix: "/api/push" });
+await app.register(reportsRoutes, { prefix: "/api/reports" });
 await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(chatRoutes, { prefix: "/api/chats" });
 await app.register(segmentRoutes, { prefix: "/api/segments" });
@@ -237,9 +240,11 @@ const host = process.env.HOST ?? "0.0.0.0";
 // Telegram orqali "savatingiz kutmoqda" eslatma yuboradi. Har 5 daqiqada skanlaydi.
 // addHook listen'dan oldin ro'yxatdan o'tishi shart (Fastify cheklovi).
 const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
+const stopEmailReports = startEmailReportsScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
 startSalesDoctorWorker(app.prisma, app.log);
 app.addHook("onClose", async () => {
   stopScheduler();
+  stopEmailReports();
   stopSalesDoctorWorker();
 });
 

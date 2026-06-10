@@ -30,6 +30,7 @@
     "argon2": "^0.41.1",
     "fastify": "^5.1.0",
     "fastify-plugin": "^5.0.1",
+    "nodemailer": "^8.0.10",
     "pino-pretty": "^11.3.0",
     "prisma": "^5.22.0",
     "tsx": "^4.19.2",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
+    "@types/nodemailer": "^8.0.0",
     "@types/web-push": "^3.6.4",
     "typescript": "^5.7.2",
     "vitest": "^3.2.4"
