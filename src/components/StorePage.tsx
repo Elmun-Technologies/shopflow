@@ -321,6 +321,9 @@ type StorefrontData = {
   brand: StoreBrand;
   products: StoreProduct[];
   categories: StoreCategory[];
+  // Do'kon turi — "single" bo'lsa bitta mahsulotli landing ko'rsatiladi
+  storeMode?: "multi" | "single";
+  singleProductId?: string | null;
 };
 
 type CartItem = {
@@ -582,6 +585,12 @@ function StoreInner({ slug }: { slug: string }) {
 
   const primaryColor = data?.brand?.primaryColor || "#10b981";
 
+  // Single-product rejim — bitta mahsulotga qaratilgan landing + direct order.
+  const isSingle = data?.storeMode === "single";
+  const singleProduct = isSingle && data
+    ? (data.products.find((p) => p.id === data.singleProductId) ?? null)
+    : null;
+
   // Telegram theme'ni va brand color'ni CSS variable'lariga joylab qo'yamiz
   useEffect(() => {
     applyTelegramTheme(data?.brand?.primaryColor);
@@ -593,6 +602,13 @@ function StoreInner({ slug }: { slug: string }) {
         setData(d);
         // GA4 / Yandex Metrika — tenant sozlagan bo'lsa inject qilamiz
         injectAnalytics((d.brand ?? {}) as StoreBrand);
+        // Single rejim — landing darhol tanlangan mahsulotni ko'rsatadi.
+        // Eski multi-savatni tozalaymiz (direct-order toza boshlanishi uchun).
+        if (d.storeMode === "single") {
+          const sp = d.singleProductId ? d.products.find((p) => p.id === d.singleProductId) : null;
+          if (sp) setSelectedProduct(sp);
+          setCart([]);
+        }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -684,7 +700,7 @@ function StoreInner({ slug }: { slug: string }) {
     if (!isMainTab) {
       bb.show();
       const handler = () => {
-        if (view === "checkout") { setView("cart"); return; }
+        if (view === "checkout") { setView(isSingle ? "home" : "cart"); return; }
         if (view === "success") { setView("home"); return; }
         setView("home");
       };
@@ -693,7 +709,7 @@ function StoreInner({ slug }: { slug: string }) {
     } else {
       bb.hide();
     }
-  }, [view, twa]);
+  }, [view, twa, isSingle]);
 
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
@@ -768,6 +784,21 @@ function StoreInner({ slug }: { slug: string }) {
       setSubmitting(false);
     }
   }, [data, form, cart, slug, twa, selectedPayment]);
+
+  // Single rejim "Buyurtma berish" — mahsulot(lar)ni savatga qo'shib
+  // to'g'ridan-to'g'ri checkout'ga o'tadi (savat bosqichisiz).
+  const buyNow = useCallback((items: StoreProduct[]) => {
+    for (const it of items) addToCart(it);
+    setView("checkout");
+  }, [addToCart]);
+
+  // Single rejimda "home" ga qaytilganda landing'ni qayta ochib qo'yamiz.
+  useEffect(() => {
+    if (!isSingle || !singleProduct) return;
+    if (view === "home" && (!selectedProduct || selectedProduct.id !== singleProduct.id)) {
+      setSelectedProduct(singleProduct);
+    }
+  }, [isSingle, singleProduct, view, selectedProduct]);
 
   const filteredProducts = useMemo(() => {
     if (!data) return [];
@@ -979,7 +1010,7 @@ function StoreInner({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
         <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
-          <button onClick={() => setView("cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
+          <button onClick={() => setView(isSingle ? "home" : "cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h2 className="text-base font-semibold text-white">{t("checkout.title")}</h2>
@@ -1334,13 +1365,15 @@ function StoreInner({ slug }: { slug: string }) {
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
           <div className="px-3 pb-2 flex items-center gap-2">
-            <button
-              onClick={() => setSelectedProduct(null)}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
-              aria-label="Yopish"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+            {!isSingle && (
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                aria-label="Yopish"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
             <h2 className="flex-1 text-sm font-semibold text-white truncate">{selectedProduct.name}</h2>
             <button
               onClick={() => toggleFavorite(selectedProduct.id)}
@@ -1366,13 +1399,15 @@ function StoreInner({ slug }: { slug: string }) {
           }`}
           style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
         >
-          <button
-            onClick={() => setSelectedProduct(null)}
-            className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center text-white active:scale-90 transition-transform"
-            aria-label="Yopish"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          {isSingle ? <div /> : (
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center text-white active:scale-90 transition-transform"
+              aria-label="Yopish"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <button
               onClick={() => toggleFavorite(selectedProduct.id)}
@@ -1729,16 +1764,20 @@ function StoreInner({ slug }: { slug: string }) {
               return (
                 <button
                   onClick={() => {
-                    addToCart(selectedProduct);
-                    for (const item of selectedComboItems) addToCart(item.product);
-                    setSelectedProduct(null);
+                    if (isSingle) {
+                      buyNow([selectedProduct, ...selectedComboItems.map((i) => i.product)]);
+                    } else {
+                      addToCart(selectedProduct);
+                      for (const item of selectedComboItems) addToCart(item.product);
+                      setSelectedProduct(null);
+                    }
                   }}
                   className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                   style={{ backgroundColor: primaryColor }}
                 >
                   <span className="flex items-center gap-2">
                     <Plus className="w-5 h-5" />
-                    Combo savatga · {comboTotal.toLocaleString("uz-UZ")} {currencyStr}
+                    {isSingle ? t("single.buy") : "Combo savatga"} · {comboTotal.toLocaleString("uz-UZ")} {currencyStr}
                   </span>
                   <span className="text-xs opacity-90">{1 + selectedComboItems.length} ta mahsulot · yetkazib berish {deliveryStr}</span>
                 </button>
@@ -1748,13 +1787,13 @@ function StoreInner({ slug }: { slug: string }) {
             if (qty === 0) {
               return (
                 <button
-                  onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
+                  onClick={() => { if (isSingle) { buyNow([selectedProduct]); } else { addToCart(selectedProduct); setSelectedProduct(null); } }}
                   className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                   style={{ backgroundColor: primaryColor }}
                 >
                   <span className="flex items-center gap-2">
-                    <Plus className="w-5 h-5" />
-                    Savatga
+                    {isSingle ? <ShoppingBag className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                    {isSingle ? t("single.buy") : "Savatga"}
                   </span>
                   <span className="text-xs opacity-90">{deliveryStr} · yetkazib berish</span>
                 </button>
@@ -1782,12 +1821,12 @@ function StoreInner({ slug }: { slug: string }) {
                 </button>
               </div>
               <button
-                onClick={() => { setSelectedProduct(null); setView("cart"); }}
+                onClick={() => { if (isSingle) { setView("checkout"); } else { setSelectedProduct(null); setView("cart"); } }}
                 className="flex-1 py-3 rounded-2xl font-semibold text-white text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
                 style={{ backgroundColor: primaryColor }}
               >
                 <ShoppingCart className="w-4 h-4" />
-                Savatga o'tish
+                {isSingle ? t("single.buy") : "Savatga o'tish"}
               </button>
             </div>
           )}
@@ -2585,6 +2624,30 @@ function StoreInner({ slug }: { slug: string }) {
       </div>
     );
   };
+
+  // ---- SINGLE-PRODUCT LANDING ----
+  // Bitta mahsulot rejimida butun do'kon = bitta mahsulot sahifasi.
+  // PDP renderer (selectedProduct = singleProduct) to'liq ekran sifatida ishlatiladi.
+  if (isSingle) {
+    if (singleProduct) {
+      return renderProductDetail() ?? (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+        </div>
+      );
+    }
+    // Mahsulot tanlanmagan (empty) yoki o'chirilgan/nofaol (unavailable)
+    const reason = data.singleProductId ? t("single.unavailable") : t("single.empty");
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-4">
+          <Package className="w-8 h-8 text-slate-600" />
+        </div>
+        <p className="text-base font-semibold text-white mb-1">{brand.name || data.tenant.name}</p>
+        <p className="text-sm text-slate-400">{reason}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">

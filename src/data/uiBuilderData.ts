@@ -67,7 +67,26 @@ export interface BrandSettings {
   // Web analitika — storefront'ga avtomatik inject qilinadi
   gaId?: string; // Google Analytics 4 — "G-XXXXXXX"
   yandexMetrikaId?: string; // Yandex Metrika raqami — "12345678"
+  // Single-product rejim landing bo'limlari (storeMode === "single")
+  singleConfig?: SingleConfig;
 }
+
+// Single-product landing'da qaysi bo'limlar ko'rsatilishi.
+export interface SingleConfig {
+  showGallery: boolean;
+  showReviews: boolean;
+  showTrustBadges: boolean;
+  showTimer: boolean;
+  showWeeklyBuyers: boolean;
+}
+
+export const defaultSingleConfig: SingleConfig = {
+  showGallery: true,
+  showReviews: true,
+  showTrustBadges: true,
+  showTimer: false,
+  showWeeklyBuyers: true,
+};
 
 export const blockDefinitions: BlockDefinition[] = [
   {

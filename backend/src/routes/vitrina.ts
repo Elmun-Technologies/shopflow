@@ -17,6 +17,8 @@ const layoutSchema = z.object({
   blocks: z.array(blockSchema),
   brand: z.record(z.unknown()).optional(),
   published: z.boolean().optional(),
+  storeMode: z.enum(["multi", "single"]).optional(),
+  singleProductId: z.string().nullable().optional(),
 });
 
 export const vitrinaRoutes: FastifyPluginAsync = async (app) => {
@@ -53,6 +55,10 @@ export const vitrinaRoutes: FastifyPluginAsync = async (app) => {
           blocks: data.blocks as unknown as Prisma.InputJsonValue,
           brand: (data.brand ?? {}) as Prisma.InputJsonValue,
           published: data.published ?? true,
+          ...(data.storeMode !== undefined && { storeMode: data.storeMode }),
+          ...(data.singleProductId !== undefined && {
+            singleProductId: data.singleProductId,
+          }),
         },
         update: {
           blocks: data.blocks as unknown as Prisma.InputJsonValue,
@@ -60,6 +66,10 @@ export const vitrinaRoutes: FastifyPluginAsync = async (app) => {
             brand: data.brand as Prisma.InputJsonValue,
           }),
           ...(data.published !== undefined && { published: data.published }),
+          ...(data.storeMode !== undefined && { storeMode: data.storeMode }),
+          ...(data.singleProductId !== undefined && {
+            singleProductId: data.singleProductId,
+          }),
         },
       });
     },

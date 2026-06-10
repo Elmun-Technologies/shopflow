@@ -256,6 +256,7 @@ shopflow/
 - ✅ **Sales Overview gauge** — yarim doira growth chart
 - ✅ **Reports PDF** — AnalyticsPage'dan hisobot generatori
 - ✅ **Order/Customer/Lead create modallari** (admin tugmalari)
+- ✅ **Single-product do'kon rejimi** — Vitrina'da "Do'kon turi: Ko'p mahsulotli / Bitta mahsulot" toggle. Single rejimda bitta mahsulotga qaratilgan landing (galereya/sharhlar/badge/taymer toggle), savatsiz to'g'ridan-to'g'ri "Buyurtma berish". `Storefront.storeMode` + `singleProductId`. Bot `/start` o'zgarmaydi — storefront rejimga qarab render qiladi.
 
 ### Marketing
 - ✅ Sale campaigns (aksiyalar)
