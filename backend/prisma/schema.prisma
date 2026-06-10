@@ -324,6 +324,15 @@ model Storefront {
   // { name, logoUrl, primaryColor, secondaryColor, contactPhone, ... }
   brand Json @default("{}")
 
+  // Do'kon turi: "multi" — ko'p mahsulotli katalog (default),
+  // "single" — bitta mahsulotga qaratilgan landing (single-product funnel).
+  storeMode String @default("multi")
+
+  // Single rejimda sotiladigan mahsulot id'si.
+  // Oddiy string (FK emas) — mahsulot o'chirilsa Storefront buzilmasin;
+  // mavjudligi read-time'da tekshiriladi.
+  singleProductId String?
+
   // Public bo'lib turishi (sayt yopilishi mumkin)
   published Boolean @default(true)
 

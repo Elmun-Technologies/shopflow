@@ -174,7 +174,13 @@ export const categoriesApi = {
 
 export const vitrinaApi = {
   getLayout: () => api<VitrinaLayout>("/vitrina/layout"),
-  saveLayout: (data: { blocks: VitrinaBlock[]; brand?: Record<string, unknown>; published?: boolean }) =>
+  saveLayout: (data: {
+    blocks: VitrinaBlock[];
+    brand?: Record<string, unknown>;
+    published?: boolean;
+    storeMode?: "multi" | "single";
+    singleProductId?: string | null;
+  }) =>
     api<VitrinaLayout>("/vitrina/layout", { method: "PUT", body: data }),
   saveBrand: (brand: Record<string, unknown>) =>
     api<VitrinaLayout>("/vitrina/brand", { method: "PUT", body: brand }),

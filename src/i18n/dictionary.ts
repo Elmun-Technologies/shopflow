@@ -383,6 +383,26 @@ export const dictionary: Record<string, Entry> = {
   "ui.published": { uz: "Nashr", ru: "Опубликован" },
   "ui.hidden": { uz: "Yashirin", ru: "Скрыт" },
   "ui.saved": { uz: "Saqlandi!", ru: "Сохранено!" },
+  // Do'kon turi (multi / single-product)
+  "ui.storeMode.label": { uz: "Do'kon turi", ru: "Тип магазина" },
+  "ui.storeMode.multi": { uz: "Ko'p mahsulotli", ru: "Много товаров" },
+  "ui.storeMode.single": { uz: "Bitta mahsulot", ru: "Один товар" },
+  "ui.single.pickProduct": { uz: "Mahsulotni tanlang", ru: "Выберите товар" },
+  "ui.single.hint": { uz: "Bot va do'kon shu bitta mahsulotni sotishga moslanadi.", ru: "Бот и магазин будут настроены на продажу одного товара." },
+  "ui.single.noProduct": { uz: "Mahsulot tanlanmagan", ru: "Товар не выбран" },
+  "ui.single.searchProduct": { uz: "Mahsulot qidirish…", ru: "Поиск товара…" },
+  "ui.single.noResults": { uz: "Mahsulot topilmadi", ru: "Товары не найдены" },
+  "ui.single.sections": { uz: "Landing bo'limlari", ru: "Разделы лендинга" },
+  "ui.single.showGallery": { uz: "Rasm galereyasi", ru: "Галерея фото" },
+  "ui.single.showReviews": { uz: "Sharhlar va reyting", ru: "Отзывы и рейтинг" },
+  "ui.single.showBadges": { uz: "Ishonch belgilari", ru: "Знаки доверия" },
+  "ui.single.showBuyers": { uz: "Haftalik xaridorlar", ru: "Покупатели за неделю" },
+  "ui.single.showTimer": { uz: "Aksiya taymeri", ru: "Таймер акции" },
+  // Storefront: single-product landing
+  "single.buy": { uz: "Buyurtma berish", ru: "Заказать" },
+  "single.unavailable": { uz: "Mahsulot vaqtincha mavjud emas", ru: "Товар временно недоступен" },
+  "single.empty": { uz: "Do'kon hali sozlanmoqda", ru: "Магазин ещё настраивается" },
+  "single.qty": { uz: "Miqdor", ru: "Количество" },
 
   // ─── Moysklad Integration ──────────────────────────────
   "moysklad.status.CONNECTED": { uz: "Ulangan", ru: "Подключено" },

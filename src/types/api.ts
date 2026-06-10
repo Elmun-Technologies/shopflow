@@ -172,6 +172,8 @@ export interface VitrinaLayout {
   blocks: VitrinaBlock[];
   brand: Record<string, unknown>;
   published: boolean;
+  storeMode: "multi" | "single";
+  singleProductId: string | null;
   createdAt: string;
   updatedAt: string;
 }

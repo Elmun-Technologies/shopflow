@@ -76,30 +76,33 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       ...(query.q ? { name: { contains: query.q, mode: "insensitive" as const } } : {}),
     };
 
+    // Single rejimdagi mahsulot ham aynan shu include bilan olinadi.
+    const productInclude = {
+      category: { select: { id: true, name: true, slug: true } },
+      saleCampaign: {
+        select: { id: true, label: true, badgeColor: true, active: true, startsAt: true, endsAt: true },
+      },
+      comboAddons: {
+        orderBy: { position: "asc" as const },
+        select: {
+          id: true,
+          position: true,
+          discountPct: true,
+          defaultSelected: true,
+          addonProduct: {
+            select: { id: true, name: true, sku: true, price: true, imageUrl: true, stock: true, active: true },
+          },
+        },
+      },
+    };
+
     const [storefront, products, productTotal, categories, weeklyOrderItems, ratingAggregates] = await Promise.all([
       app.prisma.storefront.findUnique({
         where: { tenantId: tenant.id },
       }),
       app.prisma.product.findMany({
         where: productWhere,
-        include: {
-          category: { select: { id: true, name: true, slug: true } },
-          saleCampaign: {
-            select: { id: true, label: true, badgeColor: true, active: true, startsAt: true, endsAt: true },
-          },
-          comboAddons: {
-            orderBy: { position: "asc" },
-            select: {
-              id: true,
-              position: true,
-              discountPct: true,
-              defaultSelected: true,
-              addonProduct: {
-                select: { id: true, name: true, sku: true, price: true, imageUrl: true, stock: true, active: true },
-              },
-            },
-          },
-        },
+        include: productInclude,
         orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -146,6 +149,29 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    type RawProduct = (typeof products)[number];
+    const enrich = (p: RawProduct) => ({
+      ...p,
+      weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0,
+      avgRating: ratingMap.get(p.id)?.avg ?? 0,
+      reviewCount: ratingMap.get(p.id)?.count ?? 0,
+    });
+
+    const enrichedProducts = products.map(enrich);
+
+    // Single rejim: tanlangan mahsulot katalog sahifasiga/filtriga tushmagan
+    // bo'lishi mumkin (pagination, featured tartibi). Uni alohida olib,
+    // ro'yxat boshiga qo'shamiz — client landing'ni doim ko'rsata olsin.
+    const storeMode = storefront?.storeMode === "single" ? "single" : "multi";
+    const singleProductId = storefront?.singleProductId ?? null;
+    if (storeMode === "single" && singleProductId && !enrichedProducts.some((p) => p.id === singleProductId)) {
+      const single = await app.prisma.product.findFirst({
+        where: { id: singleProductId, tenantId: tenant.id, active: true },
+        include: productInclude,
+      });
+      if (single) enrichedProducts.unshift(enrich(single));
+    }
+
     // Cache-Control — storefront ma'lumotlari sekundlar miqyosida o'zgarmaydi.
     // 30 soniya client-side + 60 soniya stale-while-revalidate Caddy/CDN uchun.
     reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
@@ -154,12 +180,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       tenant,
       layout: storefront?.blocks ?? [],
       brand: storefront?.brand ?? {},
-      products: products.map((p) => ({
-        ...p,
-        weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0,
-        avgRating: ratingMap.get(p.id)?.avg ?? 0,
-        reviewCount: ratingMap.get(p.id)?.count ?? 0,
-      })),
+      storeMode,
+      singleProductId,
+      products: enrichedProducts,
       categories,
       pagination: {
         page: query.page,

@@ -9,9 +9,9 @@ import {
   Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Loader2, Globe,
 } from "lucide-react";
 import {
-  blockDefinitions, templates, defaultBrandSettings, categoryColors,
+  blockDefinitions, templates, defaultBrandSettings, categoryColors, defaultSingleConfig,
 } from "../data/uiBuilderData";
-import type { UIBlock, BrandSettings } from "../data/uiBuilderData";
+import type { UIBlock, BrandSettings, SingleConfig } from "../data/uiBuilderData";
 import { vitrinaApi, productsApi, categoriesApi } from "../api/endpoints";
 import type { Product, Category } from "../types/api";
 import { useT } from "../i18n";
@@ -46,6 +46,9 @@ export default function UIBuilderPage() {
   const [blocks, setBlocks] = useState<UIBlock[]>([]);
   const [brand, setBrand] = useState<BrandSettings>(JSON.parse(JSON.stringify(defaultBrandSettings)));
   const [published, setPublished] = useState(true);
+  const [storeMode, setStoreMode] = useState<"multi" | "single">("multi");
+  const [singleProductId, setSingleProductId] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("mobile");
   const [activePanel, setActivePanel] = useState<"blocks" | "templates" | "brand">("blocks");
@@ -83,6 +86,8 @@ export default function UIBuilderPage() {
         );
         setBrand({ ...defaultBrandSettings, ...(layout.brand as Partial<BrandSettings>) });
         setPublished(layout.published);
+        setStoreMode(layout.storeMode ?? "multi");
+        setSingleProductId(layout.singleProductId ?? null);
         setPreviewProducts(prods.items.map(toPreviewProduct));
         setRealCategories(cats);
       } catch {
@@ -97,6 +102,16 @@ export default function UIBuilderPage() {
 
   const selectedBlock = blocks.find((b) => b.id === selectedBlockId);
   const selectedDef = blockDefinitions.find((d) => d.type === selectedBlock?.type);
+
+  // Single-product rejim uchun yordamchilar
+  const isSingle = storeMode === "single";
+  const singleConfig: SingleConfig = { ...defaultSingleConfig, ...(brand.singleConfig ?? {}) };
+  const setSingleConfig = (key: keyof SingleConfig, value: boolean) =>
+    setBrand((prev) => ({ ...prev, singleConfig: { ...defaultSingleConfig, ...(prev.singleConfig ?? {}), [key]: value } }));
+  const selectedSingleProduct = previewProducts.find((p) => p.id === singleProductId) ?? null;
+  const pickerProducts = productSearch.trim()
+    ? previewProducts.filter((p) => p.name.toLowerCase().includes(productSearch.trim().toLowerCase()))
+    : previewProducts;
 
   const toggleCategory = (cat: string) => {
     setExpandedCategories((prev) => {
@@ -195,9 +210,25 @@ export default function UIBuilderPage() {
       );
       if (!choice) return;
     }
+    // Single rejimda mahsulot tanlanmagan bo'lsa — ogohlantirish.
+    if (storeMode === "single" && !singleProductId) {
+      const choice = window.confirm(
+        "⚠️ Bitta mahsulot rejimi tanlangan, lekin mahsulot tanlanmagan.\n\n" +
+        "Saqlasangiz mijozlar do'konni ochib bo'sh sahifa ko'radi.\n\n" +
+        "OK — baribir saqlash\n" +
+        "Cancel — avval mahsulot tanlash"
+      );
+      if (!choice) return;
+    }
     setSaving(true);
     try {
-      await vitrinaApi.saveLayout({ blocks, brand: brand as unknown as Record<string, unknown>, published });
+      await vitrinaApi.saveLayout({
+        blocks,
+        brand: brand as unknown as Record<string, unknown>,
+        published,
+        storeMode,
+        singleProductId,
+      });
       setSavedMessage(t("ui.saved"));
       setTimeout(() => setSavedMessage(""), 2500);
     } catch {
@@ -206,7 +237,7 @@ export default function UIBuilderPage() {
     } finally {
       setSaving(false);
     }
-  }, [blocks, brand, published, t]);
+  }, [blocks, brand, published, storeMode, singleProductId, t]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -492,6 +523,71 @@ export default function UIBuilderPage() {
     }
   };
 
+  // Single-product landing preview — tanlangan mahsulotdan fokuslangan sahifa.
+  const renderSingleLandingPreview = () => {
+    const p = selectedSingleProduct;
+    if (!p) {
+      return (
+        <div className="py-10 text-center">
+          <Package className="w-10 h-10 text-cream-300 mx-auto mb-2" />
+          <p className="text-xs text-slate-500">{t("ui.single.noProduct")}</p>
+        </div>
+      );
+    }
+    const discount = p.oldPrice && p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+    return (
+      <div className="space-y-3">
+        <div className="w-full aspect-[4/3] bg-cream-100 rounded-2xl overflow-hidden flex items-center justify-center">
+          {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" /> : <Package className="w-12 h-12 text-cream-300" />}
+        </div>
+        {singleConfig.showGallery && (
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={`w-10 h-10 rounded-lg bg-cream-100 ${i === 0 ? "ring-2 ring-leaf-400" : ""}`} />
+            ))}
+          </div>
+        )}
+        <div>
+          <p className="text-base font-bold text-forest-800">{p.name}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xl font-bold text-forest-700">{p.price.toLocaleString()} so'm</span>
+            {p.oldPrice != null && <span className="text-sm text-slate-400 line-through">{p.oldPrice.toLocaleString()}</span>}
+            {discount > 0 && <span className="text-[10px] font-semibold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded-full">-{discount}%</span>}
+          </div>
+        </div>
+        {singleConfig.showWeeklyBuyers && (
+          <div className="flex items-center gap-1.5 text-xs text-forest-700">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Bu hafta 24 kishi sotib oldi</span>
+          </div>
+        )}
+        {singleConfig.showTimer && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="font-mono">08:45:22</span>
+          </div>
+        )}
+        {singleConfig.showReviews && (
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <span className="text-amber-500">★★★★★</span>
+            <span>4.8 · 36 sharh</span>
+          </div>
+        )}
+        {singleConfig.showTrustBadges && (
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><CheckCircle2 className="w-3 h-3" />Asl mahsulot</div>
+            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><Crown className="w-3 h-3" />Kafolat</div>
+          </div>
+        )}
+        <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">{p.categoryName ?? "Mahsulot tavsifi shu yerda ko'rsatiladi."}</p>
+        <button className="w-full py-2.5 rounded-xl bg-leaf-400 text-forest-800 text-sm font-semibold flex items-center justify-center gap-2">
+          <ShoppingBag className="w-4 h-4" />
+          {t("single.buy")}
+        </button>
+      </div>
+    );
+  };
+
   const filteredDefs = blockDefinitions.filter((d) =>
     d.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -519,11 +615,15 @@ export default function UIBuilderPage() {
       {/* Left Sidebar */}
       <div className="w-72 flex-shrink-0 bg-white border-r border-cream-300 flex flex-col">
         <div className="flex border-b border-cream-300">
-          {[
-            { key: "blocks" as const, label: t("ui.tab.blocks"), icon: LayoutGrid },
-            { key: "templates" as const, label: t("ui.tab.templates"), icon: LayoutTemplate },
+          {([
+            // Single rejimda bloklar/shablonlar tab'lari yashiriladi — landing
+            // bitta mahsulotdan avto-yaratiladi, drag-drop bloklar kerak emas.
+            ...(isSingle ? [] : [
+              { key: "blocks" as const, label: t("ui.tab.blocks"), icon: LayoutGrid },
+              { key: "templates" as const, label: t("ui.tab.templates"), icon: LayoutTemplate },
+            ]),
             { key: "brand" as const, label: t("ui.tab.brand"), icon: Palette },
-          ].map((tab) => {
+          ]).map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -717,7 +817,11 @@ export default function UIBuilderPage() {
         <div className="h-12 border-b border-cream-300 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-forest-800">{t("ui.editor")}</span>
-            <span className="text-xs text-slate-500">{t("ui.blockCount", { n: blocks.length, active: blocks.filter((b) => b.enabled).length })}</span>
+            {isSingle ? (
+              <span className="text-xs text-slate-500">{t("ui.storeMode.single")}</span>
+            ) : (
+              <span className="text-xs text-slate-500">{t("ui.blockCount", { n: blocks.length, active: blocks.filter((b) => b.enabled).length })}</span>
+            )}
             {savedMessage && (
               <motion.span
                 initial={{ opacity: 0, x: -10 }}
@@ -731,6 +835,27 @@ export default function UIBuilderPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Do'kon turi: Ko'p mahsulotli / Bitta mahsulot */}
+            <div className="flex items-center bg-cream-100 rounded-lg p-0.5" title={t("ui.storeMode.label")}>
+              <button
+                onClick={() => setStoreMode("multi")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  storeMode === "multi" ? "bg-cream-200 text-forest-800" : "text-slate-500 hover:text-forest-900"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                {t("ui.storeMode.multi")}
+              </button>
+              <button
+                onClick={() => { setStoreMode("single"); setActivePanel("brand"); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  storeMode === "single" ? "bg-cream-200 text-forest-800" : "text-slate-500 hover:text-forest-900"
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                {t("ui.storeMode.single")}
+              </button>
+            </div>
             {/* Published toggle — yashirin holatni aniq ko'rinarli qiladi */}
             <button
               onClick={() => setPublished(!published)}
@@ -789,7 +914,109 @@ export default function UIBuilderPage() {
         )}
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Block List */}
+          {/* Single-product config panel */}
+          {isSingle ? (
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="max-w-2xl mx-auto space-y-4">
+                {/* Tanlangan mahsulot / picker */}
+                <div className="bg-white border border-cream-300/80 rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-forest-800 mb-1">{t("ui.single.pickProduct")}</p>
+                  <p className="text-xs text-slate-500 mb-3">{t("ui.single.hint")}</p>
+
+                  {selectedSingleProduct ? (
+                    <div className="flex items-center gap-3 bg-leaf-100 rounded-xl p-3 mb-3">
+                      <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {selectedSingleProduct.imageUrl ? (
+                          <img src={selectedSingleProduct.imageUrl} alt={selectedSingleProduct.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="w-6 h-6 text-cream-300" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-forest-700 truncate">{selectedSingleProduct.name}</p>
+                        <p className="text-xs text-forest-700/80 font-bold">{selectedSingleProduct.price.toLocaleString()} so'm</p>
+                      </div>
+                      <button
+                        onClick={() => setSingleProductId(null)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-colors"
+                        title={t("common.cancel")}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3">
+                      <Package className="w-4 h-4 flex-shrink-0" />
+                      {t("ui.single.noProduct")}
+                    </div>
+                  )}
+
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder={t("ui.single.searchProduct")}
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="w-full bg-cream-100 border border-cream-300 rounded-lg pl-8 pr-3 py-2 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto space-y-1">
+                    {pickerProducts.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-3 text-center">{t("ui.single.noResults")}</p>
+                    ) : (
+                      pickerProducts.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSingleProductId(p.id)}
+                          className={`w-full flex items-center gap-2.5 p-2 rounded-lg text-left transition-colors ${
+                            singleProductId === p.id ? "bg-leaf-100" : "bg-cream-100/50 hover:bg-cream-100"
+                          }`}
+                        >
+                          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-4 h-4 text-cream-300" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-forest-800 truncate">{p.name}</p>
+                            <p className="text-[10px] text-slate-500">{p.price.toLocaleString()} so'm</p>
+                          </div>
+                          {singleProductId === p.id && <CheckCircle2 className="w-4 h-4 text-forest-700 flex-shrink-0" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Landing bo'limlari */}
+                <div className="bg-white border border-cream-300/80 rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-forest-800 mb-3">{t("ui.single.sections")}</p>
+                  <div className="space-y-1">
+                    {([
+                      ["showGallery", t("ui.single.showGallery")],
+                      ["showReviews", t("ui.single.showReviews")],
+                      ["showTrustBadges", t("ui.single.showBadges")],
+                      ["showWeeklyBuyers", t("ui.single.showBuyers")],
+                      ["showTimer", t("ui.single.showTimer")],
+                    ] as const).map(([key, label]) => (
+                      <div key={key} className="flex items-center justify-between py-1.5">
+                        <label className="text-xs text-slate-600">{label}</label>
+                        <button
+                          onClick={() => setSingleConfig(key, !singleConfig[key])}
+                          className={`relative w-9 h-5 rounded-full transition-all ${singleConfig[key] ? "bg-leaf-400" : "bg-cream-200"}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${singleConfig[key] ? "left-[18px]" : "left-0.5"}`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="flex-1 overflow-y-auto p-4">
             {blocks.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-cream-300 rounded-xl">
@@ -871,6 +1098,7 @@ export default function UIBuilderPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Preview Panel */}
           <AnimatePresence>
@@ -907,12 +1135,16 @@ export default function UIBuilderPage() {
                       </div>
                     </div>
 
-                    {/* Blocks */}
-                    <div className="space-y-3">
-                      {blocks.filter((b) => b.enabled).map((block) => (
-                        <div key={block.id}>{renderPreviewBlock(block, previewMode === "mobile")}</div>
-                      ))}
-                    </div>
+                    {/* Blocks (multi) yoki Single-product landing preview */}
+                    {isSingle ? (
+                      renderSingleLandingPreview()
+                    ) : (
+                      <div className="space-y-3">
+                        {blocks.filter((b) => b.enabled).map((block) => (
+                          <div key={block.id}>{renderPreviewBlock(block, previewMode === "mobile")}</div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Footer */}
                     <div className="mt-6 pt-4 border-t border-cream-300 text-center">
