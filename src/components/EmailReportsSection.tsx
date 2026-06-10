@@ -44,7 +44,7 @@ export function EmailReportsSection() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, []);
 
   const save = async (patch: Partial<NotifSettings>) => {
     setBusy(true);

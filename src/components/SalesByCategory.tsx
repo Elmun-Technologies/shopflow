@@ -6,19 +6,14 @@ import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/format";
 import type { ChartTooltipProps } from "../utils/chart";
+import { useMemo } from "react";
 import { useT } from "../i18n";
 
 // Commerly palette — yashil gradatsiyalar + yumshoq aksent
 const COLORS = ["#95D26F", "#5FA340", "#2D4938", "#A8E063", "#7BC056", "#C5E29F", "#4F6B53"];
 
-export default function SalesByCategory() {
-  const { tenant } = useAuth();
-  const { t } = useT();
-  const currency = tenant?.currency ?? "UZS";
-  const { data, loading } = useAsync(() => dashboardApi.salesByCategory(), []);
-  const items = data ?? [];
-
-  const Tip = ({ active, payload }: ChartTooltipProps) => {
+function makeTipComponent(currency: string) {
+  return function Tip({ active, payload }: ChartTooltipProps) {
     if (active && payload && payload.length) {
       const item = payload[0];
       const sales = (item.payload as { sales?: number } | undefined)?.sales ?? 0;
@@ -34,6 +29,16 @@ export default function SalesByCategory() {
     }
     return null;
   };
+}
+
+export default function SalesByCategory() {
+  const { tenant } = useAuth();
+  const { t } = useT();
+  const currency = tenant?.currency ?? "UZS";
+  const { data, loading } = useAsync(() => dashboardApi.salesByCategory(), []);
+  const items = data ?? [];
+
+  const Tip = useMemo(() => makeTipComponent(currency), [currency]);
 
   // Donut markazidagi summa
   const totalPct = items.reduce((s, x) => s + (x.value ?? 0), 0);

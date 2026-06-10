@@ -15,15 +15,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/format";
 import type { ChartTooltipProps } from "../utils/chart";
 import { useT } from "../i18n";
+import { useMemo } from "react";
 
-export default function WeeklySales() {
-  const { tenant } = useAuth();
-  const { t } = useT();
-  const currency = tenant?.currency ?? "UZS";
-  const { data, loading } = useAsync(() => dashboardApi.weeklySales(), []);
-  const series = data ?? [];
-
-  const Tip = ({ active, payload, label }: ChartTooltipProps) => {
+function makeTipComponent(currency: string) {
+  return function Tip({ active, payload, label }: ChartTooltipProps) {
     if (active && payload && payload.length) {
       return (
         <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
@@ -36,6 +31,16 @@ export default function WeeklySales() {
     }
     return null;
   };
+}
+
+export default function WeeklySales() {
+  const { tenant } = useAuth();
+  const { t } = useT();
+  const currency = tenant?.currency ?? "UZS";
+  const { data, loading } = useAsync(() => dashboardApi.weeklySales(), []);
+  const series = data ?? [];
+
+  const Tip = useMemo(() => makeTipComponent(currency), [currency]);
 
   return (
     <motion.div

@@ -1199,7 +1199,7 @@ export default function UIBuilderPage() {
                         min={1}
                         max={12}
                         value={value}
-                        onChange={(e) => updateBlockSetting(selectedBlock.id, key, parseInt(e.target.value) || 1)}
+                        onChange={(e) => updateBlockSetting(selectedBlock.id, key, parseInt(e.target.value, 10) || 1)}
                         className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
                       />
                     </div>
