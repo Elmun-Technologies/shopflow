@@ -57,6 +57,7 @@ import { exportRoutes } from "./routes/export.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { smsRoutes } from "./routes/sms.js";
 import { loyaltyRoutes } from "./routes/loyalty.js";
+import { publicApiRoutes } from "./routes/public-api.js";
 
 const app = Fastify({
   logger: {
@@ -232,6 +233,9 @@ await app.register(exportRoutes, { prefix: "/api/export" });
 await app.register(settingsRoutes, { prefix: "/api/settings" });
 await app.register(smsRoutes, { prefix: "/api/sms" });
 await app.register(loyaltyRoutes, { prefix: "/api/loyalty" });
+// Public API v1 — tashqi mijoz websaytlari uchun (API kalit auth).
+// Caddy /api/* ni backend'ga proxy qiladi → base URL: https://<domain>/api/v1
+await app.register(publicApiRoutes, { prefix: "/api/v1" });
 
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";

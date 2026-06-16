@@ -257,6 +257,8 @@ shopflow/
 - ✅ **Reports PDF** — AnalyticsPage'dan hisobot generatori
 - ✅ **Order/Customer/Lead create modallari** (admin tugmalari)
 - ✅ **Single-product do'kon rejimi** — Vitrina'da "Do'kon turi: Ko'p mahsulotli / Bitta mahsulot" toggle. Single rejimda bitta mahsulotga qaratilgan landing (galereya/sharhlar/badge/taymer toggle), savatsiz to'g'ridan-to'g'ri "Buyurtma berish". `Storefront.storeMode` + `singleProductId`. Bot `/start` o'zgarmaydi — storefront rejimga qarab render qiladi.
+- ✅ **Public API v1** — tashqi mijoz websaytlari uchun barqaror, API-kalit himoyalangan kontrakt (`/api/v1`). 6 endpoint: `GET /categories`, `/products` (filtr/sort/sahifalash), `/products/{slug}`, `/products/{id}/upsells` (ProductAddon), `/promotions` (free shipping), `POST /orders` (server-side narx, atomik stock, WEBSITE kanali, SSE/webhook). Bearer `sf_...` → tenant (`authenticateApiKey`). `?locale=uz|ru|en`. Pul butun UZS, rasm absolyut HTTPS, GET'lar 300s kesh. Shakl: `lib/public-shape.ts`, kontrakt: **`PUBLIC_API.md`**. Kalit: Sozlamalar → API yoki `npm run create-api-key -- <slug>`.
+  - Schema o'zgarishi: `Product.slug` (tenant ichida unique, URL identifikatori) + `Product.origin` (filtr) + `Product.content` (JSON — tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). Slug create'da avto-generatsiya + `npm run backfill-slugs` (mavjudlar). **Deploy'da `prisma db push` kerak.** Boy kontent admin UI — alohida PR (hozircha DB/seed orqali).
 
 ### Marketing
 - ✅ Sale campaigns (aksiyalar)

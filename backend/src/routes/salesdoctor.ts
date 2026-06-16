@@ -8,6 +8,7 @@ import { loginToSalesDoctor, SalesDoctorClient, SalesDoctorError } from "../lib/
 import { encryptSecret, decryptSecret } from "../lib/secret-cipher.js";
 import { pushOrderToSalesDoctor, normalizePhone } from "../lib/salesdoctor-push.js";
 import { logAudit } from "../lib/audit.js";
+import { uniqueProductSlug } from "../lib/slug.js";
 
 const connectSchema = z.object({
   domain: z.string().min(3).max(200),
@@ -281,10 +282,12 @@ export const salesDoctorRoutes: FastifyPluginAsync = async (app) => {
           }
         } else if (sd.name && sku) {
           try {
+            const slug = await uniqueProductSlug(app.prisma, tenantId, sd.name);
             await app.prisma.product.create({
               data: {
                 tenantId,
                 sku,
+                slug,
                 name: sd.name,
                 price: 0,
                 currency: "UZS",
