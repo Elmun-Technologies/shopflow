@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { logAudit } from "../lib/audit.js";
 import { pushProductToSD } from "../lib/salesdoctor-push.js";
+import { uniqueProductSlug } from "../lib/slug.js";
 
 const productSchema = z.object({
   sku: z.string().min(1).max(60),
@@ -17,7 +19,16 @@ const productSchema = z.object({
   imageUrl: z.string().max(500).optional().nullable(),
   images: z.array(z.string().max(500)).optional(),
   categoryId: z.string().optional().nullable(),
+  // Public API (v1) maydonlari — ixtiyoriy. slug bo'sh bo'lsa name'dan generatsiya.
+  slug: z.string().max(80).regex(/^[a-z0-9-]+$/).optional(),
+  origin: z.string().max(60).optional().nullable(),
+  content: z.unknown().optional(),
 });
+
+// content (ixtiyoriy JSON) ni Prisma input'ga keltirish.
+function toJsonInput(v: unknown): Prisma.InputJsonValue | undefined {
+  return v === undefined ? undefined : (v as Prisma.InputJsonValue);
+}
 
 const listQuery = z.object({
   search: z.string().optional(),
@@ -56,12 +67,17 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const data = productSchema.parse(req.body);
+    const { content, ...rest } = data;
+    const slug = await uniqueProductSlug(app.prisma, req.session.tenantId, data.slug || data.name);
     const created = await app.prisma.product.create({
       data: {
-        ...data,
+        ...rest,
+        slug,
         imageUrl: data.imageUrl || null,
         oldPrice: data.oldPrice ?? null,
         categoryId: data.categoryId || null,
+        origin: data.origin || null,
+        content: toJsonInput(content),
         tenantId: req.session.tenantId,
       },
     });
@@ -88,12 +104,26 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
+
+    const { content, ...rest } = data;
+    // Slug barqaror — rename'da o'zgartirmaymiz. Faqat aniq berilsa yoki
+    // mahsulotda hali slug bo'lmasa (legacy) generatsiya qilamiz.
+    let slug: string | undefined;
+    if (data.slug !== undefined) {
+      slug = await uniqueProductSlug(app.prisma, req.session.tenantId, data.slug, id);
+    } else if (!product.slug) {
+      slug = await uniqueProductSlug(app.prisma, req.session.tenantId, data.name ?? product.name, id);
+    }
+
     await app.prisma.product.updateMany({
       where: { id, tenantId: req.session.tenantId },
       data: {
-        ...data,
+        ...rest,
+        ...(slug !== undefined && { slug }),
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
         ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
+        ...(data.origin !== undefined && { origin: data.origin || null }),
+        ...(content !== undefined && { content: toJsonInput(content) }),
       },
     });
     const updated = await app.prisma.product.findFirstOrThrow({
