@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
+import { amountsMatch, reconcileOutcome, type ReconOutcome } from "../lib/payment-reconcile.js";
 
 function getPublicBaseUrl(): string {
   const raw =
@@ -51,10 +52,29 @@ async function loadPaymentMethodForWebhook(
   });
 }
 
+/** Buyurtmani to'lov referensi (order.code yoki id) bo'yicha topadi — total bilan. */
+export async function findOrderForPayment(
+  prisma: PrismaClient,
+  tenantId: string,
+  orderRef: string | null | undefined,
+): Promise<{ id: string; total: number } | null> {
+  if (!orderRef) return null;
+  const o = await prisma.order.findFirst({
+    where: { tenantId, OR: [{ code: orderRef }, { id: orderRef }] },
+    select: { id: true, total: true },
+  });
+  return o ? { id: o.id, total: Number(o.total) } : null;
+}
+
 /**
  * To'lov natijasini DB'ga yozadi: PaymentTransaction yaratadi/yangilaydi
- * (externalId bo'yicha idempotent — webhook qayta kelsa duplikat bo'lmaydi)
- * va muvaffaqiyatli to'lovda bog'liq buyurtmani "paid" deb belgilaydi.
+ * (externalId bo'yicha idempotent — webhook qayta kelsa duplikat bo'lmaydi).
+ *
+ * RECONCILIATION: SUCCESS webhook'ida buyurtma mavjudligi va summa mosligi
+ * tekshiriladi. Order topilmasa yoki summa order.total bilan mos kelmasa —
+ * buyurtma "paid" deb belgilanMAYDI, tranzaksiya FAILED sifatida sabab bilan
+ * yoziladi. Bu imzo tekshiruvidan keyingi himoya qatlami (provider'dan qat'i
+ * nazar noto'g'ri summa/order uchun pul tasdiqlanmaydi).
  */
 async function recordPaymentResult(
   prisma: PrismaClient,
@@ -68,29 +88,35 @@ async function recordPaymentResult(
     payload: unknown;
     errorMessage?: string | null;
   },
-): Promise<{ orderId: string | null }> {
+): Promise<{ orderId: string | null; outcome: ReconOutcome }> {
   const { tenantId } = method;
 
-  // Buyurtmani topamiz (order.code yoki id bo'yicha)
-  let order: { id: string } | null = null;
-  if (args.orderRef) {
-    order = await prisma.order.findFirst({
-      where: { tenantId, OR: [{ code: args.orderRef }, { id: args.orderRef }] },
-      select: { id: true },
-    });
-  }
+  const order = await findOrderForPayment(prisma, tenantId, args.orderRef);
 
-  const status = args.status as PaymentTxStatus;
-  const completedAt = args.status === "SUCCESS" ? new Date() : null;
+  // Reconciliation natijasi
+  const outcome = reconcileOutcome(args.orderRef, order, args.amount);
+
+  // SUCCESS bo'lsa-yu reconciliation muammosi bo'lsa — FAILED'ga aylantiramiz
+  const reconcileOk = outcome === "ok";
+  const effectiveStatus: PaymentTxStatus =
+    args.status === "SUCCESS" && !reconcileOk ? "FAILED" : (args.status as PaymentTxStatus);
+  const effectiveError =
+    args.status === "SUCCESS" && !reconcileOk
+      ? outcome === "no_order"
+        ? `Reconciliation: buyurtma topilmadi (ref=${args.orderRef})`
+        : `Reconciliation: summa mos emas (webhook=${args.amount}, order=${order?.total})`
+      : args.errorMessage ?? null;
+
+  const completedAt = effectiveStatus === "SUCCESS" ? new Date() : null;
   const baseData = {
     tenantId,
     methodId: method.id,
     orderId: order?.id ?? null,
     amount: args.amount,
     currency: args.currency ?? "UZS",
-    status,
+    status: effectiveStatus,
     payload: (args.payload ?? null) as Prisma.InputJsonValue,
-    errorMessage: args.errorMessage ?? null,
+    errorMessage: effectiveError,
     completedAt,
   };
 
@@ -101,14 +127,14 @@ async function recordPaymentResult(
         tenantId_methodId_externalId: { tenantId, methodId: method.id, externalId: args.externalId },
       },
       create: { ...baseData, externalId: args.externalId },
-      update: { status, completedAt, errorMessage: baseData.errorMessage, orderId: baseData.orderId },
+      update: { status: effectiveStatus, completedAt, errorMessage: effectiveError, orderId: baseData.orderId },
     });
   } else {
     await prisma.paymentTransaction.create({ data: baseData });
   }
 
-  // Muvaffaqiyatli to'lov → buyurtmani paid deb belgilaymiz
-  if (args.status === "SUCCESS" && order) {
+  // Faqat reconciliation OK bo'lganda buyurtmani paid deb belgilaymiz
+  if (args.status === "SUCCESS" && reconcileOk && order) {
     await prisma.order.update({
       where: { id: order.id },
       data: { paid: true, paidAt: new Date() },
@@ -119,7 +145,7 @@ async function recordPaymentResult(
     }).catch(() => null);
   }
 
-  return { orderId: order?.id ?? null };
+  return { orderId: order?.id ?? null, outcome };
 }
 
 function tenantRefFromRequest(req: FastifyRequest): string | undefined {
@@ -460,7 +486,21 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         const actionRaw = b.action;
         const action = (actionRaw === 0 || actionRaw === "0") ? 0 : (actionRaw === 1 || actionRaw === "1") ? 1 : -1;
         if (action === 0) {
-          // Prepare: buyurtma mavjudligini tekshirish
+          // Prepare: buyurtma mavjudligi va summa mosligini tekshirish.
+          // Click kodlari: -5 (buyurtma topilmadi), -2 (summa noto'g'ri).
+          const order = await findOrderForPayment(app.prisma, method.tenantId, b.merchant_trans_id ?? null);
+          if (!order) {
+            return reply.code(200).send({
+              click_trans_id: b.click_trans_id, merchant_trans_id: b.merchant_trans_id,
+              error: -5, error_note: "Order not found",
+            });
+          }
+          if (!amountsMatch(Number(b.amount ?? 0), order.total)) {
+            return reply.code(200).send({
+              click_trans_id: b.click_trans_id, merchant_trans_id: b.merchant_trans_id,
+              error: -2, error_note: "Incorrect amount",
+            });
+          }
           return reply.code(200).send({
             click_trans_id: b.click_trans_id,
             merchant_trans_id: b.merchant_trans_id,
@@ -471,7 +511,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         } else if (action === 1) {
           // Complete: to'lovni tasdiqlash. error < 0 — bekor/muvaffaqiyatsiz.
           const clickError = Number(b.error ?? 0);
-          await recordPaymentResult(app.prisma, method, {
+          const recon = await recordPaymentResult(app.prisma, method, {
             orderRef: b.merchant_trans_id ?? null,
             externalId: b.click_trans_id !== undefined ? String(b.click_trans_id) : null,
             amount: Number(b.amount ?? 0),
@@ -479,7 +519,25 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             status: clickError < 0 ? "FAILED" : "SUCCESS",
             payload: req.body,
             errorMessage: clickError < 0 ? `Click error ${clickError}` : null,
-          }).catch((err) => app.log.error({ err, methodCode }, "[payments] Click tx persist failed"));
+          }).catch((err) => {
+            app.log.error({ err, methodCode }, "[payments] Click tx persist failed");
+            return null;
+          });
+
+          // Reconciliation muvaffaqiyatsiz bo'lsa Click'ga mos xato qaytaramiz
+          if (clickError >= 0 && recon?.outcome === "no_order") {
+            return reply.code(200).send({
+              click_trans_id: b.click_trans_id, merchant_trans_id: b.merchant_trans_id,
+              error: -5, error_note: "Order not found",
+            });
+          }
+          if (clickError >= 0 && recon?.outcome === "amount_mismatch") {
+            app.log.warn({ methodCode, tenantId: method.tenantId, orderRef: b.merchant_trans_id }, "[payments] Click amount mismatch — to'lov rad etildi");
+            return reply.code(200).send({
+              click_trans_id: b.click_trans_id, merchant_trans_id: b.merchant_trans_id,
+              error: -2, error_note: "Incorrect amount",
+            });
+          }
 
           return reply.code(200).send({
             click_trans_id: b.click_trans_id,
@@ -540,6 +598,22 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         const pmAmount = Number(params.amount ?? 0) / 100; // Payme tiyin'da yuboradi
 
         if (rpcMethod === "CheckPerformTransaction") {
+          // Payme protokoli: bu yerda buyurtma mavjudligi va summa mosligi
+          // tekshirilishi SHART (aks holda istalgan summa/order qabul qilinardi).
+          const order = await findOrderForPayment(app.prisma, method.tenantId, pmOrderRef ?? null);
+          if (!order) {
+            return reply.code(200).send({
+              id: rpcId,
+              error: { code: -31050, message: { ru: "Заказ не найден", en: "Order not found", uz: "Buyurtma topilmadi" }, data: "order_id" },
+            });
+          }
+          if (!amountsMatch(pmAmount, order.total)) {
+            app.log.warn({ methodCode, tenantId: method.tenantId, orderRef: pmOrderRef }, "[payments] Payme amount mismatch — rad etildi");
+            return reply.code(200).send({
+              id: rpcId,
+              error: { code: -31001, message: { ru: "Неверная сумма", en: "Incorrect amount", uz: "Summa noto'g'ri" } },
+            });
+          }
           return reply.code(200).send({
             id: rpcId,
             result: { allow: true },

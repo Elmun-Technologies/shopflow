@@ -4,6 +4,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { logAuditFor } from "../lib/audit.js";
 
 const promoSchema = z.object({
   code: z.string().min(2).max(40).regex(/^[A-Z0-9_-]+$/, "Faqat katta harflar, raqamlar, _ va -"),
@@ -63,7 +64,7 @@ export const promoCodeRoutes: FastifyPluginAsync = async (app) => {
     });
 
     // Yangi promo kod
-    admin.post("/", async (req, reply) => {
+    admin.post("/", { preHandler: [admin.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
       const data = promoSchema.parse(req.body);
       const tenantId = req.session.tenantId;
 
@@ -88,11 +89,15 @@ export const promoCodeRoutes: FastifyPluginAsync = async (app) => {
           active: data.active,
         },
       });
+      await logAuditFor(app.prisma, req.session, {
+        action: "CREATE", resourceType: "promo_code", resourceId: created.id,
+        summary: `Promo kod yaratildi: ${created.code} (${created.discountType === "PERCENT" ? `${Number(created.discountValue)}%` : `${Number(created.discountValue)} so'm`})`,
+      });
       return reply.code(201).send({ ...created, discountValue: Number(created.discountValue) });
     });
 
     // Promo kodni yangilash
-    admin.patch<{ Params: { id: string } }>("/:id", async (req, reply) => {
+    admin.patch<{ Params: { id: string } }>("/:id", { preHandler: [admin.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
       const data = promoSchema.partial().parse(req.body);
       const existing = await app.prisma.promoCode.findFirst({
         where: { id: req.params.id, tenantId: req.session.tenantId },
@@ -114,6 +119,11 @@ export const promoCodeRoutes: FastifyPluginAsync = async (app) => {
           ...(data.active !== undefined && { active: data.active }),
         },
       });
+      await logAuditFor(app.prisma, req.session, {
+        action: "UPDATE", resourceType: "promo_code", resourceId: updated.id,
+        summary: `Promo kod tahrirlandi: ${updated.code}`,
+        changes: data,
+      });
       return { ...updated, discountValue: Number(updated.discountValue) };
     });
 
@@ -124,6 +134,10 @@ export const promoCodeRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!existing) return reply.code(404).send({ error: "Topilmadi" });
       await app.prisma.promoCode.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
+      await logAuditFor(app.prisma, req.session, {
+        action: "DELETE", resourceType: "promo_code", resourceId: existing.id,
+        summary: `Promo kod o'chirildi: ${existing.code}`,
+      });
       return { ok: true };
     });
 

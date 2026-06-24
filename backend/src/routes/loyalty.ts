@@ -4,6 +4,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { logAuditFor } from "../lib/audit.js";
 
 // Xariddan ball hisoblash
 export async function calculateEarnedPoints(
@@ -78,7 +79,7 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
       });
     });
 
-    admin.post("/rules", async (req, reply) => {
+    admin.post("/rules", { preHandler: [admin.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
       const data = z.object({
         name: z.string().min(1).max(80),
         description: z.string().max(300).optional(),
@@ -92,10 +93,14 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
       const rule = await app.prisma.loyaltyRule.create({
         data: { tenantId: req.session.tenantId, ...data },
       });
+      await logAuditFor(app.prisma, req.session, {
+        action: "CREATE", resourceType: "loyalty_rule", resourceId: rule.id,
+        summary: `Sodiqlik qoidasi yaratildi: ${rule.name}`,
+      });
       return reply.code(201).send(rule);
     });
 
-    admin.patch<{ Params: { id: string } }>("/rules/:id", async (req, reply) => {
+    admin.patch<{ Params: { id: string } }>("/rules/:id", { preHandler: [admin.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
       const data = z.object({
         name: z.string().min(1).max(80).optional(),
         description: z.string().max(300).optional().nullable(),
@@ -115,6 +120,10 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
         data,
       });
       if (affected.count === 0) return reply.code(404).send({ error: "Topilmadi" });
+      await logAuditFor(app.prisma, req.session, {
+        action: "UPDATE", resourceType: "loyalty_rule", resourceId: req.params.id,
+        summary: "Sodiqlik qoidasi tahrirlandi", changes: data,
+      });
       return app.prisma.loyaltyRule.findFirstOrThrow({
         where: { id: req.params.id, tenantId: req.session.tenantId },
       });
@@ -155,8 +164,8 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
       return { items, total, page: q.page, pageSize: q.pageSize };
     });
 
-    // Balansni qo'lda o'zgartirish
-    admin.post<{ Params: { customerId: string } }>("/adjust/:customerId", async (req, reply) => {
+    // Balansni qo'lda o'zgartirish — moliyaviy amal, faqat OWNER/ADMIN/MANAGER
+    admin.post<{ Params: { customerId: string } }>("/adjust/:customerId", { preHandler: [admin.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
       const data = z.object({
         amount: z.number().int().min(-100000).max(100000),
         description: z.string().min(1).max(200),
@@ -198,6 +207,12 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
           },
         }),
       ]);
+
+      await logAuditFor(app.prisma, req.session, {
+        action: "ADJUST", resourceType: "loyalty_account", resourceId: customer.id,
+        summary: `Ball balansi qo'lda o'zgartirildi: ${diff > 0 ? "+" : ""}${diff} (${account.balance} → ${newBalance}) — ${data.description}`,
+        changes: { customerId: customer.id, from: account.balance, to: newBalance, diff },
+      });
 
       return reply.code(201).send({ balance: newBalance, changed: diff });
     });
