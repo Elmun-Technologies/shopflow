@@ -41,3 +41,32 @@ export async function logAudit(args: LogAuditArgs): Promise<void> {
     console.warn("[audit] write failed", err);
   }
 }
+
+/**
+ * logAudit'ning qulay varianti — session'dan actorId/tenantId oladi va
+ * actor nomini avtomatik qidiradi. Route handler'larda boilerplate'ni
+ * kamaytiradi (har joyda user.findUnique takrorlanmasin).
+ */
+export async function logAuditFor(
+  prisma: PrismaClient,
+  session: { userId: string; tenantId: string },
+  args: Omit<LogAuditArgs, "prisma" | "tenantId" | "actorId" | "actorName">,
+): Promise<void> {
+  let actorName: string | null = null;
+  try {
+    const actor = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { name: true },
+    });
+    actorName = actor?.name ?? null;
+  } catch {
+    /* actor topilmasa ham audit yoziladi */
+  }
+  await logAudit({
+    prisma,
+    tenantId: session.tenantId,
+    actorId: session.userId,
+    actorName,
+    ...args,
+  });
+}

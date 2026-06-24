@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { pushCustomerToSD } from "../lib/salesdoctor-push.js";
+import { logAuditFor } from "../lib/audit.js";
 
 const customerSchema = z.object({
   name: z.string().min(1).max(120),
@@ -95,6 +96,10 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     const created = await app.prisma.customer.create({
       data: { ...data, email: data.email || null, tenantId: req.session.tenantId },
     });
+    await logAuditFor(app.prisma, req.session, {
+      action: "CREATE", resourceType: "customer", resourceId: created.id,
+      summary: `Mijoz yaratildi: ${created.name}`,
+    });
     pushCustomerToSD(app.prisma, req.session.tenantId, created.id)
       .catch((err) => app.log.warn({ err, customerId: created.id }, "SD push failed"));
     return created;
@@ -116,6 +121,10 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     const updated = await app.prisma.customer.findFirstOrThrow({
       where: { id, tenantId: req.session.tenantId },
     });
+    await logAuditFor(app.prisma, req.session, {
+      action: "UPDATE", resourceType: "customer", resourceId: id,
+      summary: `Mijoz tahrirlandi: ${updated.name}`,
+    });
     pushCustomerToSD(app.prisma, req.session.tenantId, id)
       .catch((err) => app.log.warn({ err, customerId: id }, "SD push failed"));
     return updated;
@@ -128,6 +137,10 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!c) return reply.code(404).send({ error: "Not found" });
     await app.prisma.customer.deleteMany({ where: { id, tenantId: req.session.tenantId } });
+    await logAuditFor(app.prisma, req.session, {
+      action: "DELETE", resourceType: "customer", resourceId: id,
+      summary: `Mijoz o'chirildi: ${c.name}`,
+    });
     return { ok: true };
   });
 
