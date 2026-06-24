@@ -13,7 +13,7 @@ import {
   Download,
   X,
 } from "lucide-react";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { leadsApi } from "../api/endpoints";
 import { exportToCsv } from "../utils/exportCsv";
 import { TableRowsSkeleton } from "./ui/Skeleton";
@@ -57,12 +57,8 @@ export default function LeadsPage() {
     [page, search, statusFilter],
   );
 
-  const { data, loading, error, refetch } = useAsync(() => leadsApi.list(listParams), [
-    page,
-    search,
-    statusFilter,
-  ]);
-  const { data: stats } = useAsync(() => leadsApi.stats(), []);
+  const { data, loading, error, refetch } = useQueryAsync(["leads", "list", listParams], () => leadsApi.list(listParams));
+  const { data: stats } = useQueryAsync(["leads", "stats"], () => leadsApi.stats());
 
   const leads = data?.items ?? [];
   const total = data?.total ?? 0;

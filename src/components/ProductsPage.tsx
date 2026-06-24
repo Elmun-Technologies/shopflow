@@ -25,7 +25,7 @@ import { Skeleton } from "./ui/Skeleton";
 import { useAppToast } from "./ui/Toast";
 
 const MAX_IMAGES = 10;
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { productsApi, categoriesApi } from "../api/endpoints";
 import { api } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
@@ -72,12 +72,8 @@ export default function ProductsPage() {
     }),
     [page, search, categoryFilter],
   );
-  const { data, loading, error, refetch } = useAsync(() => productsApi.list(params), [
-    page,
-    search,
-    categoryFilter,
-  ]);
-  const { data: categories, refetch: refetchCategories } = useAsync(() => categoriesApi.list(), []);
+  const { data, loading, error, refetch } = useQueryAsync(["products", "list", params], () => productsApi.list(params));
+  const { data: categories, refetch: refetchCategories } = useQueryAsync(["categories", "list"], () => categoriesApi.list());
 
   const products = data?.items ?? [];
   const total = data?.total ?? 0;

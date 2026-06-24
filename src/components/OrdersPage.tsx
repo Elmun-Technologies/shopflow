@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Plus, Loader2, Inbox, Eye, AlertCircle, ChevronDown, Check, Download, X } from "lucide-react";
 import { exportToCsv } from "../utils/exportCsv";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { ordersApi, productsApi, customersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency, formatDate } from "../utils/format";
@@ -87,11 +87,7 @@ export default function OrdersPage() {
     [page, search, statusFilter],
   );
 
-  const { data, loading, error, refetch } = useAsync(() => ordersApi.list(params), [
-    page,
-    search,
-    statusFilter,
-  ]);
+  const { data, loading, error, refetch } = useQueryAsync(["orders", "list", params], () => ordersApi.list(params));
 
   const orders = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -360,8 +356,8 @@ export default function OrdersPage() {
 function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; onClose: () => void; onCreated: () => void }) {
   const { t } = useT();
   const toast = useAppToast();
-  const { data: customersData } = useAsync(() => customersApi.list({ pageSize: 200 }), []);
-  const { data: productsData } = useAsync(() => productsApi.list({ pageSize: 200 }), []);
+  const { data: customersData } = useQueryAsync(["customers", "list", { pageSize: 200 }], () => customersApi.list({ pageSize: 200 }));
+  const { data: productsData } = useQueryAsync(["products", "list", { pageSize: 200 }], () => productsApi.list({ pageSize: 200 }));
   const customers = customersData?.items ?? [];
   const products = productsData?.items ?? [];
 
