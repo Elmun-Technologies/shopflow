@@ -21,9 +21,11 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+# Self-baselining migration runner (db push o'rniga prisma migrate)
+COPY scripts/db-migrate.mjs ./scripts/db-migrate.mjs
 
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD curl -fsS http://localhost:4000/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/server.js"]
+CMD ["sh", "-c", "node scripts/db-migrate.mjs && node dist/server.js"]
