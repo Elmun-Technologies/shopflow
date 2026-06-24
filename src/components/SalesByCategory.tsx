@@ -1,7 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/format";
@@ -35,7 +35,7 @@ export default function SalesByCategory() {
   const { tenant } = useAuth();
   const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
-  const { data, loading } = useAsync(() => dashboardApi.salesByCategory(), []);
+  const { data, loading } = useQueryAsync(["dashboard", "salesByCategory"], () => dashboardApi.salesByCategory());
   const items = data ?? [];
 
   const Tip = useMemo(() => makeTipComponent(currency), [currency]);

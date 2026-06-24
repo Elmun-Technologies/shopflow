@@ -22,6 +22,8 @@ import LoginPage from "./components/LoginPage";
 import { AppToastProvider } from "./components/ui/Toast";
 import { ConfirmProvider } from "./components/ui/ConfirmDialog";
 import { LangProvider } from "./i18n";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./api/queryClient";
 import { PageSkeleton } from "./components/ui/Skeleton";
 import type { MarketingSub } from "./data/marketingData";
 
@@ -351,15 +353,17 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <LangProvider>
-        <AuthProvider>
-          <AppToastProvider>
-            <ConfirmProvider>
-              <AppShell />
-            </ConfirmProvider>
-          </AppToastProvider>
-        </AuthProvider>
-      </LangProvider>
+      <QueryClientProvider client={queryClient}>
+        <LangProvider>
+          <AuthProvider>
+            <AppToastProvider>
+              <ConfirmProvider>
+                <AppShell />
+              </ConfirmProvider>
+            </AppToastProvider>
+          </AuthProvider>
+        </LangProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
