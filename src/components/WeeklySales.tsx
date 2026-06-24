@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/format";
@@ -37,7 +37,7 @@ export default function WeeklySales() {
   const { tenant } = useAuth();
   const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
-  const { data, loading } = useAsync(() => dashboardApi.weeklySales(), []);
+  const { data, loading } = useQueryAsync(["dashboard", "weeklySales"], () => dashboardApi.weeklySales());
   const series = data ?? [];
 
   const Tip = useMemo(() => makeTipComponent(currency), [currency]);

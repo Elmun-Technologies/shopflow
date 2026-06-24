@@ -3,7 +3,7 @@
 
 import { motion } from "framer-motion";
 import { Loader2, Radio } from "lucide-react";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useT } from "../i18n";
 
@@ -19,7 +19,7 @@ const COLORS = [
 
 export default function TrafficSources() {
   const { t } = useT();
-  const { data, loading } = useAsync(() => dashboardApi.trafficSources(), []);
+  const { data, loading } = useQueryAsync(["dashboard", "trafficSources"], () => dashboardApi.trafficSources());
   const sources = data ?? [];
 
   return (

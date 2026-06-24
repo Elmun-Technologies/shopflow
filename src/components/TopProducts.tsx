@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Package, Loader2, TrendingUp } from "lucide-react";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
@@ -10,7 +10,7 @@ export default function TopProducts() {
   const { tenant } = useAuth();
   const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
-  const { data, loading } = useAsync(() => dashboardApi.topProducts(), []);
+  const { data, loading } = useQueryAsync(["dashboard", "topProducts"], () => dashboardApi.topProducts());
   const products = data ?? [];
 
   const maxSold = products.length > 0 ? Math.max(...products.map((p) => p.sold)) : 1;
