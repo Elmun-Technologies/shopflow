@@ -74,11 +74,19 @@ jobs:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
         run: npx tsc --noEmit
 
-      - name: Backend DB push (test schema)
+      - name: Backend migrate deploy (fresh CI DB applies 0_init)
         working-directory: backend
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-        run: npx prisma db push --skip-generate --accept-data-loss
+        run: npx prisma migrate deploy
+
+      - name: Backend migrations in sync with schema (drift check)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        # exit 2 = drift: schema.prisma migratsiyalardan farq qiladi →
+        # `npx prisma migrate dev --name <...>` bilan yangi migration yarating.
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
 
       - name: Backend tests (with tenant isolation integration)
         working-directory: backend

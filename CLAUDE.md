@@ -272,7 +272,7 @@ shopflow/
 ## 🛣 Kelajakda (TODO / ideas)
 
 ### Qolgan
-- [ ] **Prisma migrations folder** — hozir `db push` (production risk, alohida coordinated migration)
+- ✅ **Prisma migrations** — `db push` → versiyalangan `prisma migrate`. Baseline `0_init`, self-baselining entrypoint (`scripts/db-migrate.mjs`) mavjud prod DB'ni avtomatik baseline qiladi (qo'lda amal kerak emas). CI: `migrate deploy` + drift-check. Hujjat: **`MIGRATIONS.md`**.
 - [ ] **Push notifications** — Service Worker bor, VAPID setup qoldi
 - [ ] **Email reports** — PDF tayyor, SMTP credentials kerak
 - [ ] **Eskiz SMS real API** — tenant credential kerak
