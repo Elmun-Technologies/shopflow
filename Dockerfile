@@ -11,6 +11,9 @@ RUN npm ci --no-audit --no-fund
 # Build
 COPY . .
 ENV VITE_BASE_PATH=/
+# Google OAuth client id — Vite build vaqtida embed qilinadi (bo'sh bo'lsa tugma yashirin)
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 # ─── Runtime stage ────────────────────────────────────────────────────────────
