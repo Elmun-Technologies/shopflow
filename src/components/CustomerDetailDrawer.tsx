@@ -9,6 +9,7 @@ import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
 import { useT } from "../i18n";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface CustomerDetailResponse {
   customer: {
@@ -107,6 +108,9 @@ export default function CustomerDetailDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [customerId, onClose]);
 
+  // Focus-trap: ochilganda fokus drawer ichiga, Tab tsikli ichkarida, yopilganda tiklanadi
+  const panelRef = useFocusTrap<HTMLDivElement>(!!customerId);
+
   if (!customerId) return null;
 
   const handleSave = async () => {
@@ -144,7 +148,7 @@ export default function CustomerDetailDrawer({
   return (
     <div className="fixed inset-0 z-[200] flex justify-end" role="dialog" aria-modal="true">
       <button onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-label="Yopish" />
-      <div className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div ref={panelRef} className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />

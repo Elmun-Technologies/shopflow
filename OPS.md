@@ -42,9 +42,20 @@ docker compose up -d backend
 
 ## Backup va restore
 
-**Avtomatik:** `backup` service har 24 soatda `pg_dump | gzip`. 7 kun saqlanadi.
+**Avtomatik:** `backup` service har 24 soatda `pg_dump | gzip`. `RETENTION_DAYS` kun local saqlanadi.
 
-**Lokalga nusxalash:**
+**Offsite (production uchun TAVSIYA):** `.env`'da `BACKUP_S3_BUCKET` (+ kalitlar)
+o'rnatilsa, har backup S3 / Cloudflare R2 / Backblaze B2 / MinIO'ga ham yuklanadi
+(`scripts/backup.sh` → `aws s3 cp`). VPS butunlay yo'qolsa ham ma'lumot tashqarida
+qoladi. Offsite retention'ni **bucket lifecycle rule** bilan boshqaring. Sozlash:
+`.env.example` → Backup bo'limi.
+
+```bash
+# Offsite ishlayotganini tekshirish
+docker compose logs backup | grep -i offsite
+```
+
+**Lokalga nusxalash (offsite o'rniga muqobil):**
 ```bash
 docker run --rm -v shopflow_backup_data:/data alpine tar czf - /data \
   | ssh root@<remote> "cat > /backups/shopflow-$(date +%F).tar.gz"
@@ -106,13 +117,36 @@ du -sh /var/lib/docker/volumes/shopflow_*
 
 VPS RAM'iga qarab moslang.
 
+## Monitoring (Prometheus metrics)
+
+Backend `/metrics` endpoint'i Prometheus formatida metrikalarni beradi:
+- `http_requests_total`, `http_request_duration_seconds`, `http_requests_in_flight`
+- Node default: CPU, xotira, event-loop lag, GC
+
+**Xavfsizlik:** `/metrics` Caddy orqali ommaga ochilmaydi (Caddy faqat `/api/*` ni
+proxy qiladi) — faqat ichki Docker tarmog'idan (`backend:4000/metrics`) erishiladi.
+Qo'shimcha himoya uchun `METRICS_TOKEN` o'rnating; prod'da token bo'lmasa endpoint
+o'chiq (503 qaytaradi).
+
+Prometheus scrape namunasi:
+
+```yaml
+scrape_configs:
+  - job_name: shopflow
+    metrics_path: /metrics
+    bearer_token: "<METRICS_TOKEN>"
+    static_configs:
+      - targets: ["backend:4000"]
+```
+
 ## Production checklist
 
 - [ ] `.env` da JWT_SECRET 32+ belgi, random
 - [ ] `SECRETS_ENCRYPTION_KEY` alohida (JWT'dan farq)
 - [ ] `POSTGRES_PASSWORD` kuchli (15+ belgi)
-- [ ] Backup volume tashqariga nusxalanadi (rsync/S3)
+- [ ] Offsite backup yoqilgan (`BACKUP_S3_BUCKET` + kalitlar) yoki volume tashqariga nusxalanadi
 - [ ] Sentry DSN sozlangan (`SENTRY_DSN`)
+- [ ] `METRICS_TOKEN` o'rnatilgan (prod `/metrics` himoyasi)
 - [ ] DNS A record va port 80/443 ochiq
 - [ ] `docker compose logs caddy` da TLS xato yo'q
 - [ ] `/health` 200 qaytaryapti

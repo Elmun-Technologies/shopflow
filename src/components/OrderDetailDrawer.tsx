@@ -13,6 +13,7 @@ import type { OrderStatus } from "../types/api";
 import { useT } from "../i18n";
 import { openOrderPrint } from "../utils/printOrder";
 import { useAuth } from "../contexts/AuthContext";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface TeamMember { id: string; name: string; role: string; active: boolean }
 interface OrderNote { id: string; content: string; authorId: string | null; authorName: string | null; createdAt: string }
@@ -208,6 +209,9 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
     return () => window.removeEventListener("keydown", onKey);
   }, [orderId, onClose]);
 
+  // Focus-trap: ochilganda fokus drawer ichiga, Tab tsikli ichkarida, yopilganda tiklanadi
+  const panelRef = useFocusTrap<HTMLDivElement>(!!orderId);
+
   if (!orderId) return null;
 
   const handleStatusChange = async (status: OrderStatus) => {
@@ -344,7 +348,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         aria-label="Yopish"
       />
-      <div className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div ref={panelRef} className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />

@@ -200,13 +200,14 @@ shopflow/
 - ✅ Docker Compose: Postgres + Backend + Frontend + Caddy (HTTPS) + Backup
 - ✅ VPS bootstrap skripti + OPS.md / SECURITY.md
 - ✅ Sentry error tracking + Pino log redaction
+- ✅ Prometheus metrics — `/metrics` (HTTP counter/histogram/in-flight + Node default: CPU/xotira/event-loop/GC). Prod'da `METRICS_TOKEN` himoya, Caddy'dan tashqarida (ichki). Hujjat: `OPS.md` → Monitoring
 - ✅ JWT refresh tokens + API keys + AES-256-GCM secret encryption
 - ✅ initData security (Telegram WebApp + storefront mutation endpoints)
 - ✅ SSRF himoyasi (outbound webhooks)
 - ✅ Per-tenant rate limit, mem_limit, deep healthcheck (DB ping)
 - ✅ Real-time SSE (15s polling o'rniga)
 - ✅ PWA — installable + offline shell (Service Worker, manifest)
-- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention)
+- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention) + **offsite** (S3/R2/B2/MinIO, `BACKUP_S3_*` — `scripts/backup.sh`)
 - ✅ Graceful shutdown (SIGTERM → workers stop)
 - ✅ Multi-tenant webhook URLs
 
