@@ -386,6 +386,30 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         const toLabel = STATUS_LABEL[toStatus] ?? toStatus;
         summary = `${affected} ta buyurtma → ${toLabel}`;
 
+        // Stock balansi (DI-8): single PATCH bilan bir xil — terminal holatga
+        // (CANCELLED/REFUNDED) o'tgan har bir buyurtma uchun zaxirani qaytaramiz;
+        // terminal'dan chiqqanlar uchun qayta kamaytiramiz. Per-order eski status
+        // bo'yicha qaror qilamiz (targets har biri toStatus'ga o'tdi).
+        const isTerminal = (s: string) => s === "CANCELLED" || s === "REFUNDED";
+        const crossing = targets.filter((t) => isTerminal(toStatus) !== isTerminal(t.status));
+        if (crossing.length > 0) {
+          const restore = isTerminal(toStatus);
+          const items = await app.prisma.orderItem.findMany({
+            where: { orderId: { in: crossing.map((t) => t.id) } },
+            select: { productId: true, qty: true },
+          });
+          if (items.length > 0) {
+            await app.prisma.$transaction(
+              items.map((it) =>
+                app.prisma.product.updateMany({
+                  where: { id: it.productId, tenantId },
+                  data: { stock: { increment: restore ? it.qty : -it.qty } },
+                }),
+              ),
+            );
+          }
+        }
+
         // Audit — bitta umumiy bulk yozuv
         await logAudit({
           prisma: app.prisma,

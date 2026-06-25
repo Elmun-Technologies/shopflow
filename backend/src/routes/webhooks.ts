@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { nextLeadCode } from "../lib/codes.js";
 import { aiReplyToMessage } from "../lib/ai-assistant.js";
@@ -310,25 +311,27 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
 
     const requestId = body.requestId ?? `noreq-${Date.now()}`;
 
-    // Idempotentlik tekshiruvi
-    const existing = await app.prisma.webhookEvent.findUnique({
-      where: { tenantId_source_externalId: { tenantId, source: "moysklad", externalId: requestId } },
-    });
-    if (existing) {
-      return { ok: true, duplicate: true };
+    // Idempotentlik — TOCTOU'siz: to'g'ridan-to'g'ri create urinamiz, P2002 (unique
+    // buzilishi) bo'lsa bu dublikat demak → no-op muvaffaqiyat. Ilgari findUnique +
+    // alohida create ikki bir vaqtdagi dublikatni o'tkazib, biri 500 berardi.
+    try {
+      await app.prisma.webhookEvent.create({
+        data: {
+          tenantId,
+          source: "moysklad",
+          externalId: requestId,
+          entityType: body.events[0].meta?.type ?? null,
+          action: body.events[0].action ?? null,
+          payload: body as never,
+          processed: true,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        return { ok: true, duplicate: true };
+      }
+      throw err;
     }
-
-    await app.prisma.webhookEvent.create({
-      data: {
-        tenantId,
-        source: "moysklad",
-        externalId: requestId,
-        entityType: body.events[0].meta?.type ?? null,
-        action: body.events[0].action ?? null,
-        payload: body as never,
-        processed: true,
-      },
-    });
 
     await app.prisma.moyskladAccount.update({
       where: { tenantId },
