@@ -42,9 +42,20 @@ docker compose up -d backend
 
 ## Backup va restore
 
-**Avtomatik:** `backup` service har 24 soatda `pg_dump | gzip`. 7 kun saqlanadi.
+**Avtomatik:** `backup` service har 24 soatda `pg_dump | gzip`. `RETENTION_DAYS` kun local saqlanadi.
 
-**Lokalga nusxalash:**
+**Offsite (production uchun TAVSIYA):** `.env`'da `BACKUP_S3_BUCKET` (+ kalitlar)
+o'rnatilsa, har backup S3 / Cloudflare R2 / Backblaze B2 / MinIO'ga ham yuklanadi
+(`scripts/backup.sh` → `aws s3 cp`). VPS butunlay yo'qolsa ham ma'lumot tashqarida
+qoladi. Offsite retention'ni **bucket lifecycle rule** bilan boshqaring. Sozlash:
+`.env.example` → Backup bo'limi.
+
+```bash
+# Offsite ishlayotganini tekshirish
+docker compose logs backup | grep -i offsite
+```
+
+**Lokalga nusxalash (offsite o'rniga muqobil):**
 ```bash
 docker run --rm -v shopflow_backup_data:/data alpine tar czf - /data \
   | ssh root@<remote> "cat > /backups/shopflow-$(date +%F).tar.gz"
@@ -133,7 +144,7 @@ scrape_configs:
 - [ ] `.env` da JWT_SECRET 32+ belgi, random
 - [ ] `SECRETS_ENCRYPTION_KEY` alohida (JWT'dan farq)
 - [ ] `POSTGRES_PASSWORD` kuchli (15+ belgi)
-- [ ] Backup volume tashqariga nusxalanadi (rsync/S3)
+- [ ] Offsite backup yoqilgan (`BACKUP_S3_BUCKET` + kalitlar) yoki volume tashqariga nusxalanadi
 - [ ] Sentry DSN sozlangan (`SENTRY_DSN`)
 - [ ] `METRICS_TOKEN` o'rnatilgan (prod `/metrics` himoyasi)
 - [ ] DNS A record va port 80/443 ochiq

@@ -207,7 +207,7 @@ shopflow/
 - ✅ Per-tenant rate limit, mem_limit, deep healthcheck (DB ping)
 - ✅ Real-time SSE (15s polling o'rniga)
 - ✅ PWA — installable + offline shell (Service Worker, manifest)
-- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention)
+- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention) + **offsite** (S3/R2/B2/MinIO, `BACKUP_S3_*` — `scripts/backup.sh`)
 - ✅ Graceful shutdown (SIGTERM → workers stop)
 - ✅ Multi-tenant webhook URLs
 
