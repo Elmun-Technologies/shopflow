@@ -15,6 +15,7 @@ import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
 import { SalesDoctorIntegrationCard } from "./SalesDoctorIntegrationCard";
 import { WebhookIntegrationCard } from "./WebhookIntegrationCard";
 import { useAppToast } from "./ui/Toast";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 const CATEGORY_ICONS: Record<IntegrationCategory, React.ElementType> = {
   payments: CreditCard,
@@ -299,6 +300,9 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
   const [saving, setSaving] = useState(false);
   const [savedWebhookUrl, setSavedWebhookUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Focus-trap + Escape + fokus tiklash (modal a11y). Modal faqat mount bo'lganda
+  // ko'rinadi (parent `selected` bilan gate qiladi), shuning uchun active=true.
+  const panelRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   // Field count: ba'zi providerlar 2 ta key kerak (Click — Merchant ID + Service ID)
   const needsSecondField = ["click", "payme", "uzum-pay", "alif", "google-analytics", "yandex-metrika"].includes(item.id);
@@ -359,6 +363,10 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
     >
       <motion.div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={item.name}
         initial={{ scale: 0.95, y: 10 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 10 }}

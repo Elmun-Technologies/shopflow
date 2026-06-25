@@ -16,6 +16,7 @@ interface MinimalLog {
 }
 
 let timer: NodeJS.Timeout | null = null;
+let startupTimer: NodeJS.Timeout | null = null;
 
 interface RetryRow {
   id: string;
@@ -107,8 +108,11 @@ async function tick(prisma: PrismaClient, log?: MinimalLog): Promise<void> {
 export function startSalesDoctorWorker(prisma: PrismaClient, log?: MinimalLog): void {
   if (timer) return;
   log?.info?.("[salesdoctor] retry worker started");
-  // Birinchi tick'ni darhol emas, 10s keyin — server start paytida boshqa initial ish bilan to'qnashmaslik
-  setTimeout(() => {
+  // Birinchi tick'ni darhol emas, 10s keyin — server start paytida boshqa initial ish bilan to'qnashmaslik.
+  // startupTimer'ni saqlaymiz: ilk 10s ichida shutdown bo'lsa stopSalesDoctorWorker uni bekor qiladi,
+  // aks holda u fire qilib stop'dan keyin interval yaratib qo'yardi (timer leak).
+  startupTimer = setTimeout(() => {
+    startupTimer = null;
     tick(prisma, log).catch((err) => log?.warn?.({ err }, "salesdoctor tick failed"));
     timer = setInterval(() => {
       tick(prisma, log).catch((err) => log?.warn?.({ err }, "salesdoctor tick failed"));
@@ -117,6 +121,10 @@ export function startSalesDoctorWorker(prisma: PrismaClient, log?: MinimalLog): 
 }
 
 export function stopSalesDoctorWorker(): void {
+  if (startupTimer) {
+    clearTimeout(startupTimer);
+    startupTimer = null;
+  }
   if (timer) {
     clearInterval(timer);
     timer = null;

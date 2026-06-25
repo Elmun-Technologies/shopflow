@@ -20,6 +20,11 @@ const conditionSchema = z.object({
   value2: z.union([z.string(), z.number()]).optional(),
 });
 
+// AUTOMATIC/SMART segmentlar uchun hozir qo'llab-quvvatlanmaydigan condition field'lar.
+// conditionsToWhere ularni filterga aylantira olmaydi (silently no-op edi), shu sababli
+// bunday segment 0 a'zo bilan "jim buziq" saqlanardi — endi validatsiyada rad etamiz.
+const UNSUPPORTED_AUTO_FIELDS = ["totalSpent", "totalOrders"] as const;
+
 const upsertSchema = z.object({
   name: z.string().min(1).max(80),
   description: z.string().max(500).optional(),
@@ -28,6 +33,21 @@ const upsertSchema = z.object({
   conditions: z.array(conditionSchema).optional(),
   tags: z.array(z.string().max(40)).optional(),
 });
+
+// AUTOMATIC/SMART segment uchun condition field'lari qo'llab-quvvatlanishini tekshiradi.
+// `type` undefined bo'lsa (PATCH'da o'zgartirilmasa) — joriy segment turidan foydalaniladi.
+// Qaytaradi: rad etilgan field nomi yoki null (hammasi to'g'ri).
+function unsupportedAutoCondition(
+  type: "AUTOMATIC" | "MANUAL" | "SMART" | undefined,
+  conditions: CondInput[] | undefined,
+): string | null {
+  if (type !== "AUTOMATIC" && type !== "SMART") return null;
+  if (!conditions) return null;
+  for (const c of conditions) {
+    if ((UNSUPPORTED_AUTO_FIELDS as readonly string[]).includes(c.field)) return c.field;
+  }
+  return null;
+}
 
 // Build a Prisma `where` clause from segment conditions for AUTOMATIC segments.
 // Cheklov: hozircha bitta condition (oddiy holatlar). Murakkab AND/OR — keyingi PR.
@@ -193,8 +213,14 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Yangi segment yaratish
-  app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
+  app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = upsertSchema.parse(req.body);
+    // AUTOMATIC/SMART segment qo'llab-quvvatlanmaydigan condition field'i bilan saqlanmasin
+    // (aks holda 0 a'zo qaytarib "jim buziq" bo'lardi).
+    const badField = unsupportedAutoCondition(data.type ?? "MANUAL", data.conditions);
+    if (badField) {
+      return reply.code(400).send({ error: `Bu shart turi avtomatik segment uchun qo'llab-quvvatlanmaydi: ${badField}` });
+    }
     const created = await app.prisma.customerSegment.create({
       data: {
         tenantId: req.session.tenantId,
@@ -243,6 +269,16 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!seg) return reply.code(404).send({ error: "Not found" });
+    // type yoki conditions o'zgartirilsa — natijaviy holat AUTOMATIC/SMART uchun
+    // qo'llab-quvvatlanadigan condition field'lariga ega ekanini tekshiramiz.
+    if (data.type !== undefined || data.conditions !== undefined) {
+      const effectiveType = (data.type ?? seg.type) as "AUTOMATIC" | "MANUAL" | "SMART";
+      const effectiveConditions = (data.conditions ?? (seg.conditions as unknown as CondInput[])) ?? [];
+      const badField = unsupportedAutoCondition(effectiveType, effectiveConditions);
+      if (badField) {
+        return reply.code(400).send({ error: `Bu shart turi avtomatik segment uchun qo'llab-quvvatlanmaydi: ${badField}` });
+      }
+    }
     await app.prisma.customerSegment.updateMany({
       where: { id, tenantId: req.session.tenantId },
       data: {

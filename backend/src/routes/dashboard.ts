@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { Prisma } from "@prisma/client";
 
 // Period → { from, prevFrom, prevTo } tartib bilan qaytaradi
 type Period = "today" | "week" | "month" | "year" | "all";
@@ -87,55 +88,71 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Revenue trend — oxirgi 12 oy
+  // Avval har oy uchun alohida aggregate (12 query) edi → bitta GROUP BY query.
   app.get("/revenue-trend", async (req) => {
     const tenantId = req.session.tenantId;
     const now = new Date();
-    const months: { month: string; revenue: number; orders: number }[] = [];
+    // Eng eski bucket boshi — oraliq filtri uchun (12 oy oldingi oyning 1-sanasi)
+    const rangeStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
+    // bucket = 'YYYY-MM' (UTC) — JS bucket kaliti bilan mos (start.toISOString().slice(0,7))
+    const rows = await app.prisma.$queryRaw<{ bucket: string; revenue: Prisma.Decimal | null; orders: bigint }[]>`
+      SELECT to_char(date_trunc('month', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM') AS bucket,
+             SUM("total") AS revenue,
+             COUNT(*) AS orders
+      FROM "Order"
+      WHERE "tenantId" = ${tenantId}
+        AND "status" = 'COMPLETED'::"OrderStatus"
+        AND "createdAt" >= ${rangeStart}
+      GROUP BY bucket
+    `;
+    const byBucket = new Map(rows.map((r) => [r.bucket, r]));
+
+    const months: { month: string; revenue: number; orders: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const agg = await app.prisma.order.aggregate({
-        where: {
-          tenantId,
-          status: "COMPLETED",
-          createdAt: { gte: start, lt: end },
-        },
-        _sum: { total: true },
-        _count: true,
-      });
+      const key = start.toISOString().slice(0, 7); // 'YYYY-MM'
+      const row = byBucket.get(key);
       months.push({
         month: start.toLocaleString("en-US", { month: "short" }),
-        revenue: Number(agg._sum.total ?? 0),
-        orders: agg._count,
+        revenue: Number(row?.revenue ?? 0),
+        orders: Number(row?.orders ?? 0),
       });
     }
     return months;
   });
 
   // Weekly sales — oxirgi 7 kun
+  // Avval har kun uchun alohida aggregate (7 query) edi → bitta GROUP BY query.
   app.get("/weekly-sales", async (req) => {
     const tenantId = req.session.tenantId;
     const now = new Date();
-    const days: { day: string; sales: number }[] = [];
+    // Eng eski bucket boshi (6 kun oldingi yarim tunni) — oraliq filtri uchun
+    const rangeStart = new Date(now);
+    rangeStart.setDate(now.getDate() - 6);
+    rangeStart.setHours(0, 0, 0, 0);
 
+    // bucket = 'YYYY-MM-DD' (UTC) — JS bucket kaliti bilan mos (start.toISOString().slice(0,10))
+    const rows = await app.prisma.$queryRaw<{ bucket: string; sales: Prisma.Decimal | null }[]>`
+      SELECT to_char(date_trunc('day', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS bucket,
+             SUM("total") AS sales
+      FROM "Order"
+      WHERE "tenantId" = ${tenantId}
+        AND "status" = 'COMPLETED'::"OrderStatus"
+        AND "createdAt" >= ${rangeStart}
+      GROUP BY bucket
+    `;
+    const byBucket = new Map(rows.map((r) => [r.bucket, r]));
+
+    const days: { day: string; sales: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const start = new Date(now);
       start.setDate(now.getDate() - i);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 1);
-      const agg = await app.prisma.order.aggregate({
-        where: {
-          tenantId,
-          status: "COMPLETED",
-          createdAt: { gte: start, lt: end },
-        },
-        _sum: { total: true },
-      });
+      const key = start.toISOString().slice(0, 10); // 'YYYY-MM-DD'
       days.push({
         day: start.toLocaleDateString("en-US", { weekday: "short" }),
-        sales: Number(agg._sum.total ?? 0),
+        sales: Number(byBucket.get(key)?.sales ?? 0),
       });
     }
     return days;
@@ -204,18 +221,23 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Querystring: { period?: string } }>("/sales-by-category", async (req) => {
     const tenantId = req.session.tenantId;
     const { from } = getPeriodRange((req.query.period ?? "all") as Period);
-    const items = await app.prisma.orderItem.findMany({
-      where: { order: { tenantId, status: "COMPLETED", ...(from ? { createdAt: { gte: from } } : {}) } },
-      include: { product: { include: { category: true } } },
-    });
-    const byCat = new Map<string, { name: string; sales: number }>();
-    for (const item of items) {
-      const cat = item.product.category?.name ?? "Other";
-      const prev = byCat.get(cat) ?? { name: cat, sales: 0 };
-      prev.sales += Number(item.price) * item.qty;
-      byCat.set(cat, prev);
-    }
-    const arr = [...byCat.values()];
+    // Avval barcha order qatorlari xotiraga yuklanardi → SQL'da kategoriya bo'yicha jamlash.
+    // price * qty butun OrderItem jadvalida agregatlanadi (DB tomonda).
+    const dateFilter = from ? Prisma.sql`AND o."createdAt" >= ${from}` : Prisma.empty;
+    const rows = await app.prisma.$queryRaw<{ name: string; sales: Prisma.Decimal | null }[]>`
+      SELECT COALESCE(c."name", 'Other') AS name,
+             SUM(oi."price" * oi."qty") AS sales
+      FROM "OrderItem" oi
+      JOIN "Order" o ON o."id" = oi."orderId"
+      JOIN "Product" p ON p."id" = oi."productId"
+      LEFT JOIN "Category" c ON c."id" = p."categoryId"
+      WHERE o."tenantId" = ${tenantId}
+        AND o."status" = 'COMPLETED'::"OrderStatus"
+        ${dateFilter}
+      GROUP BY COALESCE(c."name", 'Other')
+      ORDER BY sales DESC
+    `;
+    const arr = rows.map((r) => ({ name: r.name, sales: Number(r.sales ?? 0) }));
     const total = arr.reduce((s, c) => s + c.sales, 0);
     return arr.map((c) => ({
       name: c.name,
@@ -245,24 +267,38 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
     const tenantId = req.session.tenantId;
     const days = Math.min(Math.max(Number(req.query.days ?? 30), 1), 90);
     const now = new Date();
-    const result: { day: string; date: string; sales: number; orders: number }[] = [];
 
+    // Eng eski bucket boshi (days-1 kun oldingi yarim tun) — oraliq filtri uchun
+    const rangeStart = new Date(now);
+    rangeStart.setDate(now.getDate() - (days - 1));
+    rangeStart.setHours(0, 0, 0, 0);
+
+    // Avval har kun uchun alohida aggregate (90 tagacha query) edi → bitta GROUP BY query.
+    // bucket = 'YYYY-MM-DD' (UTC) — JS `date` maydoni bilan mos (start.toISOString().slice(0,10))
+    const rows = await app.prisma.$queryRaw<{ bucket: string; sales: Prisma.Decimal | null; orders: bigint }[]>`
+      SELECT to_char(date_trunc('day', "createdAt" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS bucket,
+             SUM("total") AS sales,
+             COUNT(*) AS orders
+      FROM "Order"
+      WHERE "tenantId" = ${tenantId}
+        AND "status" = 'COMPLETED'::"OrderStatus"
+        AND "createdAt" >= ${rangeStart}
+      GROUP BY bucket
+    `;
+    const byBucket = new Map(rows.map((r) => [r.bucket, r]));
+
+    const result: { day: string; date: string; sales: number; orders: number }[] = [];
     for (let i = days - 1; i >= 0; i--) {
       const start = new Date(now);
       start.setDate(now.getDate() - i);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 1);
-      const agg = await app.prisma.order.aggregate({
-        where: { tenantId, status: "COMPLETED", createdAt: { gte: start, lt: end } },
-        _sum: { total: true },
-        _count: true,
-      });
+      const key = start.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+      const row = byBucket.get(key);
       result.push({
         day: start.toLocaleDateString("uz-UZ", { day: "2-digit", month: "short" }),
-        date: start.toISOString().slice(0, 10),
-        sales: Number(agg._sum.total ?? 0),
-        orders: agg._count,
+        date: key,
+        sales: Number(row?.sales ?? 0),
+        orders: Number(row?.orders ?? 0),
       });
     }
     return result;
@@ -318,23 +354,32 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Customer segments — RFM-light (xarid soni va summasiga ko'ra)
+  // Avval har bir mijoz + uning BARCHA buyurtmalari xotiraga yuklanardi →
+  // SQL'da har mijoz uchun ixcham agregat (count/sum/max), keyin JS'da bucketing.
   app.get("/customer-segments", async (req) => {
     const tenantId = req.session.tenantId;
-    const customers = await app.prisma.customer.findMany({
-      where: { tenantId },
-      include: {
-        orders: { where: { status: "COMPLETED" }, select: { total: true, createdAt: true } },
-      },
-    });
+    // COMPLETED buyurtmalar bo'yicha LEFT JOIN — buyurtmasiz mijozlar ham (orderCount=0) qoladi.
+    const rows = await app.prisma.$queryRaw<
+      { orderCount: bigint; totalSpent: Prisma.Decimal | null; lastOrderAt: Date | null }[]
+    >`
+      SELECT COUNT(o."id") AS "orderCount",
+             SUM(o."total") AS "totalSpent",
+             MAX(o."createdAt") AS "lastOrderAt"
+      FROM "Customer" c
+      LEFT JOIN "Order" o
+        ON o."customerId" = c."id"
+       AND o."tenantId" = ${tenantId}
+       AND o."status" = 'COMPLETED'::"OrderStatus"
+      WHERE c."tenantId" = ${tenantId}
+      GROUP BY c."id"
+    `;
     let vip = 0, regular = 0, occasional = 0, lapsed = 0, newC = 0;
     const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const sixMonthsAgo = Date.now() - 180 * 24 * 60 * 60 * 1000;
-    for (const c of customers) {
-      const orderCount = c.orders.length;
-      const totalSpent = c.orders.reduce((s, o) => s + Number(o.total), 0);
-      const lastOrderTs = c.orders.length > 0
-        ? Math.max(...c.orders.map((o) => o.createdAt.getTime()))
-        : null;
+    for (const c of rows) {
+      const orderCount = Number(c.orderCount);
+      const totalSpent = Number(c.totalSpent ?? 0);
+      const lastOrderTs = c.lastOrderAt ? c.lastOrderAt.getTime() : null;
       if (orderCount === 0) {
         newC++;
       } else if (lastOrderTs && lastOrderTs < sixMonthsAgo) {

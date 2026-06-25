@@ -25,12 +25,21 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     "/",
     { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
-    async (req) => {
+    async (req, reply) => {
       const data = categorySchema.parse(req.body);
+      const parentId = data.parentId || null;
+      if (parentId) {
+        // parentId boshqa tenant kategoriyasi bo'lmasligini tekshiramiz
+        const parent = await app.prisma.category.findFirst({
+          where: { id: parentId, tenantId: req.session.tenantId },
+          select: { id: true },
+        });
+        if (!parent) return reply.code(400).send({ error: "Noto'g'ri parent kategoriya" });
+      }
       return app.prisma.category.create({
         data: {
           ...data,
-          parentId: data.parentId || null,
+          parentId,
           imageUrl: data.imageUrl || null,
           tenantId: req.session.tenantId,
         },
@@ -48,11 +57,20 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         where: { id, tenantId: req.session.tenantId },
       });
       if (!c) return reply.code(404).send({ error: "Not found" });
+      const parentId = data.parentId || null;
+      if (parentId) {
+        // parentId boshqa tenant kategoriyasi bo'lmasligini tekshiramiz
+        const parent = await app.prisma.category.findFirst({
+          where: { id: parentId, tenantId: req.session.tenantId },
+          select: { id: true },
+        });
+        if (!parent) return reply.code(400).send({ error: "Noto'g'ri parent kategoriya" });
+      }
       return app.prisma.category.update({
         where: { id },
         data: {
           ...data,
-          parentId: data.parentId || null,
+          parentId,
           imageUrl: data.imageUrl === undefined ? undefined : data.imageUrl || null,
         },
       });

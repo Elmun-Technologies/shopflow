@@ -21,6 +21,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency, formatDateTime, formatRelative } from "../utils/format";
 import type { LeadStatus, InteractionType, Interaction } from "../types/api";
 import { useT } from "../i18n";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface Props {
   leadId: string;
@@ -68,6 +69,9 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Focus-trap + Escape + fokus tiklash (modal a11y). Modal faqat mount bo'lganda
+  // ko'rinadi (parent gate qiladi), shuning uchun active=true.
+  const panelRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
     setShowStatusMenu(false);
@@ -103,6 +107,10 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
         onClick={onClose}
       >
         <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={lead?.name ?? t("leads.title")}
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}

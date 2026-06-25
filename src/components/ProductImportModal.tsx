@@ -8,6 +8,7 @@ import { X, Upload, AlertCircle, CheckCircle2, Loader2, FileText, Download } fro
 import { productsApi } from "../api/endpoints";
 import type { Category, Product } from "../types/api";
 import { useT } from "../i18n";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface Props {
   categories: Category[];
@@ -137,6 +138,9 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const [showDone, setShowDone] = useState(false);
+  // Focus-trap + Escape + fokus tiklash (modal a11y). Hook har doim chaqiriladi
+  // (showDone early return'dan oldin) — rules-of-hooks.
+  const panelRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   const parsed = useMemo(() => (text.trim() ? parseCsv(text, categories) : []), [text, categories]);
   const validRows = parsed.filter((r) => r.errors.length === 0);
@@ -216,7 +220,14 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("import.title")}
+        className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-cream-300 flex-shrink-0">
           <div>

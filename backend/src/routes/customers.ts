@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { pushCustomerToSD } from "../lib/salesdoctor-push.js";
 import { logAuditFor } from "../lib/audit.js";
@@ -154,21 +155,33 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;
 
-    // Bitta query — barcha mijoz + buyurtma agregati
-    const data = await app.prisma.customer.findMany({
-      where: { tenantId },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        email: true,
-        createdAt: true,
-        orders: {
-          where: { status: { in: ["COMPLETED", "PROCESSING", "PENDING"] } },
-          select: { total: true, createdAt: true },
-        },
-      },
-    });
+    // Avval har bir mijoz + uning BARCHA buyurtmalari graph'i xotiraga yuklanardi.
+    // Endi SQL'da har mijoz uchun ixcham agregat (count/sum/max) — LEFT JOIN bilan
+    // buyurtmasiz mijozlar ham qoladi. Bucketing (classify) JS'da bajariladi.
+    const data = await app.prisma.$queryRaw<
+      {
+        id: string;
+        name: string;
+        phone: string | null;
+        email: string | null;
+        createdAt: Date;
+        orderCount: bigint;
+        totalSpent: Prisma.Decimal | null;
+        lastOrderAt: Date | null;
+      }[]
+    >`
+      SELECT c."id", c."name", c."phone", c."email", c."createdAt",
+             COUNT(o."id") AS "orderCount",
+             SUM(o."total") AS "totalSpent",
+             MAX(o."createdAt") AS "lastOrderAt"
+      FROM "Customer" c
+      LEFT JOIN "Order" o
+        ON o."customerId" = c."id"
+       AND o."tenantId" = ${tenantId}
+       AND o."status" IN ('COMPLETED'::"OrderStatus", 'PROCESSING'::"OrderStatus", 'PENDING'::"OrderStatus")
+      WHERE c."tenantId" = ${tenantId}
+      GROUP BY c."id", c."name", c."phone", c."email", c."createdAt"
+    `;
 
     type Segment = "champion" | "loyal" | "new" | "atRisk" | "lost" | "hibernating" | "nobody";
 
@@ -190,11 +203,9 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     };
 
     const customers = data.map((c) => {
-      const orderCount = c.orders.length;
-      const totalSpent = c.orders.reduce((s, o) => s + Number(o.total), 0);
-      const lastOrderTs = c.orders.length > 0
-        ? Math.max(...c.orders.map((o) => o.createdAt.getTime()))
-        : null;
+      const orderCount = Number(c.orderCount);
+      const totalSpent = Number(c.totalSpent ?? 0);
+      const lastOrderTs = c.lastOrderAt ? c.lastOrderAt.getTime() : null;
       const daysSinceLast = lastOrderTs !== null ? Math.floor((now - lastOrderTs) / DAY) : null;
       const daysSinceJoin = Math.floor((now - c.createdAt.getTime()) / DAY);
       const segment = classify(orderCount, daysSinceLast, daysSinceJoin);
