@@ -86,6 +86,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Google OAuth — .env'dagi VITE_GOOGLE_CLIENT_ID build vaqtida frontend'ga embed qilinadi
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: shopflow:latest
     container_name: shopflow-app
     restart: unless-stopped
