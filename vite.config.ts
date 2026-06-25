@@ -29,12 +29,29 @@ export default defineConfig({
       ? undefined
       : {
           output: {
-            manualChunks: {
-              "react-vendor": ["react", "react-dom"],
-              "recharts-vendor": ["recharts"],
-              "framer-vendor": ["framer-motion"],
-              "icons-vendor": ["lucide-react"],
-              "utils-vendor": ["clsx", "tailwind-merge"],
+            // Function-form manualChunks — array-form react-dom'ni boshqa vendor
+            // chunk'ga "yutib yuborardi" (recharts-vendor'ga react-dom tushib,
+            // 395kb chunk eager yuklanardi). Bu yerda har paket aniq yo'naltiriladi.
+            manualChunks(id) {
+              if (!id.includes("node_modules")) return;
+              // React yadrosi — recharts/framer'dan OLDIN da'vo qilinishi shart
+              if (
+                id.includes("/react-dom/") ||
+                id.includes("/react/") ||
+                id.includes("/react-is/") ||
+                id.includes("/scheduler/") ||
+                id.includes("react/jsx-runtime")
+              ) return "react-vendor";
+              // recharts + uning d3/victory bog'liqliklari
+              if (
+                id.includes("/recharts/") ||
+                id.includes("/victory-vendor/") ||
+                id.includes("/d3-") ||
+                id.includes("/internmap/")
+              ) return "recharts-vendor";
+              if (id.includes("/framer-motion/")) return "framer-vendor";
+              if (id.includes("/lucide-react/")) return "icons-vendor";
+              if (id.includes("/clsx/") || id.includes("/tailwind-merge/")) return "utils-vendor";
             },
             chunkFileNames: "assets/[name]-[hash].js",
             entryFileNames: "assets/[name]-[hash].js",
