@@ -22,7 +22,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
 import { AppToastProvider } from "./components/ui/Toast";
 import { ConfirmProvider } from "./components/ui/ConfirmDialog";
-import { LangProvider } from "./i18n";
+import { LangProvider, useT } from "./i18n";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./api/queryClient";
 import { PageSkeleton } from "./components/ui/Skeleton";
@@ -73,28 +73,30 @@ type Page =
   | "settings";
 
 function PageLoader() {
+  const { t } = useT();
   return (
     <div role="status" aria-live="polite">
-      <span className="sr-only">Yuklanmoqda...</span>
+      <span className="sr-only">{t("common.loading")}</span>
       <PageSkeleton />
     </div>
   );
 }
 
 function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {}) {
+  const { t, lang } = useT();
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
     const now = new Date();
     setCurrentDate(
-      now.toLocaleDateString("uz-UZ", {
+      now.toLocaleDateString(lang === "ru" ? "ru-RU" : "uz-UZ", {
         weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
       }),
     );
-  }, []);
+  }, [lang]);
 
   return (
     <>
@@ -105,34 +107,22 @@ function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-7"
       >
         <div>
-          <p
-            className="text-[10px] font-semibold uppercase tracking-widest mb-1.5"
-            style={{ color: "#7BC056" }}
-          >
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 text-leaf-500">
             {currentDate}
           </p>
-          <h1
-            className="text-2xl md:text-3xl font-bold tracking-tight"
-            style={{ color: "#14201A" }}
-          >
-            Assalomu alaykum! 👋
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-forest-900">
+            {t("dashboard.greeting")}
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#94a3b8" }}>
-            Bugungi savdo va operatsiya holati
+          <p className="text-sm mt-1 text-slate-400">
+            {t("dashboard.subtitle")}
           </p>
         </div>
 
         {/* Date badge */}
-        <div
-          className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl self-start"
-          style={{ backgroundColor: "#fff", border: "1px solid #EAEAE0" }}
-        >
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: "#10b981" }}
-          />
-          <span className="text-xs font-medium" style={{ color: "#475569" }}>
-            Jonli ma'lumotlar
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl self-start bg-white border border-cream-300">
+          <div className="w-2 h-2 rounded-full bg-leaf-500" />
+          <span className="text-xs font-medium text-slate-600">
+            {t("dashboard.liveData")}
           </span>
         </div>
       </motion.div>

@@ -2042,4 +2042,8 @@ export const dictionary: Record<string, Entry> = {
   "widget.trafficSources.subtitle": { uz: "Buyurtmalar qaysi kanaldan", ru: "Из какого канала заказы" },
   "widget.weeklySalesEmpty": { uz: "Bu hafta sotuvlar yo'q", ru: "На этой неделе продаж нет" },
 
+  // ─── Dashboard salomlashish ───
+  "dashboard.greeting": { uz: "Assalomu alaykum! 👋", ru: "Здравствуйте! 👋" },
+  "dashboard.subtitle": { uz: "Bugungi savdo va operatsiya holati", ru: "Состояние продаж и операций на сегодня" },
+  "dashboard.liveData": { uz: "Jonli ma'lumotlar", ru: "Данные в реальном времени" },
 };
