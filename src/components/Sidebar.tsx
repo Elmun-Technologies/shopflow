@@ -22,8 +22,6 @@ import {
   Search as SearchIcon,
   Command as CommandIcon,
   X as XIcon,
-  Pin,
-  PinOff,
   LayoutGrid,
   Tag,
   Gift,
@@ -163,8 +161,6 @@ const navGroups: NavGroup[] = [
 const settingsItem: NavItem = { icon: Settings, label: "Sozlamalar", labelKey: "nav.settings", page: "settings" };
 
 const LS_KEY = "shopflow.sidebar.state";
-const LS_RECENT_KEY = "shopflow.sidebar.recent";
-const LS_PINNED_KEY = "shopflow.sidebar.pinned";
 
 interface SidebarState {
   collapsed: boolean;
@@ -181,73 +177,16 @@ function loadState(): SidebarState {
   }
   return {
     collapsed: false,
-    openGroups: { main: true, sales: true, crm: true, channels: false },
+    openGroups: { main: true, sales: true, crm: true, channels: true },
     marketingOpen: false,
   };
 }
 
-// Yaqinda ochilgan sahifalar — eng so'nggi 5 ta unique
-function loadRecent(): Page[] {
-  try {
-    const raw = localStorage.getItem(LS_RECENT_KEY);
-    if (raw) return JSON.parse(raw) as Page[];
-  } catch { /* ignore */ }
-  return [];
-}
-function saveRecent(pages: Page[]) {
-  try { localStorage.setItem(LS_RECENT_KEY, JSON.stringify(pages)); } catch { /* ignore */ }
-}
-
-// Pinned (qadalgan) sahifalar — operator o'zi pin qiladi
-function loadPinned(): Page[] {
-  try {
-    const raw = localStorage.getItem(LS_PINNED_KEY);
-    if (raw) return JSON.parse(raw) as Page[];
-  } catch { /* ignore */ }
-  return [];
-}
-function savePinned(pages: Page[]) {
-  try { localStorage.setItem(LS_PINNED_KEY, JSON.stringify(pages)); } catch { /* ignore */ }
-}
-
-// Flat lookup — Page → NavItem
-function findNavItem(page: Page): NavItem | undefined {
-  for (const g of navGroups) {
-    const it = g.items.find((i) => i.page === page);
-    if (it) return it;
-  }
-  if (settingsItem.page === page) return settingsItem;
-  return undefined;
-}
-
 export default function Sidebar({ currentPage, onPageChange, marketingSub, onMarketingNavigate, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [state, setState] = useState<SidebarState>(loadState);
-  const [recent, setRecent] = useState<Page[]>(() => loadRecent());
-  const [pinned, setPinned] = useState<Page[]>(() => loadPinned());
   const { user, tenant, logout } = useAuth();
   const confirmDialog = useConfirm();
   const { lang, setLang, t } = useT();
-
-  // Helper — NavItem'ni tarjima qilingan label bilan render qilish uchun
-  const itemLabel = (it: NavItem) => (it.labelKey ? t(it.labelKey) : it.label);
-
-  // Sahifa o'zgarganda Yaqinda ro'yxatini yangilaymiz (eng so'nggi birinchi, 5 ta max)
-  useEffect(() => {
-    if (currentPage === "settings") return; // sozlamalar pastda alohida, recent'ga kerak emas
-    setRecent((prev) => {
-      const next = [currentPage, ...prev.filter((p) => p !== currentPage)].slice(0, 5);
-      saveRecent(next);
-      return next;
-    });
-  }, [currentPage]);
-
-  const togglePin = (page: Page) => {
-    setPinned((prev) => {
-      const next = prev.includes(page) ? prev.filter((p) => p !== page) : [...prev, page].slice(0, 6);
-      savePinned(next);
-      return next;
-    });
-  };
 
   const handleLogout = async () => {
     const ok = await confirmDialog({
@@ -417,60 +356,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
       )}
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden">
-        {/* Tezkor (pinned) — operator o'zi pin qilgan */}
-        {!collapsed && pinned.length > 0 && (
-          <div className="pt-1 mb-1">
-            <div className="px-2 py-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">
-              <Pin className="w-3 h-3" />
-              <span>{t("sidebar.pinned")}</span>
-            </div>
-            <div className="space-y-0.5">
-              {pinned.map((page) => {
-                const item = findNavItem(page);
-                if (!item) return null;
-                return (
-                  <SidebarItem
-                    key={`pin-${page}`}
-                    icon={item.icon}
-                    label={itemLabel(item)}
-                    active={currentPage === page}
-                    collapsed={false}
-                    badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
-                    onClick={() => onPageChange(page)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Yaqinda (recent) — avtomatik kuzatiladi */}
-        {!collapsed && recent.length > 1 && (
-          <div className="pt-1 mb-1">
-            <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              {t("sidebar.recent")}
-            </div>
-            <div className="space-y-0.5">
-              {recent.filter((p) => p !== currentPage && !pinned.includes(p)).slice(0, 3).map((page) => {
-                const item = findNavItem(page);
-                if (!item) return null;
-                return (
-                  <SidebarItem
-                    key={`recent-${page}`}
-                    icon={item.icon}
-                    label={itemLabel(item)}
-                    active={false}
-                    collapsed={false}
-                    badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
-                    onClick={() => onPageChange(page)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        )}
-
+      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {navGroups.map((group) => (
           <NavGroupBlock
             key={group.id}
@@ -479,8 +365,6 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
             collapsed={collapsed}
             currentPage={currentPage}
             counts={counts}
-            pinned={pinned}
-            onTogglePin={togglePin}
             onToggle={() => toggleGroup(group.id)}
             onPageChange={onPageChange}
           />
@@ -496,46 +380,13 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
           onNavigate={onMarketingNavigate}
         />
 
-        {/* Promo card */}
-        {!collapsed && (
-          <div
-            className="mx-1 mt-3 p-3.5 rounded-2xl relative overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, #F0F8E3, #DCEDC2)",
-              border: "1px solid #C5E29F",
-            }}
-          >
-            <div
-              className="absolute -top-5 -right-5 w-20 h-20 rounded-full opacity-30"
-              style={{ backgroundColor: "#95D26F", filter: "blur(20px)" }}
-            />
-            <div className="relative">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center mb-2.5"
-                style={{ backgroundColor: "#5FA340" }}
-              >
-                <Award className="w-4 h-4 text-white" />
-              </div>
-              <p className="text-xs font-bold" style={{ color: "#1F3327" }}>{t("sidebar.promo.title")}</p>
-              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: "#4F6B53" }}>
-                {t("sidebar.promo.desc")}
-              </p>
-              <button
-                className="w-full mt-2.5 py-1.5 text-white text-xs font-semibold rounded-lg transition-colors"
-                style={{ backgroundColor: "#2D4938" }}
-              >
-                {t("sidebar.promo.cta")}
-              </button>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Footer */}
       <div className="px-2 py-2 space-y-1" style={{ borderTop: "1px solid #EAEAE0" }}>
         <SidebarItem
           icon={settingsItem.icon}
-          label={itemLabel(settingsItem)}
+          label={settingsItem.labelKey ? t(settingsItem.labelKey) : settingsItem.label}
           active={currentPage === settingsItem.page}
           collapsed={collapsed}
           onClick={() => onPageChange(settingsItem.page)}
@@ -754,8 +605,6 @@ function NavGroupBlock({
   collapsed,
   currentPage,
   counts,
-  pinned = [],
-  onTogglePin,
   onToggle,
   onPageChange,
 }: {
@@ -764,8 +613,6 @@ function NavGroupBlock({
   collapsed: boolean;
   currentPage: Page;
   counts: SidebarCounts | null;
-  pinned?: Page[];
-  onTogglePin?: (page: Page) => void;
   onToggle: () => void;
   onPageChange: (p: Page) => void;
 }) {
@@ -836,8 +683,6 @@ function NavGroupBlock({
                 active={currentPage === item.page}
                 collapsed={false}
                 badge={item.badgeKey && counts ? counts[item.badgeKey] : 0}
-                pinned={pinned.includes(item.page)}
-                onTogglePin={onTogglePin ? () => onTogglePin(item.page) : undefined}
                 onClick={() => onPageChange(item.page)}
               />
             ))}
@@ -949,8 +794,6 @@ function SidebarItem({
   active,
   collapsed,
   badge = 0,
-  pinned = false,
-  onTogglePin,
   onClick,
 }: {
   icon: React.ElementType;
@@ -958,26 +801,21 @@ function SidebarItem({
   active: boolean;
   collapsed: boolean;
   badge?: number;
-  pinned?: boolean;
-  onTogglePin?: () => void;
   onClick: () => void;
 }) {
-  const { t } = useT();
   return (
-    <div className="relative group">
-      {/* Left accent bar */}
+    <div className="relative">
       {active && (
         <span
           className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r-full z-10"
           style={{ backgroundColor: "#5FA340" }}
         />
       )}
-
       <button
         type="button"
         onClick={onClick}
         title={collapsed ? (badge > 0 ? `${label} (${badge})` : label) : undefined}
-        className={`relative w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-150 ${
+        className={`relative w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg transition-all duration-150 ${
           collapsed ? "justify-center" : ""
         }`}
         style={{
@@ -1038,24 +876,6 @@ function SidebarItem({
           )
         )}
       </button>
-
-      {/* Pin button */}
-      {!collapsed && onTogglePin && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all"
-          style={{
-            opacity: pinned ? 1 : 0,
-            color: pinned ? "#f59e0b" : "#94a3b8",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "#f59e0b"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = pinned ? "1" : "0"; e.currentTarget.style.color = pinned ? "#f59e0b" : "#94a3b8"; }}
-          title={pinned ? t("sidebar.unpin") : t("sidebar.pin")}
-        >
-          {pinned ? <Pin className="w-3 h-3 fill-amber-400" /> : <PinOff className="w-3 h-3" />}
-        </button>
-      )}
     </div>
   );
 }
