@@ -279,7 +279,7 @@ function SequenceModal({ seq, onClose, onSave }: {
     });
   };
 
-  const useTemplate = (tmpl: string) => {
+  const applyTemplate = (tmpl: string) => {
     setSteps((prev) => [...prev.slice(0, -1), { ...prev[prev.length - 1], message: tmpl }]);
   };
 
@@ -413,7 +413,7 @@ function SequenceModal({ seq, onClose, onSave }: {
                   {templates.map((tmpl, i) => (
                     <button
                       key={i}
-                      onClick={() => useTemplate(tmpl)}
+                      onClick={() => applyTemplate(tmpl)}
                       className="w-full text-left text-[10px] text-blue-700 hover:text-blue-900 bg-white hover:bg-blue-50 border border-blue-100 rounded-lg px-2 py-1.5 truncate transition-all"
                     >
                       {tmpl.slice(0, 80)}…
