@@ -56,6 +56,8 @@ import { startSalesDoctorWorker, stopSalesDoctorWorker } from "./lib/salesdoctor
 import { promoCodeRoutes } from "./routes/promo-codes.js";
 import { deliveryRoutes } from "./routes/delivery.js";
 import { exportRoutes } from "./routes/export.js";
+import { botSequencesRoutes } from "./routes/bot-sequences.js";
+import { startBotSequenceWorker } from "./lib/bot-sequence-worker.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { smsRoutes } from "./routes/sms.js";
 import { loyaltyRoutes } from "./routes/loyalty.js";
@@ -239,6 +241,7 @@ await app.register(salesDoctorRoutes, { prefix: "/api/salesdoctor" });
 await app.register(popupRoutes, { prefix: "/api/popups" });
 await app.register(saleCampaignRoutes, { prefix: "/api/sale-campaigns" });
 await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
+await app.register(botSequencesRoutes, { prefix: "/api/bot-sequences" });
 // Combo / product addons — mahsulotga qo'shimcha tovarlar (Amazon-style)
 await app.register(productAddonRoutes, { prefix: "/api/products" });
 await app.register(auditRoutes, { prefix: "/api/audit" });
@@ -270,6 +273,7 @@ const host = process.env.HOST ?? "0.0.0.0";
 const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
 const stopEmailReports = startEmailReportsScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
 startSalesDoctorWorker(app.prisma, app.log);
+startBotSequenceWorker(app.prisma, app.log);
 app.addHook("onClose", async () => {
   stopScheduler();
   stopEmailReports();

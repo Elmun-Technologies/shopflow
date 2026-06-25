@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { nextLeadCode } from "../lib/codes.js";
+import { notifyAdminNewLead } from "../lib/telegram-notify.js";
 
 const leadStatusEnum = z.enum([
   "NEW",
@@ -137,16 +138,19 @@ export const leadRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/", async (req) => {
     const data = createLeadSchema.parse(req.body);
-    const code = await nextLeadCode(app.prisma, req.session.tenantId);
-    return app.prisma.lead.create({
+    const tenantId = req.session.tenantId;
+    const code = await nextLeadCode(app.prisma, tenantId);
+    const lead = await app.prisma.lead.create({
       data: {
         ...data,
         email: data.email || null,
-        tenantId: req.session.tenantId,
+        tenantId,
         code,
         value: data.value ?? 0,
       },
     });
+    notifyAdminNewLead(app.prisma, tenantId, lead.name, lead.phone, lead.utmSource).catch(() => null);
+    return lead;
   });
 
   app.patch("/:id", async (req, reply) => {

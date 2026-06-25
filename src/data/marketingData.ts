@@ -14,7 +14,8 @@ export type MarketingSub =
   | "sharhlar"
   | "sodiqlik"
   | "giveaway"
-  | "tranzaksiyalar";
+  | "tranzaksiyalar"
+  | "voronka";
 
 export const marketingSubLabels: Record<MarketingSub, string> = {
   popups: "Popup'lar",
@@ -31,9 +32,11 @@ export const marketingSubLabels: Record<MarketingSub, string> = {
   sodiqlik: "Sodiqlik dasturi",
   giveaway: "Giveaway",
   tranzaksiyalar: "Tranzaksiyalar",
+  voronka: "Bot Voronka",
 };
 
 export const marketingSubOrder: MarketingSub[] = [
+  "voronka",
   "popups",
   "aksiyalar",
   "abandoned",
@@ -69,9 +72,14 @@ export const marketingSubGroups: MarketingSubGroup[] = [
     items: ["rassilka", "sms", "kanal"],
   },
   {
+    id: "automation",
+    label: "Avtomatlashtirish",
+    items: ["voronka", "abandoned"],
+  },
+  {
     id: "engagement",
     label: "Mijoz faolligi",
-    items: ["abandoned", "sharhlar", "sodiqlik", "tranzaksiyalar"],
+    items: ["sharhlar", "sodiqlik", "tranzaksiyalar"],
   },
   {
     id: "analytics",

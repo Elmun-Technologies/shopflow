@@ -230,3 +230,58 @@ function formatStatusMessage(orderCode: string, total: number, currency: string,
   if (!t) return null;
   return `${t.emoji} <b>${t.title}</b>\n\nBuyurtma: <b>#${orderCode}</b>\nSumma: ${totalStr}\n\n${t.body}`;
 }
+
+// ─── Admin xabarnomalar ────────────────────────────────────────────────────────
+
+/**
+ * Admin o'z telegramiga xabar olishi uchun.
+ * TenantNotifSettings.adminTelegramChatId + tenant'ning bot tokeni ishlatiladi.
+ * Agar adminTelegramChatId yo'q bo'lsa — jim qaytadi.
+ */
+export async function notifyAdmin(
+  prisma: PrismaClient,
+  tenantId: string,
+  text: string,
+): Promise<NotifyResult> {
+  const settings = await prisma.tenantNotifSettings.findUnique({
+    where: { tenantId },
+    select: { adminTelegramChatId: true },
+  });
+  if (!settings?.adminTelegramChatId) return { sent: false, reason: "adminTelegramChatId not set" };
+
+  const token = await getTenantBotToken(prisma, tenantId);
+  if (!token) return { sent: false, reason: "No Telegram bot token" };
+
+  const result = await sendTelegramMessage(token, settings.adminTelegramChatId.toString(), text);
+  if (result.ok) return { sent: true };
+  return { sent: false, reason: result.description ?? "sendMessage rejected" };
+}
+
+export async function notifyAdminNewOrder(
+  prisma: PrismaClient,
+  tenantId: string,
+  code: string,
+  total: number,
+  currency: string,
+  customerName?: string | null,
+): Promise<void> {
+  const totalStr = currency === "UZS"
+    ? `${total.toLocaleString("uz-UZ")} so'm`
+    : `${total} ${currency}`;
+  const who = customerName ? `\nMijoz: ${customerName}` : "";
+  const text = `🛒 <b>Yangi buyurtma</b>\n\n#${code} · ${totalStr}${who}`;
+  notifyAdmin(prisma, tenantId, text).catch(() => null);
+}
+
+export async function notifyAdminNewLead(
+  prisma: PrismaClient,
+  tenantId: string,
+  name: string,
+  phone?: string | null,
+  source?: string | null,
+): Promise<void> {
+  const contact = phone ? `\nTelefon: ${phone}` : "";
+  const src = source ? `\nManba: ${source}` : "";
+  const text = `📥 <b>Yangi lid</b>\n\n${name}${contact}${src}`;
+  notifyAdmin(prisma, tenantId, text).catch(() => null);
+}
