@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, Package, ArrowRight, Loader2 } from "lucide-react";
 import { productsApi } from "../api/endpoints";
 import type { Product } from "../types/api";
+import { useT } from "../i18n";
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function LowStockAlert({ onOpenProducts }: Props) {
+  const { t } = useT();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [outCount, setOutCount] = useState(0);
@@ -65,16 +67,16 @@ export default function LowStockAlert({ onOpenProducts }: Props) {
               <AlertTriangle style={{ width: 18, height: 18, color: "#f59e0b" }} />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-forest-800">Kam qolgan mahsulotlar</h3>
+              <h3 className="text-base font-semibold text-forest-800">{t("lowStock.title")}</h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 {outCount > 0 ? (
                   <>
-                    <span className="text-rose-600 font-semibold">{outCount} ta tugagan</span>
+                    <span className="text-rose-600 font-semibold">{t("lowStock.out", { count: outCount })}</span>
                     {" · "}
-                    {products.length} ta diqqat talab
+                    {t("lowStock.attention", { count: products.length })}
                   </>
                 ) : (
-                  `${products.length} ta mahsulot tugab qolmoqda`
+                  t("lowStock.runningOut", { count: products.length })
                 )}
               </p>
             </div>
@@ -84,7 +86,7 @@ export default function LowStockAlert({ onOpenProducts }: Props) {
               onClick={onOpenProducts}
               className="text-xs font-medium text-forest-700 hover:text-forest-900 flex items-center gap-1 flex-shrink-0"
             >
-              Hammasi
+              {t("lowStock.all")}
               <ArrowRight className="w-3 h-3" />
             </button>
           )}
@@ -126,7 +128,7 @@ export default function LowStockAlert({ onOpenProducts }: Props) {
                         : "bg-cream-100 text-slate-700"
                     }`}
                   >
-                    {p.stock === 0 ? "Tugagan" : `${p.stock} qoldi`}
+                    {p.stock === 0 ? t("lowStock.outBadge") : t("lowStock.leftBadge", { count: p.stock })}
                   </span>
                 </div>
               </motion.button>

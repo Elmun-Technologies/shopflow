@@ -127,9 +127,9 @@ export default function ProductsPage() {
       });
       clearSelection();
       refetch();
-      toast.success(res.summary || `${res.affected} ta yangilandi`);
+      toast.success(res.summary || t("products.bulk.updated", { n: res.affected }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Bulk operatsiya muvaffaqiyatsiz");
+      toast.error(err instanceof Error ? err.message : t("products.bulk.operationFailed"));
     } finally {
       setBulkBusy(false);
     }
@@ -137,7 +137,7 @@ export default function ProductsPage() {
 
   const handleBulkDelete = () => {
     if (selected.size === 0) return;
-    if (!confirm(`${selected.size} ta mahsulotni butunlay o'chirish?`)) return;
+    if (!confirm(t("products.bulk.deleteConfirm", { n: selected.size }))) return;
     runBulk({ ids: Array.from(selected), action: "delete" });
   };
   const handleBulkActive = (value: boolean) =>
@@ -444,6 +444,7 @@ function RestockModal({
   onDone: () => void;
 }) {
   const toast = useAppToast();
+  const { t } = useT();
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -452,7 +453,7 @@ function RestockModal({
     e.preventDefault();
     const qty = parseInt(quantity, 10);
     if (!qty || qty <= 0) {
-      toast.error("Miqdor 1 dan katta bo'lishi kerak");
+      toast.error(t("products.restock.quantityMin"));
       return;
     }
     setBusy(true);
@@ -461,10 +462,10 @@ function RestockModal({
         quantity: qty,
         note: note.trim() || undefined,
       });
-      toast.success(`+${res.added} qo'shildi. Yangi stok: ${res.stock}`);
+      toast.success(t("products.restock.added", { added: res.added, stock: res.stock }));
       onDone();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Stok qo'shilmadi");
+      toast.error(err instanceof Error ? err.message : t("products.restock.error"));
     } finally {
       setBusy(false);
     }
@@ -493,14 +494,14 @@ function RestockModal({
             <h3 className="text-base font-semibold text-forest-800 truncate">{product.name}</h3>
             <p className="text-xs text-slate-500 truncate">{product.sku}</p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label={t("common.close")}>
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
 
         <div className="flex items-center justify-between p-3 rounded-xl bg-cream-100/60 mb-4">
           <div className="text-center flex-1">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Hozir</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{t("products.restock.current")}</p>
             <p className="text-xl font-bold text-forest-800">{product.stock}</p>
           </div>
           <div className="text-center px-3">
@@ -508,7 +509,7 @@ function RestockModal({
             <PackagePlus className="w-5 h-5 text-leaf-500 mx-auto" />
           </div>
           <div className="text-center flex-1">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Yangi</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{t("products.restock.new")}</p>
             <p className={`text-xl font-bold ${newStock > product.stock ? "text-leaf-500" : "text-forest-800"}`}>
               {newStock}
             </p>
@@ -516,7 +517,7 @@ function RestockModal({
         </div>
 
         <label className="block mb-3">
-          <span className="text-xs text-slate-500 mb-1.5 block">Qo'shimcha miqdor</span>
+          <span className="text-xs text-slate-500 mb-1.5 block">{t("products.restock.quantity")}</span>
           <input
             type="number"
             min="1"
@@ -524,22 +525,22 @@ function RestockModal({
             autoFocus
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            placeholder="Masalan: 50"
+            placeholder={t("products.restock.quantityPlaceholder")}
             className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-lg font-semibold text-forest-800 focus:outline-none focus:border-leaf-500/60"
           />
         </label>
 
         <label className="block mb-4">
-          <span className="text-xs text-slate-500 mb-1.5 block">Izoh (ixtiyoriy)</span>
+          <span className="text-xs text-slate-500 mb-1.5 block">{t("products.restock.note")}</span>
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Masalan: Yetkazib beruvchi X, partiya №123"
+            placeholder={t("products.restock.notePlaceholder")}
             maxLength={500}
             className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
           />
-          <p className="text-[10px] text-slate-400 mt-1">Audit log'da yodda qolar — qaerdan kelganini yozib qo'ying.</p>
+          <p className="text-[10px] text-slate-400 mt-1">{t("products.restock.noteHint")}</p>
         </label>
 
         <div className="flex justify-end gap-2">
@@ -548,7 +549,7 @@ function RestockModal({
             onClick={onClose}
             className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
           >
-            Bekor qilish
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -556,7 +557,7 @@ function RestockModal({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
-            Stok qo'shish
+            {t("products.restock.title")}
           </button>
         </div>
       </motion.form>

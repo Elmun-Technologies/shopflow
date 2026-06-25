@@ -12,6 +12,7 @@ import {
 import { productsApi, ordersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useT } from "../i18n";
 
 const DISMISSED_KEY = (tenantId: string) => `shopflow.onboarding.dismissed.${tenantId}`;
 
@@ -26,57 +27,58 @@ interface Step {
   ctaPage?: "products" | "settings" | "platforms" | "uibuilder";
 }
 
-const STEPS: Step[] = [
-  {
-    id: "welcome",
-    title: "ShopFlow'ga xush kelibsiz!",
-    description: "Biz sizga bir necha qadamda ShopFlow bilan sotuvni boshlashga yordam beramiz. Bu 3-5 daqiqa oladi.",
-    icon: Sparkles,
-  },
-  {
-    id: "store",
-    title: "Do'koningiz haqida",
-    description: "Do'kon nomi, valyuta va aloqa ma'lumotlarini kiriting. Bu mijozlar Mini App'da ko'radigan birinchi narsa.",
-    icon: StoreIcon,
-    ctaLabel: "Do'kon sozlamalari",
-    ctaPage: "settings",
-  },
-  {
-    id: "product",
-    title: "Birinchi mahsulot",
-    description: "Mahsulot qo'shing — qo'lda yoki CSV/Excel'dan import qiling. Hech bo'lmaganda 1 ta mahsulot kerak.",
-    icon: Package,
-    ctaLabel: "Mahsulot qo'shish",
-    ctaPage: "products",
-  },
-  {
-    id: "channel",
-    title: "Telegram bot ulash",
-    description: "Mijozlar siz bilan qanday aloqa qiladi? Telegram bot tokenini Platformalar bo'limidan ulang.",
-    icon: MessageCircle,
-    ctaLabel: "Platformalar",
-    ctaPage: "platforms",
-  },
-  {
-    id: "done",
-    title: "Vitrina'ni ko'rish",
-    description: "Mahsulotlar tayyor, bot ulangan. Endi Vitrina'ni nashr qiling va Mini App orqali do'koningizni oching!",
-    icon: Rocket,
-    ctaLabel: "Vitrina'ga o'tish",
-    ctaPage: "uibuilder",
-  },
-];
-
 interface Props {
   onNavigate?: (page: "products" | "settings" | "platforms" | "uibuilder") => void;
 }
 
 export function OnboardingWizard({ onNavigate }: Props) {
   const { tenant } = useAuth();
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [completed, setCompleted] = useState<Set<StepId>>(new Set());
   const [checking, setChecking] = useState(true);
+
+  const STEPS: Step[] = [
+    {
+      id: "welcome",
+      title: t("onboarding.welcome.title"),
+      description: t("onboarding.welcome.desc"),
+      icon: Sparkles,
+    },
+    {
+      id: "store",
+      title: t("onboarding.store.title"),
+      description: t("onboarding.store.desc"),
+      icon: StoreIcon,
+      ctaLabel: t("onboarding.store.cta"),
+      ctaPage: "settings",
+    },
+    {
+      id: "product",
+      title: t("onboarding.product.title"),
+      description: t("onboarding.product.desc"),
+      icon: Package,
+      ctaLabel: t("onboarding.product.cta"),
+      ctaPage: "products",
+    },
+    {
+      id: "channel",
+      title: t("onboarding.channel.title"),
+      description: t("onboarding.channel.desc"),
+      icon: MessageCircle,
+      ctaLabel: t("onboarding.channel.cta"),
+      ctaPage: "platforms",
+    },
+    {
+      id: "done",
+      title: t("onboarding.done.title"),
+      description: t("onboarding.done.desc"),
+      icon: Rocket,
+      ctaLabel: t("onboarding.done.cta"),
+      ctaPage: "uibuilder",
+    },
+  ];
 
   // Birinchi kirishda — mahsulot va buyurtma bormi?
   // Bo'sh bo'lsa va dismiss qilinmagan bo'lsa, sehrgarni ko'rsatamiz.
@@ -171,13 +173,13 @@ export function OnboardingWizard({ onNavigate }: Props) {
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Qadam {stepIndex + 1} / {STEPS.length}
+              {t("onboarding.step", { current: stepIndex + 1, total: STEPS.length })}
             </div>
             <button
               onClick={dismiss}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-cream-100"
-              aria-label="Yopish"
-              title="Keyinroq qaytaman"
+              aria-label={t("common.close")}
+              title={t("onboarding.comeBackLater")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -241,21 +243,21 @@ export function OnboardingWizard({ onNavigate }: Props) {
                 className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-cream-100 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                Orqaga
+                {t("common.back")}
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={dismiss}
                   className="text-xs text-slate-500 hover:text-forest-800 px-2"
                 >
-                  Keyinroq
+                  {t("onboarding.later")}
                 </button>
                 {!isLast ? (
                   <button
                     onClick={() => setStepIndex((i) => Math.min(STEPS.length - 1, i + 1))}
                     className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-forest-700 text-white hover:bg-forest-800"
                   >
-                    Davom etish
+                    {t("onboarding.continue")}
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 ) : (
@@ -263,7 +265,7 @@ export function OnboardingWizard({ onNavigate }: Props) {
                     onClick={dismiss}
                     className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-leaf-400 text-forest-800 hover:bg-leaf-500"
                   >
-                    Boshlash
+                    {t("onboarding.start")}
                   </button>
                 )}
               </div>

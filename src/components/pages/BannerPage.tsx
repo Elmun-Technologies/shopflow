@@ -168,7 +168,7 @@ export default function BannerPage() {
               <p className="text-sm text-slate-500 mb-6">{t("mkt.confirmDelete.body")}</p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-                <button onClick={() => { setBanners((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">{t("common.delete")}</button>
+                <button onClick={() => { setBanners((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-500 hover:bg-red-600 text-white font-medium">{t("common.delete")}</button>
               </div>
             </motion.div>
           </motion.div>

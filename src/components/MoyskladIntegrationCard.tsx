@@ -213,7 +213,7 @@ export function MoyskladIntegrationCard() {
         {s === "DISCONNECTED" || s === "ERROR" ? (
           <button
             onClick={() => setShowConnect(true)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-leaf-100 text-forest-700 hover:bg-emerald-400/25 transition-all"
+            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-leaf-100 text-forest-700 hover:bg-leaf-500/25 transition-all"
           >
             Ulash
           </button>
