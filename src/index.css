@@ -38,6 +38,31 @@
   --color-slate-50:  #F8FAFC;
 }
 
+/* Forma inputlari — light admin tema (oq fon, cream border, forest text).
+   Avval .input hech qayerda aniqlanmagan edi → dark-mode brauzerda to'q ko'rinardi. */
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-cream-300);
+  background-color: #ffffff;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-forest-800);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input::placeholder { color: var(--color-slate-400); }
+.input:focus {
+  outline: none;
+  border-color: var(--color-leaf-400);
+  box-shadow: 0 0 0 3px rgba(149, 210, 111, 0.25);
+}
+.input:disabled {
+  background-color: var(--color-cream-100);
+  color: var(--color-slate-400);
+  cursor: not-allowed;
+}
+
 html {
   scroll-behavior: smooth;
 }

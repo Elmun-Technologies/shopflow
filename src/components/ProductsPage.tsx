@@ -694,6 +694,7 @@ function ProductFormModal({
   onSaved: () => void;
 }) {
   const { t } = useT();
+  const { tenant } = useAuth();
   const [sku, setSku] = useState(product?.sku ?? "");
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -989,6 +990,38 @@ function ProductFormModal({
               />
             </Field>
           </div>
+
+          {/* Narx tarkibi — narx kiritilganda jonli: mahsulot + yetkazib berish + xizmat = jami */}
+          {(() => {
+            const priceNum = Number(price.replace(/[^\d]/g, "")) || 0;
+            if (priceNum <= 0) return null;
+            const bd = priceBreakdown(priceNum, tenant?.deliveryPct, tenant?.servicePct);
+            return (
+              <div className="rounded-xl border border-cream-300 bg-cream-50 p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                  {t("pricing.costs")}
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between text-slate-600">
+                    <span>{t("pricing.product")}</span>
+                    <span>{formatCurrency(bd.product, currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>{t("pricing.delivery")} ({tenant?.deliveryPct ?? 3}%)</span>
+                    <span>+ {formatCurrency(bd.delivery, currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>{t("pricing.service")} ({tenant?.servicePct ?? 15}%)</span>
+                    <span>+ {formatCurrency(bd.service, currency)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-forest-800 border-t border-cream-300 pt-1.5 mt-1">
+                    <span>{t("pricing.total")}</span>
+                    <span>{formatCurrency(bd.total, currency)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           <ImageGallery
             images={images}
