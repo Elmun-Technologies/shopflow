@@ -82,12 +82,13 @@ export const statusLabels: Record<CustomerStatus, string> = {
   inactive: "Nofaol",
 };
 
+// Light admin tema — pastel pill (bg-*-100 + text-*-600), emerald → leaf (brand).
 export const statusConfig: Record<CustomerStatus, { color: string; bg: string; icon: string }> = {
-  active: { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", icon: "CheckCircle" },
-  vip: { color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", icon: "Crown" },
-  new: { color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20", icon: "Sparkles" },
-  banned: { color: "text-red-400", bg: "bg-red-500/10 border-red-500/20", icon: "Ban" },
-  inactive: { color: "text-slate-400", bg: "bg-slate-500/10 border-slate-500/20", icon: "MinusCircle" },
+  active: { color: "text-leaf-600", bg: "bg-leaf-100 border-leaf-200", icon: "CheckCircle" },
+  vip: { color: "text-amber-600", bg: "bg-amber-100 border-amber-200", icon: "Crown" },
+  new: { color: "text-blue-600", bg: "bg-blue-100 border-blue-200", icon: "Sparkles" },
+  banned: { color: "text-red-600", bg: "bg-red-100 border-red-200", icon: "Ban" },
+  inactive: { color: "text-slate-500", bg: "bg-slate-100 border-slate-200", icon: "MinusCircle" },
 };
 
 export const regionStats = [];

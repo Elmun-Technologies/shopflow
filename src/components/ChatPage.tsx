@@ -361,7 +361,7 @@ export default function ChatPage() {
                             animate={{ width: `${(fs.count / maxCount) * 100}%` }}
                             transition={{ duration: 0.5, delay: i * 0.06 }}
                             className="h-full rounded-md flex items-center px-2"
-                            style={{ backgroundColor: cfg.color.replace("text-", "").replace("400", "500").replace("slate", "64748b").replace("blue", "3b82f6").replace("cyan", "06b6d4").replace("violet", "8b5cf6").replace("amber", "f59e0b").replace("orange", "f97316").replace("emerald", "10b981").replace("red", "ef4444").replace("pink", "ec4899") }}
+                            style={{ backgroundColor: cfg.hex }}
                           >
                             <span className="text-[10px] text-forest-800 font-medium">{Math.round((fs.count / maxCount) * 100)}%</span>
                           </motion.div>
