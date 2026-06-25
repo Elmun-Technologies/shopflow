@@ -668,6 +668,7 @@ export const dictionary: Record<string, Entry> = {
   // Tabs
   "settings.tab.profile": { uz: "Profil", ru: "Профиль" },
   "settings.tab.store": { uz: "Do'kon", ru: "Магазин" },
+  "settings.tab.team": { uz: "Jamoa", ru: "Команда" },
   "settings.tab.notifications": { uz: "Bildirishnomalar", ru: "Уведомления" },
   "settings.tab.integrations": { uz: "Integratsiyalar", ru: "Интеграции" },
   "settings.tab.security": { uz: "Xavfsizlik", ru: "Безопасность" },
@@ -710,6 +711,12 @@ export const dictionary: Record<string, Entry> = {
   "pricing.total": { uz: "Jami", ru: "Итого" },
   "pricing.deliveryPct": { uz: "Yetkazib berish (%)", ru: "Доставка (%)" },
   "pricing.servicePct": { uz: "Xizmat ko'rsatish (%)", ru: "Сервис (%)" },
+
+  // Dashboard sof foyda widget
+  "profit.title": { uz: "Sof foyda tahlili", ru: "Анализ чистой прибыли" },
+  "profit.subtitle": { uz: "Daromaddan yetkazib berish va xizmat xarajatlari chiqarilgandan keyingi sof foyda", ru: "Чистая прибыль после вычета расходов на доставку и сервис из выручки" },
+  "profit.revenue": { uz: "Daromad", ru: "Выручка" },
+  "profit.net": { uz: "Sof foyda", ru: "Чистая прибыль" },
 
   // Notifications section
   "settings.notify.type": { uz: "Tur", ru: "Тип" },
