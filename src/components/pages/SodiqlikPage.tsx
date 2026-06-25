@@ -7,6 +7,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
+import { useT } from "../../i18n";
 
 interface LoyaltyRule {
   id: string;
@@ -28,16 +29,17 @@ interface LoyaltyStats {
   byType: Array<{ type: string; count: number; total: number }>;
 }
 
-const TYPE_LABELS: Record<string, { label: string; icon: typeof Award; color: string }> = {
-  purchase:    { label: "Xariddan ball", icon: TrendingUp, color: "#10b981" },
-  birthday:    { label: "Tug'ilgan kun", icon: Gift, color: "#8b5cf6" },
-  referral:    { label: "Do'st taklif", icon: Users, color: "#3b82f6" },
-  first_order: { label: "Birinchi buyurtma", icon: Award, color: "#f59e0b" },
+const TYPE_LABELS: Record<string, { labelKey: string; icon: typeof Award; color: string }> = {
+  purchase:    { labelKey: "loyalty.type.purchase", icon: TrendingUp, color: "#10b981" },
+  birthday:    { labelKey: "loyalty.type.birthday", icon: Gift, color: "#8b5cf6" },
+  referral:    { labelKey: "loyalty.type.referral", icon: Users, color: "#3b82f6" },
+  first_order: { labelKey: "loyalty.type.first_order", icon: Award, color: "#f59e0b" },
 };
 
 const cls = "w-full bg-cream-100 border border-cream-300 rounded-xl px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 transition-colors";
 
 export default function SodiqlikPage() {
+  const { t } = useT();
   const { data: rules, loading: rulesLoading, refetch: reloadRules } = useAsync<LoyaltyRule[]>(
     () => api("/loyalty/rules"), [],
   );
@@ -62,9 +64,9 @@ export default function SodiqlikPage() {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
       >
         <div>
-          <h1 className="text-2xl font-bold text-forest-900">Sodiqlik dasturi</h1>
+          <h1 className="text-2xl font-bold text-forest-900">{t("loyalty.title")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Mijozlarga ball to'plash va sarflash qoidalari
+            {t("loyalty.subtitle")}
           </p>
         </div>
         <button
@@ -72,7 +74,7 @@ export default function SodiqlikPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-forest-700 hover:bg-forest-800 text-white rounded-xl text-sm font-semibold transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Yangi qoida
+          {t("loyalty.newRule")}
         </button>
       </motion.div>
 
@@ -80,10 +82,10 @@ export default function SodiqlikPage() {
       {!statsLoading && stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Aktiv mijozlar", value: stats.totalAccounts, color: "#3b82f6" },
-            { label: "Jami balans", value: stats.totalBalance.toLocaleString("uz-UZ"), color: "#8b5cf6", unit: "ball" },
-            { label: "Berilgan", value: stats.totalEarned.toLocaleString("uz-UZ"), color: "#10b981", unit: "ball" },
-            { label: "Sarflangan", value: stats.totalSpent.toLocaleString("uz-UZ"), color: "#f59e0b", unit: "ball" },
+            { label: t("loyalty.stat.activeCustomers"), value: stats.totalAccounts, color: "#3b82f6" },
+            { label: t("loyalty.stat.totalBalance"), value: stats.totalBalance.toLocaleString("uz-UZ"), color: "#8b5cf6", unit: t("loyalty.points") },
+            { label: t("loyalty.stat.earned"), value: stats.totalEarned.toLocaleString("uz-UZ"), color: "#10b981", unit: t("loyalty.points") },
+            { label: t("loyalty.stat.spent"), value: stats.totalSpent.toLocaleString("uz-UZ"), color: "#f59e0b", unit: t("loyalty.points") },
           ].map((s) => (
             <div
               key={s.label}
@@ -102,7 +104,7 @@ export default function SodiqlikPage() {
 
       {/* Rules */}
       <div>
-        <h2 className="text-base font-semibold text-forest-800 mb-3">Ball qoidalari</h2>
+        <h2 className="text-base font-semibold text-forest-800 mb-3">{t("loyalty.rulesTitle")}</h2>
 
         {rulesLoading && (
           <div className="flex justify-center py-10">
@@ -113,17 +115,18 @@ export default function SodiqlikPage() {
         {!rulesLoading && (!rules || rules.length === 0) && (
           <EmptyState
             icon={Award}
-            title="Qoidalar yo'q"
-            description="Birinchi ball to'plash qoidasini yarating"
-            buttonText="Yaratish"
+            title={t("loyalty.empty.title")}
+            description={t("loyalty.empty.description")}
+            buttonText={t("loyalty.empty.button")}
             onButtonClick={() => setShowForm(true)}
           />
         )}
 
         <div className="space-y-3">
           {rules?.map((rule) => {
-            const typeConf = TYPE_LABELS[rule.type] ?? { label: rule.type, icon: Award, color: "#94a3b8" };
+            const typeConf = TYPE_LABELS[rule.type] ?? { labelKey: "", icon: Award, color: "#94a3b8" };
             const TypeIcon = typeConf.icon;
+            const typeLabel = typeConf.labelKey ? t(typeConf.labelKey) : rule.type;
 
             return (
               <motion.div
@@ -147,14 +150,14 @@ export default function SodiqlikPage() {
                           className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                           style={{ backgroundColor: typeConf.color + "20", color: typeConf.color }}
                         >
-                          {typeConf.label}
+                          {typeLabel}
                         </span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                           rule.active
                             ? "bg-leaf-100 text-forest-700 border-leaf-300/60"
                             : "bg-slate-100 text-slate-500 border-slate-200"
                         }`}>
-                          {rule.active ? "Faol" : "Nofaol"}
+                          {rule.active ? t("loyalty.active") : t("loyalty.inactive")}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -162,7 +165,7 @@ export default function SodiqlikPage() {
                           onClick={() => handleToggle(rule.id, !rule.active)}
                           className="text-xs px-2.5 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
                         >
-                          {rule.active ? "O'chirish" : "Yoqish"}
+                          {rule.active ? t("loyalty.disable") : t("loyalty.enable")}
                         </button>
                         <button
                           onClick={() => { setEditRule(rule); setShowForm(true); }}
@@ -179,13 +182,13 @@ export default function SodiqlikPage() {
                       {rule.earnPerAmount && rule.earnPerThreshold && (
                         <span className="flex items-center gap-1">
                           <TrendingUp className="w-3 h-3" />
-                          Har {rule.earnPerThreshold.toLocaleString()} so'mga →{" "}
-                          <span className="font-semibold text-forest-700">{rule.earnPerAmount} ball</span>
+                          {t("loyalty.earnPer", { amount: rule.earnPerThreshold.toLocaleString() })} →{" "}
+                          <span className="font-semibold text-forest-700">{t("loyalty.pointsN", { count: rule.earnPerAmount })}</span>
                         </span>
                       )}
                       {rule.redeemRate && (
                         <span>
-                          1 ball = <span className="font-semibold text-forest-700">{rule.redeemRate} so'm</span> chegirma
+                          {t("loyalty.redeemPrefix")} <span className="font-semibold text-forest-700">{t("loyalty.sumN", { count: rule.redeemRate })}</span> {t("loyalty.discount")}
                         </span>
                       )}
                     </div>
@@ -214,6 +217,7 @@ export default function SodiqlikPage() {
 function RuleFormModal({
   rule, onClose, onSaved,
 }: { rule: LoyaltyRule | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useT();
   const isEdit = !!rule;
   const [form, setForm] = useState({
     name: rule?.name ?? "",
@@ -228,7 +232,7 @@ function RuleFormModal({
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
-    if (!form.name.trim()) { setError("Nom kiritish shart"); return; }
+    if (!form.name.trim()) { setError(t("loyalty.form.nameRequired")); return; }
     setSaving(true);
     setError(null);
     try {
@@ -245,7 +249,7 @@ function RuleFormModal({
       else await api("/loyalty/rules", { method: "POST", body });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -263,7 +267,7 @@ function RuleFormModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-forest-800">{isEdit ? "Qoidani tahrirlash" : "Yangi qoida"}</h3>
+          <h3 className="font-bold text-forest-800">{isEdit ? t("loyalty.editRule") : t("loyalty.newRule")}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100">
             <X className="w-4 h-4" />
           </button>
@@ -277,28 +281,28 @@ function RuleFormModal({
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Nomi *</label>
-            <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Xariddan ball to'plash" className={cls} />
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("loyalty.form.name")} *</label>
+            <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("loyalty.form.namePlaceholder")} className={cls} />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Qoida turi</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("loyalty.form.ruleType")}</label>
             <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className={cls}>
-              <option value="purchase">Xariddan ball to'plash</option>
-              <option value="first_order">Birinchi buyurtma bonusi</option>
-              <option value="birthday">Tug'ilgan kun bonusi</option>
-              <option value="referral">Do'st taklif bonusi</option>
+              <option value="purchase">{t("loyalty.option.purchase")}</option>
+              <option value="first_order">{t("loyalty.option.first_order")}</option>
+              <option value="birthday">{t("loyalty.option.birthday")}</option>
+              <option value="referral">{t("loyalty.option.referral")}</option>
             </select>
           </div>
 
           {form.type === "purchase" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Ball miqdori</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{t("loyalty.form.pointAmount")}</label>
                 <input type="number" min={1} value={form.earnPerAmount} onChange={(e) => setForm((f) => ({ ...f, earnPerAmount: Number(e.target.value) }))} className={cls} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Har (so'm)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{t("loyalty.form.perSum")}</label>
                 <input type="number" min={1} value={form.earnPerThreshold} onChange={(e) => setForm((f) => ({ ...f, earnPerThreshold: Number(e.target.value) }))} className={cls} />
               </div>
             </div>
@@ -306,27 +310,27 @@ function RuleFormModal({
 
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">
-              1 ball = ? so'm chegirma (ixtiyoriy)
+              {t("loyalty.form.redeemRate")}
             </label>
             <input type="number" value={form.redeemRate} onChange={(e) => setForm((f) => ({ ...f, redeemRate: e.target.value }))} placeholder="10" className={cls} />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Izoh</label>
-            <input type="text" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Qo'shimcha izoh" className={cls} />
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("loyalty.form.description")}</label>
+            <input type="text" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder={t("loyalty.form.descriptionPlaceholder")} className={cls} />
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active} onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))} className="rounded" />
-            <span className="text-sm text-slate-700">Faol</span>
+            <span className="text-sm text-slate-700">{t("loyalty.active")}</span>
           </label>
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-cream-100 hover:bg-cream-200 transition-colors">Bekor</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-cream-100 hover:bg-cream-200 transition-colors">{t("common.cancel")}</button>
           <button onClick={save} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("common.save") : t("loyalty.create")}
           </button>
         </div>
       </motion.div>

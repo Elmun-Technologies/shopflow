@@ -12,6 +12,7 @@ import EmptyState from "../EmptyState";
 import { api } from "../../api/client";
 import { useAppToast } from "../ui/Toast";
 import { useConfirm } from "../ui/ConfirmDialog";
+import { useT } from "../../i18n";
 
 interface ApiReview {
   id: string;
@@ -51,13 +52,14 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
 }
 
 function StatusBadge({ status }: { status: ApiReview["status"] }) {
-  const map: Record<ApiReview["status"], { cls: string; label: string }> = {
-    PENDING: { cls: "bg-amber-100 text-amber-700 border-amber-300", label: "Kutilmoqda" },
-    APPROVED: { cls: "bg-leaf-100 text-forest-700 border-leaf-400/50", label: "Tasdiqlangan" },
-    REJECTED: { cls: "bg-rose-100 text-rose-600 border-rose-300", label: "Rad etilgan" },
+  const { t } = useT();
+  const map: Record<ApiReview["status"], { cls: string; labelKey: string }> = {
+    PENDING: { cls: "bg-amber-100 text-amber-700 border-amber-300", labelKey: "reviews.status.pending" },
+    APPROVED: { cls: "bg-leaf-100 text-forest-700 border-leaf-400/50", labelKey: "reviews.status.approved" },
+    REJECTED: { cls: "bg-rose-100 text-rose-600 border-rose-300", labelKey: "reviews.status.rejected" },
   };
-  const { cls, label } = map[status];
-  return <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>;
+  const { cls, labelKey } = map[status];
+  return <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>{t(labelKey)}</span>;
 }
 
 function formatDate(iso: string): string {
@@ -65,6 +67,7 @@ function formatDate(iso: string): string {
 }
 
 export default function IzohlarPage() {
+  const { t } = useT();
   const toast = useAppToast();
   const confirm = useConfirm();
   const [reviews, setReviews] = useState<ApiReview[]>([]);
@@ -85,7 +88,7 @@ export default function IzohlarPage() {
       setReviews(res.items);
       setStats(res.stats);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sharhlarni yuklab bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("reviews.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -112,10 +115,10 @@ export default function IzohlarPage() {
         method: "PATCH",
         body: status === "REJECTED" ? { status, rejectReason: reason ?? null } : { status },
       });
-      toast.success(status === "APPROVED" ? "Sharh tasdiqlandi" : "Sharh rad etildi");
+      toast.success(status === "APPROVED" ? t("reviews.approved") : t("reviews.rejected"));
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setBusyId(null);
     }
@@ -123,20 +126,20 @@ export default function IzohlarPage() {
 
   const remove = async (id: string) => {
     const ok = await confirm({
-      title: "Sharh o'chirilsinmi?",
-      description: "Sharh va u bilan birga photos ham yo'qoladi. Bu amalni qaytarib bo'lmaydi.",
+      title: t("reviews.deleteConfirm.title"),
+      description: t("reviews.deleteConfirm.body"),
       kind: "danger",
-      confirmText: "O'chirish",
+      confirmText: t("common.delete"),
     });
     if (!ok) return;
     setBusyId(id);
     try {
       await api(`/reviews/${id}`, { method: "DELETE" });
-      toast.success("Sharh o'chirildi");
+      toast.success(t("reviews.deleted"));
       setDetail(null);
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setBusyId(null);
     }
@@ -176,11 +179,13 @@ export default function IzohlarPage() {
   const bulkModerate = async (status: "APPROVED" | "REJECTED") => {
     if (selected.size === 0) return;
     const ok = await confirm({
-      title: `${selected.size} ta sharhni ${status === "APPROVED" ? "tasdiqlash" : "rad etish"}?`,
+      title: status === "APPROVED"
+        ? t("reviews.bulkConfirm.approveTitle", { count: selected.size })
+        : t("reviews.bulkConfirm.rejectTitle", { count: selected.size }),
       description: status === "APPROVED"
-        ? "Tanlangan sharhlar do'kon vitrinasida ko'rinadi."
-        : "Tanlangan sharhlar mijozlarga ko'rinmaydi.",
-      confirmText: status === "APPROVED" ? "Tasdiqlash" : "Rad etish",
+        ? t("reviews.bulkConfirm.approveBody")
+        : t("reviews.bulkConfirm.rejectBody"),
+      confirmText: status === "APPROVED" ? t("reviews.approve") : t("reviews.reject"),
       kind: status === "REJECTED" ? "danger" : "default",
     });
     if (!ok) return;
@@ -193,7 +198,9 @@ export default function IzohlarPage() {
           api(`/reviews/${id}`, { method: "PATCH", body: { status } }).catch(() => null),
         ),
       );
-      toast.success(`${ids.length} ta sharh ${status === "APPROVED" ? "tasdiqlandi" : "rad etildi"}`);
+      toast.success(status === "APPROVED"
+        ? t("reviews.bulkApproved", { count: ids.length })
+        : t("reviews.bulkRejected", { count: ids.length }));
       setSelected(new Set());
       await reload();
     } finally {
@@ -207,26 +214,26 @@ export default function IzohlarPage() {
 
   const statBoxes = stats
     ? [
-        { label: "O'rtacha baho", value: stats.total > 0 ? stats.avgRating.toFixed(1) + "★" : "—", color: "text-yellow-500" },
-        { label: "Kutilmoqda", value: stats.pending, color: "text-amber-600" },
-        { label: "Tasdiqlangan", value: stats.approved, color: "text-forest-700" },
-        { label: "Rad etilgan", value: stats.rejected, color: "text-rose-600" },
+        { label: t("reviews.stat.avgRating"), value: stats.total > 0 ? stats.avgRating.toFixed(1) + "★" : "—", color: "text-yellow-500" },
+        { label: t("reviews.status.pending"), value: stats.pending, color: "text-amber-600" },
+        { label: t("reviews.status.approved"), value: stats.approved, color: "text-forest-700" },
+        { label: t("reviews.status.rejected"), value: stats.rejected, color: "text-rose-600" },
       ]
     : [];
 
   const tabs: { key: Filter; label: string; count?: number }[] = [
-    { key: "PENDING", label: "Kutilmoqda", count: stats?.pending },
-    { key: "APPROVED", label: "Tasdiqlangan", count: stats?.approved },
-    { key: "REJECTED", label: "Rad etilgan", count: stats?.rejected },
-    { key: "all", label: "Hammasi", count: stats?.total },
+    { key: "PENDING", label: t("reviews.status.pending"), count: stats?.pending },
+    { key: "APPROVED", label: t("reviews.status.approved"), count: stats?.approved },
+    { key: "REJECTED", label: t("reviews.status.rejected"), count: stats?.rejected },
+    { key: "all", label: t("reviews.tab.all"), count: stats?.total },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-forest-800">Mahsulot izohları</h1>
-          <p className="text-sm text-slate-500 mt-1">Mijoz sharh va baholashlarini boshqaring</p>
+          <h1 className="text-2xl font-bold text-forest-800">{t("reviews.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("reviews.subtitle")}</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
           {statBoxes.map((s) => (
@@ -245,7 +252,7 @@ export default function IzohlarPage() {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Mijoz, mahsulot, matn…"
+            placeholder={t("reviews.searchPlaceholder")}
             className="w-full bg-white border border-cream-300 rounded-lg px-3 py-2 pl-10 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
           />
         </div>
@@ -280,7 +287,7 @@ export default function IzohlarPage() {
           className="flex flex-wrap items-center gap-2 px-3 py-2 bg-leaf-100 border border-leaf-300/60 rounded-xl"
         >
           <span className="text-sm font-medium text-forest-800 mr-1">
-            {selected.size} ta tanlandi
+            {t("reviews.selectedCount", { count: selected.size })}
           </span>
           <button
             onClick={() => bulkModerate("APPROVED")}
@@ -288,7 +295,7 @@ export default function IzohlarPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-xs font-medium text-forest-800 transition-colors"
           >
             {bulkBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            Tasdiqlash
+            {t("reviews.approve")}
           </button>
           <button
             onClick={() => bulkModerate("REJECTED")}
@@ -296,13 +303,13 @@ export default function IzohlarPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 hover:bg-rose-200 border border-rose-300 disabled:opacity-50 rounded-lg text-xs font-medium text-rose-600 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
-            Rad etish
+            {t("reviews.reject")}
           </button>
           <button
             onClick={() => setSelected(new Set())}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 hover:text-forest-900"
           >
-            Bekor qilish
+            {t("common.cancel")}
           </button>
         </motion.div>
       )}
@@ -311,19 +318,19 @@ export default function IzohlarPage() {
         {loading ? (
           <div className="py-12 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
             <Loader2 className="w-6 h-6 animate-spin" />
-            Yuklanmoqda…
+            {t("common.loading")}
           </div>
         ) : reviews.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
-            title="Hali izohlar yo'q"
-            description="Xaridorlar mahsulot uchun izoh qoldirganida bu yerda ko'rinadi."
-            buttonText="Filterni tozalash"
+            title={t("reviews.empty.title")}
+            description={t("reviews.empty.description")}
+            buttonText={t("reviews.clearFilter")}
             onButtonClick={() => { setSearch(""); setFilterStatus("all"); }}
             iconColor="text-cream-300"
           />
         ) : filtered.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 text-sm">Ma'lumot topilmadi</div>
+          <div className="py-12 text-center text-slate-500 text-sm">{t("mkt.noData")}</div>
         ) : (
           <div>
             {filtered.length > 1 && (
@@ -333,10 +340,10 @@ export default function IzohlarPage() {
                   checked={allVisibleSelected}
                   ref={(el) => { if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected; }}
                   onChange={toggleAll}
-                  aria-label="Hammasini tanlash"
+                  aria-label={t("reviews.selectAll")}
                   className="w-4 h-4 rounded border-cream-300 text-leaf-500 cursor-pointer"
                 />
-                <span className="text-xs text-slate-500">Hammasini tanlash</span>
+                <span className="text-xs text-slate-500">{t("reviews.selectAll")}</span>
               </div>
             )}
             <div className="divide-y divide-cream-300/60">
@@ -389,7 +396,7 @@ export default function IzohlarPage() {
                         </div>
                       )}
                       {r.status === "REJECTED" && r.rejectReason && (
-                        <p className="text-[11px] text-rose-600 mt-1.5 italic">Sabab: {r.rejectReason}</p>
+                        <p className="text-[11px] text-rose-600 mt-1.5 italic">{t("reviews.reasonLabel")}: {r.rejectReason}</p>
                       )}
                       <p className="text-[10px] text-slate-400 mt-2">{formatDate(r.createdAt)}</p>
                     </div>
@@ -399,7 +406,7 @@ export default function IzohlarPage() {
                           onClick={() => moderate(r.id, "APPROVED")}
                           disabled={busyId === r.id}
                           className="p-2 rounded-lg bg-leaf-100 text-forest-700 hover:bg-leaf-200 disabled:opacity-50"
-                          title="Tasdiqlash"
+                          title={t("reviews.approve")}
                         >
                           {busyId === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         </button>
@@ -407,7 +414,7 @@ export default function IzohlarPage() {
                           onClick={() => { setRejectingId(r.id); setRejectReason(""); }}
                           disabled={busyId === r.id}
                           className="p-2 rounded-lg bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50"
-                          title="Rad etish"
+                          title={t("reviews.reject")}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -471,16 +478,16 @@ export default function IzohlarPage() {
 
               {detail.status === "REJECTED" && detail.rejectReason && (
                 <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200">
-                  <p className="text-xs font-medium text-rose-700 mb-1">Rad etish sababi</p>
+                  <p className="text-xs font-medium text-rose-700 mb-1">{t("reviews.rejectReasonTitle")}</p>
                   <p className="text-sm text-rose-600">{detail.rejectReason}</p>
                 </div>
               )}
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 border-t border-cream-300">
                 <p className="text-xs text-slate-500">
-                  Yaratilgan: {formatDate(detail.createdAt)}
+                  {t("reviews.createdAt")}: {formatDate(detail.createdAt)}
                   {detail.moderatedAt && (
-                    <> · Moderatsiya: {formatDate(detail.moderatedAt)}</>
+                    <> · {t("reviews.moderatedAt")}: {formatDate(detail.moderatedAt)}</>
                   )}
                 </p>
                 <div className="flex gap-2 flex-wrap">
@@ -490,7 +497,7 @@ export default function IzohlarPage() {
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs bg-cream-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 disabled:opacity-50 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    O'chirish
+                    {t("common.delete")}
                   </button>
                   {detail.status === "PENDING" && (
                     <>
@@ -499,14 +506,14 @@ export default function IzohlarPage() {
                         disabled={busyId === detail.id}
                         className="px-3 py-2 rounded-lg text-sm bg-rose-100 text-rose-600 hover:bg-rose-200 border border-rose-300 disabled:opacity-50 font-medium"
                       >
-                        Rad etish
+                        {t("reviews.reject")}
                       </button>
                       <button
                         onClick={() => { moderate(detail.id, "APPROVED"); setDetail(null); }}
                         disabled={busyId === detail.id}
                         className="px-3 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
                       >
-                        {busyId === detail.id ? <Loader2 className="w-4 h-4 animate-spin inline" /> : "Tasdiqlash"}
+                        {busyId === detail.id ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t("reviews.approve")}
                       </button>
                     </>
                   )}
@@ -516,7 +523,7 @@ export default function IzohlarPage() {
                       disabled={busyId === detail.id}
                       className="px-3 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
                     >
-                      Tasdiqlash
+                      {t("reviews.approve")}
                     </button>
                   )}
                   {detail.status === "APPROVED" && (
@@ -525,7 +532,7 @@ export default function IzohlarPage() {
                       disabled={busyId === detail.id}
                       className="px-3 py-2 rounded-lg text-sm bg-rose-100 text-rose-600 hover:bg-rose-200 border border-rose-300 disabled:opacity-50 font-medium"
                     >
-                      Rad etish
+                      {t("reviews.reject")}
                     </button>
                   )}
                 </div>
@@ -552,14 +559,14 @@ export default function IzohlarPage() {
               className="bg-white border border-cream-300 rounded-2xl p-5 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold text-forest-800 mb-2">Sharhni rad etish</h3>
+              <h3 className="text-lg font-semibold text-forest-800 mb-2">{t("reviews.rejectModalTitle")}</h3>
               <p className="text-sm text-slate-500 mb-3">
-                Ixtiyoriy: mijozga ko'rsatish uchun sabab yozing. Bo'sh qoldirsangiz ham bo'ladi.
+                {t("reviews.rejectModalHint")}
               </p>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Masalan: Mahsulotga aloqasiz, haqorat..."
+                placeholder={t("reviews.rejectModalPlaceholder")}
                 rows={4}
                 maxLength={500}
                 autoFocus
@@ -571,14 +578,14 @@ export default function IzohlarPage() {
                   onClick={() => { setRejectingId(null); setRejectReason(""); }}
                   className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
                 >
-                  Bekor qilish
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={submitReject}
                   disabled={busyId === rejectingId}
                   className="px-3 py-2 rounded-lg text-sm bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-medium"
                 >
-                  {busyId === rejectingId ? <Loader2 className="w-4 h-4 animate-spin inline" /> : "Rad etish"}
+                  {busyId === rejectingId ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t("reviews.reject")}
                 </button>
               </div>
             </motion.div>

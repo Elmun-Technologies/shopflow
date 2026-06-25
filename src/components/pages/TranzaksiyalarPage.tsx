@@ -8,6 +8,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
+import { useT } from "../../i18n";
 
 interface LoyaltyTx {
   id: string;
@@ -22,15 +23,16 @@ interface LoyaltyTx {
   };
 }
 
-const TYPE_CONF: Record<string, { label: string; icon: typeof TrendingUp; color: string }> = {
-  EARN:   { label: "Ball to'plandi",  icon: TrendingUp,  color: "#10b981" },
-  SPEND:  { label: "Ball sarflandi",  icon: TrendingDown, color: "#ef4444" },
-  EXPIRE: { label: "Muddati tugadi",  icon: Clock,       color: "#94a3b8" },
-  ADJUST: { label: "Sozlash",         icon: Award,       color: "#3b82f6" },
-  BONUS:  { label: "Bonus",           icon: Gift,        color: "#8b5cf6" },
+const TYPE_CONF: Record<string, { labelKey: string; icon: typeof TrendingUp; color: string }> = {
+  EARN:   { labelKey: "loyaltyTx.type.EARN",   icon: TrendingUp,  color: "#10b981" },
+  SPEND:  { labelKey: "loyaltyTx.type.SPEND",  icon: TrendingDown, color: "#ef4444" },
+  EXPIRE: { labelKey: "loyaltyTx.type.EXPIRE", icon: Clock,       color: "#94a3b8" },
+  ADJUST: { labelKey: "loyaltyTx.type.ADJUST", icon: Award,       color: "#3b82f6" },
+  BONUS:  { labelKey: "loyaltyTx.type.BONUS",  icon: Gift,        color: "#8b5cf6" },
 };
 
 export default function TranzaksiyalarPage() {
+  const { t } = useT();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("");
@@ -53,23 +55,31 @@ export default function TranzaksiyalarPage() {
   const totalPages = Math.ceil(total / pageSize);
 
   const filtered = search
-    ? items.filter((t) =>
-        t.account.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-        (t.account.customer.phone ?? "").includes(search)
+    ? items.filter((tx) =>
+        tx.account.customer.name.toLowerCase().includes(search.toLowerCase()) ||
+        (tx.account.customer.phone ?? "").includes(search)
       )
     : items;
 
   const exportCsv = () => {
     const rows = [
-      ["Sana", "Mijoz", "Telefon", "Tur", "Ball", "Balans", "Izoh"].join(","),
-      ...items.map((t) => [
-        new Date(t.createdAt).toLocaleDateString("uz-UZ"),
-        `"${t.account.customer.name}"`,
-        t.account.customer.phone ?? "",
-        TYPE_CONF[t.type]?.label ?? t.type,
-        t.amount,
-        t.balance,
-        `"${t.description ?? ""}"`,
+      [
+        t("loyaltyTx.csv.date"),
+        t("loyaltyTx.csv.customer"),
+        t("loyaltyTx.csv.phone"),
+        t("loyaltyTx.csv.type"),
+        t("loyaltyTx.csv.points"),
+        t("loyaltyTx.csv.balance"),
+        t("loyaltyTx.csv.note"),
+      ].join(","),
+      ...items.map((tx) => [
+        new Date(tx.createdAt).toLocaleDateString("uz-UZ"),
+        `"${tx.account.customer.name}"`,
+        tx.account.customer.phone ?? "",
+        TYPE_CONF[tx.type] ? t(TYPE_CONF[tx.type].labelKey) : tx.type,
+        tx.amount,
+        tx.balance,
+        `"${tx.description ?? ""}"`,
       ].join(",")),
     ].join("\r\n");
 
@@ -92,9 +102,9 @@ export default function TranzaksiyalarPage() {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
       >
         <div>
-          <h1 className="text-2xl font-bold text-forest-900">Ball tranzaksiyalari</h1>
+          <h1 className="text-2xl font-bold text-forest-900">{t("loyaltyTx.title")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Jami: {total.toLocaleString()} ta tranzaksiya
+            {t("loyaltyTx.subtitle", { count: total.toLocaleString() })}
           </p>
         </div>
         <button
@@ -102,7 +112,7 @@ export default function TranzaksiyalarPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-cream-100 hover:bg-cream-200 border border-cream-300 text-forest-800 rounded-xl text-sm font-medium transition-colors"
         >
           <Download className="w-4 h-4" />
-          CSV yuklab olish
+          {t("loyaltyTx.exportCsv")}
         </button>
       </motion.div>
 
@@ -114,7 +124,7 @@ export default function TranzaksiyalarPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Mijoz ismi yoki telefon bo'yicha..."
+            placeholder={t("loyaltyTx.searchPlaceholder")}
             className="w-full bg-white border border-cream-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-leaf-500/60"
           />
         </div>
@@ -123,9 +133,9 @@ export default function TranzaksiyalarPage() {
           onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
           className="bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none min-w-[160px]"
         >
-          <option value="">Barcha turlar</option>
+          <option value="">{t("loyaltyTx.allTypes")}</option>
           {Object.entries(TYPE_CONF).map(([key, conf]) => (
-            <option key={key} value={key}>{conf.label}</option>
+            <option key={key} value={key}>{t(conf.labelKey)}</option>
           ))}
         </select>
       </div>
@@ -138,8 +148,8 @@ export default function TranzaksiyalarPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Award}
-          title="Tranzaksiyalar yo'q"
-          description="Hali sodiqlik tranzaksiyalari mavjud emas"
+          title={t("loyaltyTx.empty.title")}
+          description={t("loyaltyTx.empty.description")}
           buttonText=""
           onButtonClick={() => {}}
         />
@@ -149,20 +159,28 @@ export default function TranzaksiyalarPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-cream-300">
-                  {["Sana", "Mijoz", "Tur", "Ball", "Balans", "Izoh"].map((h) => (
+                  {[
+                    { key: "date", label: t("loyaltyTx.col.date") },
+                    { key: "customer", label: t("loyaltyTx.col.customer") },
+                    { key: "type", label: t("loyaltyTx.col.type") },
+                    { key: "points", label: t("loyaltyTx.col.points") },
+                    { key: "balance", label: t("loyaltyTx.col.balance") },
+                    { key: "note", label: t("loyaltyTx.col.note") },
+                  ].map((h) => (
                     <th
-                      key={h}
+                      key={h.key}
                       className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3"
                     >
-                      {h}
+                      {h.label}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((tx) => {
-                  const conf = TYPE_CONF[tx.type] ?? { label: tx.type, icon: Award, color: "#94a3b8" };
+                  const conf = TYPE_CONF[tx.type] ?? { labelKey: "", icon: Award, color: "#94a3b8" };
                   const ConfIcon = conf.icon;
+                  const confLabel = conf.labelKey ? t(conf.labelKey) : tx.type;
                   const isEarn = tx.amount > 0;
                   return (
                     <tr
@@ -189,7 +207,7 @@ export default function TranzaksiyalarPage() {
                           style={{ backgroundColor: conf.color + "15", color: conf.color }}
                         >
                           <ConfIcon className="w-3 h-3" />
-                          {conf.label}
+                          {confLabel}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -197,7 +215,7 @@ export default function TranzaksiyalarPage() {
                           className="text-sm font-bold"
                           style={{ color: isEarn ? "#10b981" : "#ef4444" }}
                         >
-                          {isEarn ? "+" : ""}{tx.amount.toLocaleString()} ball
+                          {isEarn ? "+" : ""}{t("loyaltyTx.pointsN", { count: tx.amount.toLocaleString() })}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -227,7 +245,7 @@ export default function TranzaksiyalarPage() {
                   disabled={page === 1}
                   className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-cream-100 disabled:opacity-40 transition-colors"
                 >
-                  Oldingi
+                  {t("loyaltyTx.prev")}
                 </button>
                 <span className="px-3 py-1.5 text-xs font-medium text-forest-800">
                   {page} / {totalPages}
@@ -237,7 +255,7 @@ export default function TranzaksiyalarPage() {
                   disabled={page >= totalPages}
                   className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-cream-100 disabled:opacity-40 transition-colors"
                 >
-                  Keyingi
+                  {t("loyaltyTx.next")}
                 </button>
               </div>
             </div>

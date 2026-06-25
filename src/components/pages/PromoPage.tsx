@@ -8,6 +8,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
+import { useT } from "../../i18n";
 
 interface PromoCode {
   id: string;
@@ -28,11 +29,9 @@ interface PromoCode {
 
 const cls = "w-full bg-cream-100 border border-cream-300 rounded-xl px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 transition-colors";
 
-function fmtPrice(v: number) {
-  return v.toLocaleString("uz-UZ") + " so'm";
-}
-
 export default function PromoPage() {
+  const { t } = useT();
+  const fmtPrice = (v: number) => v.toLocaleString("uz-UZ") + " " + t("common.sum");
   const { data: codes, loading, refetch } = useAsync<PromoCode[]>(
     () => api("/promo-codes"), [],
   );
@@ -48,7 +47,7 @@ export default function PromoPage() {
   };
 
   const handleDelete = async (id: string, code: string) => {
-    if (!confirm(`"${code}" promo kodini o'chirishni xohlaysizmi?`)) return;
+    if (!confirm(t("promo.confirmDelete", { code }))) return;
     await api(`/promo-codes/${id}`, { method: "DELETE" });
     refetch();
   };
@@ -67,9 +66,9 @@ export default function PromoPage() {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
       >
         <div>
-          <h1 className="text-2xl font-bold text-forest-900">Promo kodlar</h1>
+          <h1 className="text-2xl font-bold text-forest-900">{t("promo.title")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Chegirma kodlarini yarating va boshqaring
+            {t("promo.subtitle")}
           </p>
         </div>
         <button
@@ -77,7 +76,7 @@ export default function PromoPage() {
           className="flex items-center gap-2 px-4 py-2.5 bg-forest-700 hover:bg-forest-800 text-white rounded-xl text-sm font-semibold transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Yangi kod
+          {t("promo.newCode")}
         </button>
       </motion.div>
 
@@ -85,10 +84,10 @@ export default function PromoPage() {
       {codes && codes.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Jami kodlar", value: codes.length, color: "#475569" },
-            { label: "Faol", value: codes.filter(c => c.active).length, color: "#10b981" },
-            { label: "Ishlatilgan", value: codes.reduce((s, c) => s + c.usageCount, 0), color: "#3b82f6" },
-            { label: "Tugagan", value: codes.filter(c => c.endsAt && new Date(c.endsAt) < new Date()).length, color: "#f59e0b" },
+            { label: t("promo.stat.total"), value: codes.length, color: "#475569" },
+            { label: t("mkt.active"), value: codes.filter(c => c.active).length, color: "#10b981" },
+            { label: t("promo.stat.used"), value: codes.reduce((s, c) => s + c.usageCount, 0), color: "#3b82f6" },
+            { label: t("promo.stat.expired"), value: codes.filter(c => c.endsAt && new Date(c.endsAt) < new Date()).length, color: "#f59e0b" },
           ].map((s) => (
             <div
               key={s.label}
@@ -112,9 +111,9 @@ export default function PromoPage() {
       {!loading && (!codes || codes.length === 0) && (
         <EmptyState
           icon={Tag}
-          title="Promo kodlar yo'q"
-          description="Birinchi promo kodni yarating"
-          buttonText="Yaratish"
+          title={t("promo.empty.title")}
+          description={t("promo.empty.desc")}
+          buttonText={t("promo.empty.btn")}
           onButtonClick={() => setShowForm(true)}
         />
       )}
@@ -143,7 +142,7 @@ export default function PromoPage() {
                       <button
                         onClick={() => handleCopy(code.code)}
                         className="flex items-center gap-1.5 font-mono font-bold text-forest-800 hover:text-forest-700 transition-colors text-sm"
-                        title="Nusxalash"
+                        title={t("promo.copy")}
                       >
                         {code.code}
                         {copied === code.code
@@ -158,7 +157,7 @@ export default function PromoPage() {
                             ? "bg-amber-100 text-amber-600 border-amber-200"
                             : "bg-leaf-100 text-forest-700 border-leaf-300/60"
                       }`}>
-                        {!code.active ? "Nofaol" : isExpired ? "Tugagan" : "Faol"}
+                        {!code.active ? t("promo.status.inactive") : isExpired ? t("promo.status.expired") : t("mkt.active")}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
@@ -166,23 +165,23 @@ export default function PromoPage() {
                         {code.discountType === "PERCENT"
                           ? `${code.discountValue}%`
                           : fmtPrice(code.discountValue)
-                        } chegirma
+                        } {t("promo.discount")}
                       </span>
                       {code.minOrderAmount && (
-                        <span>min: {fmtPrice(code.minOrderAmount)}</span>
+                        <span>{t("promo.min")} {fmtPrice(code.minOrderAmount)}</span>
                       )}
                       {code.usageLimit && (
-                        <span>{code.usageCount}/{code.usageLimit} ishlatildi</span>
+                        <span>{t("promo.usedCount", { used: code.usageCount, limit: code.usageLimit })}</span>
                       )}
                       {!code.usageLimit && code.usageCount > 0 && (
                         <span className="flex items-center gap-1">
                           <BarChart3 className="w-3 h-3" />
-                          {code.usageCount} marta
+                          {t("promo.timesUsed", { count: code.usageCount })}
                         </span>
                       )}
                       {code.endsAt && (
                         <span>
-                          {isExpired ? "Tugagan: " : "Tugaydi: "}
+                          {isExpired ? t("promo.expiredOn") : t("promo.expiresOn")}{" "}
                           {new Date(code.endsAt).toLocaleDateString("uz-UZ")}
                         </span>
                       )}
@@ -211,7 +210,7 @@ export default function PromoPage() {
                         : "text-forest-700 hover:bg-leaf-100"
                     }`}
                   >
-                    {code.active ? "O'chirish" : "Yoqish"}
+                    {code.active ? t("promo.deactivate") : t("promo.activate")}
                   </button>
                   <button
                     onClick={() => { setEditCode(code); setShowForm(true); }}
@@ -251,6 +250,7 @@ export default function PromoPage() {
 function PromoFormModal({
   code, onClose, onSaved,
 }: { code: PromoCode | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useT();
   const isEdit = !!code;
   const [form, setForm] = useState({
     code: code?.code ?? "",
@@ -275,8 +275,8 @@ function PromoFormModal({
   };
 
   const save = async () => {
-    if (!form.code.trim()) { setError("Kod kiritish shart"); return; }
-    if (!form.discountValue || form.discountValue <= 0) { setError("Chegirma miqdori kiritish shart"); return; }
+    if (!form.code.trim()) { setError(t("promo.err.codeRequired")); return; }
+    if (!form.discountValue || form.discountValue <= 0) { setError(t("promo.err.valueRequired")); return; }
     setSaving(true);
     setError(null);
     try {
@@ -297,7 +297,7 @@ function PromoFormModal({
       else await api("/promo-codes", { method: "POST", body });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -316,9 +316,9 @@ function PromoFormModal({
       >
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-forest-800 text-lg">
-            {isEdit ? "Kodni tahrirlash" : "Yangi promo kod"}
+            {isEdit ? t("promo.modal.editTitle") : t("promo.modal.newTitle")}
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100" aria-label={t("common.close")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -332,7 +332,7 @@ function PromoFormModal({
         <div className="space-y-3">
           {/* Kod */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Kod *</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("promo.form.code")}</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -347,19 +347,19 @@ function PromoFormModal({
                 onClick={generateCode}
                 className="px-3 py-2 bg-cream-200 hover:bg-cream-300 rounded-xl text-xs font-medium text-slate-600 transition-colors whitespace-nowrap"
               >
-                Tasodifiy
+                {t("promo.form.random")}
               </button>
             </div>
           </div>
 
           {/* Izoh */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Izoh</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">{t("promo.form.description")}</label>
             <input
               type="text"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Yozgi chegirma kampaniyasi"
+              placeholder={t("promo.form.descriptionPh")}
               className={cls}
             />
           </div>
@@ -367,19 +367,19 @@ function PromoFormModal({
           {/* Chegirma turi + miqdori */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Tur</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t("promo.form.type")}</label>
               <select
                 value={form.discountType}
                 onChange={(e) => setForm((f) => ({ ...f, discountType: e.target.value as "PERCENT" | "FIXED" }))}
                 className={cls}
               >
-                <option value="PERCENT">Foiz (%)</option>
-                <option value="FIXED">Belgilangan (so'm)</option>
+                <option value="PERCENT">{t("promo.type.percent")}</option>
+                <option value="FIXED">{t("promo.type.fixed")}</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
-                {form.discountType === "PERCENT" ? "Foiz *" : "Summa (so'm) *"}
+                {form.discountType === "PERCENT" ? t("promo.form.percentValue") : t("promo.form.fixedValue")}
               </label>
               <input
                 type="number"
@@ -396,7 +396,7 @@ function PromoFormModal({
           {form.discountType === "PERCENT" && (
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
-                Maksimal chegirma (so'm, ixtiyoriy)
+                {t("promo.form.maxDiscount")}
               </label>
               <input
                 type="number"
@@ -411,7 +411,7 @@ function PromoFormModal({
           {/* Minimal summa */}
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">
-              Minimal buyurtma summasi (ixtiyoriy)
+              {t("promo.form.minOrder")}
             </label>
             <input
               type="number"
@@ -426,7 +426,7 @@ function PromoFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
-                Umumiy limit (ixtiyoriy)
+                {t("promo.form.totalLimit")}
               </label>
               <input
                 type="number"
@@ -438,7 +438,7 @@ function PromoFormModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">
-                Bitta foydalanuvchi uchun
+                {t("promo.form.perUserLimit")}
               </label>
               <input
                 type="number"
@@ -453,7 +453,7 @@ function PromoFormModal({
           {/* Sana */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Boshlanish sanasi</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t("promo.form.startDate")}</label>
               <input
                 type="date"
                 value={form.startsAt}
@@ -462,7 +462,7 @@ function PromoFormModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Tugash sanasi</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t("promo.form.endDate")}</label>
               <input
                 type="date"
                 value={form.endsAt}
@@ -479,13 +479,13 @@ function PromoFormModal({
               onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm text-slate-700">Faol</span>
+            <span className="text-sm text-slate-700">{t("mkt.active")}</span>
           </label>
         </div>
 
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-cream-100 hover:bg-cream-200 transition-colors">
-            Bekor
+            {t("common.cancel")}
           </button>
           <button
             onClick={save}
@@ -493,7 +493,7 @@ function PromoFormModal({
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("common.save") : t("promo.empty.btn")}
           </button>
         </div>
       </motion.div>
