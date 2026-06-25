@@ -763,6 +763,9 @@ export const dictionary: Record<string, Entry> = {
   "login.submit.register": { uz: "Ro'yxatdan o'tish", ru: "Зарегистрироваться" },
   "login.switchToRegister": { uz: "Hisobingiz yo'qmi? Ro'yxatdan o'ting", ru: "Нет аккаунта? Зарегистрируйтесь" },
   "login.switchToLogin": { uz: "Hisobingiz bormi? Kiring", ru: "Есть аккаунт? Войдите" },
+  "auth.orContinue": { uz: "yoki", ru: "или" },
+  "auth.googleSignIn": { uz: "Google bilan kirish", ru: "Войти через Google" },
+  "auth.googleMultiTenant": { uz: "Bir nechta tashkilot topildi. Birini tanlang:", ru: "Найдено несколько организаций. Выберите одну:" },
 
   // ─── Admin: Chat page ────────────────────────────────
   "chat.title": { uz: "Chat Markazi", ru: "Чат-центр" },
