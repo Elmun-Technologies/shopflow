@@ -2,6 +2,8 @@
 // Hujjat: https://github.com/Clever91/salesdoc-api-doc
 // Barcha so'rovlar POST /api/v2 bo'lib, body ichida method, auth (userId+token), data.
 
+import { isUrlSafe } from "./outbound-webhook.js";
+
 export class SalesDoctorError extends Error {
   constructor(public readonly reason: string, public readonly httpStatus: number, public readonly apiCode?: number) {
     super(`SalesDoctor: ${reason} (HTTP ${httpStatus}${apiCode ? `, code ${apiCode}` : ""})`);
@@ -25,11 +27,23 @@ function endpoint(domain: string): string {
 }
 
 async function rawCall<T>(domain: string, body: Record<string, unknown>, timeoutMs = 15000): Promise<T> {
+  // SSRF himoyasi — domain user'dan (admin /connect) keladi; ichki/private
+  // hostlarni (metadata, loopback, RFC1918) rad etamiz (outbound-webhook bilan bir xil)
+  let target: URL;
+  try {
+    target = new URL(endpoint(domain));
+  } catch {
+    throw new SalesDoctorError("Noto'g'ri domen", 0);
+  }
+  if (!(await isUrlSafe(target))) {
+    throw new SalesDoctorError("Xavfsiz bo'lmagan domen (ichki manzil rad etildi)", 0);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
-    res = await fetch(endpoint(domain), {
+    res = await fetch(target, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

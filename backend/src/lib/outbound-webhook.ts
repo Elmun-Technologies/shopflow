@@ -47,7 +47,7 @@ function isPrivateIPv6(ip: string): boolean {
   );
 }
 
-async function isUrlSafe(url: URL): Promise<boolean> {
+export async function isUrlSafe(url: URL): Promise<boolean> {
   // Faqat http(s)
   if (url.protocol !== "https:" && url.protocol !== "http:") return false;
   const host = url.hostname.toLowerCase();
