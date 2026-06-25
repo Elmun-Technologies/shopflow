@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { pushCustomerToSD } from "../lib/salesdoctor-push.js";
 import { logAuditFor } from "../lib/audit.js";
+import { enrollBotSequences } from "../lib/bot-sequence-worker.js";
 
 const customerSchema = z.object({
   name: z.string().min(1).max(120),
@@ -103,6 +104,8 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
     });
     pushCustomerToSD(app.prisma, req.session.tenantId, created.id)
       .catch((err) => app.log.warn({ err, customerId: created.id }, "SD push failed"));
+    enrollBotSequences(app.prisma, req.session.tenantId, created.id, "NEW_CUSTOMER")
+      .catch((err) => app.log.warn({ err, customerId: created.id }, "NEW_CUSTOMER enroll failed"));
     return created;
   });
 

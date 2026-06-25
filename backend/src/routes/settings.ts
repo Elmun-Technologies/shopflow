@@ -16,8 +16,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
     const settings = await app.prisma.tenantNotifSettings.findUnique({
       where: { tenantId },
     });
-    // Agar yo'q bo'lsa default qaytaramiz
-    return settings ?? {
+    const base = settings ?? {
       tenantId,
       notifyOrdersGroupId: null,
       notifyOrdersEnabled: true,
@@ -26,6 +25,12 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       notifyAbandonedEnabled: true,
       emailNotificationsEnabled: false,
       emailRecipients: [],
+      adminTelegramChatId: null,
+    };
+    // BigInt JSON'ga aylanmaydi — string sifatida qaytaramiz
+    return {
+      ...base,
+      adminTelegramChatId: base.adminTelegramChatId != null ? String(base.adminTelegramChatId) : null,
     };
   });
 
@@ -39,13 +44,18 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       emailNotificationsEnabled: z.boolean().optional(),
       emailRecipients: z.array(z.string().email()).max(10).optional(),
       reportFrequency: z.enum(["daily", "weekly", "monthly"]).nullable().optional(),
+      adminTelegramChatId: z.string().regex(/^-?\d+$/).optional().nullable(),
     }).parse(req.body);
+
+    // BigInt konvertatsiya
+    const { adminTelegramChatId: rawChatId, ...rest } = data;
+    const adminTelegramChatId = rawChatId != null ? BigInt(rawChatId) : rawChatId;
 
     const tenantId = req.session.tenantId;
     return app.prisma.tenantNotifSettings.upsert({
       where: { tenantId },
-      create: { tenantId, ...data, updatedAt: new Date() },
-      update: { ...data, updatedAt: new Date() },
+      create: { tenantId, ...rest, adminTelegramChatId, updatedAt: new Date() },
+      update: { ...rest, adminTelegramChatId, updatedAt: new Date() },
     });
   });
 

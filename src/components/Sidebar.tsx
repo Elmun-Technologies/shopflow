@@ -37,6 +37,7 @@ import {
   Award,
   Wallet,
   Link2,
+  GitMerge,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
@@ -58,6 +59,7 @@ const marketingSubIcons: Record<MarketingSub, React.ElementType> = {
   sodiqlik: Award,
   tranzaksiyalar: Wallet,
   manbalar: Link2,
+  voronka: GitMerge,
 };
 import { useAuth } from "../contexts/AuthContext";
 import { useConfirm } from "./ui/ConfirmDialog";

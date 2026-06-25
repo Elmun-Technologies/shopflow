@@ -51,6 +51,7 @@ const GiveawayPage = lazy(() => import("./components/pages/GiveawayPage"));
 const ManbaPage = lazy(() => import("./components/pages/ManbaPage"));
 const TranzaksiyalarPage = lazy(() => import("./components/pages/TranzaksiyalarPage"));
 const SegmentsPage = lazy(() => import("./components/pages/SegmentsPage"));
+const VoronkaPage = lazy(() => import("./components/pages/VoronkaPage"));
 const AnalyticsPage = lazy(() => import("./components/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./components/SettingsPage"));
 const UIBuilderPage = lazy(() => import("./components/UIBuilderPage"));
@@ -317,6 +318,8 @@ function AppShell() {
             return <ManbaPage />;
           case "tranzaksiyalar":
             return <TranzaksiyalarPage />;
+          case "voronka":
+            return <VoronkaPage />;
           default:
             return <RassilkaPage />;
         }

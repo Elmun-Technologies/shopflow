@@ -60,6 +60,7 @@ model Tenant {
   notifSettings   TenantNotifSettings?
   loyaltyAccounts LoyaltyAccount[]
   loyaltyRules    LoyaltyRule[]
+  botSequences    BotSequence[]
 }
 
 enum UserRole {
@@ -412,6 +413,7 @@ model Customer {
   reviews       Review[]
   promoUsages   PromoUsage[]
   loyaltyAccount LoyaltyAccount?
+  botEnrollments BotSequenceEnrollment[]
 
   @@unique([tenantId, moyskladId])
   @@unique([tenantId, salesDoctorId])
@@ -1375,6 +1377,9 @@ model TenantNotifSettings {
   emailNotificationsEnabled Boolean @default(false)
   emailRecipients         String[] @default([])
 
+  // Admin Telegram — yangi buyurtma/lid kelganda admin o'z telegramiga xabar oladi
+  adminTelegramChatId     BigInt?
+
   // Avtomatik email hisobotlar
   reportFrequency    String?   // "daily" | "weekly" | "monthly" | null = off
   lastReportSentAt   DateTime?
@@ -1452,6 +1457,62 @@ model LoyaltyRule {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, active])
+}
+
+// ============== BOT VORONKA (SALES FUNNEL) ==============
+
+enum BotSequenceTrigger {
+  NEW_CUSTOMER    // Mijoz birinchi /start bosishi yoki ro'yxatdan o'tishi
+  FIRST_PURCHASE  // Birinchi buyurtma yakunlanganda
+  INACTIVE_DAYS   // N kun davomida xarid qilmagan
+  VIP_STATUS      // Mijoz VIP maqomiga o'tganda
+  BIRTHDAY        // Tug'ilgan kun (yillik qayta ishlaydi)
+  WEEKLY          // Har hafta belgilangan kun — reklama/eslatma
+}
+
+model BotSequence {
+  id           String             @id @default(cuid())
+  tenantId     String
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  trigger      BotSequenceTrigger
+  inactiveDays Int?               // faqat INACTIVE_DAYS uchun
+  weekDay      Int?               // faqat WEEKLY uchun: 0=Yak, 1=Du, ..., 5=Ju, 6=Sha
+  active       Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  steps       BotSequenceStep[]
+  enrollments BotSequenceEnrollment[]
+
+  @@index([tenantId, active])
+}
+
+model BotSequenceStep {
+  id         String      @id @default(cuid())
+  sequenceId String
+  sequence   BotSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  stepOrder  Int
+  delayHours Int         @default(0)
+  message    String
+
+  @@index([sequenceId, stepOrder])
+}
+
+model BotSequenceEnrollment {
+  id          String      @id @default(cuid())
+  sequenceId  String
+  sequence    BotSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  currentStep Int         @default(0)
+  nextSendAt  DateTime?
+  completed   Boolean     @default(false)
+  enrolledAt  DateTime    @default(now())
+
+  @@unique([sequenceId, customerId])
+  @@index([nextSendAt, completed])
+  @@index([customerId])
 }
 
 // ============== REFRESH TOKENS ==============

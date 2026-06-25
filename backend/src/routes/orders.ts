@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { createOrderCodeWithRetry } from "../lib/codes.js";
-import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
+import { notifyOrderStatusChange, notifyAdminNewOrder } from "../lib/telegram-notify.js";
+import { enrollBotSequences } from "../lib/bot-sequence-worker.js";
 import { logAudit } from "../lib/audit.js";
 import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
@@ -150,6 +151,17 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         url: "/",
       }).catch(() => null);
 
+      // Admin Telegram xabari — adminTelegramChatId sozlangan bo'lsa
+      if (order.customerId) {
+        const cust = await app.prisma.customer.findUnique({
+          where: { id: order.customerId },
+          select: { name: true },
+        });
+        notifyAdminNewOrder(app.prisma, tenantId, order.code, Number(order.total), order.currency, cust?.name).catch(() => null);
+      } else {
+        notifyAdminNewOrder(app.prisma, tenantId, order.code, Number(order.total), order.currency).catch(() => null);
+      }
+
       return order;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
@@ -236,6 +248,17 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
           }
         })
         .catch((err) => app.log.warn({ err, orderId: id }, "TG push failed"));
+
+      // FIRST_PURCHASE bot sekans trigger — birinchi buyurtma COMPLETED bo'lganda
+      if (data.status === "COMPLETED" && order.customerId) {
+        const prevOrders = await app.prisma.order.count({
+          where: { customerId: order.customerId, status: "COMPLETED", id: { not: id } },
+        });
+        if (prevOrders === 0) {
+          enrollBotSequences(app.prisma, tenantId, order.customerId, "FIRST_PURCHASE")
+            .catch((err) => app.log.warn({ err }, "FIRST_PURCHASE enroll failed"));
+        }
+      }
 
       // Sales Doctor'ga status sync
       pushOrderStatus(app.prisma, tenantId, id, data.status)
