@@ -13,7 +13,7 @@ const COLORS = [
   "from-amber-500 to-amber-400",
   "from-violet-500 to-violet-400",
   "from-pink-500 to-pink-400",
-  "from-forest-600 to-forest-500",
+  "from-forest-700 to-forest-500",
   "from-rose-500 to-rose-400",
 ];
 
