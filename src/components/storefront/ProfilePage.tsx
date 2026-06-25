@@ -87,6 +87,12 @@ interface ProfilePageProps {
   initialView?: ProfileView;
 }
 
+// Telegram WebApp signed initData — backend customer-scoped so'rovlarni
+// shu string orqali tasdiqlaydi (tgUserId yolg'iz yetarli emas).
+function tgInitData(): string {
+  return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp?.initData ?? "";
+}
+
 function lsKey(slug: string, key: string): string {
   return `shopflow:store:${slug}:${key}`;
 }
@@ -154,6 +160,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
     if (!isOnline || profileLoaded) return;
     const params = new URLSearchParams({
       tgUserId: String(tgUserId),
+      initData: tgInitData(),
       ...(telegramUser?.firstName && { firstName: telegramUser.firstName }),
       ...(telegramUser?.lastName && { lastName: telegramUser.lastName }),
       ...(telegramUser?.username && { username: telegramUser.username }),
@@ -203,6 +210,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tgUserId,
+          initData: tgInitData(),
           firstName: next.firstName || null,
           lastName: next.lastName || null,
           patronymic: next.patronymic || null,
@@ -229,7 +237,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       await fetch(profileUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tgUserId, [fieldMap[key]]: value }),
+        body: JSON.stringify({ tgUserId, initData: tgInitData(), [fieldMap[key]]: value }),
       });
     } catch { /* offline */ }
   }, [isOnline, profileUrl, tgUserId]);
@@ -243,7 +251,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       await fetch(profileUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tgUserId, language: next }),
+        body: JSON.stringify({ tgUserId, initData: tgInitData(), language: next }),
       });
     } catch { /* offline cache only */ }
   }, [storeSlug, isOnline, profileUrl, tgUserId, setGlobalLang]);
@@ -263,6 +271,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tgUserId,
+          initData: tgInitData(),
           label: draft.label,
           city: draft.city || null,
           street: draft.street,
@@ -289,7 +298,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
     try { localStorage.setItem(lsKey(storeSlug, "addresses"), JSON.stringify(next)); } catch { /* ignore */ }
     if (!isOnline || id.startsWith("addr-")) return; // localStorage IDsi server'da yo'q
     try {
-      await fetch(`${addressesUrl}/${id}?tgUserId=${tgUserId}`, { method: "DELETE" });
+      await fetch(`${addressesUrl}/${id}?tgUserId=${tgUserId}&initData=${encodeURIComponent(tgInitData())}`, { method: "DELETE" });
     } catch { /* ignore */ }
   }, [addresses, isOnline, addressesUrl, tgUserId, storeSlug]);
 
@@ -301,7 +310,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       return;
     }
     setOrdersLoading(true);
-    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/orders?tgUserId=${tgUserId}`)
+    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/orders?tgUserId=${tgUserId}&initData=${encodeURIComponent(tgInitData())}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: { orders: CustomerOrder[] }) => setOrders(data.orders ?? []))
       .catch(() => setOrders([]))
@@ -311,7 +320,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
   // Fetch referrals stats when entering referrals view
   useEffect(() => {
     if (view !== "referrals" || referrals !== null || !tgUserId) return;
-    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/referrals?tgUserId=${tgUserId}`)
+    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/referrals?tgUserId=${tgUserId}&initData=${encodeURIComponent(tgInitData())}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: { totals: { invitedCount: number; withOrdersCount: number }; invited: ReferralStats["invited"] }) => {
         setReferrals({

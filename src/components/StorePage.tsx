@@ -29,6 +29,7 @@ declare global {
         ready: () => void;
         expand: () => void;
         close: () => void;
+        initData?: string;
         initDataUnsafe?: {
           user?: {
             id: number;
@@ -401,6 +402,12 @@ function viewToTab(v: StoreView): StoreTab | null {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
+// Telegram WebApp signed initData — backend verifikatsiyasi uchun har bir
+// customer-scoped so'rovga qo'shiladi (tgUserId yolg'iz tasdiqlanmaydi).
+function tgInitData(): string {
+  return window.Telegram?.WebApp?.initData ?? "";
+}
+
 async function fetchStorefront(slug: string): Promise<StorefrontData> {
   const res = await fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}`);
   if (!res.ok) {
@@ -548,10 +555,10 @@ function StoreInner({ slug }: { slug: string }) {
         fetch(`/api/storefront/${slug}/wishlist`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tgUserId: tgUid, productId }),
+          body: JSON.stringify({ tgUserId: tgUid, productId, initData: tgInitData() }),
         }).catch(() => null);
       } else {
-        fetch(`/api/storefront/${slug}/wishlist/${productId}?tgUserId=${tgUid}`, {
+        fetch(`/api/storefront/${slug}/wishlist/${productId}?tgUserId=${tgUid}&initData=${encodeURIComponent(tgInitData())}`, {
           method: "DELETE",
         }).catch(() => null);
       }
@@ -597,6 +604,7 @@ function StoreInner({ slug }: { slug: string }) {
       const ref = refFromUrl || refFromTg;
       const params = new URLSearchParams({
         tgUserId: String(tgUser.id),
+        initData: tgInitData(),
         ...(tgUser.first_name && { firstName: tgUser.first_name }),
         ...(tgUser.last_name && { lastName: tgUser.last_name }),
         ...(tgUser.username && { username: tgUser.username }),
@@ -607,7 +615,7 @@ function StoreInner({ slug }: { slug: string }) {
       });
       // Wishlist'ni server'dan yuklab, lokal favoritlar bilan birlashtiramiz.
       // Server "haqiqat" manbai — qurilmadan-qurilmaga sevimlilar saqlanadi.
-      fetch(`/api/storefront/${slug}/wishlist?tgUserId=${tgUser.id}`)
+      fetch(`/api/storefront/${slug}/wishlist?tgUserId=${tgUser.id}&initData=${encodeURIComponent(tgInitData())}`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
         .then((data: { items: Array<{ productId: string }> }) => {
           const serverFavs = new Set(data.items.map((i) => i.productId));
@@ -2041,6 +2049,7 @@ function StoreInner({ slug }: { slug: string }) {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           tgUserId: telegramUser.userId,
+                          initData: tgInitData(),
                           productId: selectedProduct.id,
                           rating: reviewForm.rating,
                           text: reviewForm.text.trim(),

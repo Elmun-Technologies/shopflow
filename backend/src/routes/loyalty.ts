@@ -5,6 +5,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { logAuditFor } from "../lib/audit.js";
+import { authStorefrontCustomer } from "../lib/telegram-auth.js";
 
 // Xariddan ball hisoblash
 export async function calculateEarnedPoints(
@@ -253,12 +254,18 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
     "/storefront/:tenantSlug/balance",
     async (req, reply) => {
       const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
-      const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+      const { tgUserId, initData } = z.object({
+        tgUserId: z.coerce.number().int().positive(),
+        initData: z.string().optional(),
+      }).parse(req.query);
 
       const tenant = await app.prisma.tenant.findUnique({
         where: { slug: tenantSlug }, select: { id: true },
       });
       if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+      const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
+      if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
       const customer = await app.prisma.customer.findFirst({
         where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
