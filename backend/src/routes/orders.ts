@@ -194,6 +194,27 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
 
     // Audit log + Telegram push notification — status o'zgarganda
     if (data.status && data.status !== order.status) {
+      // Stock balansi (DI-8): terminal holatga (CANCELLED/REFUNDED) o'tganda mahsulot
+      // zaxirasini qaytaramiz; terminal'dan chiqqanda (un-cancel) qayta kamaytiramiz.
+      const isTerminal = (s: string) => s === "CANCELLED" || s === "REFUNDED";
+      if (isTerminal(data.status) !== isTerminal(order.status)) {
+        const restore = isTerminal(data.status);
+        const items = await app.prisma.orderItem.findMany({
+          where: { orderId: id },
+          select: { productId: true, qty: true },
+        });
+        if (items.length > 0) {
+          await app.prisma.$transaction(
+            items.map((it) =>
+              app.prisma.product.updateMany({
+                where: { id: it.productId, tenantId },
+                data: { stock: { increment: restore ? it.qty : -it.qty } },
+              }),
+            ),
+          );
+        }
+      }
+
       const fromLabel = STATUS_LABEL[order.status] ?? order.status;
       const toLabel = STATUS_LABEL[data.status] ?? data.status;
       await logAudit({
