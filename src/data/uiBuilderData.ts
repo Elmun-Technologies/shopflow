@@ -71,22 +71,99 @@ export interface BrandSettings {
   singleConfig?: SingleConfig;
 }
 
-// Single-product landing'da qaysi bo'limlar ko'rsatilishi.
-export interface SingleConfig {
-  showGallery: boolean;
-  showReviews: boolean;
-  showTrustBadges: boolean;
-  showTimer: boolean;
-  showWeeklyBuyers: boolean;
+// Single-product landing konstruktori.
+// Landing = doimiy "skelet" (galereya → narx/nomi → … → buyurtma tugmasi) +
+// operator yoqib/o'chirib, tartibini o'zgartira oladigan qo'shimcha bo'limlar.
+export type SingleSectionKey =
+  | "trustBadges"
+  | "reviews"
+  | "weeklyBuyers"
+  | "stats"
+  | "timer"
+  | "description"
+  | "delivery"
+  | "combo";
+
+export interface SingleSection {
+  key: SingleSectionKey;
+  enabled: boolean;
 }
 
+export interface SingleConfig {
+  // Qo'shimcha bo'limlar — tartib bo'yicha (yuqoridan pastga).
+  sections: SingleSection[];
+}
+
+// Standart tartib va yoqilgan holat.
+export const defaultSingleSections: SingleSection[] = [
+  { key: "trustBadges", enabled: true },
+  { key: "reviews", enabled: true },
+  { key: "weeklyBuyers", enabled: true },
+  { key: "stats", enabled: true },
+  { key: "timer", enabled: false },
+  { key: "description", enabled: true },
+  { key: "delivery", enabled: true },
+  { key: "combo", enabled: true },
+];
+
 export const defaultSingleConfig: SingleConfig = {
-  showGallery: true,
-  showReviews: true,
-  showTrustBadges: true,
-  showTimer: false,
-  showWeeklyBuyers: true,
+  sections: defaultSingleSections.map((s) => ({ ...s })),
 };
+
+// Editor uchun bo'lim metama'lumotlari (ikonka nomi + i18n kalitlari).
+export interface SingleSectionMeta {
+  key: SingleSectionKey;
+  icon: string; // lucide ikonka nomi (iconMap)
+  labelKey: string;
+  descKey: string;
+}
+
+export const singleSectionMeta: SingleSectionMeta[] = [
+  { key: "trustBadges", icon: "ShieldCheck", labelKey: "single.sec.trustBadges", descKey: "single.sec.trustBadges.d" },
+  { key: "reviews", icon: "Star", labelKey: "single.sec.reviews", descKey: "single.sec.reviews.d" },
+  { key: "weeklyBuyers", icon: "TrendingUp", labelKey: "single.sec.weeklyBuyers", descKey: "single.sec.weeklyBuyers.d" },
+  { key: "stats", icon: "Info", labelKey: "single.sec.stats", descKey: "single.sec.stats.d" },
+  { key: "timer", icon: "Clock", labelKey: "single.sec.timer", descKey: "single.sec.timer.d" },
+  { key: "description", icon: "Type", labelKey: "single.sec.description", descKey: "single.sec.description.d" },
+  { key: "delivery", icon: "Truck", labelKey: "single.sec.delivery", descKey: "single.sec.delivery.d" },
+  { key: "combo", icon: "Plus", labelKey: "single.sec.combo", descKey: "single.sec.combo.d" },
+];
+
+const KNOWN_SINGLE_KEYS = singleSectionMeta.map((m) => m.key) as SingleSectionKey[];
+
+// Saqlangan singleConfig'ni normalizatsiya qiladi.
+// - Yangi shakl (sections[]) — noma'lum kalitlarni tashlaydi, yangi qo'shilgan
+//   bo'limlarni standart tartibda oxiriga qo'shadi.
+// - Eski shakl (showGallery/showReviews/... boolean'lar) — yangi modelга ko'chiradi.
+export function normalizeSingleConfig(raw: unknown): SingleConfig {
+  const r = (raw ?? {}) as Record<string, unknown>;
+
+  if (Array.isArray(r.sections)) {
+    const incoming = (r.sections as Array<{ key?: string; enabled?: boolean }>)
+      .filter((s) => s && KNOWN_SINGLE_KEYS.includes(s.key as SingleSectionKey))
+      .map((s) => ({ key: s.key as SingleSectionKey, enabled: s.enabled !== false }));
+    const seen = new Set(incoming.map((s) => s.key));
+    for (const def of defaultSingleSections) {
+      if (!seen.has(def.key)) incoming.push({ ...def });
+    }
+    return { sections: incoming };
+  }
+
+  // Eski boolean shakl → migratsiya
+  const enabledFor: Record<SingleSectionKey, boolean> = {
+    trustBadges: r.showTrustBadges !== false,
+    reviews: r.showReviews !== false,
+    weeklyBuyers: r.showWeeklyBuyers !== false,
+    timer: r.showTimer === true,
+    stats: true,
+    description: true,
+    delivery: true,
+    combo: true,
+  };
+  return {
+    sections: defaultSingleSections.map((s) => ({ key: s.key, enabled: enabledFor[s.key] })),
+  };
+}
 
 export const blockDefinitions: BlockDefinition[] = [
   {

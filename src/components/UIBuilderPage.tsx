@@ -7,11 +7,13 @@ import {
   Grid3X3, Zap, Sun, Heart, LayoutGrid, List, LayoutTemplate as LayoutIcon,
   Play, Megaphone, X, Type, Phone, Mail, MapPin, ShoppingBag,
   Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Loader2, Globe,
+  ShieldCheck, Star, Info, Truck, Tag, Lock,
 } from "lucide-react";
 import {
-  blockDefinitions, templates, defaultBrandSettings, categoryColors, defaultSingleConfig,
+  blockDefinitions, templates, defaultBrandSettings, categoryColors,
+  normalizeSingleConfig, singleSectionMeta,
 } from "../data/uiBuilderData";
-import type { UIBlock, BrandSettings, SingleConfig } from "../data/uiBuilderData";
+import type { UIBlock, BrandSettings, SingleSection, SingleSectionKey } from "../data/uiBuilderData";
 import { vitrinaApi, productsApi, categoriesApi } from "../api/endpoints";
 import type { Product, Category } from "../types/api";
 import { useT } from "../i18n";
@@ -19,6 +21,7 @@ import { useT } from "../i18n";
 const iconMap: Record<string, React.ElementType> = {
   Image, Sparkles, Percent, TrendingUp, Crown, Calendar, Grid3X3, Zap, Sun, Heart,
   LayoutGrid, List, LayoutIcon, Play, Megaphone, Search, Type,
+  ShieldCheck, Star, Info, Truck, Clock, Plus, ShoppingBag,
 };
 
 type PreviewProduct = {
@@ -56,6 +59,8 @@ export default function UIBuilderPage() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["products", "navigation", "media"]));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [singleDragIndex, setSingleDragIndex] = useState<number | null>(null);
+  const [singleDragOver, setSingleDragOver] = useState<number | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
   const [showPreview, setShowPreview] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -105,9 +110,18 @@ export default function UIBuilderPage() {
 
   // Single-product rejim uchun yordamchilar
   const isSingle = storeMode === "single";
-  const singleConfig: SingleConfig = { ...defaultSingleConfig, ...(brand.singleConfig ?? {}) };
-  const setSingleConfig = (key: keyof SingleConfig, value: boolean) =>
-    setBrand((prev) => ({ ...prev, singleConfig: { ...defaultSingleConfig, ...(prev.singleConfig ?? {}), [key]: value } }));
+  const singleSections: SingleSection[] = normalizeSingleConfig(brand.singleConfig).sections;
+  const setSingleSections = (next: SingleSection[]) =>
+    setBrand((prev) => ({ ...prev, singleConfig: { sections: next } }));
+  const toggleSingleSection = (key: SingleSectionKey) =>
+    setSingleSections(singleSections.map((s) => (s.key === key ? { ...s, enabled: !s.enabled } : s)));
+  const moveSingleSection = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= singleSections.length) return;
+    const next = [...singleSections];
+    const [removed] = next.splice(from, 1);
+    next.splice(to, 0, removed);
+    setSingleSections(next);
+  };
   const selectedSingleProduct = previewProducts.find((p) => p.id === singleProductId) ?? null;
   const pickerProducts = productSearch.trim()
     ? previewProducts.filter((p) => p.name.toLowerCase().includes(productSearch.trim().toLowerCase()))
@@ -523,7 +537,68 @@ export default function UIBuilderPage() {
     }
   };
 
+  // Bitta qo'shimcha bo'lim preview'i (admin mock) — storefront tartibiga mos.
+  const renderSinglePreviewSection = (key: SingleSectionKey) => {
+    switch (key) {
+      case "trustBadges":
+        return (
+          <div className="flex gap-2">
+            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><ShieldCheck className="w-3 h-3" />Asl mahsulot</div>
+            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><Crown className="w-3 h-3" />Kafolat</div>
+          </div>
+        );
+      case "reviews":
+        return (
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <span className="text-amber-500">★★★★★</span>
+            <span>4.8 · 36 sharh</span>
+          </div>
+        );
+      case "weeklyBuyers":
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-forest-700">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Bu hafta 24 kishi sotib oldi</span>
+          </div>
+        );
+      case "stats":
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-[10px] text-slate-600 bg-cream-100 px-2 py-0.5 rounded-md">{selectedSingleProduct?.categoryName ?? "Kategoriya"}</span>
+            <span className="text-[10px] text-forest-700 bg-leaf-100 px-2 py-0.5 rounded-md">Mavjud</span>
+            <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">Bestseller</span>
+          </div>
+        );
+      case "timer":
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="font-mono">08:45:22</span>
+          </div>
+        );
+      case "description":
+        return <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">Mahsulot tavsifi shu yerda ko'rsatiladi.</p>;
+      case "delivery":
+        return (
+          <div className="flex items-center gap-2 text-xs text-slate-600 border-t border-cream-300 pt-2">
+            <Truck className="w-3.5 h-3.5 text-forest-700" />
+            <span>Tez yetkazib berish</span>
+          </div>
+        );
+      case "combo":
+        return (
+          <div className="flex items-center gap-2 text-xs text-slate-600 bg-cream-100 rounded-lg px-3 py-2">
+            <Plus className="w-3.5 h-3.5 text-forest-700" />
+            <span>Qo'shimcha mahsulotlar</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   // Single-product landing preview — tanlangan mahsulotdan fokuslangan sahifa.
+  // Bo'limlar saqlangan tartibda (yoqilganlari) ko'rsatiladi.
   const renderSingleLandingPreview = () => {
     const p = selectedSingleProduct;
     if (!p) {
@@ -537,16 +612,11 @@ export default function UIBuilderPage() {
     const discount = p.oldPrice && p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
     return (
       <div className="space-y-3">
+        {/* Galereya (doimiy) */}
         <div className="w-full aspect-[4/3] bg-cream-100 rounded-2xl overflow-hidden flex items-center justify-center">
           {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" /> : <Package className="w-12 h-12 text-cream-300" />}
         </div>
-        {singleConfig.showGallery && (
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className={`w-10 h-10 rounded-lg bg-cream-100 ${i === 0 ? "ring-2 ring-leaf-400" : ""}`} />
-            ))}
-          </div>
-        )}
+        {/* Narx va nomi (doimiy) */}
         <div>
           <p className="text-base font-bold text-forest-800">{p.name}</p>
           <div className="flex items-center gap-2 mt-1">
@@ -555,31 +625,11 @@ export default function UIBuilderPage() {
             {discount > 0 && <span className="text-[10px] font-semibold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded-full">-{discount}%</span>}
           </div>
         </div>
-        {singleConfig.showWeeklyBuyers && (
-          <div className="flex items-center gap-1.5 text-xs text-forest-700">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Bu hafta 24 kishi sotib oldi</span>
-          </div>
-        )}
-        {singleConfig.showTimer && (
-          <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="font-mono">08:45:22</span>
-          </div>
-        )}
-        {singleConfig.showReviews && (
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span className="text-amber-500">★★★★★</span>
-            <span>4.8 · 36 sharh</span>
-          </div>
-        )}
-        {singleConfig.showTrustBadges && (
-          <div className="flex gap-2">
-            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><CheckCircle2 className="w-3 h-3" />Asl mahsulot</div>
-            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><Crown className="w-3 h-3" />Kafolat</div>
-          </div>
-        )}
-        <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">{p.categoryName ?? "Mahsulot tavsifi shu yerda ko'rsatiladi."}</p>
+        {/* Qo'shimcha bo'limlar — saqlangan tartibda */}
+        {singleSections.filter((s) => s.enabled).map((s) => (
+          <div key={s.key}>{renderSinglePreviewSection(s.key)}</div>
+        ))}
+        {/* Buyurtma tugmasi (doimiy) */}
         <button className="w-full py-2.5 rounded-xl bg-leaf-400 text-forest-800 text-sm font-semibold flex items-center justify-center gap-2">
           <ShoppingBag className="w-4 h-4" />
           {t("single.buy")}
@@ -991,28 +1041,112 @@ export default function UIBuilderPage() {
                   </div>
                 </div>
 
-                {/* Landing bo'limlari */}
+                {/* Landing tuzilmasi — konstruktor */}
                 <div className="bg-white border border-cream-300/80 rounded-2xl p-4">
-                  <p className="text-sm font-semibold text-forest-800 mb-3">{t("ui.single.sections")}</p>
-                  <div className="space-y-1">
+                  <p className="text-sm font-semibold text-forest-800">{t("ui.single.structure")}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 mb-3">{t("ui.single.structureHint")}</p>
+
+                  {/* Asosiy (doimiy) — galereya + narx, tepada qulflangan */}
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("ui.single.coreLabel")}</p>
+                  <div className="space-y-1.5 mb-3">
                     {([
-                      ["showGallery", t("ui.single.showGallery")],
-                      ["showReviews", t("ui.single.showReviews")],
-                      ["showTrustBadges", t("ui.single.showBadges")],
-                      ["showWeeklyBuyers", t("ui.single.showBuyers")],
-                      ["showTimer", t("ui.single.showTimer")],
-                    ] as const).map(([key, label]) => (
-                      <div key={key} className="flex items-center justify-between py-1.5">
-                        <label className="text-xs text-slate-600">{label}</label>
-                        <button
-                          onClick={() => setSingleConfig(key, !singleConfig[key])}
-                          className={`relative w-9 h-5 rounded-full transition-all ${singleConfig[key] ? "bg-leaf-400" : "bg-cream-200"}`}
-                        >
-                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${singleConfig[key] ? "left-[18px]" : "left-0.5"}`} />
-                        </button>
+                      [Image, t("ui.single.coreGallery"), t("ui.single.coreGallery.d")],
+                      [Tag, t("ui.single.corePrice"), t("ui.single.corePrice.d")],
+                    ] as const).map(([Icon, label, desc], i) => (
+                      <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg bg-cream-100/60 border border-cream-300/60">
+                        <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Icon className="w-3.5 h-3.5 text-forest-700" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-forest-800 truncate">{label}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{desc}</p>
+                        </div>
+                        <span className="flex items-center gap-1 text-[9px] font-medium text-slate-400 flex-shrink-0">
+                          <Lock className="w-2.5 h-2.5" />{t("ui.single.locked")}
+                        </span>
                       </div>
                     ))}
                   </div>
+
+                  {/* Qo'shimcha bo'limlar — drag/strelka bilan tartiblanadi */}
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("ui.single.optionalLabel")}</p>
+                  <div className="space-y-1.5">
+                    {singleSections.map((sec, index) => {
+                      const meta = singleSectionMeta.find((m) => m.key === sec.key);
+                      const Icon = meta ? (iconMap[meta.icon] || Package) : Package;
+                      return (
+                        <div
+                          key={sec.key}
+                          draggable
+                          onDragStart={() => setSingleDragIndex(index)}
+                          onDragEnter={() => setSingleDragOver(index)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (singleDragIndex !== null) moveSingleSection(singleDragIndex, index);
+                            setSingleDragIndex(null);
+                            setSingleDragOver(null);
+                          }}
+                          onDragEnd={() => { setSingleDragIndex(null); setSingleDragOver(null); }}
+                          className={`group flex items-center gap-2 p-2 rounded-lg border transition-all cursor-move ${
+                            sec.enabled ? "bg-white border-cream-300" : "bg-cream-100/40 border-cream-300/50 opacity-60"
+                          } ${singleDragOver === index && singleDragIndex !== index ? "border-leaf-400/60 bg-leaf-400/5" : ""} ${singleDragIndex === index ? "opacity-40" : ""}`}
+                        >
+                          <div className="flex flex-col -my-0.5">
+                            <button
+                              onClick={() => moveSingleSection(index, index - 1)}
+                              disabled={index === 0}
+                              className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
+                              title="Yuqoriga"
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => moveSingleSection(index, index + 1)}
+                              disabled={index === singleSections.length - 1}
+                              className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
+                              title="Pastga"
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <GripVertical className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                          <div className="w-7 h-7 bg-cream-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Icon className="w-3.5 h-3.5 text-slate-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-forest-800 truncate">{meta ? t(meta.labelKey) : sec.key}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{meta ? t(meta.descKey) : ""}</p>
+                          </div>
+                          <button
+                            onClick={() => toggleSingleSection(sec.key)}
+                            className={`relative w-9 h-5 rounded-full transition-all flex-shrink-0 ${sec.enabled ? "bg-leaf-400" : "bg-cream-200"}`}
+                            title={sec.enabled ? t("ui.single.locked") : ""}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${sec.enabled ? "left-[18px]" : "left-0.5"}`} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* CTA (doimiy) — pastda qulflangan */}
+                  <div className="flex items-center gap-2.5 p-2 rounded-lg bg-cream-100/60 border border-cream-300/60 mt-3">
+                    <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                      <ShoppingBag className="w-3.5 h-3.5 text-forest-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-forest-800 truncate">{t("ui.single.coreCta")}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{t("ui.single.coreCta.d")}</p>
+                    </div>
+                    <span className="flex items-center gap-1 text-[9px] font-medium text-slate-400 flex-shrink-0">
+                      <Lock className="w-2.5 h-2.5" />{t("ui.single.locked")}
+                    </span>
+                  </div>
+
+                  {singleSections.every((s) => !s.enabled) && (
+                    <p className="text-[10px] text-amber-600 mt-3 text-center">{t("ui.single.allOff")}</p>
+                  )}
                 </div>
               </div>
             </div>

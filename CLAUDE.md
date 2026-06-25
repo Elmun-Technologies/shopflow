@@ -145,7 +145,7 @@ shopflow/
 │   │   ├── DeliveryPage.tsx       # Delivery orders + tracking
 │   │   ├── PaymentsPage.tsx       # Payment methods + transactions
 │   │   ├── PlatformsPage.tsx      # Channel CRUD + AddChannelModal
-│   │   ├── UIBuilderPage.tsx      # Vitrina editor (drag/drop blocks)
+│   │   ├── UIBuilderPage.tsx      # Vitrina editor (drag/drop blocks + single-product konstruktor)
 │   │   ├── SettingsPage.tsx       # 7 tab: profile/store/team/notify/integrations/security/api
 │   │   ├── TeamSection.tsx        # Jamoa — invite + rol + deaktiv
 │   │   ├── OnboardingWizard.tsx   # 5 qadamli sehrgar (yangi tenant)
@@ -260,6 +260,7 @@ shopflow/
 - ✅ **Single-product do'kon rejimi** — Vitrina'da "Do'kon turi: Ko'p mahsulotli / Bitta mahsulot" toggle. Single rejimda bitta mahsulotga qaratilgan landing (galereya/sharhlar/badge/taymer toggle), savatsiz to'g'ridan-to'g'ri "Buyurtma berish". `Storefront.storeMode` + `singleProductId`. Bot `/start` o'zgarmaydi — storefront rejimga qarab render qiladi.
 - ✅ **Public API v1** — tashqi mijoz websaytlari uchun barqaror, API-kalit himoyalangan kontrakt (`/api/v1`). 6 endpoint: `GET /categories`, `/products` (filtr/sort/sahifalash), `/products/{slug}`, `/products/{id}/upsells` (ProductAddon), `/promotions` (free shipping), `POST /orders` (server-side narx, atomik stock, WEBSITE kanali, SSE/webhook). Bearer `sf_...` → tenant (`authenticateApiKey`). `?locale=uz|ru|en`. Pul butun UZS, rasm absolyut HTTPS, GET'lar 300s kesh. Shakl: `lib/public-shape.ts`, kontrakt: **`PUBLIC_API.md`**. Kalit: Sozlamalar → API yoki `npm run create-api-key -- <slug>`.
   - Schema o'zgarishi: `Product.slug` (tenant ichida unique, URL identifikatori) + `Product.origin` (filtr) + `Product.content` (JSON — tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). Slug create'da avto-generatsiya + `npm run backfill-slugs` (mavjudlar). **Deploy'da `prisma db push` kerak.** Boy kontent admin UI — alohida PR (hozircha DB/seed orqali).
+- ✅ **Single-product landing konstruktori** — multi rejimdek to'liq seksiya builder. `SingleConfig` endi tartiblangan `sections[]` (eski 5-boolean shaklga backward-compat `normalizeSingleConfig`). Editor: doimiy "skelet" (galereya → narx → CTA, qulflangan) + qo'shimcha bo'limlar (ishonch belgilari / sharhlar / haftalik xaridorlar / tezkor info / aksiya taymeri / tavsif / yetkazib berish / combo) — drag + strelka bilan tartiblanadi, eye toggle bilan yoqiladi. **Storefront'ga to'liq ulangan**: `StorePage` single PDP body bo'limlarni saqlangan tartib + holatga qarab chizadi (multi rejim PDP o'zgarmagan). Yangi `CountdownBanner` (kun oxirigacha jonli ortga hisob).
 
 ### Marketing
 - ✅ Sale campaigns (aksiyalar)
