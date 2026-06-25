@@ -699,6 +699,18 @@ export const dictionary: Record<string, Entry> = {
   "settings.store.deliveryFee": { uz: "Yetkazish narxi (so'm)", ru: "Стоимость доставки (сум)" },
   "settings.store.freeDeliveryFrom": { uz: "Bepul yetkazish (dan)", ru: "Бесплатная доставка (от)" },
 
+  // ─── Pricing breakdown (faqat admin — narx tarkibi ko'rinishi) ─────────
+  "pricing.title": { uz: "Narx tarkibi foizlari", ru: "Проценты структуры цены" },
+  "pricing.desc": { uz: "Mahsulot narxiga qo'shimcha yetkazib berish va xizmat xarajatlarini hisoblash uchun (faqat boshqaruv ko'rinishi — mijoz to'loviga ta'sir qilmaydi).", ru: "Для расчёта дополнительных расходов на доставку и сервис к цене товара (только для управления — не влияет на оплату клиента)." },
+  "pricing.breakdown": { uz: "Narx tarkibi", ru: "Структура цены" },
+  "pricing.costs": { uz: "Xarajatlar tarkibi", ru: "Структура расходов" },
+  "pricing.product": { uz: "Mahsulot narxi", ru: "Цена товара" },
+  "pricing.delivery": { uz: "Yetkazib berish", ru: "Доставка" },
+  "pricing.service": { uz: "Xizmat ko'rsatish", ru: "Сервис" },
+  "pricing.total": { uz: "Jami", ru: "Итого" },
+  "pricing.deliveryPct": { uz: "Yetkazib berish (%)", ru: "Доставка (%)" },
+  "pricing.servicePct": { uz: "Xizmat ko'rsatish (%)", ru: "Сервис (%)" },
+
   // Notifications section
   "settings.notify.type": { uz: "Tur", ru: "Тип" },
   "settings.notify.email": { uz: "Email", ru: "Email" },

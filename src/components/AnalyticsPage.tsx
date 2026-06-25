@@ -16,6 +16,8 @@ import { dashboardApi } from "../api/endpoints";
 import type { DashboardPeriod } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { openReportPrint } from "../utils/printReport";
+import { priceBreakdown } from "../utils/pricing";
+import { formatCurrency } from "../utils/format";
 import { useAppToast } from "./ui/Toast";
 import { useT } from "../i18n";
 
@@ -746,6 +748,50 @@ export default function AnalyticsPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Xarajatlar tarkibi — daromaddan yetkazib berish + xizmat (boshqaruv ko'rinishi) */}
+      {kpis && (() => {
+        const cur = tenant?.currency ?? "UZS";
+        const bd = priceBreakdown(kpis.revenue.value, tenant?.deliveryPct, tenant?.servicePct);
+        const rows = [
+          { key: "product", label: t("pricing.product"), value: bd.product, color: "#10b981" },
+          { key: "delivery", label: `${t("pricing.delivery")} (${tenant?.deliveryPct ?? 3}%)`, value: bd.delivery, color: "#3b82f6" },
+          { key: "service", label: `${t("pricing.service")} (${tenant?.servicePct ?? 15}%)`, value: bd.service, color: "#8b5cf6" },
+        ];
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.65 }}
+            className="bg-white border border-cream-300 rounded-2xl p-5 mb-4"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Receipt className="w-4 h-4 text-forest-700" />
+              <h3 className="text-sm font-semibold text-forest-800">{t("pricing.costs")}</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">{t("pricing.desc")}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {rows.map((r) => (
+                <div key={r.key} className="bg-cream-50 border border-cream-300 rounded-xl p-3.5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: r.color }} />
+                    <span className="text-[11px] text-slate-500">{r.label}</span>
+                  </div>
+                  <p className="text-lg font-bold text-forest-800">{formatCurrency(r.value, cur)}</p>
+                </div>
+              ))}
+              {/* Jami — yorqin (leaf) aksent */}
+              <div className="bg-leaf-100 border border-leaf-400/50 rounded-xl p-3.5">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-leaf-400" />
+                  <span className="text-[11px] text-forest-700">{t("pricing.total")}</span>
+                </div>
+                <p className="text-lg font-bold text-forest-800">{formatCurrency(bd.total, cur)}</p>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Footer */}
       <motion.div

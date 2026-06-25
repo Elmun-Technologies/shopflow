@@ -15,6 +15,8 @@ export interface Tenant {
   slug: string;
   name: string;
   currency: string;
+  deliveryPct?: number; // yetkazib berish narxi foizi (default 3)
+  servicePct?: number; // xizmat ko'rsatish narxi foizi (default 15)
 }
 
 export type ChannelType =

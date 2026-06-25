@@ -30,6 +30,7 @@ import { productsApi, categoriesApi } from "../api/endpoints";
 import { api } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
+import { priceBreakdown } from "../utils/pricing";
 import type { Product, Category } from "../types/api";
 import { useT } from "../i18n";
 
@@ -581,7 +582,11 @@ function ProductCard({
   onRestock: () => void;
 }) {
   const { t } = useT();
+  const { tenant } = useAuth();
   const lowStock = product.stock <= 5;
+  const cur = product.currency || currency;
+  // Narx tarkibi (faqat boshqaruv ko'rinishi) — mahsulot narxidan yetkazib berish + xizmat
+  const bd = priceBreakdown(Number(product.price), tenant?.deliveryPct, tenant?.servicePct);
   return (
     <div className={`bg-white border rounded-xl p-4 transition-colors group ${
       selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-cream-300 hover:border-cream-300"
@@ -667,6 +672,10 @@ function ProductCard({
           </span>
         )}
       </div>
+      {/* Narx tarkibi — yetkazib berish + xizmat (boshqaruv ko'rinishi) */}
+      <p className="text-slate-400 text-xs mt-1.5 leading-snug">
+        {t("pricing.delivery")} ({tenant?.deliveryPct ?? 3}%): {formatCurrency(bd.delivery, cur)} · {t("pricing.service")} ({tenant?.servicePct ?? 15}%): {formatCurrency(bd.service, cur)} · {t("pricing.total")}: {formatCurrency(bd.total, cur)}
+      </p>
     </div>
   );
 }

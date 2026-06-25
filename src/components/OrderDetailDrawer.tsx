@@ -13,6 +13,7 @@ import type { OrderStatus } from "../types/api";
 import { useT } from "../i18n";
 import { openOrderPrint } from "../utils/printOrder";
 import { useAuth } from "../contexts/AuthContext";
+import { priceBreakdown } from "../utils/pricing";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface TeamMember { id: string; name: string; role: string; active: boolean }
@@ -531,16 +532,38 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
 
               {/* Totals */}
               <Section title={t("orderDetail.summary")} icon={Calendar}>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Mahsulotlar yig'indisi</span>
-                    <span>{formatMoney(subtotal, order.currency)}</span>
-                  </div>
-                  <div className="flex justify-between text-base font-bold text-forest-800 pt-2 border-t border-cream-300 mt-2">
-                    <span>Jami</span>
-                    <span>{formatMoney(order.total, order.currency)}</span>
-                  </div>
-                </div>
+                {(() => {
+                  // Narx tarkibi — buyurtma jami narxidan yetkazib berish + xizmat (boshqaruv ko'rinishi)
+                  const bd = priceBreakdown(Number(order.total), tenant?.deliveryPct, tenant?.servicePct);
+                  return (
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between text-slate-500">
+                        <span>Mahsulotlar yig'indisi</span>
+                        <span>{formatMoney(subtotal, order.currency)}</span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold text-forest-800 pt-2 border-t border-cream-300 mt-2">
+                        <span>Jami</span>
+                        <span>{formatMoney(order.total, order.currency)}</span>
+                      </div>
+                      {/* Boshqaruv ko'rinishi — xarajatlar tarkibi (mijoz to'loviga ta'sir qilmaydi) */}
+                      <div className="pt-2 mt-2 border-t border-cream-300 space-y-1">
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">{t("pricing.costs")}</div>
+                        <div className="flex justify-between text-slate-400 text-xs">
+                          <span>{t("pricing.delivery")} ({tenant?.deliveryPct ?? 3}%)</span>
+                          <span>{formatMoney(bd.delivery, order.currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-400 text-xs">
+                          <span>{t("pricing.service")} ({tenant?.servicePct ?? 15}%)</span>
+                          <span>{formatMoney(bd.service, order.currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-500 text-xs font-medium">
+                          <span>{t("pricing.total")}</span>
+                          <span>{formatMoney(bd.total, order.currency)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </Section>
 
               {/* Channel & dates */}
