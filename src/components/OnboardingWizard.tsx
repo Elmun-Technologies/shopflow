@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { productsApi, ordersApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 const DISMISSED_KEY = (tenantId: string) => `shopflow.onboarding.dismissed.${tenantId}`;
 
@@ -127,6 +128,10 @@ export function OnboardingWizard({ onNavigate }: Props) {
     onNavigate?.(page);
   };
 
+  // Focus-trap + Escape + fokus tiklash (modal a11y).
+  // Hook early return'dan oldin — rules-of-hooks.
+  const panelRef = useFocusTrap<HTMLDivElement>(!checking && open, dismiss);
+
   if (checking || !open) return null;
 
   const step = STEPS[stepIndex];
@@ -144,6 +149,10 @@ export function OnboardingWizard({ onNavigate }: Props) {
         className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       >
         <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={step.title}
           initial={{ scale: 0.96, opacity: 0, y: 12 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.96, opacity: 0 }}
