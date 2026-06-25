@@ -116,7 +116,7 @@ export function EmailReportsSection() {
           </h3>
           <p className="text-xs text-slate-500">
             {smtpConfigured ? (
-              <span className="inline-flex items-center gap-1 text-emerald-600">
+              <span className="inline-flex items-center gap-1 text-forest-700">
                 <CheckCircle2 className="w-3 h-3" /> {t("emailReports.smtpConfigured")}
               </span>
             ) : (

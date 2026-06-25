@@ -98,7 +98,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
           if (newOrders.length > 0 && prefs.orders.browser) {
             const first = newOrders[0];
             void showBrowserNotification(
-              `Yangi buyurtma #${first.code}`,
+              t("notif.newOrder", { code: first.code }),
               `${first.customer?.name ?? "—"} · ${Number(first.total).toLocaleString("uz-UZ")} ${first.currency === "UZS" ? "so'm" : first.currency}`,
             );
           }
@@ -108,7 +108,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
           if (newLeads.length > 0 && prefs.leads.browser) {
             const first = newLeads[0];
             void showBrowserNotification(
-              `Yangi lid: ${first.name}`,
+              t("notif.newLead", { name: first.name }),
               first.channel?.name ?? `#${first.code}`,
             );
           }
@@ -203,7 +203,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
       >
         {muted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
         {unseenCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-forest-800 text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
             {unseenCount > 9 ? "9+" : unseenCount}
           </span>
         )}
@@ -244,7 +244,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
                 <div className="divide-y divide-cream-300/60">
                   {items.map((it) => {
                     const Icon = it.kind === "order" ? ShoppingBag : it.kind === "lead" ? Radio : ShoppingCart;
-                    const colorCls = it.kind === "order" ? "text-forest-700" : it.kind === "lead" ? "text-sky-600" : "text-amber-500";
+                    const colorCls = it.kind === "order" ? "text-forest-700" : it.kind === "lead" ? "text-leaf-600" : "text-amber-500";
                     const isNew = it.createdAt > lastSeen;
                     return (
                       <button
@@ -258,7 +258,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <p className="text-xs font-medium text-forest-800 truncate flex-1">{it.title}</p>
-                            {isNew && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />}
+                            {isNew && <span className="w-1.5 h-1.5 rounded-full bg-leaf-400 flex-shrink-0" />}
                           </div>
                           <p className="text-[11px] text-slate-500 truncate mt-0.5">{it.subtitle}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">{formatRelative(it.createdAt)}</p>

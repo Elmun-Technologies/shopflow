@@ -118,13 +118,13 @@ import {
 } from "recharts";
 import type { ChartTooltipProps } from "../utils/chart";
 
-function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
+function CustomTooltip({ active, payload, label, t }: ChartTooltipProps & { t: (k: string) => string }) {
   if (active && payload && payload.length) {
     return (
       <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
         <p className="text-sm font-medium text-forest-800">{label}</p>
-        <p className="text-xs text-forest-700">Kiruvchi: {payload[0].value}</p>
-        <p className="text-xs text-sky-600">Yakunlangan: {payload[1]?.value}</p>
+        <p className="text-xs text-forest-700">{t("chat.chart.incoming")}: {payload[0].value}</p>
+        <p className="text-xs text-blue-600">{t("chat.chart.resolved")}: {payload[1]?.value}</p>
       </div>
     );
   }
@@ -254,7 +254,7 @@ export default function ChatPage() {
       );
       if (res.deliveryReason) {
         // Yuborildi (DB'da), lekin mijozga yetib bormadi — diagnostika xabari
-        toast.info(`Saqlandi, lekin mijozga yetib bormadi: ${res.deliveryReason}`);
+        toast.info(`${t("chat.savedNotDelivered")}: ${res.deliveryReason}`);
       }
     } catch (err) {
       // Optimistic xabarni qaytarish
@@ -311,9 +311,9 @@ export default function ChatPage() {
         {[
           { label: t("chat.stats.active"), value: activeCount, icon: MessageSquare, color: "text-forest-700", alert: false },
           { label: t("chat.stats.waiting"), value: waitingCount, icon: Clock, color: "text-amber-500", alert: waitingCount > 0 },
-          { label: t("chat.stats.resolvedToday"), value: resolvedToday, icon: CheckCheck, color: "text-sky-600", alert: false },
-          { label: t("chat.stats.potential"), value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-violet-600", alert: false },
-          { label: t("chat.stats.avgResponse"), value: "42s", icon: Zap, color: "text-cyan-600", alert: false },
+          { label: t("chat.stats.resolvedToday"), value: resolvedToday, icon: CheckCheck, color: "text-blue-600", alert: false },
+          { label: t("chat.stats.potential"), value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-forest-700", alert: false },
+          { label: t("chat.stats.avgResponse"), value: "42s", icon: Zap, color: "text-leaf-500", alert: false },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -376,22 +376,22 @@ export default function ChatPage() {
               <div className="bg-white border border-cream-300 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-forest-800 mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-forest-700" />
-                  Soatlik hajm
+                  {t("chat.hourlyVolume")}
                 </h3>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={hourlyChatVolume} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="incomingGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#95D26F" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="#95D26F" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" vertical={false} />
                       <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10 }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="incoming" stroke="#10b981" strokeWidth={2} fill="url(#incomingGrad)" dot={false} />
+                      <Tooltip content={<CustomTooltip t={t} />} />
+                      <Area type="monotone" dataKey="incoming" stroke="#95D26F" strokeWidth={2} fill="url(#incomingGrad)" dot={false} />
                       <Area type="monotone" dataKey="resolved" stroke="#3b82f6" strokeWidth={2} fill="none" dot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -399,11 +399,11 @@ export default function ChatPage() {
                 <div className="flex items-center justify-center gap-4 mt-1">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-sm bg-leaf-400" />
-                    <span className="text-[10px] text-slate-500">Kiruvchi</span>
+                    <span className="text-[10px] text-slate-500">{t("chat.chart.incoming")}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-sm bg-blue-500" />
-                    <span className="text-[10px] text-slate-500">Yakunlangan</span>
+                    <span className="text-[10px] text-slate-500">{t("chat.chart.resolved")}</span>
                   </div>
                 </div>
               </div>
@@ -412,7 +412,7 @@ export default function ChatPage() {
               <div className="bg-white border border-cream-300 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-forest-800 mb-4 flex items-center gap-2">
                   <Headphones className="w-4 h-4 text-forest-700" />
-                  Agentlar samaradorligi
+                  {t("chat.agentPerformance")}
                 </h3>
                 <div className="space-y-3">
                   {agents.map((agent) => (
@@ -421,15 +421,15 @@ export default function ChatPage() {
                         <div className="w-9 h-9 bg-cream-100 rounded-full flex items-center justify-center text-xs font-bold text-forest-800">
                           {agent.avatar}
                         </div>
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
                           agent.status === "online" ? "bg-leaf-400" : agent.status === "away" ? "bg-amber-500" : "bg-slate-500"
                         }`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-forest-800 truncate">{agent.name}</p>
                         <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-[10px] text-slate-500">{agent.activeChats} faol</span>
-                          <span className="text-[10px] text-slate-500">{agent.resolvedToday} yakun</span>
+                          <span className="text-[10px] text-slate-500">{agent.activeChats} {t("chat.agentActive")}</span>
+                          <span className="text-[10px] text-slate-500">{agent.resolvedToday} {t("chat.agentResolved")}</span>
                           <span className="text-[10px] text-slate-500">{agent.avgResponseTime}s</span>
                         </div>
                       </div>
@@ -490,20 +490,20 @@ export default function ChatPage() {
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   <div className="grid grid-cols-2 gap-1.5 pt-2 mt-2 border-t border-cream-300">
                     <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
-                      <option value="all">Barcha kanallar</option>
+                      <option value="all">{t("chat.allChannels")}</option>
                       {Object.entries(channelLabels).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
                     </select>
                     <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
-                      <option value="all">Barcha agentlar</option>
+                      <option value="all">{t("chat.allAgents")}</option>
                       {agents.map((a) => (<option key={a.id} value={a.name}>{a.name}</option>))}
                     </select>
                     <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
-                      <option value="all">Barcha prioritetlar</option>
-                      <option value="high">Yuqori</option>
-                      <option value="medium">O'rta</option>
-                      <option value="low">Past</option>
+                      <option value="all">{t("chat.allPriorities")}</option>
+                      <option value="high">{t("chat.priority.high")}</option>
+                      <option value="medium">{t("chat.priority.medium")}</option>
+                      <option value="low">{t("chat.priority.low")}</option>
                     </select>
-                    <button onClick={() => { setSearchQuery(""); setChannelFilter("all"); setStatusFilter("all"); setAgentFilter("all"); setPriorityFilter("all"); }} className="text-[10px] text-slate-500 hover:text-forest-900 transition-colors">Tozalash</button>
+                    <button onClick={() => { setSearchQuery(""); setChannelFilter("all"); setStatusFilter("all"); setAgentFilter("all"); setPriorityFilter("all"); }} className="text-[10px] text-slate-500 hover:text-forest-900 transition-colors">{t("chat.clearFilters")}</button>
                   </div>
                 </motion.div>
               )}
@@ -520,20 +520,20 @@ export default function ChatPage() {
                   key={chat.id}
                   onClick={() => setActiveChat(chat)}
                   className={`w-full text-left p-3 border-b border-cream-300/50 transition-all ${
-                    isActive ? "bg-leaf-400/5 border-l-2 border-l-emerald-500" : "hover:bg-cream-100/30 border-l-2 border-l-transparent"
+                    isActive ? "bg-leaf-400/5 border-l-2 border-l-leaf-500" : "hover:bg-cream-100/30 border-l-2 border-l-transparent"
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <div className="relative flex-shrink-0">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        chat.priority === "high" ? "bg-rose-200 text-rose-600" :
+                        chat.priority === "high" ? "bg-red-100 text-red-600" :
                         chat.priority === "medium" ? "bg-amber-200 text-amber-500" :
                         "bg-leaf-200 text-forest-700"
                       }`}>
                         {chat.customerAvatar}
                       </div>
                       {chat.unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-forest-800 font-bold">
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">
                           {chat.unreadCount}
                         </div>
                       )}
@@ -581,7 +581,7 @@ export default function ChatPage() {
                   <button
                     onClick={() => setActiveChat(null)}
                     className="md:hidden p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100"
-                    aria-label="Orqaga"
+                    aria-label={t("common.back")}
                   >
                     <CornerDownLeft className="w-4 h-4" />
                   </button>
@@ -642,9 +642,9 @@ export default function ChatPage() {
                   <div key={msg.id} className={`flex ${msg.sender === "agent" || msg.sender === "bot" ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[70%] rounded-xl px-3 py-2 ${
                       msg.sender === "agent"
-                        ? "bg-leaf-200 text-emerald-100"
+                        ? "bg-leaf-200 text-forest-800"
                         : msg.sender === "bot"
-                        ? "bg-sky-200 text-blue-100"
+                        ? "bg-blue-100 text-blue-700"
                         : msg.sender === "system"
                         ? "bg-cream-200/70 text-slate-500 text-center mx-auto text-[10px]"
                         : "bg-cream-100 text-forest-800"
@@ -721,7 +721,7 @@ export default function ChatPage() {
             <div className="w-64 flex-shrink-0 bg-white border border-cream-300 rounded-xl p-4 overflow-y-auto">
               <div className="text-center mb-4">
                 <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-lg font-bold ${
-                  activeChat.priority === "high" ? "bg-rose-200 text-rose-600" :
+                  activeChat.priority === "high" ? "bg-red-100 text-red-600" :
                   activeChat.priority === "medium" ? "bg-amber-200 text-amber-500" :
                   "bg-leaf-200 text-forest-700"
                 }`}>
@@ -733,15 +733,15 @@ export default function ChatPage() {
 
               <div className="space-y-3">
                 <div className="bg-cream-100/50 rounded-lg p-2.5">
-                  <p className="text-[10px] text-slate-500">Potensial qiymat</p>
-                  <p className="text-sm font-bold text-forest-700">{activeChat.estimatedValue.toLocaleString()} so'm</p>
+                  <p className="text-[10px] text-slate-500">{t("chat.info.potentialValue")}</p>
+                  <p className="text-sm font-bold text-forest-700">{activeChat.estimatedValue.toLocaleString()} {t("chat.info.currency")}</p>
                 </div>
                 <div className="bg-cream-100/50 rounded-lg p-2.5">
-                  <p className="text-[10px] text-slate-500">Birinchi javob vaqti</p>
+                  <p className="text-[10px] text-slate-500">{t("chat.info.firstResponse")}</p>
                   <p className="text-sm font-bold text-forest-800">{activeChat.firstResponseTime ? activeChat.firstResponseTime + "s" : "—"}</p>
                 </div>
                 <div className="bg-cream-100/50 rounded-lg p-2.5">
-                  <p className="text-[10px] text-slate-500">O'rtacha javob</p>
+                  <p className="text-[10px] text-slate-500">{t("chat.info.avgResponse")}</p>
                   <p className="text-sm font-bold text-forest-800">{activeChat.avgResponseTime ? activeChat.avgResponseTime + "s" : "—"}</p>
                 </div>
                 <div className="bg-cream-100/50 rounded-lg p-2.5">
@@ -754,7 +754,7 @@ export default function ChatPage() {
               </div>
 
               <div className="mt-4 pt-4 border-t border-cream-300">
-                <p className="text-[10px] text-slate-500 mb-2">Teglar</p>
+                <p className="text-[10px] text-slate-500 mb-2">{t("chat.info.tags")}</p>
                 <div className="flex flex-wrap gap-1">
                   {activeChat.tags.map((tag) => (
                     <span key={tag} className="px-1.5 py-0.5 rounded bg-cream-100 text-[10px] text-slate-500">{tag}</span>
@@ -763,18 +763,18 @@ export default function ChatPage() {
               </div>
 
               <div className="mt-4 pt-4 border-t border-cream-300 space-y-2">
-                <p className="text-[10px] text-slate-500 mb-2">Amallar</p>
+                <p className="text-[10px] text-slate-500 mb-2">{t("chat.info.actions")}</p>
                 <button className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all">
                   <Archive className="w-3.5 h-3.5" />
-                  Arxivlash
+                  {t("chat.action.archive")}
                 </button>
                 <button className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all">
                   <Tag className="w-3.5 h-3.5" />
-                  Teg qo'shish
+                  {t("chat.action.addTag")}
                 </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-rose-100 hover:bg-rose-200 border border-rose-300 rounded-lg text-xs text-rose-600 transition-all">
+                <button className="w-full flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-xs text-red-600 transition-all">
                   <Ban className="w-3.5 h-3.5" />
-                  Spam deb belgilash
+                  {t("chat.action.markSpam")}
                 </button>
               </div>
             </div>
@@ -783,7 +783,7 @@ export default function ChatPage() {
           <div className="flex-1 flex items-center justify-center bg-white border border-cream-300 rounded-xl">
             <div className="text-center">
               <MessageSquare className="w-12 h-12 text-cream-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500">Chat tanlang</p>
+              <p className="text-sm text-slate-500">{t("chat.selectChat")}</p>
             </div>
           </div>
         )}

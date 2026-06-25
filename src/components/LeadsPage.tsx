@@ -29,7 +29,7 @@ const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
   NEW: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
   CONTACTED: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
   QUALIFIED: { color: "text-violet-600", bg: "bg-violet-100 border-violet-300" },
-  PROPOSAL: { color: "text-cyan-600", bg: "bg-cyan-100 border-cyan-500/20" },
+  PROPOSAL: { color: "text-cyan-600", bg: "bg-cyan-100 border-cyan-300" },
   NEGOTIATION: { color: "text-orange-600", bg: "bg-orange-100 border-orange-300" },
   WON: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
   LOST: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
@@ -286,7 +286,7 @@ export default function LeadsPage() {
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             setShowCreate(false);
-            toast.success("Lead qo'shildi");
+            toast.success(t("leads.create.success"));
             refetch();
           }}
         />
@@ -321,7 +321,7 @@ function LeadCreateModal({ currency, onClose, onCreated }: { currency: string; o
       });
       onCreated();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Lead qo'shilmadi");
+      toast.error(err instanceof Error ? err.message : t("leads.create.error"));
     } finally {
       setBusy(false);
     }
@@ -342,53 +342,53 @@ function LeadCreateModal({ currency, onClose, onCreated }: { currency: string; o
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-forest-800">{t("leads.newLead")}</h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label={t("common.close")}>
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
         <div className="space-y-3">
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Ism *</span>
-            <input type="text" required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ism familiya" className={field} />
+            <span className="text-xs text-slate-500 mb-1 block">{t("leads.form.name")} *</span>
+            <input type="text" required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("leads.form.namePlaceholder")} className={field} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs text-slate-500 mb-1 block">Telefon</span>
+              <span className="text-xs text-slate-500 mb-1 block">{t("leads.form.phone")}</span>
               <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" className={field} />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500 mb-1 block">Email</span>
+              <span className="text-xs text-slate-500 mb-1 block">{t("leads.form.email")}</span>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@…" className={field} />
             </label>
           </div>
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Kompaniya</span>
+            <span className="text-xs text-slate-500 mb-1 block">{t("leads.form.company")}</span>
             <input type="text" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={field} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs text-slate-500 mb-1 block">Status</span>
+              <span className="text-xs text-slate-500 mb-1 block">{t("leads.col.status")}</span>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })} className={field}>
                 {STATUSES.map((s) => <option key={s} value={s}>{t(`leads.status.${s}`)}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500 mb-1 block">Prioritet</span>
+              <span className="text-xs text-slate-500 mb-1 block">{t("leads.form.priority")}</span>
               <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as LeadPriority })} className={field}>
                 {PRIORITIES.map((p) => <option key={p} value={p}>{t(`leads.priority.${p}`)}</option>)}
               </select>
             </label>
           </div>
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Qiymat ({currency})</span>
+            <span className="text-xs text-slate-500 mb-1 block">{t("leads.form.value")} ({currency})</span>
             <input inputMode="numeric" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} placeholder="0" className={field} />
           </label>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">Bekor qilish</button>
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">{t("leads.form.cancel")}</button>
           <button type="submit" disabled={busy || !form.name.trim()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium">
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Qo'shish
+            {t("common.add")}
           </button>
         </div>
       </motion.form>

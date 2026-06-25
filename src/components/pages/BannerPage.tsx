@@ -71,7 +71,7 @@ export default function BannerPage() {
           <h1 className="text-2xl font-bold text-forest-800">{editItem ? t("banner.editTitle") : t("banner.newTitle")}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-            <button form="banner-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
+            <button form="banner-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium">{t("common.save")}</button>
           </div>
         </div>
 
@@ -108,7 +108,7 @@ export default function BannerPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("common.search")} className={inputClass + " pl-10"} />
         </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           {t("banner.new")}
         </button>
@@ -122,7 +122,7 @@ export default function BannerPage() {
             description={t("banner.empty.desc")}
             buttonText={t("banner.new")}
             onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
-            iconColor="text-orange-600"
+            iconColor="text-cream-300"
           />
         </motion.div>
       ) : (
@@ -150,7 +150,7 @@ export default function BannerPage() {
                   <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${b.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>{b.active ? t("mkt.active") : t("mkt.inactive")}</span></td>
                   <td className={tdClass + " text-right whitespace-nowrap"}>
                     <button onClick={() => { setEditItem(b); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => setPendingDelete(b.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setPendingDelete(b.id)} className="p-1.5 rounded text-slate-500 hover:text-red-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -246,12 +246,12 @@ function BannerForm({ initial, error, onSave }: BannerFormProps) {
           <h3 className="font-semibold text-forest-800">{t("mkt.col.status")}</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
-            <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
+            <div className={`w-5 h-5 rounded border ${active ? "bg-leaf-400 border-leaf-500" : "border-cream-300"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
             <span className="text-sm text-slate-700">{t("mkt.active")}</span>
           </label>
-          {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-600">{error}</div>}
         </div>
       </div>
     </form>

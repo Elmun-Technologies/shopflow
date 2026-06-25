@@ -15,10 +15,10 @@ import OrderDetailDrawer from "./OrderDetailDrawer";
 
 // Faqat rangli stillar — labellar t() orqali olinadi
 const statusStyle: Record<OrderStatus, { color: string; bg: string }> = {
-  PENDING: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
-  PROCESSING: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
+  PENDING: { color: "text-amber-600", bg: "bg-amber-100 border-amber-300" },
+  PROCESSING: { color: "text-blue-600", bg: "bg-blue-100 border-blue-300" },
   COMPLETED: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
-  CANCELLED: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
+  CANCELLED: { color: "text-red-600", bg: "bg-red-100 border-red-300" },
   REFUNDED: { color: "text-slate-500", bg: "bg-slate-100 border-slate-300" },
 };
 
@@ -279,7 +279,7 @@ export default function OrdersPage() {
           <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+            <AlertCircle className="w-10 h-10 text-red-600 mb-2" />
             <p className="text-sm text-slate-700">{error.message}</p>
             <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
               {t("orders.retry")}
@@ -466,7 +466,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
                     onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value)) })}
                     className="w-16 bg-cream-100 border border-cream-300 rounded-lg px-2 py-2.5 text-sm text-center text-forest-800 focus:outline-none focus:border-leaf-500/60"
                   />
-                  <button type="button" onClick={() => removeLine(i)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex-shrink-0" aria-label={t("common.delete")}>
+                  <button type="button" onClick={() => removeLine(i)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0" aria-label={t("common.delete")}>
                     <X className="w-4 h-4" />
                   </button>
                 </div>

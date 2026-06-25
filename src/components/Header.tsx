@@ -188,7 +188,7 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
                     style={{ color: "#475569" }}
                   >
                     <Settings className="w-4 h-4" style={{ color: "#94a3b8" }} />
-                    Sozlamalar
+                    {t("nav.settings")}
                   </button>
                   <button
                     type="button"

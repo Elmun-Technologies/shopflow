@@ -30,7 +30,7 @@ interface LoyaltyStats {
 }
 
 const TYPE_LABELS: Record<string, { labelKey: string; icon: typeof Award; color: string }> = {
-  purchase:    { labelKey: "loyalty.type.purchase", icon: TrendingUp, color: "#10b981" },
+  purchase:    { labelKey: "loyalty.type.purchase", icon: TrendingUp, color: "#7BC056" },
   birthday:    { labelKey: "loyalty.type.birthday", icon: Gift, color: "#8b5cf6" },
   referral:    { labelKey: "loyalty.type.referral", icon: Users, color: "#3b82f6" },
   first_order: { labelKey: "loyalty.type.first_order", icon: Award, color: "#f59e0b" },
@@ -84,7 +84,7 @@ export default function SodiqlikPage() {
           {[
             { label: t("loyalty.stat.activeCustomers"), value: stats.totalAccounts, color: "#3b82f6" },
             { label: t("loyalty.stat.totalBalance"), value: stats.totalBalance.toLocaleString("uz-UZ"), color: "#8b5cf6", unit: t("loyalty.points") },
-            { label: t("loyalty.stat.earned"), value: stats.totalEarned.toLocaleString("uz-UZ"), color: "#10b981", unit: t("loyalty.points") },
+            { label: t("loyalty.stat.earned"), value: stats.totalEarned.toLocaleString("uz-UZ"), color: "#7BC056", unit: t("loyalty.points") },
             { label: t("loyalty.stat.spent"), value: stats.totalSpent.toLocaleString("uz-UZ"), color: "#f59e0b", unit: t("loyalty.points") },
           ].map((s) => (
             <div

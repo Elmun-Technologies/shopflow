@@ -71,7 +71,7 @@ export default function LowStockAlert({ onOpenProducts }: Props) {
               <p className="text-xs text-slate-500 mt-0.5">
                 {outCount > 0 ? (
                   <>
-                    <span className="text-rose-600 font-semibold">{t("lowStock.out", { count: outCount })}</span>
+                    <span className="text-red-600 font-semibold">{t("lowStock.out", { count: outCount })}</span>
                     {" · "}
                     {t("lowStock.attention", { count: products.length })}
                   </>
@@ -122,7 +122,7 @@ export default function LowStockAlert({ onOpenProducts }: Props) {
                   <span
                     className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                       p.stock === 0
-                        ? "bg-rose-100 text-rose-600"
+                        ? "bg-red-100 text-red-600"
                         : p.stock <= 2
                         ? "bg-amber-100 text-amber-600"
                         : "bg-cream-100 text-slate-700"

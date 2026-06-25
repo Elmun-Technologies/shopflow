@@ -81,14 +81,14 @@ export function BrowserNotifSection() {
           permState === "granted"
             ? "bg-leaf-100 border-leaf-400/50"
             : permState === "denied"
-              ? "bg-rose-100 border-rose-300"
+              ? "bg-red-100 border-red-300"
               : "bg-amber-100 border-amber-300"
         }`}>
           <div className="flex items-center gap-2 min-w-0">
             {permState === "granted" ? (
               <CheckCircle2 className="w-4 h-4 text-forest-700 flex-shrink-0" />
             ) : (
-              <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${permState === "denied" ? "text-rose-600" : "text-amber-500"}`} />
+              <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${permState === "denied" ? "text-red-600" : "text-amber-500"}`} />
             )}
             <div className="min-w-0">
               <p className="text-xs font-medium text-forest-800">
@@ -138,7 +138,7 @@ export function BrowserNotifSection() {
           </p>
           <button
             onClick={() => playSound(prefs.soundType)}
-            className="flex items-center gap-1 text-xs text-forest-700 hover:text-forest-700 font-medium"
+            className="flex items-center gap-1 text-xs text-forest-700 hover:text-forest-800 font-medium"
           >
             <Play className="w-3 h-3" />
             {t("notifSettings.testSound")}

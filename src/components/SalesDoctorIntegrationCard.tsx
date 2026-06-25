@@ -14,7 +14,7 @@ import { useT } from "../i18n";
 
 const STATUS_BADGE_CLS: Record<SalesDoctorStatus["status"], string> = {
   CONNECTED: "bg-leaf-100 text-forest-700",
-  CONNECTING: "bg-blue-400/15 text-sky-700",
+  CONNECTING: "bg-blue-100 text-blue-600",
   ERROR: "bg-rose-400/15 text-rose-600",
   DISCONNECTED: "bg-cream-200 text-slate-700",
 };

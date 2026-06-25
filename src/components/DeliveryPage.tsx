@@ -88,7 +88,7 @@ export default function DeliveryPage() {
     ASSIGNED:   { color: "#3b82f6", bg: "bg-sky-50 border-sky-200",       label: t("delivery.dStatus.ASSIGNED"),   Icon: Truck },
     PICKED_UP:  { color: "#8b5cf6", bg: "bg-violet-50 border-violet-200", label: t("delivery.dStatus.PICKED_UP"),  Icon: Package },
     IN_TRANSIT: { color: "#06b6d4", bg: "bg-cyan-50 border-cyan-200",     label: t("delivery.dStatus.IN_TRANSIT"), Icon: Truck },
-    DELIVERED:  { color: "#10b981", bg: "bg-emerald-50 border-emerald-200",label: t("delivery.dStatus.DELIVERED"), Icon: CheckCircle2 },
+    DELIVERED:  { color: "#84cc16", bg: "bg-leaf-50 border-leaf-200",     label: t("delivery.dStatus.DELIVERED"), Icon: CheckCircle2 },
     FAILED:     { color: "#ef4444", bg: "bg-red-50 border-red-200",       label: t("delivery.dStatus.FAILED"),     Icon: XCircle },
     RETURNED:   { color: "#64748b", bg: "bg-slate-100 border-slate-300",  label: t("delivery.dStatus.RETURNED"),   Icon: XCircle },
   };
@@ -145,7 +145,7 @@ export default function DeliveryPage() {
           {[
             { label: t("delivery.stat.total"),     value: stats.total, color: "#475569" },
             { label: t("delivery.stat.inTransit"), value: stats.byStatus.find(s => s.status === "IN_TRANSIT")?.count ?? 0, color: "#06b6d4" },
-            { label: t("delivery.stat.delivered"), value: stats.byStatus.find(s => s.status === "DELIVERED")?.count ?? 0, color: "#10b981" },
+            { label: t("delivery.stat.delivered"), value: stats.byStatus.find(s => s.status === "DELIVERED")?.count ?? 0, color: "#84cc16" },
             { label: t("delivery.stat.failed"),    value: stats.byStatus.find(s => s.status === "FAILED")?.count ?? 0, color: "#ef4444" },
           ].map((s) => (
             <div
@@ -225,7 +225,7 @@ export default function DeliveryPage() {
                     {method.minDays}–{method.maxDays} {t("delivery.days")}
                   </span>
                   {method.zone && (
-                    <span className="text-xs text-sky-600 flex items-center gap-1">
+                    <span className="text-xs text-forest-700 flex items-center gap-1">
                       <MapPin className="w-3 h-3" />{method.zone.name}
                     </span>
                   )}
@@ -246,7 +246,7 @@ export default function DeliveryPage() {
                     await api(`/delivery/methods/${method.id}`, { method: "DELETE" });
                     reloadMethods();
                   }}
-                  className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-red-50 transition-colors"
+                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                   title={t("common.delete")}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -275,8 +275,8 @@ export default function DeliveryPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center">
-                    <MapPin className="w-4.5 h-4.5 text-sky-600" />
+                  <div className="w-9 h-9 rounded-xl bg-leaf-100 flex items-center justify-center">
+                    <MapPin className="w-4.5 h-4.5 text-forest-700" />
                   </div>
                   <div>
                     <p className="font-semibold text-forest-800 text-sm">{zone.name}</p>
@@ -297,7 +297,7 @@ export default function DeliveryPage() {
                       await api(`/delivery/zones/${zone.id}`, { method: "DELETE" });
                       reloadZones();
                     }}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-red-50 transition-colors"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                     title={t("common.delete")}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -721,7 +721,7 @@ function OrderDetailModal({
     ASSIGNED:   { color: "#3b82f6", bg: "bg-sky-50 border-sky-200",       label: t("delivery.dStatus.ASSIGNED"),   Icon: Truck },
     PICKED_UP:  { color: "#8b5cf6", bg: "bg-violet-50 border-violet-200", label: t("delivery.dStatus.PICKED_UP"),  Icon: Package },
     IN_TRANSIT: { color: "#06b6d4", bg: "bg-cyan-50 border-cyan-200",     label: t("delivery.dStatus.IN_TRANSIT"), Icon: Truck },
-    DELIVERED:  { color: "#10b981", bg: "bg-emerald-50 border-emerald-200",label: t("delivery.dStatus.DELIVERED"), Icon: CheckCircle2 },
+    DELIVERED:  { color: "#84cc16", bg: "bg-leaf-50 border-leaf-200",     label: t("delivery.dStatus.DELIVERED"), Icon: CheckCircle2 },
     FAILED:     { color: "#ef4444", bg: "bg-red-50 border-red-200",       label: t("delivery.dStatus.FAILED"),     Icon: XCircle },
     RETURNED:   { color: "#64748b", bg: "bg-slate-100 border-slate-300",  label: t("delivery.dStatus.RETURNED"),   Icon: XCircle },
   };
@@ -823,7 +823,7 @@ function OrderDetailModal({
           <button
             onClick={() => updateStatus("FAILED")}
             disabled={updating}
-            className="w-full py-2.5 rounded-xl text-sm font-medium text-rose-600 bg-red-50 hover:bg-red-100 transition-colors"
+            className="w-full py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
           >
             {t("delivery.orders.markFailed")}
           </button>

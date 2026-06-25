@@ -7,8 +7,8 @@ import { useT } from "../i18n";
 
 const STATUS_BADGE_CLS: Record<MoyskladStatus["status"], string> = {
   CONNECTED: "bg-leaf-100 text-forest-700",
-  CONNECTING: "bg-blue-400/15 text-sky-700",
-  ERROR: "bg-rose-400/15 text-rose-600",
+  CONNECTING: "bg-blue-100 text-blue-600",
+  ERROR: "bg-red-100 text-red-600",
   DISCONNECTED: "bg-cream-200 text-slate-700",
 };
 
@@ -145,7 +145,7 @@ export function MoyskladIntegrationCard() {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-orange-400/15">
-            <Boxes className="w-5 h-5 text-orange-300" />
+            <Boxes className="w-5 h-5 text-orange-600" />
           </div>
           <div>
             <h4 className="text-sm text-forest-800 font-semibold flex items-center gap-2">
@@ -153,11 +153,11 @@ export function MoyskladIntegrationCard() {
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${badgeCls}`}>{t(`moysklad.status.${s}`)}</span>
             </h4>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Mahsulot katalogi, qoldiq va buyurtmalar yagona manbadan
+              {t("moysklad.subtitle")}
             </p>
             {status?.accountName && (
               <p className="text-[11px] text-slate-500 mt-1">
-                Hisob: <span className="text-forest-700">{status.accountName}</span>
+                {t("moysklad.account")}: <span className="text-forest-700">{status.accountName}</span>
               </p>
             )}
           </div>
@@ -165,7 +165,7 @@ export function MoyskladIntegrationCard() {
       </div>
 
       {status?.lastError && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-600 bg-rose-100 border border-rose-300 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-xs text-red-600 bg-red-100 border border-red-200 rounded-lg p-2.5">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>{status.lastError}</span>
         </div>
@@ -174,28 +174,28 @@ export function MoyskladIntegrationCard() {
       {s === "CONNECTED" && (
         <div className="grid grid-cols-2 gap-2 mb-3 text-[11px]">
           <div className="bg-cream-100/40 rounded-lg p-2">
-            <div className="text-slate-500">Ulangan</div>
+            <div className="text-slate-500">{t("moysklad.connectedAt")}</div>
             <div className="text-forest-700 mt-0.5">{formatDate(status?.connectedAt)}</div>
           </div>
           <div className="bg-cream-100/40 rounded-lg p-2">
-            <div className="text-slate-500">Oxirgi sync</div>
+            <div className="text-slate-500">{t("moysklad.lastSync")}</div>
             <div className="text-forest-700 mt-0.5">{formatDate(status?.lastSyncAt)}</div>
           </div>
         </div>
       )}
 
       {activeJob && activeJob.status !== "COMPLETED" && activeJob.status !== "FAILED" && (
-        <div className="mb-3 bg-sky-100 border border-sky-300 rounded-lg p-3">
+        <div className="mb-3 bg-blue-100 border border-blue-200 rounded-lg p-3">
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-sky-700 flex items-center gap-1.5">
+            <span className="text-blue-600 flex items-center gap-1.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Sinxronlash...
+              {t("moysklad.syncing")}
             </span>
-            <span className="text-blue-200">{activeJob.progress}%</span>
+            <span className="text-blue-600">{activeJob.progress}%</span>
           </div>
           <div className="h-1.5 bg-white rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-400 transition-all"
+              className="h-full bg-blue-500 transition-all"
               style={{ width: `${activeJob.progress}%` }}
             />
           </div>
@@ -205,7 +205,7 @@ export function MoyskladIntegrationCard() {
       {activeJob?.status === "COMPLETED" && (
         <div className="mb-3 text-xs text-forest-700 bg-leaf-100 border border-leaf-300/60 rounded-lg p-2.5 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
-          Sinxronizatsiya tugadi
+          {t("moysklad.syncDone")}
         </div>
       )}
 
@@ -215,29 +215,29 @@ export function MoyskladIntegrationCard() {
             onClick={() => setShowConnect(true)}
             className="text-xs font-medium px-3 py-1.5 rounded-lg bg-leaf-100 text-forest-700 hover:bg-leaf-500/25 transition-all"
           >
-            Ulash
+            {t("moysklad.connect")}
           </button>
         ) : (
           <>
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-400/15 text-sky-700 hover:bg-blue-400/25 transition-all disabled:opacity-50 flex items-center gap-1.5"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
-              To'liq sinxronlash
+              {t("moysklad.fullSync")}
             </button>
             <button
               onClick={handleSubscribeWebhooks}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-cream-200 text-slate-700 hover:bg-slate-600 transition-all"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-cream-200 text-slate-700 hover:bg-cream-300 transition-all"
             >
-              Webhook'larni ulash ({status?.webhookCount ?? 0})
+              {t("moysklad.subscribeWebhooks")} ({status?.webhookCount ?? 0})
             </button>
             <button
               onClick={handleDisconnect}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-all ml-auto"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-100 transition-all ml-auto"
             >
-              Uzish
+              {t("moysklad.disconnect")}
             </button>
           </>
         )}
@@ -248,8 +248,8 @@ export function MoyskladIntegrationCard() {
           <div className="bg-white border border-cream-300 rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-base font-semibold text-forest-800">MoySklad'ga ulash</h3>
-                <p className="text-xs text-slate-500 mt-1">Access token kiriting</p>
+                <h3 className="text-base font-semibold text-forest-800">{t("moysklad.connectTitle")}</h3>
+                <p className="text-xs text-slate-500 mt-1">{t("moysklad.enterToken")}</p>
               </div>
               <button
                 onClick={() => {
@@ -263,18 +263,18 @@ export function MoyskladIntegrationCard() {
             </div>
 
             <div className="text-xs text-slate-500 mb-3 space-y-1">
-              <div>1. MoySklad → Sozlamalar → Foydalanuvchilar → o'zingiz</div>
-              <div>2. Pastda "Access token" → "Yangi token yaratish"</div>
-              <div>3. Token'ni nusxalab, pastga joylang</div>
+              <div>{t("moysklad.step1")}</div>
+              <div>{t("moysklad.step2")}</div>
+              <div>{t("moysklad.step3")}</div>
             </div>
 
             <a
               href="https://online.moysklad.ru/app/#admin"
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-sky-600 hover:text-sky-700 inline-flex items-center gap-1 mb-3"
+              className="text-xs text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mb-3"
             >
-              MoySklad sozlamalari
+              {t("moysklad.settingsLink")}
               <ExternalLink className="w-3 h-3" />
             </a>
 
@@ -282,12 +282,12 @@ export function MoyskladIntegrationCard() {
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="MoySklad access token"
-              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-slate-600 mb-3"
+              placeholder={t("moysklad.tokenPlaceholder")}
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-400 mb-3"
             />
 
             {connectError && (
-              <div className="text-xs text-rose-600 bg-rose-100 border border-rose-300 rounded-lg p-2.5 mb-3">
+              <div className="text-xs text-red-600 bg-red-100 border border-red-200 rounded-lg p-2.5 mb-3">
                 {connectError}
               </div>
             )}
@@ -300,15 +300,15 @@ export function MoyskladIntegrationCard() {
                 }}
                 className="flex-1 px-3 py-2 text-sm text-slate-500 hover:text-forest-900 hover:bg-cream-100 rounded-lg transition-all"
               >
-                Bekor qilish
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleConnect}
                 disabled={connecting || token.trim().length < 20}
-                className="flex-1 px-3 py-2 text-sm font-medium bg-leaf-400 hover:bg-emerald-400 text-slate-900 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-3 py-2 text-sm font-medium bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {connecting && <Loader2 className="w-4 h-4 animate-spin" />}
-                Ulash
+                {t("moysklad.connect")}
               </button>
             </div>
           </div>

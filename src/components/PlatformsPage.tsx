@@ -30,12 +30,12 @@ import type { ChannelType, Channel } from "../types/api";
 import { useT } from "../i18n";
 
 const channelTypeMeta: Record<ChannelType, { label: string; icon: React.ElementType; color: string }> = {
-  WEBSITE: { label: "Veb-sayt", icon: Globe, color: "text-sky-600" },
-  LANDING_PAGE: { label: "Landing Page", icon: Monitor, color: "text-cyan-600" },
+  WEBSITE: { label: "Veb-sayt", icon: Globe, color: "text-forest-700" },
+  LANDING_PAGE: { label: "Landing Page", icon: Monitor, color: "text-forest-700" },
   INSTAGRAM: { label: "Instagram", icon: Instagram, color: "text-pink-600" },
-  TELEGRAM: { label: "Telegram", icon: Send, color: "text-sky-600" },
-  FACEBOOK: { label: "Facebook", icon: Facebook, color: "text-sky-600" },
-  WHATSAPP: { label: "WhatsApp", icon: MessageCircle, color: "text-green-400" },
+  TELEGRAM: { label: "Telegram", icon: Send, color: "text-blue-600" },
+  FACEBOOK: { label: "Facebook", icon: Facebook, color: "text-blue-600" },
+  WHATSAPP: { label: "WhatsApp", icon: MessageCircle, color: "text-leaf-600" },
   EMAIL: { label: "Email", icon: Mail, color: "text-amber-500" },
   PHONE: { label: "Telefon", icon: Phone, color: "text-forest-700" },
   REFERRAL: { label: "Referral", icon: UsersIcon, color: "text-violet-600" },
@@ -57,7 +57,7 @@ export default function PlatformsPage() {
   };
 
   const handleDelete = async (ch: Channel) => {
-    if (!confirm(`"${ch.name}" kanalini o'chirish? Unga bog'langan lidlar saqlanadi.`)) return;
+    if (!confirm(t("platforms.deleteConfirm", { name: ch.name }))) return;
     await channelsApi.delete(ch.id);
     refetch();
   };
@@ -139,6 +139,7 @@ function ChannelCard({
   onDelete: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useT();
   const meta = channelTypeMeta[channel.type];
   const Icon = meta.icon;
   const [copied, setCopied] = useState(false);
@@ -180,16 +181,16 @@ function ChannelCard({
       );
       const json = (await res.json()) as { ok?: boolean; error?: string; bot?: { username?: string } };
       if (!res.ok || !json.ok) {
-        setConnectMsg({ ok: false, text: json.error || "Xato" });
+        setConnectMsg({ ok: false, text: json.error || t("common.error") });
       } else {
         setConnectMsg({
           ok: true,
-          text: `Ulanishi muvaffaqiyatli! Bot: @${json.bot?.username ?? "?"}`,
+          text: t("platforms.connectOk", { username: json.bot?.username ?? "?" }),
         });
         onChanged();
       }
     } catch (err) {
-      setConnectMsg({ ok: false, text: err instanceof Error ? err.message : "Xato" });
+      setConnectMsg({ ok: false, text: err instanceof Error ? err.message : t("common.error") });
     } finally {
       setConnecting(false);
     }
@@ -227,7 +228,7 @@ function ChannelCard({
             channel.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200 text-slate-500"
           }`}
         >
-          {channel.active ? "Aktiv" : "O'chirilgan"}
+          {channel.active ? t("platforms.statusActive") : t("platforms.statusDisabled")}
         </span>
       </div>
 
@@ -235,29 +236,29 @@ function ChannelCard({
         <div className="bg-cream-100/50 border border-cream-300 rounded-lg p-2.5 mb-3">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-slate-500 uppercase mb-0.5">Bot token</p>
+              <p className="text-[10px] text-slate-500 uppercase mb-0.5">{t("platforms.botToken")}</p>
               <p className="text-[11px] text-slate-700 font-mono truncate">
-                {hasToken ? (config.botToken as string) : <span className="text-slate-400">kiritilmagan</span>}
+                {hasToken ? (config.botToken as string) : <span className="text-slate-400">{t("platforms.notSet")}</span>}
               </p>
             </div>
             <button
               onClick={() => setShowTokenModal(true)}
               className="ml-2 px-2 py-1 rounded text-forest-700 hover:bg-cream-200 text-[11px] font-medium"
             >
-              {hasToken ? "O'zgartirish" : "Qo'shish"}
+              {hasToken ? t("common.edit") : t("common.add")}
             </button>
           </div>
         </div>
       )}
 
       <div className="bg-cream-100/50 border border-cream-300 rounded-lg p-2.5 mb-3">
-        <p className="text-[10px] text-slate-500 uppercase mb-1">Webhook URL</p>
+        <p className="text-[10px] text-slate-500 uppercase mb-1">{t("platforms.webhookUrl")}</p>
         <div className="flex items-center gap-2">
           <code className="text-[11px] text-slate-700 font-mono truncate flex-1">{webhookUrl}</code>
           <button
             onClick={copy}
             className="p-1 rounded text-slate-500 hover:text-forest-900 flex-shrink-0"
-            aria-label="Nusxa olish"
+            aria-label={t("platforms.copy")}
           >
             {copied ? <Check className="w-3.5 h-3.5 text-forest-700" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
@@ -268,10 +269,10 @@ function ChannelCard({
         <button
           onClick={handleConnectTelegram}
           disabled={connecting}
-          className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-sky-100 hover:bg-sky-200 border border-sky-500/30 rounded-lg text-sm font-medium text-sky-600 disabled:opacity-50"
+          className="w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 bg-leaf-100 hover:bg-leaf-200 border border-leaf-300/60 rounded-lg text-sm font-medium text-forest-700 disabled:opacity-50"
         >
           {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          Telegram'ga avto-ulash (setWebhook)
+          {t("platforms.telegramAutoConnect")}
         </button>
       )}
 
@@ -288,25 +289,25 @@ function ChannelCard({
       )}
 
       <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-500">Yaratilgan: {formatDate(channel.createdAt)}</span>
+        <span className="text-slate-500">{t("platforms.createdAt")}: {formatDate(channel.createdAt)}</span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowHelp(!showHelp)}
             className="px-2 py-1 rounded text-forest-700 hover:bg-cream-100 text-[11px] font-medium"
           >
-            {showHelp ? "Yopish" : "Qanday ulanadi?"}
+            {showHelp ? t("common.close") : t("platforms.howToConnect")}
           </button>
           <button
             onClick={onToggle}
             className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"
-            title={channel.active ? "O'chirish" : "Yoqish"}
+            title={channel.active ? t("platforms.disable") : t("platforms.enable")}
           >
             {channel.active ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={onDelete}
             className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"
-            title="O'chirish"
+            title={t("common.delete")}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -336,6 +337,7 @@ function ChannelSetupHelp({
   channelType: ChannelType;
   webhookUrl: string;
 }) {
+  const { t } = useT();
   const renderSteps = () => {
     switch (channelType) {
       case "TELEGRAM":
@@ -434,7 +436,7 @@ fetch("${webhookUrl}", {
 
   return (
     <div className="mt-3 pt-3 border-t border-cream-300 space-y-2">
-      <p className="text-xs font-semibold text-forest-800 mb-2">Sozlash bosqichlari</p>
+      <p className="text-xs font-semibold text-forest-800 mb-2">{t("platforms.setupSteps")}</p>
       {renderSteps()}
     </div>
   );
@@ -471,7 +473,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
       await channelsApi.create({ type, name, config });
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Xato");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -494,7 +496,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
           <select
             value={type}
             onChange={(e) => setType(e.target.value as ChannelType)}
-            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
           >
             {(Object.keys(channelTypeMeta) as ChannelType[]).map((k) => (
               <option key={k} value={k}>
@@ -512,7 +514,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={type === "TELEGRAM" ? t("platforms.add.namePh.telegram") : t("platforms.add.namePh.generic")}
-            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
           />
         </div>
 
@@ -534,7 +536,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
               placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
-              className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm font-mono focus:outline-none focus:border-leaf-500"
             />
             <p className="text-[10px] text-slate-500 mt-1">
               {t("platforms.add.tokenNote")}
@@ -571,6 +573,7 @@ function BotTokenModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useT();
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -583,7 +586,7 @@ function BotTokenModal({
       await channelsApi.update(channel.id, { config: { botToken: token.trim() } });
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Xato");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -599,7 +602,7 @@ function BotTokenModal({
         onClick={(e) => e.stopPropagation()}
         className="bg-white border border-cream-300 rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4"
       >
-        <h2 className="text-lg font-bold text-forest-800">Bot token</h2>
+        <h2 className="text-lg font-bold text-forest-800">{t("platforms.botToken")}</h2>
 
         <div className="text-xs text-slate-500 space-y-2 bg-cream-100/50 border border-cream-300 rounded-lg p-3">
           <p>1. Telegram'da{" "}
@@ -620,14 +623,14 @@ function BotTokenModal({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1.5">Bot token</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">{t("platforms.botToken")}</label>
           <input
             type="text"
             required
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder="7891234567:AAEhBP1234abcdEFGHIjklmn..."
-            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm font-mono focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm font-mono focus:outline-none focus:border-leaf-500"
             autoFocus
           />
         </div>
@@ -636,7 +639,7 @@ function BotTokenModal({
 
         <div className="flex items-center gap-2 justify-end">
           <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-slate-500 hover:text-forest-900">
-            Bekor qilish
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -644,7 +647,7 @@ function BotTokenModal({
             className="flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Saqlash
+            {t("common.save")}
           </button>
         </div>
       </form>

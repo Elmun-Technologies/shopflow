@@ -78,7 +78,7 @@ export default function AbandonedCartsPage() {
       const res = await abandonedApi.list();
       setData(res);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Yuklashda xato");
+      toast.error(err instanceof Error ? err.message : t("abandonedCarts.loadError"));
     } finally {
       setLoading(false);
     }
@@ -93,10 +93,10 @@ export default function AbandonedCartsPage() {
     setReminding(cart.id);
     try {
       await abandonedApi.remind(cart.id);
-      toast.success(`Eslatma yuborildi: ${cart.customerName ?? cart.telegramUserId}`);
+      toast.success(`${t("abandonedCarts.reminderToast")}: ${cart.customerName ?? cart.telegramUserId}`);
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Eslatma yuborilmadi");
+      toast.error(err instanceof Error ? err.message : t("abandonedCarts.reminderError"));
     } finally {
       setReminding(null);
     }
@@ -104,18 +104,18 @@ export default function AbandonedCartsPage() {
 
   const handleDelete = async (cart: AbandonedCart) => {
     const ok = await confirmDialog({
-      title: "Savat o'chirilsinmi?",
-      description: `${cart.customerName ?? cart.telegramUserId} mijozning savati o'chiriladi (mijoz Telegram'ni qaytadan ochsa qayta yaratiladi).`,
+      title: t("abandonedCarts.deleteTitle"),
+      description: t("abandonedCarts.deleteDescription", { name: cart.customerName ?? cart.telegramUserId }),
       kind: "danger",
-      confirmText: "O'chirish",
+      confirmText: t("common.delete"),
     });
     if (!ok) return;
     try {
       await abandonedApi.remove(cart.id);
-      toast.success("Savat o'chirildi");
+      toast.success(t("abandonedCarts.deleted"));
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "O'chirilmadi");
+      toast.error(err instanceof Error ? err.message : t("abandonedCarts.deleteError"));
     }
   };
 
@@ -123,7 +123,7 @@ export default function AbandonedCartsPage() {
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h1 className="text-2xl font-bold text-forest-800 flex items-center gap-2">
-          <ShoppingCart className="w-6 h-6 text-rose-600" />
+          <ShoppingCart className="w-6 h-6 text-amber-600" />
           {t("abandonedCarts.title")}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -138,12 +138,12 @@ export default function AbandonedCartsPage() {
           <SummaryCard
             label={t("abandonedCarts.summary.atRisk")}
             value={formatPrice(data.summary.atRisk, data.summary.currency)}
-            accent="rose"
+            accent="amber"
           />
           <SummaryCard
             label={t("abandonedCarts.summary.reminded")}
             value={`${data.summary.remindedCount} / ${data.summary.total}`}
-            accent="emerald"
+            accent="leaf"
           />
         </div>
       )}
@@ -155,10 +155,9 @@ export default function AbandonedCartsPage() {
       ) : !data || data.carts.length === 0 ? (
         <div className="bg-white border border-cream-300 rounded-xl py-20 px-6 text-center">
           <ShoppingCart className="w-12 h-12 text-cream-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-forest-800 mb-1">Tashlab ketilgan savatlar yo'q</h3>
+          <h3 className="text-lg font-semibold text-forest-800 mb-1">{t("abandonedCarts.empty.title")}</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto">
-            Mijoz savatga mahsulot qo'shsa va checkout qilmasa, shu yerda ko'rinadi.
-            Avtomatik eslatma 1 soatdan keyin yuboriladi.
+            {t("abandonedCarts.empty.description")}
           </p>
         </div>
       ) : (
@@ -167,7 +166,7 @@ export default function AbandonedCartsPage() {
             {data.carts.map((cart) => (
               <div key={cart.id} className="p-4 hover:bg-cream-100/30 transition-colors">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
                     <ShoppingCart className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -177,18 +176,18 @@ export default function AbandonedCartsPage() {
                       </span>
                       <span className="text-[10px] text-slate-500">·</span>
                       <span className="text-[11px] text-slate-500">
-                        {cart.itemCount} ta mahsulot
+                        {t("products.count", { count: cart.itemCount })}
                       </span>
                       <span className="text-[10px] text-slate-500">·</span>
-                      <span className="text-sm font-semibold text-rose-600">
+                      <span className="text-sm font-semibold text-amber-600">
                         {formatPrice(cart.total, cart.currency)}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500 mb-2">
-                      Oxirgi faollik: {timeAgo(cart.lastActiveAt)}
+                      {t("abandonedCarts.lastActive")}: {timeAgo(cart.lastActiveAt)}
                       {cart.reminderSentAt && (
                         <span className="ml-2 text-forest-700">
-                          ✓ Eslatma yuborilgan ({timeAgo(cart.reminderSentAt)})
+                          ✓ {t("abandonedCarts.reminderSent")} ({timeAgo(cart.reminderSentAt)})
                         </span>
                       )}
                     </div>
@@ -222,8 +221,8 @@ export default function AbandonedCartsPage() {
                     <button
                       onClick={() => handleRemind(cart)}
                       disabled={reminding === cart.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-rose-100 hover:bg-rose-500/25 text-rose-600 rounded-lg font-medium disabled:opacity-50"
-                      title={cart.reminderSentAt ? "Qayta eslatma yuborish" : "Eslatma yuborish"}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-leaf-100 hover:bg-leaf-200 text-forest-700 rounded-lg font-medium disabled:opacity-50"
+                      title={cart.reminderSentAt ? t("abandonedCarts.resendReminder") : t("abandonedCarts.sendReminder")}
                     >
                       {reminding === cart.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -232,12 +231,12 @@ export default function AbandonedCartsPage() {
                       ) : (
                         <Bell className="w-3.5 h-3.5" />
                       )}
-                      {cart.reminderSentAt ? "Qayta yuborish" : "Eslatma"}
+                      {cart.reminderSentAt ? t("abandonedCarts.resend") : t("abandonedCarts.reminder")}
                     </button>
                     <button
                       onClick={() => handleDelete(cart)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-100 rounded-lg"
-                      title="O'chirish"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-red-600 hover:bg-red-100 rounded-lg"
+                      title={t("common.delete")}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -255,10 +254,10 @@ export default function AbandonedCartsPage() {
 function SummaryCard({
   label, value, accent,
 }: {
-  label: string; value: string; accent?: "rose" | "emerald";
+  label: string; value: string; accent?: "amber" | "leaf";
 }) {
   const accentCls =
-    accent === "rose" ? "text-rose-600" : accent === "emerald" ? "text-forest-700" : "text-forest-800";
+    accent === "amber" ? "text-amber-600" : accent === "leaf" ? "text-forest-700" : "text-forest-800";
   return (
     <div className="bg-white border border-cream-300 rounded-xl p-4">
       <div className="text-[11px] text-slate-500 mb-1">{label}</div>

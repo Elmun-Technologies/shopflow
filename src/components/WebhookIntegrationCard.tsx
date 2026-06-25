@@ -127,7 +127,7 @@ export function WebhookIntegrationCard() {
                   <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
                     {h.hasSecret && <span className="text-forest-600">🔒 HMAC</span>}
                     {h.lastStatus != null && (
-                      <span className={h.lastStatus >= 200 && h.lastStatus < 300 ? "text-emerald-600" : "text-rose-600"}>
+                      <span className={h.lastStatus >= 200 && h.lastStatus < 300 ? "text-forest-700" : "text-red-600"}>
                         {h.lastStatus >= 200 && h.lastStatus < 300 ? <CheckCircle2 className="w-3 h-3 inline" /> : <AlertCircle className="w-3 h-3 inline" />}
                         {" "}HTTP {h.lastStatus}
                       </span>
@@ -142,7 +142,7 @@ export function WebhookIntegrationCard() {
                   <button onClick={() => toggleActive(h)} disabled={busyId === h.id} className="text-[10px] px-2 py-1 rounded-lg bg-cream-100 hover:bg-cream-200 text-slate-600">
                     {h.active ? t("webhook.active") : t("webhook.off")}
                   </button>
-                  <button onClick={() => remove(h)} disabled={busyId === h.id} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50" title={t("common.delete")}>
+                  <button onClick={() => remove(h)} disabled={busyId === h.id} className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50" title={t("common.delete")}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

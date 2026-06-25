@@ -51,7 +51,7 @@ export default function SalesByCategory() {
       className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
       <h3 className="text-base font-semibold text-forest-800">{t("widget.salesByCategory")}</h3>
-      <p className="text-xs text-slate-500 mb-3 mt-0.5">Mahsulot kategoriyalari taqsimoti</p>
+      <p className="text-xs text-slate-500 mb-3 mt-0.5">{t("salesByCategory.subtitle")}</p>
 
       <div className="relative h-44">
         {loading ? (
@@ -60,7 +60,7 @@ export default function SalesByCategory() {
           </div>
         ) : items.length === 0 ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-500">
-            Kategoriyalar bo'yicha ma'lumot yo'q
+            {t("salesByCategory.empty")}
           </div>
         ) : (
           <>
@@ -85,7 +85,7 @@ export default function SalesByCategory() {
             </ResponsiveContainer>
             {/* Markazdagi raqam */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Jami</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">{t("salesByCategory.total")}</p>
               <p className="text-lg font-bold text-forest-800">{items.length}</p>
             </div>
           </>
@@ -104,7 +104,7 @@ export default function SalesByCategory() {
             </div>
           ))}
           {items.length > 4 && (
-            <p className="text-[10px] text-slate-400 pl-4">+{items.length - 4} ko'proq</p>
+            <p className="text-[10px] text-slate-400 pl-4">{t("salesByCategory.more", { count: items.length - 4 })}</p>
           )}
         </div>
       )}

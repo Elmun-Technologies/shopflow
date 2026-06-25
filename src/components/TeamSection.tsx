@@ -23,9 +23,9 @@ interface TeamUser {
 
 function getRoleLabels(t: ReturnType<typeof useT>["t"]): Record<Role, { label: string; color: string; description: string }> {
   return {
-    OWNER: { label: t("team.role.OWNER"), color: "bg-purple-100 text-purple-700 border-purple-300", description: t("team.role.OWNER.desc") },
+    OWNER: { label: t("team.role.OWNER"), color: "bg-forest-100 text-forest-700 border-forest-200", description: t("team.role.OWNER.desc") },
     ADMIN: { label: t("team.role.ADMIN"), color: "bg-leaf-100 text-forest-700 border-leaf-300/60", description: t("team.role.ADMIN.desc") },
-    MANAGER: { label: t("team.role.MANAGER"), color: "bg-sky-100 text-sky-700 border-sky-300", description: t("team.role.MANAGER.desc") },
+    MANAGER: { label: t("team.role.MANAGER"), color: "bg-blue-100 text-blue-700 border-blue-300", description: t("team.role.MANAGER.desc") },
     AGENT: { label: t("team.role.AGENT"), color: "bg-cream-200 text-slate-700 border-cream-300", description: t("team.role.AGENT.desc") },
   };
 }
@@ -252,7 +252,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                         className={`p-1.5 rounded-lg disabled:opacity-50 ${
                           user.active
                             ? "text-slate-500 hover:text-amber-600 hover:bg-cream-100"
-                            : "text-emerald-600 hover:bg-leaf-100"
+                            : "text-forest-700 hover:bg-leaf-100"
                         }`}
                         title={user.active ? t("team.action.deactivate") : t("team.action.activate")}
                       >
@@ -262,7 +262,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                       <button
                         onClick={() => remove(user)}
                         disabled={busyId === user.id}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
                         title={t("common.delete")}
                       >
                         <Trash2 className="w-4 h-4" />

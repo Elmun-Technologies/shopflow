@@ -78,7 +78,7 @@ export default function KanalPage() {
           <h1 className="text-2xl font-bold text-forest-800">{editItem ? t("kanal.editTitle") : t("kanal.newTitle")}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-            <button form="post-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
+            <button form="post-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium">{t("common.save")}</button>
           </div>
         </div>
 
@@ -115,7 +115,7 @@ export default function KanalPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("common.search")} className={inputClass + " pl-10"} />
         </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           {t("kanal.new")}
         </button>
@@ -129,7 +129,7 @@ export default function KanalPage() {
             description={t("kanal.empty.desc")}
             buttonText={t("kanal.new")}
             onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
-            iconColor="text-purple-400"
+            iconColor="text-cream-300"
           />
         </motion.div>
       ) : (
@@ -254,7 +254,7 @@ function PostForm({ initial, error, onSave }: PostFormProps) {
             <label className={labelClass}>{t("kanal.col.scheduledAt")}</label>
             <input className={inputClass} type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </div>
-          {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-600">{error}</div>}
         </div>
       </div>
     </form>

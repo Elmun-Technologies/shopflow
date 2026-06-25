@@ -102,13 +102,13 @@ const statusConfig: Record<PaymentMethodStatus, { color: string; bg: string; lab
   active: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60", label: "Faol", icon: CheckCircle2 },
   inactive: { color: "text-slate-500", bg: "bg-slate-100 border-slate-300", label: "Nofaol", icon: XCircle },
   pending: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300", label: "Kutilmoqda", icon: Clock },
-  error: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300", label: "Xatolik", icon: AlertTriangle },
+  error: { color: "text-red-600", bg: "bg-red-100 border-red-300", label: "Xatolik", icon: AlertTriangle },
 };
 
 const txnStatusConfig: Record<string, { color: string; label: string }> = {
   success: { color: "text-forest-700", label: "Muvaffaqiyatli" },
   pending: { color: "text-amber-500", label: "Kutilmoqda" },
-  failed: { color: "text-rose-600", label: "Bekor" },
+  failed: { color: "text-red-600", label: "Bekor" },
   refunded: { color: "text-slate-500", label: "Qaytarildi" },
 };
 
@@ -200,7 +200,7 @@ export default function PaymentsPage() {
     setTxns(t.items);
   };
 
-  const flashSaved = (msg = "Saqlandi!") => {
+  const flashSaved = (msg = t("payments.saved")) => {
     setSavedMessage(msg);
     setTimeout(() => setSavedMessage(""), 2000);
   };
@@ -213,9 +213,9 @@ export default function PaymentsPage() {
       const next = m.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
       await api(`/payments/methods/${id}`, { method: "PATCH", body: { status: next } });
       await reload();
-      flashSaved(next === "ACTIVE" ? "Yoqildi" : "O'chirildi");
+      flashSaved(next === "ACTIVE" ? t("payments.enabled") : t("payments.disabled"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setBusyId(null);
     }
@@ -235,11 +235,11 @@ export default function PaymentsPage() {
         body: { config: clean },
       });
       await reload();
-      flashSaved("Sozlamalar saqlandi");
+      flashSaved(t("payments.configSaved"));
       setShowConfig(false);
       setSelectedMethod(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setBusyId(null);
     }
@@ -249,9 +249,9 @@ export default function PaymentsPage() {
     try {
       await api("/payments/methods", { method: "POST", body: { code, name } });
       await reload();
-      flashSaved(`${name} qo'shildi`);
+      flashSaved(t("payments.methodAdded", { name }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato");
+      setError(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -289,7 +289,7 @@ export default function PaymentsPage() {
             </span>
           )}
           {error && (
-            <span className="flex items-center gap-1.5 text-xs text-rose-600">
+            <span className="flex items-center gap-1.5 text-xs text-red-600">
               <AlertTriangle className="w-3.5 h-3.5" />
               {error}
             </span>
@@ -334,8 +334,8 @@ export default function PaymentsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: t("payments.stats.revenue"), value: (totalRevenue / 1000000).toFixed(1) + "M so'm", icon: DollarSign, color: "text-forest-700" },
-          { label: t("payments.stats.transactions"), value: totalTxns.toLocaleString(), icon: Activity, color: "text-sky-600" },
-          { label: t("payments.stats.successRate"), value: avgSuccess + "%", icon: ShieldCheck, color: "text-violet-600" },
+          { label: t("payments.stats.transactions"), value: totalTxns.toLocaleString(), icon: Activity, color: "text-forest-700" },
+          { label: t("payments.stats.successRate"), value: avgSuccess + "%", icon: ShieldCheck, color: "text-leaf-600" },
           { label: t("payments.stats.today"), value: (todayRevenue / 1000000).toFixed(1) + "M so'm", icon: TrendingUp, color: "text-amber-500" },
         ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-white border border-cream-300 rounded-xl p-5">
@@ -447,17 +447,17 @@ export default function PaymentsPage() {
                         <h3 className="text-base font-semibold text-forest-800">{method.name}</h3>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${st.bg} ${st.color}`}>
                           <StatusIcon className="w-3 h-3" />
-                          {st.label}
+                          {t(`payments.status.${method.status}`)}
                         </span>
                         {method.type === "installment" && (
-                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-500 text-[10px] font-medium">Nasiya</span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-500 text-[10px] font-medium">{t("payments.installment")}</span>
                         )}
                       </div>
                       <p className="text-sm text-slate-500 mt-1">{method.description}</p>
                       <div className="flex items-center gap-4 mt-2">
-                        <span className="text-xs text-slate-500">Oxirgi yangilanish: {new Date(method.lastUpdated).toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", year: "numeric" })}</span>
+                        <span className="text-xs text-slate-500">{t("payments.lastUpdated")}: {new Date(method.lastUpdated).toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", year: "numeric" })}</span>
                         {method.config.commissionPercent !== undefined && (
-                          <span className="text-xs text-slate-500">Komissiya: {method.config.commissionPercent}%</span>
+                          <span className="text-xs text-slate-500">{t("payments.commission")}: {method.config.commissionPercent}%</span>
                         )}
                       </div>
                     </div>
@@ -471,7 +471,7 @@ export default function PaymentsPage() {
                       className="flex items-center gap-1.5 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-xs text-forest-800 transition-all"
                     >
                       <Settings className="w-3.5 h-3.5" />
-                      Sozlash
+                      {t("payments.configure")}
                     </button>
                     <button
                       onClick={() => toggleMethod(method.id)}
@@ -490,23 +490,23 @@ export default function PaymentsPage() {
                 {/* Stats row */}
                 <div className="grid grid-cols-5 gap-3 mt-4 pt-4 border-t border-cream-300">
                   <div>
-                    <p className="text-[10px] text-slate-500">Tranzaksiyalar</p>
+                    <p className="text-[10px] text-slate-500">{t("payments.col.transactions")}</p>
                     <p className="text-sm font-bold text-forest-800">{method.stats.totalTransactions.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-500">Daromad</p>
+                    <p className="text-[10px] text-slate-500">{t("payments.col.revenue")}</p>
                     <p className="text-sm font-bold text-forest-700">{(method.stats.totalAmount / 1000000).toFixed(1)}M</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-500">Muvaffaqiyat</p>
+                    <p className="text-[10px] text-slate-500">{t("payments.col.success")}</p>
                     <p className="text-sm font-bold text-forest-800">{method.stats.successRate}%</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-500">O'rtacha</p>
+                    <p className="text-[10px] text-slate-500">{t("payments.col.avg")}</p>
                     <p className="text-sm font-bold text-forest-800">{(method.stats.avgAmount / 1000).toFixed(0)}k</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-500">Bugun</p>
+                    <p className="text-[10px] text-slate-500">{t("payments.col.today")}</p>
                     <p className="text-sm font-bold text-amber-500">{method.stats.todayTransactions}</p>
                   </div>
                 </div>
@@ -519,18 +519,18 @@ export default function PaymentsPage() {
       {/* Transactions Table */}
       <div className="bg-white border border-cream-300 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-cream-300 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-forest-800">So'nggi tranzaksiyalar</h3>
+          <h3 className="text-sm font-semibold text-forest-800">{t("payments.recentTxns")}</h3>
           <div className="flex items-center gap-2">
             <select value={txnFilter} onChange={(e) => setTxnFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-lg px-2 py-1 text-xs text-forest-800 focus:outline-none">
-              <option value="all">Barcha</option>
-              <option value="success">Muvaffaqiyatli</option>
-              <option value="pending">Kutilmoqda</option>
-              <option value="failed">Bekor</option>
-              <option value="refunded">Qaytarildi</option>
+              <option value="all">{t("payments.filter.all")}</option>
+              <option value="success">{t("payments.txn.success")}</option>
+              <option value="pending">{t("payments.txn.pending")}</option>
+              <option value="failed">{t("payments.txn.failed")}</option>
+              <option value="refunded">{t("payments.txn.refunded")}</option>
             </select>
             <button className="flex items-center gap-1 px-2 py-1 bg-cream-100 border border-cream-300 rounded-lg text-xs text-slate-500 hover:text-forest-900 transition-all">
               <Download className="w-3 h-3" />
-              Export
+              {t("payments.export")}
             </button>
           </div>
         </div>
@@ -539,18 +539,19 @@ export default function PaymentsPage() {
             <thead>
               <tr className="border-b border-cream-300 bg-cream-100/30">
                 <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">ID</th>
-                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Buyurtma</th>
-                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Mijoz</th>
-                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Usul</th>
-                <th className="py-3 px-5 text-right text-xs text-slate-500 uppercase">Summa</th>
-                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Status</th>
-                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">Sana</th>
+                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">{t("payments.th.order")}</th>
+                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">{t("payments.th.customer")}</th>
+                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">{t("payments.th.method")}</th>
+                <th className="py-3 px-5 text-right text-xs text-slate-500 uppercase">{t("payments.th.amount")}</th>
+                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">{t("payments.th.status")}</th>
+                <th className="py-3 px-5 text-left text-xs text-slate-500 uppercase">{t("payments.th.date")}</th>
               </tr>
             </thead>
             <tbody>
               {paginatedTxns.map((txn, i) => {
                 const tsKey = txn.status.toLowerCase();
                 const ts = txnStatusConfig[tsKey] ?? { color: "text-slate-500", label: txn.status };
+                const tsLabel = txnStatusConfig[tsKey] ? t(`payments.txn.${tsKey}`) : ts.label;
                 const methodName = txn.method?.name ?? "—";
                 return (
                   <motion.tr key={txn.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="border-b border-cream-300/50 hover:bg-cream-100/30 transition-colors">
@@ -565,8 +566,8 @@ export default function PaymentsPage() {
                     </td>
                     <td className="py-3 px-5 text-sm font-semibold text-forest-800 text-right">{txn.amount.toLocaleString()}</td>
                     <td className="py-3 px-5">
-                      <span className={`text-xs font-medium ${ts.color}`}>{ts.label}</span>
-                      {txn.errorMessage && <p className="text-[10px] text-rose-600 mt-0.5">{txn.errorMessage}</p>}
+                      <span className={`text-xs font-medium ${ts.color}`}>{tsLabel}</span>
+                      {txn.errorMessage && <p className="text-[10px] text-red-600 mt-0.5">{txn.errorMessage}</p>}
                     </td>
                     <td className="py-3 px-5 text-sm text-slate-500">{new Date(txn.createdAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</td>
                   </motion.tr>
@@ -578,7 +579,11 @@ export default function PaymentsPage() {
         {filteredTxns.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-cream-300">
             <p className="text-xs text-slate-500">
-              {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredTxns.length)} / {filteredTxns.length} ta
+              {t("payments.pageRange", {
+                from: String((currentPage - 1) * itemsPerPage + 1),
+                to: String(Math.min(currentPage * itemsPerPage, filteredTxns.length)),
+                total: String(filteredTxns.length),
+              })}
             </p>
             <div className="flex items-center gap-1">
               <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 disabled:opacity-30 transition-all">
@@ -623,8 +628,8 @@ export default function PaymentsPage() {
             >
               <div className="flex items-center justify-between p-6 border-b border-cream-300">
                 <div>
-                  <h2 className="text-lg font-bold text-forest-800">{selectedMethod.name} sozlamalari</h2>
-                  <p className="text-sm text-slate-500 mt-0.5">Integratsiya ma'lumotlari</p>
+                  <h2 className="text-lg font-bold text-forest-800">{t("payments.cfg.title", { name: selectedMethod.name })}</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">{t("payments.cfg.subtitle")}</p>
                 </div>
                 <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="p-2 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100">
                   <X className="w-5 h-5" />
@@ -635,8 +640,8 @@ export default function PaymentsPage() {
                 {/* Test mode */}
                 <div className="flex items-center justify-between bg-cream-100/50 rounded-xl p-3">
                   <div>
-                    <p className="text-sm text-forest-800">Test rejimi</p>
-                    <p className="text-xs text-slate-500">Haqiqiy to'lovlarni o'tkazmaydi</p>
+                    <p className="text-sm text-forest-800">{t("payments.cfg.testMode")}</p>
+                    <p className="text-xs text-slate-500">{t("payments.cfg.testModeHint")}</p>
                   </div>
                   <button
                     onClick={() => setTestMode((prev) => ({ ...prev, [selectedMethod.id]: !(prev[selectedMethod.id] ?? selectedMethod.config.testMode) }))}
@@ -652,7 +657,7 @@ export default function PaymentsPage() {
                     <label className="text-xs text-slate-500 mb-1.5 block">Merchant ID</label>
                     <div className="flex items-center gap-2">
                       <input defaultValue={selectedMethod.config.merchantId} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors" title="Nusxa olish">
+                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors" title={t("payments.cfg.copy")}>
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
@@ -700,7 +705,7 @@ export default function PaymentsPage() {
                 )}
                 {selectedMethod.config.password !== undefined && (
                   <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Parol</label>
+                    <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.password")}</label>
                     <input type="password" defaultValue={selectedMethod.config.password} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
@@ -724,22 +729,22 @@ export default function PaymentsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Minimal summa</label>
+                    <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.minAmount")}</label>
                     <input type="number" defaultValue={selectedMethod.config.minAmount} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Maksimal summa</label>
+                    <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.maxAmount")}</label>
                     <input type="number" defaultValue={selectedMethod.config.maxAmount} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Komissiya (%)</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.commission")}</label>
                   <input type="number" step="0.1" defaultValue={selectedMethod.config.commissionPercent} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <label className="text-xs text-slate-500">Avtomatik tasdiqlash</label>
+                  <label className="text-xs text-slate-500">{t("payments.cfg.autoConfirm")}</label>
                   <button
                     className={`relative w-8 h-4 rounded-full transition-all ${selectedMethod.config.autoConfirm ? "bg-leaf-400" : "bg-cream-200"}`}
                   >
@@ -752,7 +757,7 @@ export default function PaymentsPage() {
                   {selectedMethod.docsUrl && (
                     <a href={selectedMethod.docsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-forest-700 hover:text-forest-700 transition-colors">
                       <BookOpen className="w-3.5 h-3.5" />
-                      Hujjatlar
+                      {t("payments.cfg.docs")}
                     </a>
                   )}
                   {selectedMethod.integrationUrl && (
@@ -765,10 +770,10 @@ export default function PaymentsPage() {
               </div>
 
               <div className="flex items-center justify-end gap-2 p-6 pt-0">
-                <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all">Bekor</button>
+                <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all">{t("common.cancel")}</button>
                 <button onClick={() => saveConfig(selectedMethod.id, selectedMethod.config)} className="flex items-center gap-1.5 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-sm font-medium rounded-lg transition-all">
                   <Save className="w-4 h-4" />
-                  Saqlash
+                  {t("common.save")}
                 </button>
               </div>
             </motion.div>

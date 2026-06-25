@@ -42,9 +42,9 @@ interface CustomerDetailResponse {
 // Faqat ranglar — labellar t() orqali
 const ORDER_STATUS_CLS: Record<OrderStatus, string> = {
   PENDING: "bg-amber-100 text-amber-600",
-  PROCESSING: "bg-sky-100 text-sky-700",
+  PROCESSING: "bg-blue-100 text-blue-600",
   COMPLETED: "bg-leaf-100 text-forest-700",
-  CANCELLED: "bg-rose-100 text-rose-600",
+  CANCELLED: "bg-red-100 text-red-600",
   REFUNDED: "bg-cream-200 text-slate-700",
 };
 
@@ -132,14 +132,14 @@ export default function CustomerDetailDrawer({
           tags,
         },
       });
-      toast.success("Mijoz saqlandi");
+      toast.success(t("customerDetail.saved"));
       setEditing(false);
       onChanged();
       // Re-fetch the detail
       const res = await api<CustomerDetailResponse>(`/customers/${data.customer.id}`);
       setData(res);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Saqlanmadi");
+      toast.error(err instanceof Error ? err.message : t("customerDetail.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -147,7 +147,7 @@ export default function CustomerDetailDrawer({
 
   return (
     <div className="fixed inset-0 z-[200] flex justify-end" role="dialog" aria-modal="true">
-      <button onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-label="Yopish" />
+      <button onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-label={t("common.close")} />
       <div ref={panelRef} className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
@@ -155,9 +155,9 @@ export default function CustomerDetailDrawer({
           </div>
         ) : error ? (
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
-            <AlertCircle className="w-10 h-10 text-rose-600" />
-            <p className="text-sm text-rose-600">{error}</p>
-            <button onClick={onClose} className="px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">Yopish</button>
+            <AlertCircle className="w-10 h-10 text-red-500" />
+            <p className="text-sm text-red-600">{error}</p>
+            <button onClick={onClose} className="px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">{t("common.close")}</button>
           </div>
         ) : data ? (
           <>
@@ -293,7 +293,7 @@ export default function CustomerDetailDrawer({
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-500">
-                              {formatDate(order.createdAt)} · {order.itemCount} mahsulot
+                              {formatDate(order.createdAt)} · {t("customerDetail.itemCount", { count: order.itemCount })}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">

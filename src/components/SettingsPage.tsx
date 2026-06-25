@@ -98,7 +98,7 @@ export default function SettingsPage() {
     }
   }, [user, tenant]);
 
-  const flashSaved = (msg = "Saqlandi!") => {
+  const flashSaved = (msg = t("settings.toast.saved")) => {
     setSavedMsg(msg);
     setErrorMsg("");
     setTimeout(() => setSavedMsg(""), 2500);
@@ -119,20 +119,20 @@ export default function SettingsPage() {
         if (profile.email && profile.email !== user?.email) body.email = profile.email;
         if (newPassword) {
           if (!currentPassword) {
-            flashError("Joriy parolni kiriting");
+            flashError(t("settings.toast.enterCurrentPassword"));
             return;
           }
           body.currentPassword = currentPassword;
           body.newPassword = newPassword;
         }
         if (Object.keys(body).length === 0) {
-          flashSaved("O'zgarishlar yo'q");
+          flashSaved(t("settings.toast.noChanges"));
           return;
         }
         await api("/auth/me", { method: "PATCH", body });
         setCurrentPassword("");
         setNewPassword("");
-        flashSaved("Profil saqlandi");
+        flashSaved(t("settings.toast.profileSaved"));
       } else if (activeTab === "store") {
         const body: Record<string, unknown> = {};
         if (store.name && store.name !== tenant?.name) body.name = store.name;
@@ -144,7 +144,7 @@ export default function SettingsPage() {
         if (servicePct !== (tenant?.servicePct ?? DEFAULT_SERVICE_PCT)) pricingBody.servicePct = servicePct;
 
         if (Object.keys(body).length === 0 && Object.keys(pricingBody).length === 0) {
-          flashSaved("O'zgarishlar yo'q");
+          flashSaved(t("settings.toast.noChanges"));
           return;
         }
         if (Object.keys(body).length > 0) {
@@ -153,12 +153,12 @@ export default function SettingsPage() {
         if (Object.keys(pricingBody).length > 0) {
           await api("/settings/profile", { method: "PATCH", body: pricingBody });
         }
-        flashSaved("Do'kon saqlandi");
+        flashSaved(t("settings.toast.storeSaved"));
       } else {
         flashSaved();
       }
     } catch (e) {
-      flashError(e instanceof Error ? e.message : "Saqlanmadi");
+      flashError(e instanceof Error ? e.message : t("settings.toast.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -490,7 +490,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`text-xs font-medium ${l.status === "success" ? "text-forest-700" : "text-rose-600"}`}>
+                  <span className={`text-xs font-medium ${l.status === "success" ? "text-forest-700" : "text-red-600"}`}>
                     {l.status === "success" ? t("settings.sec.loginSuccess") : t("settings.sec.loginFailed")}
                   </span>
                   <p className="text-[10px] text-slate-400 mt-0.5">{l.date}</p>
@@ -550,7 +550,7 @@ export default function SettingsPage() {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
-              <button className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-colors">
+              <button className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-100 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -617,7 +617,7 @@ export default function SettingsPage() {
             <motion.span
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-xs text-rose-600 flex items-center gap-1"
+              className="text-xs text-red-600 flex items-center gap-1"
             >
               <AlertCircle className="w-3.5 h-3.5" />
               {errorMsg}

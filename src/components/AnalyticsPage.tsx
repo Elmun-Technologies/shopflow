@@ -171,19 +171,19 @@ export default function AnalyticsPage() {
     const avgOrderVal = kpis.avgOrder?.value ?? (kpis.orders.value > 0 ? kpis.revenue.value / kpis.orders.value : 0);
     const returnRateVal = kpis.returnRate?.value ?? 0;
     return [
-      { id: "revenue", label: "Daromad", value: fmt(kpis.revenue.value) + " so'm", change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
-      { id: "orders", label: "Buyurtmalar", value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", icon: "ShoppingCart", color: "#3b82f6" },
-      { id: "customers", label: "Mijozlar", value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", icon: "Users", color: "#8b5cf6" },
-      { id: "conversion", label: "Konversiya", value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", icon: "Target", color: "#f59e0b" },
-      { id: "avg", label: "O'rtacha chek", value: fmt(avgOrderVal) + " so'm", change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", icon: "Receipt", color: "#06b6d4" },
-      { id: "returns", label: "Bekor qilish", value: returnRateVal.toFixed(1) + "%", change: Math.round(kpis.returnRate?.change ?? 0), trend: returnRateVal <= 5 ? "up" : "down", icon: "RotateCcw", color: "#94a3b8" },
+      { id: "revenue", label: t("analytics.kpi.revenue"), value: fmt(kpis.revenue.value) + " so'm", change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
+      { id: "orders", label: t("analytics.kpi.orders"), value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", icon: "ShoppingCart", color: "#3b82f6" },
+      { id: "customers", label: t("analytics.kpi.customers"), value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", icon: "Users", color: "#8b5cf6" },
+      { id: "conversion", label: t("analytics.kpi.conversion"), value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", icon: "Target", color: "#f59e0b" },
+      { id: "avg", label: t("analytics.kpi.avgOrder"), value: fmt(avgOrderVal) + " so'm", change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", icon: "Receipt", color: "#06b6d4" },
+      { id: "returns", label: t("analytics.kpi.returns"), value: returnRateVal.toFixed(1) + "%", change: Math.round(kpis.returnRate?.change ?? 0), trend: returnRateVal <= 5 ? "up" : "down", icon: "RotateCcw", color: "#94a3b8" },
     ];
-  }, [kpis]);
+  }, [kpis, t]);
 
   if (loading && !kpis) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-leaf-500 animate-spin" />
       </div>
     );
   }
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
             onClick={() => {
               if (!kpis) return;
               const rows = [
-                ["Ko'rsatkich", "Qiymat", "O'zgarish"],
+                [t("analytics.csv.metric"), t("analytics.csv.value"), t("analytics.csv.change")],
                 ...analyticsKPIs.map(k => [k.label, k.value, `${k.change > 0 ? "+" : ""}${k.change}%`]),
               ];
               const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
@@ -258,7 +258,7 @@ export default function AnalyticsPage() {
                 categorySales: categorySales.map((c) => ({ name: c.name, value: c.value })),
                 trafficSources: trafficSources.map((s) => ({ name: s.name, percentage: s.percentage })),
               });
-              if (!ok) toast.error("Pop-up bloklangan. Brauzer sozlamalaridan ruxsat bering.");
+              if (!ok) toast.error(t("analytics.popupBlocked"));
             }}
             className="flex items-center gap-2 px-4 py-2 bg-forest-700 hover:bg-forest-800 rounded-lg text-sm font-medium text-white transition-all"
           >
@@ -291,10 +291,10 @@ export default function AnalyticsPage() {
                 <div
                   className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${
                     kpi.trend === "up"
-                      ? "text-forest-700 bg-emerald-400/10"
+                      ? "text-forest-700 bg-leaf-100"
                       : kpi.trend === "down" && kpi.id === "returns"
-                      ? "text-forest-700 bg-emerald-400/10"
-                      : "text-rose-600 bg-red-400/10"
+                      ? "text-forest-700 bg-leaf-100"
+                      : "text-red-600 bg-red-100"
                   }`}
                 >
                   {kpi.trend === "up" ? (
@@ -373,7 +373,7 @@ export default function AnalyticsPage() {
                 stroke="#5FA340"
                 strokeWidth={2}
                 fill="url(#revenueGrad)"
-                name="Daromad"
+                name={t("analytics.legend.revenue")}
               />
               <Area
                 yAxisId="orders"
@@ -382,7 +382,7 @@ export default function AnalyticsPage() {
                 stroke="#0EA5E9"
                 strokeWidth={2}
                 fill="url(#ordersGrad)"
-                name="Buyurtmalar"
+                name={t("analytics.legend.orders")}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -395,8 +395,8 @@ export default function AnalyticsPage() {
           transition={{ duration: 0.4, delay: 0.3 }}
           className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-forest-800 mb-1">Haftalik sotuv</h3>
-          <p className="text-xs text-slate-500 mb-4">Haftaning kunlari bo'yicha</p>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">{t("analytics.dailySales.title")}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t("analytics.dailySales.subtitle")}</p>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={dailySales}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" />
@@ -405,7 +405,7 @@ export default function AnalyticsPage() {
               <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="orders"
-                name="Buyurtmalar"
+                name={t("analytics.legend.orders")}
                 fill="#8b5cf6"
                 radius={[12, 12, 12, 12]}
                 maxBarSize={32}
@@ -426,11 +426,11 @@ export default function AnalyticsPage() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-forest-800">Top mahsulotlar</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Eng ko'p sotilgan mahsulotlar</p>
+              <h3 className="text-sm font-semibold text-forest-800">{t("analytics.topProducts.title")}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t("analytics.topProducts.subtitle")}</p>
             </div>
             <button className="text-xs text-forest-700 hover:text-forest-700 flex items-center gap-1">
-              Barchasi <ChevronRight className="w-3 h-3" />
+              {t("analytics.topProducts.all")} <ChevronRight className="w-3 h-3" />
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -438,11 +438,11 @@ export default function AnalyticsPage() {
               <thead>
                 <tr className="border-b border-cream-300">
                   <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">#</th>
-                  <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">Mahsulot</th>
-                  <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">Kategoriya</th>
-                  <th className="text-right text-[11px] text-slate-500 font-medium pb-3 pr-4">Sotilgan</th>
-                  <th className="text-right text-[11px] text-slate-500 font-medium pb-3 pr-4">Daromad</th>
-                  <th className="text-right text-[11px] text-slate-500 font-medium pb-3">O'sish</th>
+                  <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">{t("analytics.topProducts.col.product")}</th>
+                  <th className="text-left text-[11px] text-slate-500 font-medium pb-3 pr-4">{t("analytics.topProducts.col.category")}</th>
+                  <th className="text-right text-[11px] text-slate-500 font-medium pb-3 pr-4">{t("analytics.topProducts.col.sold")}</th>
+                  <th className="text-right text-[11px] text-slate-500 font-medium pb-3 pr-4">{t("analytics.topProducts.col.revenue")}</th>
+                  <th className="text-right text-[11px] text-slate-500 font-medium pb-3">{t("analytics.topProducts.col.growth")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -475,7 +475,7 @@ export default function AnalyticsPage() {
                     <td className="py-3 text-right">
                       <span
                         className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-                          p.growth >= 0 ? "text-forest-700" : "text-rose-600"
+                          p.growth >= 0 ? "text-forest-700" : "text-red-600"
                         }`}
                       >
                         {p.growth >= 0 ? (
@@ -500,8 +500,8 @@ export default function AnalyticsPage() {
           transition={{ duration: 0.4, delay: 0.4 }}
           className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-forest-800 mb-1">Trafik manbalari</h3>
-          <p className="text-xs text-slate-500 mb-4">Tashrifchilar qayerdan keladi</p>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">{t("analytics.traffic.title")}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t("analytics.traffic.subtitle")}</p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -526,8 +526,8 @@ export default function AnalyticsPage() {
                   return (
                     <div className="bg-cream-100 border border-cream-300 rounded-xl px-4 py-3 shadow-2xl">
                       <p className="text-xs font-medium text-forest-800">{d.name}</p>
-                      <p className="text-xs text-slate-500">{d.visitors.toLocaleString()} buyurtma</p>
-                      <p className="text-xs text-forest-700">{d.percentage}% ulush</p>
+                      <p className="text-xs text-slate-500">{d.visitors.toLocaleString()} {t("analytics.orderUnit")}</p>
+                      <p className="text-xs text-forest-700">{d.percentage}% {t("analytics.share")}</p>
                     </div>
                   );
                 }}
@@ -560,8 +560,8 @@ export default function AnalyticsPage() {
           transition={{ duration: 0.4, delay: 0.45 }}
           className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-forest-800 mb-1">Kategoriya bo'yicha sotuv</h3>
-          <p className="text-xs text-slate-500 mb-4">Har bir kategoriyaning ulushi</p>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">{t("analytics.categorySales.title")}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t("analytics.categorySales.subtitle")}</p>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={categorySales} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E5DA" horizontal={false} />
@@ -581,7 +581,7 @@ export default function AnalyticsPage() {
                 width={80}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="revenue" name="Daromad" radius={[0, 6, 6, 0]} maxBarSize={24}>
+              <Bar dataKey="revenue" name={t("analytics.legend.revenue")} radius={[0, 6, 6, 0]} maxBarSize={24}>
                 {categorySales.map((c) => (
                   <Cell key={c.category} fill={c.color} />
                 ))}
@@ -597,8 +597,8 @@ export default function AnalyticsPage() {
           transition={{ duration: 0.4, delay: 0.5 }}
           className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-forest-800 mb-1">Konversiya funnel</h3>
-          <p className="text-xs text-slate-500 mb-4">Tashrifdan buyurtmagacha</p>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">{t("analytics.funnel.title")}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t("analytics.funnel.subtitle")}</p>
           <div className="space-y-3">
             {conversionFunnel.map((step, i) => (
               <div key={step.stage}>
@@ -632,7 +632,7 @@ export default function AnalyticsPage() {
                   </div>
                   {i < conversionFunnel.length - 1 && step.dropOff > 0 && (
                     <div className="absolute -right-1 top-1/2 -translate-y-1/2">
-                      <span className="text-[9px] text-rose-600 bg-red-400/10 px-1.5 py-0.5 rounded-full">
+                      <span className="text-[9px] text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">
                         -{step.dropOff}%
                       </span>
                     </div>
@@ -653,8 +653,8 @@ export default function AnalyticsPage() {
           transition={{ duration: 0.4, delay: 0.55 }}
           className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-forest-800 mb-1">Geografiya</h3>
-          <p className="text-xs text-slate-500 mb-4">Shaharlar bo'yicha buyurtmalar</p>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">{t("analytics.geography.title")}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t("analytics.geography.subtitle")}</p>
           <div className="space-y-3">
             {geographyData.map((g, i) => (
               <motion.div
@@ -666,7 +666,7 @@ export default function AnalyticsPage() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-forest-800 font-medium">{g.city}</span>
-                    <span className="text-[10px] text-slate-500">{g.orders} buyurtma</span>
+                    <span className="text-[10px] text-slate-500">{g.orders} {t("analytics.orderUnit")}</span>
                   </div>
                   <span className="text-xs text-slate-500 font-medium">{g.percentage}%</span>
                 </div>
@@ -693,8 +693,8 @@ export default function AnalyticsPage() {
           transition={{ duration: 0.4, delay: 0.6 }}
           className="bg-white border border-cream-300 rounded-xl p-5"
         >
-          <h3 className="text-sm font-semibold text-forest-800 mb-1">Mijoz segmentlari</h3>
-          <p className="text-xs text-slate-500 mb-4">Mijozlar toifasi bo'yicha taqsimot</p>
+          <h3 className="text-sm font-semibold text-forest-800 mb-1">{t("analytics.segments.title")}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t("analytics.segments.subtitle")}</p>
           <div className="grid grid-cols-2 gap-3 mb-4">
             {customerSegments.map((seg, i) => (
               <motion.div
@@ -715,7 +715,7 @@ export default function AnalyticsPage() {
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-[10px] text-slate-500">{seg.percentage}%</span>
                   <span className="text-[10px] text-slate-500">
-                    ~{seg.avgOrders} buyurtma
+                    ~{seg.avgOrders} {t("analytics.orderUnit")}
                   </span>
                 </div>
                 {/* Mini progress */}
@@ -743,7 +743,7 @@ export default function AnalyticsPage() {
               ))}
             </div>
             <span className="text-xs text-forest-800 font-semibold">
-              {customerSegments.reduce((a, s) => a + s.count, 0).toLocaleString()} jami
+              {customerSegments.reduce((a, s) => a + s.count, 0).toLocaleString()} {t("analytics.totalLabel")}
             </span>
           </div>
         </motion.div>
@@ -801,7 +801,7 @@ export default function AnalyticsPage() {
         className="mt-8 pt-6 border-t border-cream-300"
       >
         <p className="text-xs text-slate-400 text-center">
-          Ma'lumotlar real vaqtda bazadan olingan · ShopFlow Analytics · {new Date().toLocaleDateString("uz-UZ")}
+          {t("analytics.footer")} · ShopFlow Analytics · {new Date().toLocaleDateString("uz-UZ")}
         </p>
       </motion.div>
     </>

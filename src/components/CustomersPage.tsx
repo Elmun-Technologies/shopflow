@@ -11,46 +11,46 @@ import { useT } from "../i18n";
 import CustomerDetailDrawer from "./CustomerDetailDrawer";
 
 const RFM_META: Record<Exclude<RfmSegment, "nobody">, {
-  label: string;
-  description: string;
+  labelKey: string;
+  descKey: string;
   icon: typeof Crown;
   color: string;
 }> = {
   champion: {
-    label: "Chempionlar",
-    description: "So'nggi 30 kunda 5+ buyurtma",
+    labelKey: "customers.rfm.champion.label",
+    descKey: "customers.rfm.champion.desc",
     icon: Crown,
     color: "bg-purple-100 text-purple-700 border-purple-300",
   },
   loyal: {
-    label: "Sodiq mijozlar",
-    description: "So'nggi 90 kunda 3+ buyurtma",
+    labelKey: "customers.rfm.loyal.label",
+    descKey: "customers.rfm.loyal.desc",
     icon: Heart,
     color: "bg-leaf-100 text-forest-700 border-leaf-300/60",
   },
   new: {
-    label: "Yangi mijozlar",
-    description: "Birinchi buyurtma so'nggi 30 kunda",
+    labelKey: "customers.rfm.new.label",
+    descKey: "customers.rfm.new.desc",
     icon: Sparkles,
-    color: "bg-sky-100 text-sky-700 border-sky-300",
+    color: "bg-blue-100 text-blue-600 border-blue-300",
   },
   atRisk: {
-    label: "Xavf ostida",
-    description: "60-180 kun ko'rinmagan",
+    labelKey: "customers.rfm.atRisk.label",
+    descKey: "customers.rfm.atRisk.desc",
     icon: AlertTriangle,
     color: "bg-amber-100 text-amber-700 border-amber-300",
   },
   hibernating: {
-    label: "Uyqudagilar",
-    description: "1 ta buyurtma, 90+ kun yo'q",
+    labelKey: "customers.rfm.hibernating.label",
+    descKey: "customers.rfm.hibernating.desc",
     icon: Moon,
     color: "bg-cream-200 text-slate-600 border-cream-300",
   },
   lost: {
-    label: "Yo'qolganlar",
-    description: "180+ kun ko'rinmagan",
+    labelKey: "customers.rfm.lost.label",
+    descKey: "customers.rfm.lost.desc",
     icon: Snowflake,
-    color: "bg-rose-100 text-rose-600 border-rose-300",
+    color: "bg-red-100 text-red-600 border-red-300",
   },
 };
 
@@ -96,10 +96,10 @@ export default function CustomersPage() {
         filename: `customers-${new Date().toISOString().slice(0, 10)}`,
         columns: [
           { key: "name", label: t("customers.col.customer") },
-          { key: "phone", label: "Phone" },
-          { key: "email", label: "Email" },
+          { key: "phone", label: t("customers.field.phone") },
+          { key: "email", label: t("customers.field.email") },
           { key: "location", label: t("customers.col.location") },
-          { key: "tags", label: "Tags" },
+          { key: "tags", label: t("customers.field.tags") },
           { key: "createdAt", label: t("customers.col.date") },
         ],
         rows: res.items.map((c) => ({
@@ -160,14 +160,14 @@ export default function CustomersPage() {
       {rfm && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-forest-800">RFM segmentlar</h3>
+            <h3 className="text-sm font-semibold text-forest-800">{t("customers.rfm.title")}</h3>
             {segmentFilter !== "all" && (
               <button
                 type="button"
                 onClick={() => setSegmentFilter("all")}
                 className="text-xs text-slate-500 hover:text-forest-800"
               >
-                Filterni tozalash
+                {t("customers.rfm.clearFilter")}
               </button>
             )}
           </div>
@@ -188,13 +188,13 @@ export default function CustomersPage() {
                       ? "border-leaf-500 ring-2 ring-leaf-500/30 bg-white"
                       : "bg-white border-cream-300 hover:border-cream-300 disabled:opacity-40 disabled:cursor-not-allowed"
                   }`}
-                  title={meta.description}
+                  title={t(meta.descKey)}
                 >
                   <div className={`inline-flex items-center justify-center w-7 h-7 rounded-lg border ${meta.color} mb-2`}>
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                   <p className="text-lg font-bold text-forest-800 leading-tight">{count}</p>
-                  <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">{meta.label}</p>
+                  <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">{t(meta.labelKey)}</p>
                 </button>
               );
             })}
@@ -207,7 +207,7 @@ export default function CustomersPage() {
           <TableRowsSkeleton rows={8} cols={4} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+            <AlertCircle className="w-10 h-10 text-red-500 mb-2" />
             <p className="text-sm text-slate-700">{error.message}</p>
             <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
               {t("orders.retry")}
@@ -254,7 +254,7 @@ export default function CustomersPage() {
                             return (
                               <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border ${meta.color}`}>
                                 <Icon className="w-3 h-3" />
-                                {meta.label}
+                                {t(meta.labelKey)}
                               </span>
                             );
                           })()}
@@ -320,7 +320,7 @@ export default function CustomersPage() {
                           return (
                             <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border ${meta.color}`}>
                               <Icon className="w-2.5 h-2.5" />
-                              {meta.label}
+                              {t(meta.labelKey)}
                             </span>
                           );
                         })()}
@@ -385,7 +385,7 @@ export default function CustomersPage() {
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             setShowCreate(false);
-            toast.success("Mijoz qo'shildi");
+            toast.success(t("customers.created"));
             refetch();
           }}
         />
@@ -414,7 +414,7 @@ function CustomerCreateModal({ onClose, onCreated }: { onClose: () => void; onCr
       });
       onCreated();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Mijoz qo'shilmadi");
+      toast.error(err instanceof Error ? err.message : t("customers.createFailed"));
     } finally {
       setBusy(false);
     }
@@ -433,39 +433,39 @@ function CustomerCreateModal({ onClose, onCreated }: { onClose: () => void; onCr
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-forest-800">{t("customers.newCustomer")}</h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label={t("common.close")}>
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
         <div className="space-y-3">
           <label className="block">
             <span className="text-xs text-slate-500 mb-1 block">{t("customers.col.customer")} *</span>
-            <input type="text" required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ism familiya" className={field} />
+            <input type="text" required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("customers.placeholder.name")} className={field} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs text-slate-500 mb-1 block">Telefon</span>
+              <span className="text-xs text-slate-500 mb-1 block">{t("customers.field.phone")}</span>
               <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" className={field} />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500 mb-1 block">Email</span>
+              <span className="text-xs text-slate-500 mb-1 block">{t("customers.field.email")}</span>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@…" className={field} />
             </label>
           </div>
           <label className="block">
             <span className="text-xs text-slate-500 mb-1 block">{t("customers.col.location")}</span>
-            <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Shahar / manzil" className={field} />
+            <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder={t("customers.placeholder.location")} className={field} />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Izoh</span>
+            <span className="text-xs text-slate-500 mb-1 block">{t("customers.field.notes")}</span>
             <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={`${field} resize-none`} />
           </label>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">Bekor qilish</button>
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">{t("common.cancel")}</button>
           <button type="submit" disabled={busy || !form.name.trim()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium">
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Qo'shish
+            {t("common.add")}
           </button>
         </div>
       </motion.form>
