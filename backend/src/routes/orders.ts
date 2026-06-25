@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { nextOrderCode } from "../lib/codes.js";
+import { createOrderCodeWithRetry } from "../lib/codes.js";
 import { notifyOrderStatusChange } from "../lib/telegram-notify.js";
 import { logAudit } from "../lib/audit.js";
 import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
@@ -88,55 +88,80 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     return order;
   });
 
-  app.post("/", async (req) => {
+  app.post("/", async (req, reply) => {
     const data = createOrderSchema.parse(req.body);
-    const code = await nextOrderCode(app.prisma, req.session.tenantId);
+    const tenantId = req.session.tenantId;
     const total = data.items.reduce((s, i) => s + i.qty * i.price, 0);
 
-    const order = await app.prisma.order.create({
-      data: {
-        tenantId: req.session.tenantId,
-        code,
-        status: data.status ?? "PENDING",
-        total,
-        currency: data.currency ?? "UZS",
-        notes: data.notes,
-        customerId: data.customerId,
-        channelId: data.channelId,
-        items: {
-          create: data.items.map((i) => ({
-            productId: i.productId,
-            qty: i.qty,
-            price: i.price,
-          })),
-        },
-      },
-      include: { items: true },
-    });
+    try {
+      // Kod race-safe (P2002 retry) + stock atomik kamaytirish bitta transaksiyada.
+      // Ilgari admin order stock'ni KAMAYTIRMAS edi → oversell. Endi storefront kabi.
+      const order = await createOrderCodeWithRetry(app.prisma, tenantId, (code) =>
+        app.prisma.$transaction(async (tx) => {
+          for (const item of data.items) {
+            const dec = await tx.product.updateMany({
+              where: { id: item.productId, tenantId, stock: { gte: item.qty } },
+              data: { stock: { decrement: item.qty } },
+            });
+            if (dec.count === 0) throw new Error(`OUT_OF_STOCK:${item.productId}`);
+          }
+          return tx.order.create({
+            data: {
+              tenantId,
+              code,
+              status: data.status ?? "PENDING",
+              total,
+              currency: data.currency ?? "UZS",
+              notes: data.notes,
+              customerId: data.customerId,
+              channelId: data.channelId,
+              items: {
+                create: data.items.map((i) => ({
+                  productId: i.productId,
+                  qty: i.qty,
+                  price: i.price,
+                })),
+              },
+            },
+            include: { items: true },
+          });
+        }),
+      );
 
-    // Sales Doctor'ga avtomatik push — fire-and-forget
-    pushOrderToSalesDoctor(app.prisma, req.session.tenantId, order.id)
-      .catch((err) => app.log.warn({ err, orderId: order.id }, "SD push failed"));
+      // Sales Doctor'ga avtomatik push — fire-and-forget
+      pushOrderToSalesDoctor(app.prisma, tenantId, order.id)
+        .catch((err) => app.log.warn({ err, orderId: order.id }, "SD push failed"));
 
-    // Outbound webhook — order.created
-    fireWebhookEvent(app.prisma, req.session.tenantId, "order.created", {
-      order: { id: order.id, code: order.code, total: Number(order.total), currency: order.currency, status: order.status },
-    }).catch((err) => app.log.warn({ err, orderId: order.id }, "webhook fire failed"));
+      // Outbound webhook — order.created
+      fireWebhookEvent(app.prisma, tenantId, "order.created", {
+        order: { id: order.id, code: order.code, total: Number(order.total), currency: order.currency, status: order.status },
+      }).catch((err) => app.log.warn({ err, orderId: order.id }, "webhook fire failed"));
 
-    // SSE real-time push admin paneliga
-    publishToTenant(req.session.tenantId, {
-      type: "order.created", orderId: order.id, code: order.code,
-      total: Number(order.total), currency: order.currency,
-    });
+      // SSE real-time push admin paneliga
+      publishToTenant(tenantId, {
+        type: "order.created", orderId: order.id, code: order.code,
+        total: Number(order.total), currency: order.currency,
+      });
 
-    // Brauzer/OS push notification — tab yopiq bo'lsa ham keladi
-    pushToTenantAdmins(app.prisma, req.session.tenantId, {
-      title: "Yangi buyurtma",
-      body: `#${order.code} · ${Number(order.total).toLocaleString("uz-UZ")} ${order.currency}`,
-      url: "/",
-    }).catch(() => null);
+      // Brauzer/OS push notification — tab yopiq bo'lsa ham keladi
+      pushToTenantAdmins(app.prisma, tenantId, {
+        title: "Yangi buyurtma",
+        body: `#${order.code} · ${Number(order.total).toLocaleString("uz-UZ")} ${order.currency}`,
+        url: "/",
+      }).catch(() => null);
 
-    return order;
+      return order;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.startsWith("OUT_OF_STOCK:")) {
+        return reply.code(409).send({
+          error: "Mahsulot zaxirada yetarli emas",
+          code: "OUT_OF_STOCK",
+          productId: msg.slice("OUT_OF_STOCK:".length),
+        });
+      }
+      throw err;
+    }
   });
 
   app.patch("/:id", async (req, reply) => {

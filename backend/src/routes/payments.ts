@@ -120,26 +120,35 @@ async function recordPaymentResult(
     completedAt,
   };
 
-  // externalId bor → idempotent upsert; yo'q → oddiy create
-  if (args.externalId) {
-    await prisma.paymentTransaction.upsert({
-      where: {
-        tenantId_methodId_externalId: { tenantId, methodId: method.id, externalId: args.externalId },
-      },
-      create: { ...baseData, externalId: args.externalId },
-      update: { status: effectiveStatus, completedAt, errorMessage: effectiveError, orderId: baseData.orderId },
-    });
-  } else {
-    await prisma.paymentTransaction.create({ data: baseData });
-  }
+  // Transaction-record + order.paid O'TISHI bitta $transaction'da ATOMIK (DI-5).
+  // externalId bor → idempotent upsert; yo'q → oddiy create.
+  const paidTransition = await prisma.$transaction(async (tx) => {
+    if (args.externalId) {
+      await tx.paymentTransaction.upsert({
+        where: {
+          tenantId_methodId_externalId: { tenantId, methodId: method.id, externalId: args.externalId },
+        },
+        create: { ...baseData, externalId: args.externalId },
+        update: { status: effectiveStatus, completedAt, errorMessage: effectiveError, orderId: baseData.orderId },
+      });
+    } else {
+      await tx.paymentTransaction.create({ data: baseData });
+    }
 
-  // Faqat reconciliation OK bo'lganda buyurtmani paid deb belgilaymiz
-  if (args.status === "SUCCESS" && reconcileOk && order) {
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { paid: true, paidAt: new Date() },
-    });
-    // Outbound webhook — order.paid
+    // Faqat reconciliation OK + hali paid emas → paid. updateMany(paid:false)
+    // count===1 faqat haqiqiy O'TISHDA (dublikat webhook qayta yubormaydi — DI-4).
+    if (args.status === "SUCCESS" && reconcileOk && order) {
+      const res = await tx.order.updateMany({
+        where: { id: order.id, paid: false },
+        data: { paid: true, paidAt: new Date() },
+      });
+      return res.count === 1;
+    }
+    return false;
+  });
+
+  // Outbound webhook — faqat haqiqiy paid o'tishida bir marta yuboriladi
+  if (paidTransition && order) {
     fireWebhookEvent(prisma, tenantId, "order.paid", {
       order: { id: order.id, amount: args.amount, currency: args.currency ?? "UZS" },
     }).catch(() => null);
@@ -472,7 +481,10 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
 
           const expected = createHash("md5").update(signSource).digest("hex");
 
-          if (!timingSafeEqual(Buffer.from(b.sign_string), Buffer.from(expected))) {
+          const sigBuf = Buffer.from(b.sign_string);
+          const expBuf = Buffer.from(expected);
+          // Uzunlik teng bo'lmasa timingSafeEqual throw qiladi (500) — avval tekshiramiz
+          if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
             app.log.warn({ methodCode, tenantId: method.tenantId, sign_string: b.sign_string, expected }, "[payments] Click sign mismatch");
             return reply.code(200).send({ error: -1, error_note: "SIGN CHECK FAILED" });
           }
