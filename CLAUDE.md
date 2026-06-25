@@ -200,6 +200,7 @@ shopflow/
 - ✅ Docker Compose: Postgres + Backend + Frontend + Caddy (HTTPS) + Backup
 - ✅ VPS bootstrap skripti + OPS.md / SECURITY.md
 - ✅ Sentry error tracking + Pino log redaction
+- ✅ Prometheus metrics — `/metrics` (HTTP counter/histogram/in-flight + Node default: CPU/xotira/event-loop/GC). Prod'da `METRICS_TOKEN` himoya, Caddy'dan tashqarida (ichki). Hujjat: `OPS.md` → Monitoring
 - ✅ JWT refresh tokens + API keys + AES-256-GCM secret encryption
 - ✅ initData security (Telegram WebApp + storefront mutation endpoints)
 - ✅ SSRF himoyasi (outbound webhooks)

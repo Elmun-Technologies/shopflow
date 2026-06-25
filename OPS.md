@@ -106,6 +106,28 @@ du -sh /var/lib/docker/volumes/shopflow_*
 
 VPS RAM'iga qarab moslang.
 
+## Monitoring (Prometheus metrics)
+
+Backend `/metrics` endpoint'i Prometheus formatida metrikalarni beradi:
+- `http_requests_total`, `http_request_duration_seconds`, `http_requests_in_flight`
+- Node default: CPU, xotira, event-loop lag, GC
+
+**Xavfsizlik:** `/metrics` Caddy orqali ommaga ochilmaydi (Caddy faqat `/api/*` ni
+proxy qiladi) — faqat ichki Docker tarmog'idan (`backend:4000/metrics`) erishiladi.
+Qo'shimcha himoya uchun `METRICS_TOKEN` o'rnating; prod'da token bo'lmasa endpoint
+o'chiq (503 qaytaradi).
+
+Prometheus scrape namunasi:
+
+```yaml
+scrape_configs:
+  - job_name: shopflow
+    metrics_path: /metrics
+    bearer_token: "<METRICS_TOKEN>"
+    static_configs:
+      - targets: ["backend:4000"]
+```
+
 ## Production checklist
 
 - [ ] `.env` da JWT_SECRET 32+ belgi, random
@@ -113,6 +135,7 @@ VPS RAM'iga qarab moslang.
 - [ ] `POSTGRES_PASSWORD` kuchli (15+ belgi)
 - [ ] Backup volume tashqariga nusxalanadi (rsync/S3)
 - [ ] Sentry DSN sozlangan (`SENTRY_DSN`)
+- [ ] `METRICS_TOKEN` o'rnatilgan (prod `/metrics` himoyasi)
 - [ ] DNS A record va port 80/443 ochiq
 - [ ] `docker compose logs caddy` da TLS xato yo'q
 - [ ] `/health` 200 qaytaryapti

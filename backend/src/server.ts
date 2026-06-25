@@ -19,6 +19,7 @@ if (process.env.SENTRY_DSN) {
 }
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authPlugin } from "./plugins/auth.js";
+import { registerMetrics } from "./lib/metrics.js";
 import { authRoutes } from "./routes/auth.js";
 import { tenantRoutes } from "./routes/tenants.js";
 import { leadRoutes } from "./routes/leads.js";
@@ -139,6 +140,9 @@ await app.register(rateLimit, {
 await app.register(jwt, { secret: JWT_SECRET });
 await app.register(prismaPlugin);
 await app.register(authPlugin);
+
+// Prometheus metrics — hooklar barcha route registratsiyasidan oldin qo'yiladi
+registerMetrics(app);
 
 // Global error handler — Zod va Prisma xatolarini 400/409/500 ga moslashtirish
 app.setErrorHandler((err, req, reply) => {
