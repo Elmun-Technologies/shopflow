@@ -130,7 +130,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.get("/profile", async (req) => {
     const tenant = await app.prisma.tenant.findUnique({
       where: { id: req.session.tenantId },
-      select: { id: true, name: true, slug: true, currency: true, timezone: true, locale: true },
+      select: { id: true, name: true, slug: true, currency: true, timezone: true, locale: true, deliveryPct: true, servicePct: true },
     });
     return tenant;
   });
@@ -141,12 +141,15 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
       currency: z.enum(["UZS", "USD", "EUR", "RUB"]).optional(),
       timezone: z.string().max(50).optional(),
       locale: z.enum(["uz", "ru", "en"]).optional(),
+      // Narxlash breakdown foizlari (management ko'rinishi)
+      deliveryPct: z.number().min(0).max(100).optional(),
+      servicePct: z.number().min(0).max(100).optional(),
     }).parse(req.body);
 
     return app.prisma.tenant.update({
       where: { id: req.session.tenantId },
       data,
-      select: { id: true, name: true, slug: true, currency: true, timezone: true, locale: true },
+      select: { id: true, name: true, slug: true, currency: true, timezone: true, locale: true, deliveryPct: true, servicePct: true },
     });
   });
 

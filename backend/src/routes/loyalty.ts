@@ -31,39 +31,42 @@ export async function grantOrderPoints(
   const points = await calculateEarnedPoints(prisma, tenantId, orderTotal);
   if (points <= 0) return 0;
 
-  const account = await prisma.loyaltyAccount.upsert({
-    where: { customerId },
-    create: {
-      tenantId,
-      customerId,
-      balance: 0,
-      totalEarned: 0,
-      totalSpent: 0,
-    },
-    update: {},
-  });
+  // Idempotency + atomiklik bitta $transaction'da (DI-6). Shu order uchun EARN
+  // tranzaksiyasi allaqachon bo'lsa qayta bermaymiz (retry-safe). Balansni JS'dagi
+  // stale o'qishdan emas, atomik increment natijasidan olamiz (concurrent-safe).
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.loyaltyTransaction.findFirst({
+      where: { orderId, type: "EARN" },
+      select: { id: true },
+    });
+    if (existing) return 0;
 
-  const newBalance = account.balance + points;
+    const account = await tx.loyaltyAccount.upsert({
+      where: { customerId },
+      create: { tenantId, customerId, balance: 0, totalEarned: 0, totalSpent: 0 },
+      update: {},
+    });
 
-  await Promise.all([
-    prisma.loyaltyAccount.update({
+    const updated = await tx.loyaltyAccount.update({
       where: { id: account.id },
       data: { balance: { increment: points }, totalEarned: { increment: points } },
-    }),
-    prisma.loyaltyTransaction.create({
+      select: { balance: true },
+    });
+
+    await tx.loyaltyTransaction.create({
       data: {
         tenantId,
         accountId: account.id,
         type: "EARN",
         amount: points,
-        balance: newBalance,
+        balance: updated.balance,
         description: `Xariddan ball: ${orderTotal.toLocaleString("uz-UZ")} so'm`,
         orderId,
       },
-    }),
-  ]);
+    });
 
-  return points;
+    return points;
+  });
 }
 
 export const loyaltyRoutes: FastifyPluginAsync = async (app) => {

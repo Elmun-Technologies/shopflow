@@ -70,7 +70,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       refreshToken: refreshRaw,
       expiresIn: 15 * 60,
       user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role },
-      tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, currency: tenant.currency },
+      tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, currency: tenant.currency, deliveryPct: tenant.deliveryPct, servicePct: tenant.servicePct },
     });
   });
 
@@ -129,6 +129,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         slug: user.tenant.slug,
         name: user.tenant.name,
         currency: user.tenant.currency,
+        deliveryPct: user.tenant.deliveryPct,
+        servicePct: user.tenant.servicePct,
       },
     };
   });
@@ -191,6 +193,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         slug: user.tenant.slug,
         name: user.tenant.name,
         currency: user.tenant.currency,
+        deliveryPct: user.tenant.deliveryPct,
+        servicePct: user.tenant.servicePct,
       },
     };
   });

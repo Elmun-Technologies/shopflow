@@ -24,6 +24,8 @@ import { api, API_BASE } from "../api/client";
 import { useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useT } from "../i18n";
+import { DEFAULT_DELIVERY_PCT, DEFAULT_SERVICE_PCT, priceBreakdown } from "../utils/pricing";
+import { formatCurrency } from "../utils/format";
 
 const deviceIcon: Record<string, React.ElementType> = {
   Chrome: Monitor, Safari: Smartphone, Firefox: Globe, Edge: Monitor,
@@ -67,6 +69,9 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  // Narx tarkibi foizlari (faqat boshqaruv ko'rinishi) — tenant'dan to'ldiriladi
+  const [deliveryPct, setDeliveryPct] = useState<number>(DEFAULT_DELIVERY_PCT);
+  const [servicePct, setServicePct] = useState<number>(DEFAULT_SERVICE_PCT);
 
   // Profile va tenant ma'lumotlarini auth context'dan to'ldiramiz
   useEffect(() => {
@@ -88,6 +93,8 @@ export default function SettingsPage() {
         currency: tenant.currency,
         logo: tenant.name.slice(0, 2).toUpperCase(),
       }));
+      setDeliveryPct(tenant.deliveryPct ?? DEFAULT_DELIVERY_PCT);
+      setServicePct(tenant.servicePct ?? DEFAULT_SERVICE_PCT);
     }
   }, [user, tenant]);
 
@@ -130,11 +137,22 @@ export default function SettingsPage() {
         const body: Record<string, unknown> = {};
         if (store.name && store.name !== tenant?.name) body.name = store.name;
         if (store.currency && store.currency !== tenant?.currency) body.currency = store.currency;
-        if (Object.keys(body).length === 0) {
+
+        // Narx tarkibi foizlari — tenant profil orqali saqlanadi (/settings/profile)
+        const pricingBody: Record<string, unknown> = {};
+        if (deliveryPct !== (tenant?.deliveryPct ?? DEFAULT_DELIVERY_PCT)) pricingBody.deliveryPct = deliveryPct;
+        if (servicePct !== (tenant?.servicePct ?? DEFAULT_SERVICE_PCT)) pricingBody.servicePct = servicePct;
+
+        if (Object.keys(body).length === 0 && Object.keys(pricingBody).length === 0) {
           flashSaved("O'zgarishlar yo'q");
           return;
         }
-        await api("/tenant", { method: "PATCH", body });
+        if (Object.keys(body).length > 0) {
+          await api("/tenant", { method: "PATCH", body });
+        }
+        if (Object.keys(pricingBody).length > 0) {
+          await api("/settings/profile", { method: "PATCH", body: pricingBody });
+        }
         flashSaved("Do'kon saqlandi");
       } else {
         flashSaved();
@@ -265,6 +283,63 @@ export default function SettingsPage() {
               className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
           </div>
         </div>
+      </div>
+
+      {/* Narx tarkibi foizlari — faqat boshqaruv ko'rinishi (mijoz to'loviga ta'sir qilmaydi) */}
+      <div className="border-t border-cream-300 pt-4">
+        <h4 className="text-sm font-semibold text-forest-800 mb-1">{t("pricing.title")}</h4>
+        <p className="text-xs text-slate-500 mb-3">{t("pricing.desc")}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("pricing.deliveryPct")}</label>
+            <input
+              type="number"
+              step={0.5}
+              min={0}
+              max={100}
+              value={deliveryPct}
+              onChange={(e) => setDeliveryPct(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1.5 block">{t("pricing.servicePct")}</label>
+            <input
+              type="number"
+              step={0.5}
+              min={0}
+              max={100}
+              value={servicePct}
+              onChange={(e) => setServicePct(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+            />
+          </div>
+        </div>
+        {/* Misol — 100,000 so'mlik mahsulot uchun tarkib */}
+        {(() => {
+          const example = priceBreakdown(100000, deliveryPct, servicePct);
+          const cur = store.currency || tenant?.currency || "UZS";
+          return (
+            <div className="mt-3 bg-cream-50 border border-cream-300 rounded-xl p-3 text-xs">
+              <div className="flex items-center justify-between text-slate-500 py-0.5">
+                <span>{t("pricing.product")}</span>
+                <span className="text-forest-800">{formatCurrency(example.product, cur)}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500 py-0.5">
+                <span>{t("pricing.delivery")} ({deliveryPct}%)</span>
+                <span className="text-forest-800">{formatCurrency(example.delivery, cur)}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-500 py-0.5">
+                <span>{t("pricing.service")} ({servicePct}%)</span>
+                <span className="text-forest-800">{formatCurrency(example.service, cur)}</span>
+              </div>
+              <div className="flex items-center justify-between font-semibold text-forest-800 pt-1.5 mt-1 border-t border-cream-300">
+                <span>{t("pricing.total")}</span>
+                <span>{formatCurrency(example.total, cur)}</span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
