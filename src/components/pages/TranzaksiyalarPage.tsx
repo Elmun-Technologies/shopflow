@@ -24,7 +24,7 @@ interface LoyaltyTx {
 }
 
 const TYPE_CONF: Record<string, { labelKey: string; icon: typeof TrendingUp; color: string }> = {
-  EARN:   { labelKey: "loyaltyTx.type.EARN",   icon: TrendingUp,  color: "#10b981" },
+  EARN:   { labelKey: "loyaltyTx.type.EARN",   icon: TrendingUp,  color: "#5FA340" },
   SPEND:  { labelKey: "loyaltyTx.type.SPEND",  icon: TrendingDown, color: "#ef4444" },
   EXPIRE: { labelKey: "loyaltyTx.type.EXPIRE", icon: Clock,       color: "#94a3b8" },
   ADJUST: { labelKey: "loyaltyTx.type.ADJUST", icon: Award,       color: "#3b82f6" },
@@ -213,7 +213,7 @@ export default function TranzaksiyalarPage() {
                       <td className="px-4 py-3">
                         <span
                           className="text-sm font-bold"
-                          style={{ color: isEarn ? "#10b981" : "#ef4444" }}
+                          style={{ color: isEarn ? "#5FA340" : "#ef4444" }}
                         >
                           {isEarn ? "+" : ""}{t("loyaltyTx.pointsN", { count: tx.amount.toLocaleString() })}
                         </span>

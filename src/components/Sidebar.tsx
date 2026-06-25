@@ -251,10 +251,10 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
 
   const handleLogout = async () => {
     const ok = await confirmDialog({
-      title: "Chiqishni xohlaysizmi?",
-      description: "Hisobingizdan chiqasiz va qaytadan login qilishingiz kerak.",
-      confirmText: "Chiqish",
-      cancelText: "Bekor",
+      title: t("sidebar.logoutConfirm.title"),
+      description: t("sidebar.logoutConfirm.desc"),
+      confirmText: t("sidebar.logout"),
+      cancelText: t("common.cancel"),
     });
     if (ok) logout();
   };
@@ -405,7 +405,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
             backgroundColor: "#F4F4ED",
             border: "1px solid #E5E5DA",
           }}
-          title="Tezkor navigatsiya (⌘K)"
+          title={t("sidebar.quickNav")}
         >
           <SearchIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#94a3b8" }} />
           <span className="flex-1 text-left text-xs" style={{ color: "#94a3b8" }}>{t("sidebar.search")}</span>
@@ -516,15 +516,15 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
               >
                 <Award className="w-4 h-4 text-white" />
               </div>
-              <p className="text-xs font-bold" style={{ color: "#1F3327" }}>AI bilan samaraliroq</p>
+              <p className="text-xs font-bold" style={{ color: "#1F3327" }}>{t("sidebar.promo.title")}</p>
               <p className="text-[10px] mt-0.5 leading-tight" style={{ color: "#4F6B53" }}>
-                Avto javoblar va smart insight'lar
+                {t("sidebar.promo.desc")}
               </p>
               <button
                 className="w-full mt-2.5 py-1.5 text-white text-xs font-semibold rounded-lg transition-colors"
                 style={{ backgroundColor: "#2D4938" }}
               >
-                Yangilash
+                {t("sidebar.promo.cta")}
               </button>
             </div>
           </div>
@@ -664,7 +664,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                   autoFocus
                   value={paletteQuery}
                   onChange={(e) => setPaletteQuery(e.target.value)}
-                  placeholder="Sahifani qidiring…"
+                  placeholder={t("sidebar.palette.placeholder")}
                   className="flex-1 bg-transparent text-sm focus:outline-none"
                   style={{ color: "#1F3327" }}
                   onKeyDown={(e) => {
@@ -690,7 +690,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
               <div className="max-h-[60vh] overflow-y-auto py-1.5">
                 {filteredPalette.length === 0 ? (
                   <div className="py-8 text-center text-sm" style={{ color: "#94a3b8" }}>
-                    Topilmadi
+                    {t("sidebar.palette.empty")}
                   </div>
                 ) : (
                   filteredPalette.map((p, i) => {
@@ -732,12 +732,12 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
                 className="px-4 py-2 text-[10px] flex items-center justify-between"
                 style={{ borderTop: "1px solid #EAEAE0", color: "#94a3b8" }}
               >
-                <span>↵ ochish</span>
+                <span>↵ {t("sidebar.palette.open")}</span>
                 <span>
                   <kbd
                     className="px-1.5 py-0.5 rounded font-mono"
                     style={{ backgroundColor: "#EAEAE0", color: "#64748b" }}
-                  >Esc</kbd>{" "}yopish
+                  >Esc</kbd>{" "}{t("sidebar.palette.close")}
                 </span>
               </div>
             </motion.div>
@@ -883,7 +883,7 @@ function MarketingBlock({
         className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 transition-colors"
         aria-expanded={open}
       >
-        <span>Marketing</span>
+        <span>{t("nav.marketing")}</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "" : "-rotate-90"}`} />
       </button>
       <AnimatePresence initial={false}>
@@ -906,7 +906,7 @@ function MarketingBlock({
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
-              <span>Marketing paneli</span>
+              <span>{t("nav.marketingPanel")}</span>
             </button>
 
             {/* Mantiqiy mini-guruhlar — vizual aniqlik */}
@@ -962,6 +962,7 @@ function SidebarItem({
   onTogglePin?: () => void;
   onClick: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="relative group">
       {/* Left accent bar */}
@@ -1050,7 +1051,7 @@ function SidebarItem({
           }}
           onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "#f59e0b"; }}
           onMouseLeave={(e) => { e.currentTarget.style.opacity = pinned ? "1" : "0"; e.currentTarget.style.color = pinned ? "#f59e0b" : "#94a3b8"; }}
-          title={pinned ? "Pin'dan olib tashlash" : "Pin qo'shish"}
+          title={pinned ? t("sidebar.unpin") : t("sidebar.pin")}
         >
           {pinned ? <Pin className="w-3 h-3 fill-amber-400" /> : <PinOff className="w-3 h-3" />}
         </button>

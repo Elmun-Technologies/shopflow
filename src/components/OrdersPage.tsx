@@ -15,10 +15,10 @@ import OrderDetailDrawer from "./OrderDetailDrawer";
 
 // Faqat rangli stillar — labellar t() orqali olinadi
 const statusStyle: Record<OrderStatus, { color: string; bg: string }> = {
-  PENDING: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
-  PROCESSING: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
+  PENDING: { color: "text-amber-600", bg: "bg-amber-100 border-amber-300" },
+  PROCESSING: { color: "text-blue-600", bg: "bg-blue-100 border-blue-300" },
   COMPLETED: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
-  CANCELLED: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
+  CANCELLED: { color: "text-red-600", bg: "bg-red-100 border-red-300" },
   REFUNDED: { color: "text-slate-500", bg: "bg-slate-100 border-slate-300" },
 };
 
@@ -54,10 +54,10 @@ export default function OrdersPage() {
         columns: [
           { key: "code", label: t("orders.col.code") },
           { key: "customerName", label: t("orders.col.customer") },
-          { key: "phone", label: t("orders.col.customer") + " phone" },
+          { key: "phone", label: t("orders.col.phone") },
           { key: "channel", label: t("orders.col.channel") },
           { key: "total", label: t("orders.col.amount") },
-          { key: "currency", label: "Currency" },
+          { key: "currency", label: t("orders.col.currency") },
           { key: "status", label: t("orders.col.status") },
           { key: "createdAt", label: t("orders.col.date") },
         ],
@@ -279,7 +279,7 @@ export default function OrdersPage() {
           <TableRowsSkeleton rows={8} cols={7} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <AlertCircle className="w-10 h-10 text-rose-600 mb-2" />
+            <AlertCircle className="w-10 h-10 text-red-600 mb-2" />
             <p className="text-sm text-slate-700">{error.message}</p>
             <button onClick={refetch} className="mt-3 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
               {t("orders.retry")}
@@ -344,7 +344,7 @@ export default function OrdersPage() {
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             setShowCreate(false);
-            toast.success("Buyurtma yaratildi");
+            toast.success(t("orders.create.success"));
             refetch();
           }}
         />
@@ -387,7 +387,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validLines.length === 0) {
-      toast.error("Kamida bitta mahsulot qo'shing");
+      toast.error(t("orders.create.addItemError"));
       return;
     }
     setBusy(true);
@@ -400,7 +400,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
       });
       onCreated();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Buyurtma yaratilmadi");
+      toast.error(err instanceof Error ? err.message : t("orders.create.failed"));
     } finally {
       setBusy(false);
     }
@@ -419,7 +419,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-forest-800">{t("orders.newOrder")}</h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label={t("common.close")}>
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
@@ -427,7 +427,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
         <label className="block mb-3">
           <span className="text-xs text-slate-500 mb-1 block">{t("orders.col.customer")}</span>
           <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={field}>
-            <option value="">— Mijozsiz —</option>
+            <option value="">{t("orders.create.noCustomer")}</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
             ))}
@@ -436,14 +436,14 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
 
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-slate-500">Mahsulotlar</span>
+            <span className="text-xs text-slate-500">{t("orders.create.productsLabel")}</span>
             <button type="button" onClick={addLine} className="inline-flex items-center gap-1 text-xs text-forest-700 hover:text-forest-900 font-medium">
-              <Plus className="w-3.5 h-3.5" /> Qo'shish
+              <Plus className="w-3.5 h-3.5" /> {t("common.add")}
             </button>
           </div>
           {lines.length === 0 ? (
             <div className="text-center py-4 text-xs text-slate-400 bg-cream-50 rounded-lg border border-dashed border-cream-300">
-              Mahsulot qo'shilmagan
+              {t("orders.create.emptyLines")}
             </div>
           ) : (
             <div className="space-y-2">
@@ -454,7 +454,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
                     onChange={(e) => updateLine(i, { productId: e.target.value })}
                     className={`${field} flex-1`}
                   >
-                    <option value="">Mahsulot tanlang</option>
+                    <option value="">{t("orders.create.selectProduct")}</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
@@ -466,7 +466,7 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
                     onChange={(e) => updateLine(i, { qty: Math.max(1, Number(e.target.value)) })}
                     className="w-16 bg-cream-100 border border-cream-300 rounded-lg px-2 py-2.5 text-sm text-center text-forest-800 focus:outline-none focus:border-leaf-500/60"
                   />
-                  <button type="button" onClick={() => removeLine(i)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex-shrink-0" aria-label="O'chirish">
+                  <button type="button" onClick={() => removeLine(i)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0" aria-label={t("common.delete")}>
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -476,20 +476,20 @@ function OrderCreateModal({ currency, onClose, onCreated }: { currency: string; 
         </div>
 
         <label className="block mb-4">
-          <span className="text-xs text-slate-500 mb-1 block">Izoh</span>
-          <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Yetkazib berish manzili, izoh…" className={field} />
+          <span className="text-xs text-slate-500 mb-1 block">{t("orders.create.notesLabel")}</span>
+          <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders.create.notesPlaceholder")} className={field} />
         </label>
 
         <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-xl bg-cream-100">
-          <span className="text-sm text-slate-600">Jami</span>
+          <span className="text-sm text-slate-600">{t("orders.create.total")}</span>
           <span className="text-lg font-bold text-forest-800">{formatCurrency(total, currency)}</span>
         </div>
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">Bekor qilish</button>
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700">{t("orders.create.cancel")}</button>
           <button type="submit" disabled={busy || validLines.length === 0} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium">
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Yaratish
+            {t("orders.create.submit")}
           </button>
         </div>
       </motion.form>
@@ -601,7 +601,7 @@ function OrderTable({
                     </span>
                     {order.paid && (
                       <span className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-leaf-100 text-forest-700 align-middle">
-                        <Check className="w-2.5 h-2.5" /> To'langan
+                        <Check className="w-2.5 h-2.5" /> {t("orders.paid")}
                       </span>
                     )}
                   </td>
@@ -712,7 +712,7 @@ function OrderTable({
                   </p>
                   {order.paid && (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mt-0.5 rounded-full text-[10px] font-medium bg-leaf-100 text-forest-700">
-                      <Check className="w-2.5 h-2.5" /> To'langan
+                      <Check className="w-2.5 h-2.5" /> {t("orders.paid")}
                     </span>
                   )}
                   <p className="text-[10px] text-slate-500 mt-0.5">{formatDate(order.createdAt)}</p>

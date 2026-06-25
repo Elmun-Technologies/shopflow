@@ -337,7 +337,7 @@ export default function UIBuilderPage() {
             <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className={`grid gap-2 ${isMobile ? "grid-cols-2" : "grid-cols-4"}`}>
               {prods.map((p) => (
-                <div key={p.id} className="bg-cream-100 rounded-xl p-2.5 hover:bg-slate-750 transition-colors">
+                <div key={p.id} className="bg-cream-100 rounded-xl p-2.5 hover:bg-cream-200 transition-colors">
                   <div className="w-full h-20 bg-cream-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
                     {p.imageUrl ? (
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
@@ -362,13 +362,13 @@ export default function UIBuilderPage() {
       case "flash_sale": {
         const fsProds = getProducts(s.count || 4);
         return (
-          <div className="w-full bg-rose-100 border border-rose-300 rounded-xl p-4">
+          <div className="w-full bg-red-100 border border-red-300 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-rose-600">{s.title}</h3>
+              <h3 className="text-sm font-semibold text-red-600">{s.title}</h3>
               {s.showTimer && (
                 <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-rose-600" />
-                  <span className="text-xs text-rose-600 font-mono">04:23:15</span>
+                  <Clock className="w-3 h-3 text-red-600" />
+                  <span className="text-xs text-red-600 font-mono">04:23:15</span>
                 </div>
               )}
             </div>
@@ -384,7 +384,7 @@ export default function UIBuilderPage() {
                   </div>
                   <p className="text-[10px] text-forest-800 truncate">{p.name}</p>
                   <div className="flex items-center gap-1">
-                    <p className="text-[10px] text-rose-600 font-bold">
+                    <p className="text-[10px] text-red-600 font-bold">
                       {p.price > 0 ? p.price.toLocaleString() : "—"}
                     </p>
                     {p.oldPrice != null && (
@@ -432,7 +432,7 @@ export default function UIBuilderPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-slate-500">Mahsulotlar yo'q</div>
+              <div className="text-xs text-slate-500">{t("ui.noProducts")}</div>
             )}
           </div>
         );
@@ -444,7 +444,7 @@ export default function UIBuilderPage() {
             <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className={`grid gap-2 ${isMobile ? "grid-cols-3" : "grid-cols-6"}`}>
               {(realCategories.length > 0 ? realCategories : []).slice(0, s.count || 6).map((cat) => (
-                <div key={cat.id} className="bg-cream-100 rounded-xl p-3 text-center hover:bg-slate-750 transition-colors cursor-pointer">
+                <div key={cat.id} className="bg-cream-100 rounded-xl p-3 text-center hover:bg-cream-200 transition-colors cursor-pointer">
                   <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-1" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                     <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                   </div>
@@ -467,7 +467,7 @@ export default function UIBuilderPage() {
             <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="space-y-1">
               {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between bg-cream-100 rounded-lg px-3 py-2 hover:bg-slate-750 transition-colors cursor-pointer">
+                <div key={cat.id} className="flex items-center justify-between bg-cream-100 rounded-lg px-3 py-2 hover:bg-cream-200 transition-colors cursor-pointer">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                       <Grid3X3 className="w-3 h-3" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
@@ -487,7 +487,7 @@ export default function UIBuilderPage() {
             <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="grid grid-cols-2 gap-2">
               {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).slice(0, s.count || 4).map((cat) => (
-                <div key={cat.id} className="bg-cream-100 rounded-xl p-3 flex items-center gap-2 hover:bg-slate-750 transition-colors cursor-pointer">
+                <div key={cat.id} className="bg-cream-100 rounded-xl p-3 flex items-center gap-2 hover:bg-cream-200 transition-colors cursor-pointer">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                     <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
                   </div>
@@ -505,7 +505,7 @@ export default function UIBuilderPage() {
             <div className="flex gap-2 overflow-x-auto pb-1">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex-shrink-0 w-16 cursor-pointer">
-                  <div className="w-14 h-14 mx-auto rounded-full border-2 border-emerald-500 p-0.5">
+                  <div className="w-14 h-14 mx-auto rounded-full border-2 border-leaf-500 p-0.5">
                     <div className="w-full h-full bg-cream-200 rounded-full flex items-center justify-center">
                       <Play className="w-4 h-4 text-slate-500" />
                     </div>
@@ -571,7 +571,7 @@ export default function UIBuilderPage() {
         );
       case "timer":
         return (
-          <div className="flex items-center gap-1.5 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             <Clock className="w-3.5 h-3.5" />
             <span className="font-mono">08:45:22</span>
           </div>
@@ -622,7 +622,7 @@ export default function UIBuilderPage() {
           <div className="flex items-center gap-2 mt-1">
             <span className="text-xl font-bold text-forest-700">{p.price.toLocaleString()} so'm</span>
             {p.oldPrice != null && <span className="text-sm text-slate-400 line-through">{p.oldPrice.toLocaleString()}</span>}
-            {discount > 0 && <span className="text-[10px] font-semibold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded-full">-{discount}%</span>}
+            {discount > 0 && <span className="text-[10px] font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">-{discount}%</span>}
           </div>
         </div>
         {/* Qo'shimcha bo'limlar — saqlangan tartibda */}
@@ -654,7 +654,7 @@ export default function UIBuilderPage() {
       <div className="h-full flex items-center justify-center">
         <div className="flex items-center gap-3 text-slate-500">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Yuklanmoqda...</span>
+          <span className="text-sm">{t("common.loading")}</span>
         </div>
       </div>
     );
@@ -680,7 +680,7 @@ export default function UIBuilderPage() {
                 key={tab.key}
                 onClick={() => setActivePanel(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-all ${
-                  activePanel === tab.key ? "text-forest-700 border-b-2 border-emerald-400" : "text-slate-500 hover:text-forest-900"
+                  activePanel === tab.key ? "text-forest-700 border-b-2 border-leaf-400" : "text-slate-500 hover:text-forest-900"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -707,7 +707,7 @@ export default function UIBuilderPage() {
 
                 {Object.entries(groupedDefs).map(([category, defs]) => {
                   const isExpanded = expandedCategories.has(category);
-                  const catLabels: Record<string, string> = { products: "Mahsulotlar", navigation: "Navigatsiya", media: "Media" };
+                  const catLabels: Record<string, string> = { products: t("ui.cat.products"), navigation: t("ui.cat.navigation"), media: t("ui.cat.media") };
                   return (
                     <div key={category} className="mb-2">
                       <button onClick={() => toggleCategory(category)} className="flex items-center gap-1.5 w-full py-2 text-xs font-medium text-slate-500 hover:text-forest-900 transition-colors">
@@ -774,32 +774,32 @@ export default function UIBuilderPage() {
             {activePanel === "brand" && (
               <motion.div key="brand" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Do'kon nomi</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.storeName")}</label>
                   <input value={brand.name} onChange={(e) => setBrand({ ...brand, name: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Asosiy</label>
+                    <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.primary")}</label>
                     <div className="flex items-center gap-2">
                       <input type="color" value={brand.primaryColor} onChange={(e) => setBrand({ ...brand, primaryColor: e.target.value })} className="w-8 h-8 rounded-lg border-0 p-0 bg-transparent cursor-pointer" />
                       <span className="text-[10px] text-slate-500 font-mono">{brand.primaryColor}</span>
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Qo'shimcha</label>
+                    <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.secondary")}</label>
                     <div className="flex items-center gap-2">
                       <input type="color" value={brand.secondaryColor} onChange={(e) => setBrand({ ...brand, secondaryColor: e.target.value })} className="w-8 h-8 rounded-lg border-0 p-0 bg-transparent cursor-pointer" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500 mb-1.5 block">Aksent</label>
+                    <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.accent")}</label>
                     <div className="flex items-center gap-2">
                       <input type="color" value={brand.accentColor} onChange={(e) => setBrand({ ...brand, accentColor: e.target.value })} className="w-8 h-8 rounded-lg border-0 p-0 bg-transparent cursor-pointer" />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Mahsulot kartasi</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.productCard")}</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["compact", "standard", "large"] as const).map((style) => (
                       <button key={style} onClick={() => setBrand({ ...brand, productCardStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.productCardStyle === style ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"}`}>
@@ -809,7 +809,7 @@ export default function UIBuilderPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Kategoriya uslubi</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.categoryStyle")}</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["list", "grid", "circle"] as const).map((style) => (
                       <button key={style} onClick={() => setBrand({ ...brand, categoryStyle: style })} className={`px-2 py-1.5 rounded-lg text-[10px] capitalize transition-all ${brand.categoryStyle === style ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"}`}>
@@ -819,7 +819,7 @@ export default function UIBuilderPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Telefon</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.phone")}</label>
                   <input value={brand.phone} onChange={(e) => setBrand({ ...brand, phone: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div>
@@ -827,12 +827,12 @@ export default function UIBuilderPage() {
                   <input value={brand.email} onChange={(e) => setBrand({ ...brand, email: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Manzil</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.address")}</label>
                   <input value={brand.address} onChange={(e) => setBrand({ ...brand, address: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
 
                 <div className="pt-3 mt-1 border-t border-cream-300">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Web analitika</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">{t("ui.brand.webAnalytics")}</p>
                   <div className="space-y-2.5">
                     <div>
                       <label className="text-xs text-slate-500 mb-1.5 block">Google Analytics (GA4)</label>
@@ -852,7 +852,7 @@ export default function UIBuilderPage() {
                         className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 font-mono focus:outline-none focus:border-leaf-500/60"
                       />
                     </div>
-                    <p className="text-[10px] text-slate-400">Saqlangach Mini App'ga avtomatik ulanadi — qo'shimcha kod kerak emas.</p>
+                    <p className="text-[10px] text-slate-400">{t("ui.brand.analyticsHint")}</p>
                   </div>
                 </div>
               </motion.div>
@@ -877,7 +877,7 @@ export default function UIBuilderPage() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
-                className={`text-xs flex items-center gap-1 ${savedMessage === t("ui.saved") ? "text-forest-700" : "text-rose-600"}`}
+                className={`text-xs flex items-center gap-1 ${savedMessage === t("ui.saved") ? "text-forest-700" : "text-red-600"}`}
               >
                 <CheckCircle2 className="w-3 h-3" />
                 {savedMessage}
@@ -909,7 +909,7 @@ export default function UIBuilderPage() {
             {/* Published toggle — yashirin holatni aniq ko'rinarli qiladi */}
             <button
               onClick={() => setPublished(!published)}
-              title={published ? "Do'kon mijozlarga ko'rinadi — bossangiz yashiradi" : "⚠️ Do'kon mijozlarga ko'rinmaydi! Bossangiz nashr qiladi"}
+              title={published ? t("ui.publish.tipVisible") : `⚠️ ${t("ui.publish.tipHidden")}`}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 published
                   ? "bg-leaf-100 text-forest-700 border border-leaf-300/60"
@@ -948,17 +948,14 @@ export default function UIBuilderPage() {
               <Globe className="w-4 h-4 text-amber-700" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-900">Do'kon yashirin holatda</p>
-              <p className="text-xs text-amber-700">
-                Mijozlar hozir Mini App'ni ochsa "<strong>Do'kon yopiq</strong>" xabari chiqadi.
-                Mijozlar uchun ochish uchun yuqoridagi <strong>Yashirin</strong> tugmasini bosing.
-              </p>
+              <p className="text-sm font-semibold text-amber-900">{t("ui.hiddenBanner.title")}</p>
+              <p className="text-xs text-amber-700">{t("ui.hiddenBanner.desc")}</p>
             </div>
             <button
               onClick={() => setPublished(true)}
               className="flex-shrink-0 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-xs font-semibold rounded-lg transition-colors"
             >
-              Nashr qilish
+              {t("ui.publishNow")}
             </button>
           </div>
         )}
@@ -988,7 +985,7 @@ export default function UIBuilderPage() {
                       </div>
                       <button
                         onClick={() => setSingleProductId(null)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-colors"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-100 transition-colors"
                         title={t("common.cancel")}
                       >
                         <X className="w-4 h-4" />
@@ -1097,7 +1094,7 @@ export default function UIBuilderPage() {
                               onClick={() => moveSingleSection(index, index - 1)}
                               disabled={index === 0}
                               className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
-                              title="Yuqoriga"
+                              title={t("ui.moveUp")}
                             >
                               <ArrowUp className="w-3 h-3" />
                             </button>
@@ -1105,7 +1102,7 @@ export default function UIBuilderPage() {
                               onClick={() => moveSingleSection(index, index + 1)}
                               disabled={index === singleSections.length - 1}
                               className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
-                              title="Pastga"
+                              title={t("ui.moveDown")}
                             >
                               <ArrowDown className="w-3 h-3" />
                             </button>
@@ -1155,8 +1152,8 @@ export default function UIBuilderPage() {
             {blocks.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-cream-300 rounded-xl">
                 <Plus className="w-8 h-8 text-cream-300 mb-2" />
-                <p className="text-sm text-slate-500">Blok qo'shing</p>
-                <p className="text-xs text-slate-400 mt-1">Chap paneldan tanlang</p>
+                <p className="text-sm text-slate-500">{t("ui.empty.addBlock")}</p>
+                <p className="text-xs text-slate-400 mt-1">{t("ui.empty.pickFromPanel")}</p>
               </div>
             ) : (
               <div className="space-y-2 max-w-2xl mx-auto">
@@ -1170,7 +1167,7 @@ export default function UIBuilderPage() {
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, index)}
                     className={`group relative bg-white border rounded-xl p-3 transition-all cursor-move ${
-                      selectedBlockId === block.id ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : "border-cream-300 hover:border-cream-300"
+                      selectedBlockId === block.id ? "border-leaf-500/50 ring-1 ring-leaf-500/20" : "border-cream-300 hover:border-cream-300"
                     } ${!block.enabled ? "opacity-40" : ""} ${dragOverIndex === index && draggedIndex !== index ? "border-leaf-400/50 bg-leaf-400/5" : ""} ${draggedIndex === index ? "opacity-50" : ""}`}
                     onClick={() => setSelectedBlockId(block.id)}
                   >
@@ -1204,13 +1201,13 @@ export default function UIBuilderPage() {
                         <p className="text-[10px] text-slate-500">{blockDefinitions.find((d) => d.type === block.type)?.description}</p>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); toggleBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title={block.enabled ? "O'chirish" : "Yoqish"}>
+                        <button onClick={(e) => { e.stopPropagation(); toggleBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title={block.enabled ? t("ui.hide") : t("ui.show")}>
                           {block.enabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title="Nusxa">
+                        <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title={t("ui.duplicate")}>
                           <Copy className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100 transition-colors" title="O'chirish">
+                        <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-100 transition-colors" title={t("common.delete")}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -1227,7 +1224,7 @@ export default function UIBuilderPage() {
                   onDragOver={handleDragOver}
                   onDrop={handleDropAtEnd}
                 >
-                  Blokni shu yerga torting
+                  {t("ui.dropHere")}
                 </div>
               </div>
             )}
@@ -1245,10 +1242,10 @@ export default function UIBuilderPage() {
                 className="border-l border-cream-300 bg-cream-50 overflow-hidden flex flex-col"
               >
                 <div className="h-10 border-b border-cream-300 flex items-center justify-between px-3 flex-shrink-0">
-                  <span className="text-xs font-medium text-slate-500">Preview</span>
+                  <span className="text-xs font-medium text-slate-500">{t("ui.preview")}</span>
                   <div className="flex items-center gap-2">
                     {previewProducts.length > 0 && (
-                      <span className="text-[10px] text-slate-400">{previewProducts.length} mahsulot</span>
+                      <span className="text-[10px] text-slate-400">{t("ui.productCount", { n: previewProducts.length })}</span>
                     )}
                     <span className="text-[10px] text-slate-400">{previewMode === "mobile" ? "375px" : "480px"}</span>
                   </div>
@@ -1308,14 +1305,14 @@ export default function UIBuilderPage() {
             className="border-l border-cream-300 bg-white overflow-hidden flex flex-col"
           >
             <div className="h-12 border-b border-cream-300 flex items-center justify-between px-4 flex-shrink-0">
-              <span className="text-sm font-semibold text-forest-800">Blok sozlamalari</span>
+              <span className="text-sm font-semibold text-forest-800">{t("ui.blockSettings")}</span>
               <button onClick={() => setSelectedBlockId(null)} className="p-1 rounded-lg text-slate-500 hover:text-forest-900">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <div className="mb-4">
-                <label className="text-xs text-slate-500 mb-1.5 block">Sarlavha</label>
+                <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.field.heading")}</label>
                 <input
                   value={selectedBlock.title}
                   onChange={(e) => updateBlockTitle(selectedBlock.id, e.target.value)}
@@ -1327,7 +1324,7 @@ export default function UIBuilderPage() {
                 if (key === "count") {
                   return (
                     <div key={key} className="mb-3">
-                      <label className="text-xs text-slate-500 mb-1.5 block">Mahsulotlar soni</label>
+                      <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.field.productCount")}</label>
                       <input
                         type="number"
                         min={1}
@@ -1343,7 +1340,7 @@ export default function UIBuilderPage() {
                   return (
                     <div key={key} className="mb-3">
                       <label className="text-xs text-slate-500 mb-1.5 block capitalize">
-                        {key === "buttonText" ? "Tugma matni" : key === "placeholder" ? "Placeholder" : key}
+                        {key === "buttonText" ? t("ui.field.buttonText") : key === "placeholder" ? "Placeholder" : key}
                       </label>
                       <input
                         value={value}
@@ -1356,13 +1353,13 @@ export default function UIBuilderPage() {
                 if (key === "category") {
                   return (
                     <div key={key} className="mb-3">
-                      <label className="text-xs text-slate-500 mb-1.5 block">Kategoriya</label>
+                      <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.field.category")}</label>
                       <select
                         value={value}
                         onChange={(e) => updateBlockSetting(selectedBlock.id, key, e.target.value)}
                         className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
                       >
-                        <option value="">Barcha kategoriyalar</option>
+                        <option value="">{t("ui.field.allCategories")}</option>
                         {realCategories.map((c) => (
                           <option key={c.id} value={c.name}>{c.name}</option>
                         ))}
@@ -1373,7 +1370,7 @@ export default function UIBuilderPage() {
                 if (key === "bgColor") {
                   return (
                     <div key={key} className="mb-3">
-                      <label className="text-xs text-slate-500 mb-1.5 block">Fon rangi</label>
+                      <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.field.bgColor")}</label>
                       <div className="flex items-center gap-2">
                         <input
                           type="color"
@@ -1388,9 +1385,9 @@ export default function UIBuilderPage() {
                 }
                 if (key === "showBadge" || key === "showTimer" || key === "showStockBar") {
                   const labels: Record<string, string> = {
-                    showBadge: "Badge ko'rsatish",
-                    showTimer: "Taymer ko'rsatish",
-                    showStockBar: "Zaxira shkalasi",
+                    showBadge: t("ui.field.showBadge"),
+                    showTimer: t("ui.field.showTimer"),
+                    showStockBar: t("ui.field.showStockBar"),
                   };
                   return (
                     <div key={key} className="mb-3 flex items-center justify-between">

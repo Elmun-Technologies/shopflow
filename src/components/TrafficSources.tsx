@@ -8,12 +8,12 @@ import { dashboardApi } from "../api/endpoints";
 import { useT } from "../i18n";
 
 const COLORS = [
-  "from-emerald-500 to-emerald-400",
+  "from-leaf-500 to-leaf-400",
   "from-sky-500 to-sky-400",
   "from-amber-500 to-amber-400",
   "from-violet-500 to-violet-400",
   "from-pink-500 to-pink-400",
-  "from-cyan-500 to-cyan-400",
+  "from-forest-700 to-forest-500",
   "from-rose-500 to-rose-400",
 ];
 
@@ -33,7 +33,7 @@ export default function TrafficSources() {
         <Radio className="w-4 h-4 text-forest-700" />
         {t("widget.trafficSources")}
       </h3>
-      <p className="text-xs text-slate-500 mt-0.5 mb-4">Buyurtmalar qaysi kanaldan</p>
+      <p className="text-xs text-slate-500 mt-0.5 mb-4">{t("widget.trafficSources.subtitle")}</p>
 
       {loading ? (
         <div className="flex items-center justify-center h-32">
@@ -41,7 +41,7 @@ export default function TrafficSources() {
         </div>
       ) : sources.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-32 text-center">
-          <p className="text-sm text-slate-500">Kanal bo'yicha buyurtmalar yo'q</p>
+          <p className="text-sm text-slate-500">{t("widget.trafficSources.empty")}</p>
         </div>
       ) : (
         <div className="space-y-3">

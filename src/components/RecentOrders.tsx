@@ -9,9 +9,9 @@ import { useT } from "../i18n";
 
 const statusStyles: Record<OrderStatus, string> = {
   COMPLETED: "bg-leaf-100 text-forest-700",
-  PROCESSING: "bg-sky-100 text-sky-600",
-  PENDING: "bg-amber-100 text-amber-500",
-  CANCELLED: "bg-rose-100 text-rose-600",
+  PROCESSING: "bg-blue-100 text-blue-600",
+  PENDING: "bg-amber-100 text-amber-600",
+  CANCELLED: "bg-red-100 text-red-600",
   REFUNDED: "bg-slate-100 text-slate-500",
 };
 
@@ -22,7 +22,7 @@ const AVATAR_COLORS = [
   "bg-violet-100 text-violet-700",
   "bg-amber-100 text-amber-600",
   "bg-pink-100 text-pink-700",
-  "bg-cyan-100 text-cyan-700",
+  "bg-forest-100 text-forest-700",
 ];
 
 function avatarColor(name: string): string {
@@ -35,15 +35,15 @@ function initials(name: string): string {
   return name.split(/\s+/).map((p) => p[0] ?? "").filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
-function relTime(iso: string): string {
+function relTime(iso: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "hozir";
-  if (m < 60) return `${m}d oldin`;
+  if (m < 1) return t("time.now");
+  if (m < 60) return t("time.minutesAgo", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}s oldin`;
+  if (h < 24) return t("time.hoursAgo", { count: h });
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d}k oldin`;
+  if (d < 7) return t("time.daysAgo", { count: d });
   return new Date(iso).toLocaleDateString("uz-UZ", { month: "short", day: "numeric" });
 }
 
@@ -66,7 +66,7 @@ export default function RecentOrders() {
           <h3 className="text-base font-semibold text-forest-800">{t("widget.recentOrders")}</h3>
           <p className="text-xs text-slate-500 mt-0.5">{t("widget.recentOrders.subtitle")}</p>
         </div>
-        <button className="text-xs font-medium text-forest-700 hover:text-forest-700 flex items-center gap-1">
+        <button className="text-xs font-medium text-forest-700 hover:text-forest-800 flex items-center gap-1">
           {t("orders.viewDetails")}
           <ArrowRight className="w-3 h-3" />
         </button>
@@ -103,7 +103,7 @@ export default function RecentOrders() {
                     <span className="text-[11px] text-slate-500 flex-shrink-0">#{order.code}</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">
-                    {order.channel?.name ?? "—"} · {relTime(order.createdAt)}
+                    {order.channel?.name ?? "—"} · {relTime(order.createdAt, t)}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">

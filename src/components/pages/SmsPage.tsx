@@ -283,7 +283,7 @@ export default function SmsPage() {
           <button
             onClick={sendTest}
             disabled={testSending || !smsStatus?.configured || !message.trim() || !testPhone.trim()}
-            className="px-5 py-2.5 bg-sky-100 hover:bg-sky-200 border border-sky-200 text-sky-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-5 py-2.5 bg-leaf-100 hover:bg-leaf-200 border border-leaf-200 text-forest-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             {testSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {t("sms.test.btn")}

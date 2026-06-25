@@ -45,7 +45,7 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} className={`${cls} ${i < rating ? "fill-yellow-400 text-yellow-400" : "text-slate-300"}`} />
+        <Star key={i} className={`${cls} ${i < rating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />
       ))}
     </div>
   );
@@ -56,7 +56,7 @@ function StatusBadge({ status }: { status: ApiReview["status"] }) {
   const map: Record<ApiReview["status"], { cls: string; labelKey: string }> = {
     PENDING: { cls: "bg-amber-100 text-amber-700 border-amber-300", labelKey: "reviews.status.pending" },
     APPROVED: { cls: "bg-leaf-100 text-forest-700 border-leaf-400/50", labelKey: "reviews.status.approved" },
-    REJECTED: { cls: "bg-rose-100 text-rose-600 border-rose-300", labelKey: "reviews.status.rejected" },
+    REJECTED: { cls: "bg-red-100 text-red-600 border-red-300", labelKey: "reviews.status.rejected" },
   };
   const { cls, labelKey } = map[status];
   return <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>{t(labelKey)}</span>;
@@ -214,10 +214,10 @@ export default function IzohlarPage() {
 
   const statBoxes = stats
     ? [
-        { label: t("reviews.stat.avgRating"), value: stats.total > 0 ? stats.avgRating.toFixed(1) + "★" : "—", color: "text-yellow-500" },
+        { label: t("reviews.stat.avgRating"), value: stats.total > 0 ? stats.avgRating.toFixed(1) + "★" : "—", color: "text-amber-500" },
         { label: t("reviews.status.pending"), value: stats.pending, color: "text-amber-600" },
         { label: t("reviews.status.approved"), value: stats.approved, color: "text-forest-700" },
-        { label: t("reviews.status.rejected"), value: stats.rejected, color: "text-rose-600" },
+        { label: t("reviews.status.rejected"), value: stats.rejected, color: "text-red-600" },
       ]
     : [];
 
@@ -300,7 +300,7 @@ export default function IzohlarPage() {
           <button
             onClick={() => bulkModerate("REJECTED")}
             disabled={bulkBusy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 hover:bg-rose-200 border border-rose-300 disabled:opacity-50 rounded-lg text-xs font-medium text-rose-600 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 border border-red-300 disabled:opacity-50 rounded-lg text-xs font-medium text-red-600 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
             {t("reviews.reject")}
@@ -396,7 +396,7 @@ export default function IzohlarPage() {
                         </div>
                       )}
                       {r.status === "REJECTED" && r.rejectReason && (
-                        <p className="text-[11px] text-rose-600 mt-1.5 italic">{t("reviews.reasonLabel")}: {r.rejectReason}</p>
+                        <p className="text-[11px] text-red-600 mt-1.5 italic">{t("reviews.reasonLabel")}: {r.rejectReason}</p>
                       )}
                       <p className="text-[10px] text-slate-400 mt-2">{formatDate(r.createdAt)}</p>
                     </div>
@@ -413,7 +413,7 @@ export default function IzohlarPage() {
                         <button
                           onClick={() => { setRejectingId(r.id); setRejectReason(""); }}
                           disabled={busyId === r.id}
-                          className="p-2 rounded-lg bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50"
+                          className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50"
                           title={t("reviews.reject")}
                         >
                           <X className="w-4 h-4" />
@@ -477,9 +477,9 @@ export default function IzohlarPage() {
               )}
 
               {detail.status === "REJECTED" && detail.rejectReason && (
-                <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200">
-                  <p className="text-xs font-medium text-rose-700 mb-1">{t("reviews.rejectReasonTitle")}</p>
-                  <p className="text-sm text-rose-600">{detail.rejectReason}</p>
+                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
+                  <p className="text-xs font-medium text-red-700 mb-1">{t("reviews.rejectReasonTitle")}</p>
+                  <p className="text-sm text-red-600">{detail.rejectReason}</p>
                 </div>
               )}
 
@@ -494,7 +494,7 @@ export default function IzohlarPage() {
                   <button
                     onClick={() => remove(detail.id)}
                     disabled={busyId === detail.id}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs bg-cream-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs bg-cream-100 hover:bg-red-100 text-slate-600 hover:text-red-600 disabled:opacity-50 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     {t("common.delete")}
@@ -504,7 +504,7 @@ export default function IzohlarPage() {
                       <button
                         onClick={() => { setRejectingId(detail.id); setRejectReason(""); }}
                         disabled={busyId === detail.id}
-                        className="px-3 py-2 rounded-lg text-sm bg-rose-100 text-rose-600 hover:bg-rose-200 border border-rose-300 disabled:opacity-50 font-medium"
+                        className="px-3 py-2 rounded-lg text-sm bg-red-100 text-red-600 hover:bg-red-200 border border-red-300 disabled:opacity-50 font-medium"
                       >
                         {t("reviews.reject")}
                       </button>
@@ -530,7 +530,7 @@ export default function IzohlarPage() {
                     <button
                       onClick={() => { setRejectingId(detail.id); setRejectReason(""); }}
                       disabled={busyId === detail.id}
-                      className="px-3 py-2 rounded-lg text-sm bg-rose-100 text-rose-600 hover:bg-rose-200 border border-rose-300 disabled:opacity-50 font-medium"
+                      className="px-3 py-2 rounded-lg text-sm bg-red-100 text-red-600 hover:bg-red-200 border border-red-300 disabled:opacity-50 font-medium"
                     >
                       {t("reviews.reject")}
                     </button>
@@ -583,7 +583,7 @@ export default function IzohlarPage() {
                 <button
                   onClick={submitReject}
                   disabled={busyId === rejectingId}
-                  className="px-3 py-2 rounded-lg text-sm bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-medium"
+                  className="px-3 py-2 rounded-lg text-sm bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-medium"
                 >
                   {busyId === rejectingId ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t("reviews.reject")}
                 </button>

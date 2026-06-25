@@ -229,7 +229,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
       onChanged();
       await refreshTimeline();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Status yangilanmadi");
+      toast.error(err instanceof Error ? err.message : t("orderDetail.statusUpdateFailed"));
     } finally {
       setUpdating(false);
     }
@@ -245,12 +245,12 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         body: { assigneeId },
       });
       setOrder({ ...order, assigneeId: updated.assigneeId });
-      const name = assigneeId ? team.find((t) => t.id === assigneeId)?.name : null;
-      toast.success(assigneeId ? `Mas'ul: ${name}` : "Mas'ul olib tashlandi");
+      const name = assigneeId ? team.find((m) => m.id === assigneeId)?.name : null;
+      toast.success(assigneeId ? t("orderDetail.assigneeSet", { name: name ?? "" }) : t("orderDetail.assigneeRemoved"));
       onChanged();
       await refreshTimeline();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Mas'ul tayinlanmadi");
+      toast.error(err instanceof Error ? err.message : t("orderDetail.assigneeFailed"));
     } finally {
       setUpdatingAssignee(false);
     }
@@ -266,10 +266,10 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
       });
       setOrderNotes((prev) => [note, ...prev]);
       setNewNote("");
-      toast.success("Izoh qo'shildi");
+      toast.success(t("orderDetail.noteAdded"));
       await refreshTimeline();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Izoh saqlanmadi");
+      toast.error(err instanceof Error ? err.message : t("orderDetail.noteSaveFailed"));
     } finally {
       setAddingNote(false);
     }
@@ -277,12 +277,12 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
 
   const handleDeleteNote = async (noteId: string) => {
     if (!order) return;
-    if (!confirm("Izohni o'chirish?")) return;
+    if (!confirm(t("orderDetail.deleteNoteConfirm"))) return;
     try {
       await api(`/orders/${order.id}/notes/${noteId}`, { method: "DELETE" });
       setOrderNotes((prev) => prev.filter((n) => n.id !== noteId));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "O'chirilmadi");
+      toast.error(err instanceof Error ? err.message : t("orderDetail.deleteFailed"));
     }
   };
 
@@ -291,10 +291,10 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
     setSavingNotes(true);
     try {
       await api(`/orders/${order.id}`, { method: "PATCH", body: { notes: notesDraft } });
-      toast.success("Izoh saqlandi");
+      toast.success(t("orderDetail.noteSaved"));
       setOrder({ ...order, notes: notesDraft });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Saqlanmadi");
+      toast.error(err instanceof Error ? err.message : t("orderDetail.saveFailed"));
     } finally {
       setSavingNotes(false);
     }
@@ -347,7 +347,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
       <button
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        aria-label="Yopish"
+        aria-label={t("common.close")}
       />
       <div ref={panelRef} className="relative w-full sm:max-w-md bg-white border-l border-cream-300 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {loading ? (
@@ -359,7 +359,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
             <AlertCircle className="w-10 h-10 text-rose-600" />
             <p className="text-sm text-rose-600">{error}</p>
             <button onClick={onClose} className="px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700">
-              Yopish
+              {t("common.close")}
             </button>
           </div>
         ) : order ? (
@@ -372,7 +372,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   <h2 className="text-lg font-bold text-forest-800">#{order.code}</h2>
                   {order.paid && (
                     <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-leaf-100 text-forest-700">
-                      <Check className="w-3 h-3" /> To'langan
+                      <Check className="w-3 h-3" /> {t("orders.paid")}
                     </span>
                   )}
                 </div>
@@ -398,7 +398,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                 <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                     <Send className="w-3.5 h-3.5" />
-                    Keyingi qadam — bossangiz mijozga avtomatik Telegram xabar yuboriladi
+                    {t("orderDetail.nextStepHint")}
                   </div>
                   <div className="flex gap-2">
                     {order.status === "PENDING" && (
@@ -408,7 +408,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-forest-800 transition-colors"
                       >
                         {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        Qabul qilish
+                        {t("orderDetail.accept")}
                       </button>
                     )}
                     {order.status === "PROCESSING" && (
@@ -418,7 +418,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-semibold text-forest-800 transition-colors"
                       >
                         {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        Yetkazildi
+                        {t("orderDetail.delivered")}
                       </button>
                     )}
                     <button
@@ -427,7 +427,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                       className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-cream-200 hover:bg-rose-200 hover:text-rose-600 disabled:opacity-50 rounded-lg text-sm font-medium text-slate-700 transition-colors"
                     >
                       <X className="w-4 h-4" />
-                      Bekor
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </div>
@@ -538,11 +538,11 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                   return (
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between text-slate-500">
-                        <span>Mahsulotlar yig'indisi</span>
+                        <span>{t("orderDetail.subtotal")}</span>
                         <span>{formatMoney(subtotal, order.currency)}</span>
                       </div>
                       <div className="flex justify-between text-base font-bold text-forest-800 pt-2 border-t border-cream-300 mt-2">
-                        <span>Jami</span>
+                        <span>{t("orderDetail.grandTotal")}</span>
                         <span>{formatMoney(order.total, order.currency)}</span>
                       </div>
                       {/* Boshqaruv ko'rinishi — xarajatlar tarkibi (mijoz to'loviga ta'sir qilmaydi) */}
@@ -571,16 +571,16 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                 <div className="space-y-1 text-sm">
                   {order.channel && (
                     <div className="flex justify-between text-slate-500">
-                      <span>Kanal</span>
+                      <span>{t("orderDetail.channel")}</span>
                       <span className="text-forest-700">{order.channel.name}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-slate-500">
-                    <span>Yaratilgan</span>
+                    <span>{t("orderDetail.created")}</span>
                     <span className="text-forest-700">{formatDateTime(order.createdAt)}</span>
                   </div>
                   <div className="flex justify-between text-slate-500">
-                    <span>Yangilangan</span>
+                    <span>{t("orderDetail.updated")}</span>
                     <span className="text-forest-700">{formatDateTime(order.updatedAt)}</span>
                   </div>
                 </div>
@@ -637,8 +637,8 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                     <span className="flex items-center gap-2">
                       {updatingAssignee && <Loader2 className="w-4 h-4 animate-spin" />}
                       {order.assigneeId
-                        ? team.find((t) => t.id === order.assigneeId)?.name ?? "?"
-                        : <span className="text-slate-500">— tayinlanmagan —</span>}
+                        ? team.find((m) => m.id === order.assigneeId)?.name ?? "?"
+                        : <span className="text-slate-500">{t("orderDetail.unassigned")}</span>}
                     </span>
                     <ChevronDown className="w-4 h-4 text-slate-500" />
                   </button>
@@ -650,7 +650,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                           onClick={() => handleAssign(null)}
                           className="w-full text-left px-3 py-2 text-sm text-slate-500 hover:bg-cream-200"
                         >
-                          — tayinlamaslik —
+                          {t("orderDetail.noAssign")}
                         </button>
                         {team.map((u) => (
                           <button
@@ -675,7 +675,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     rows={2}
-                    placeholder="Jamoa uchun izoh yozing (mijoz ko'rmaydi)..."
+                    placeholder={t("orderDetail.internalNotePlaceholder")}
                     className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
                   />
                   {newNote.trim() && (
@@ -685,7 +685,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                       className="px-3 py-1.5 text-xs bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg font-medium flex items-center gap-1.5"
                     >
                       {addingNote && <Loader2 className="w-3 h-3 animate-spin" />}
-                      Qo'shish
+                      {t("common.add")}
                     </button>
                   )}
                 </div>
@@ -702,7 +702,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                         <button
                           onClick={() => handleDeleteNote(n.id)}
                           className="p-1 text-slate-500 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="O'chirish"
+                          aria-label={t("common.delete")}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -724,16 +724,16 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
 
               <Section title={t("orderDetail.history")} icon={Clock}>
                 {auditLog.length === 0 ? (
-                  <p className="text-xs text-slate-500">Hozircha yozuv yo'q</p>
+                  <p className="text-xs text-slate-500">{t("orderDetail.noHistory")}</p>
                 ) : (
                   <div className="space-y-2">
                     {auditLog.map((a) => (
                       <div key={a.id} className="flex items-start gap-2.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 flex-shrink-0" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-leaf-400 mt-2 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-forest-700">{a.summary ?? a.action}</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            {a.actorName ?? "Tizim"} · {formatDateTime(a.createdAt)}
+                            {a.actorName ?? t("orderDetail.system")} · {formatDateTime(a.createdAt)}
                           </p>
                         </div>
                       </div>
@@ -758,7 +758,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                     className="mt-2 px-3 py-1.5 text-xs bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg font-medium flex items-center gap-1.5"
                   >
                     {savingNotes && <Loader2 className="w-3 h-3 animate-spin" />}
-                    Saqlash
+                    {t("common.save")}
                   </button>
                 )}
               </Section>

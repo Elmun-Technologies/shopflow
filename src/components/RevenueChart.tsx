@@ -18,7 +18,10 @@ import type { ChartTooltipProps } from "../utils/chart";
 import { useT } from "../i18n";
 
 // Tooltip — komponent tashqarisida, har render'da qayta yaratilmasligi uchun
-function makeTipComponent(currency: string) {
+function makeTipComponent(
+  currency: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
   return function Tip({ active, payload, label }: ChartTooltipProps) {
     if (active && payload && payload.length) {
       return (
@@ -28,7 +31,9 @@ function makeTipComponent(currency: string) {
             {formatCompactCurrency(payload[0].value as number, currency)}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            {String((payload[0].payload as { orders?: number } | undefined)?.orders ?? 0)} buyurtma
+            {t("widget.revenue.ordersCount", {
+              count: (payload[0].payload as { orders?: number } | undefined)?.orders ?? 0,
+            })}
           </p>
         </div>
       );
@@ -53,7 +58,7 @@ export default function RevenueChart() {
     return { current: last, change };
   }, [series]);
 
-  const Tip = useMemo(() => makeTipComponent(currency), [currency]);
+  const Tip = useMemo(() => makeTipComponent(currency, t), [currency, t]);
 
   return (
     <motion.div
@@ -72,14 +77,14 @@ export default function RevenueChart() {
             </p>
             {stats.change !== 0 && (
               <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
-                stats.change >= 0 ? "bg-leaf-100 text-forest-700" : "bg-rose-100 text-rose-600"
+                stats.change >= 0 ? "bg-leaf-100 text-forest-700" : "bg-red-100 text-red-600"
               }`}>
                 <TrendingUp className={`w-3 h-3 ${stats.change < 0 ? "rotate-180" : ""}`} />
                 {Math.abs(stats.change).toFixed(1)}%
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-1">Oxirgi 12 oy</p>
+          <p className="text-xs text-slate-500 mt-1">{t("widget.revenue.last12Months")}</p>
         </div>
       </div>
 
@@ -90,7 +95,7 @@ export default function RevenueChart() {
           </div>
         ) : series.every((s) => s.revenue === 0) ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-500">
-            Hali yopilgan buyurtmalar yo'q
+            {t("widget.revenue.empty")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

@@ -257,7 +257,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
                 </code>
                 <button
                   onClick={downloadSample}
-                  className="text-xs font-medium text-forest-700 hover:text-forest-700 flex items-center gap-1 mt-2"
+                  className="text-xs font-medium text-forest-700 hover:text-forest-800 flex items-center gap-1 mt-2"
                 >
                   <Download className="w-3 h-3" />
                   {t("import.downloadSample")}
@@ -268,7 +268,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
               <div>
                 <label className="block">
                   <span className="text-xs text-slate-500 mb-1.5 block">{t("import.fromFile")}</span>
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-cream-100 border border-cream-300 border-dashed rounded-lg cursor-pointer hover:border-emerald-500/50 transition-colors">
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-cream-100 border border-cream-300 border-dashed rounded-lg cursor-pointer hover:border-leaf-500/50 transition-colors">
                     <Upload className="w-4 h-4 text-slate-500" />
                     <input
                       type="file"
@@ -300,7 +300,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
               <div className="grid grid-cols-3 gap-3">
                 <Stat label={t("import.stat.total")} value={parsed.length} color="text-forest-800" />
                 <Stat label={t("import.stat.valid")} value={validRows.length} color="text-forest-700" />
-                <Stat label={t("import.stat.invalid")} value={invalidRows.length} color="text-rose-600" />
+                <Stat label={t("import.stat.invalid")} value={invalidRows.length} color="text-red-600" />
               </div>
 
               {/* Preview table */}
@@ -320,7 +320,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
                     </thead>
                     <tbody>
                       {parsed.map((row) => (
-                        <tr key={row.rowNum} className={`border-t border-cream-300/50 ${row.errors.length > 0 ? "bg-rose-500/5" : ""}`}>
+                        <tr key={row.rowNum} className={`border-t border-cream-300/50 ${row.errors.length > 0 ? "bg-red-500/5" : ""}`}>
                           <td className="py-1.5 px-2 text-slate-500">{row.rowNum}</td>
                           <td className="py-1.5 px-2 text-forest-800 font-mono">{row.sku || "—"}</td>
                           <td className="py-1.5 px-2 text-forest-800 truncate max-w-[180px]">{row.name || "—"}</td>
@@ -331,7 +331,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
                             {row.errors.length === 0 ? (
                               <span className="text-forest-700 text-[10px] font-medium">OK</span>
                             ) : (
-                              <span className="text-rose-600 text-[10px] font-medium" title={row.errors.join(", ")}>
+                              <span className="text-red-600 text-[10px] font-medium" title={row.errors.join(", ")}>
                                 ✗ {row.errors.join(", ")}
                               </span>
                             )}
@@ -346,7 +346,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
               {/* Progress */}
               {importing && (
                 <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
-                  <div className="flex items-center justify-between text-xs text-cream-300 mb-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {t("import.progressLabel")}

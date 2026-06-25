@@ -59,32 +59,10 @@ interface DeliveryOrder {
 
 type Tab = "methods" | "zones" | "orders";
 
-const STATUS_CONF: Record<string, { color: string; bg: string; label: string; Icon: typeof Truck }> = {
-  PENDING:    { color: "#f59e0b", bg: "bg-amber-50 border-amber-200",   label: "Kutilmoqda",  Icon: Clock },
-  ASSIGNED:   { color: "#3b82f6", bg: "bg-sky-50 border-sky-200",       label: "Tayinlandi",  Icon: Truck },
-  PICKED_UP:  { color: "#8b5cf6", bg: "bg-violet-50 border-violet-200", label: "Olib ketildi", Icon: Package },
-  IN_TRANSIT: { color: "#06b6d4", bg: "bg-cyan-50 border-cyan-200",     label: "Yo'lda",      Icon: Truck },
-  DELIVERED:  { color: "#10b981", bg: "bg-emerald-50 border-emerald-200",label: "Yetkazildi", Icon: CheckCircle2 },
-  FAILED:     { color: "#ef4444", bg: "bg-red-50 border-red-200",       label: "Muammo",      Icon: XCircle },
-  RETURNED:   { color: "#64748b", bg: "bg-slate-100 border-slate-300",  label: "Qaytarildi",  Icon: XCircle },
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  FREE: "Bepul",
-  FLAT_RATE: "Belgilangan narx",
-  BY_WEIGHT: "Og'irlik bo'yicha",
-  BY_DISTANCE: "Masofa bo'yicha",
-};
-
-function formatPrice(v: number, currency = "UZS") {
-  if (currency === "UZS") return v.toLocaleString("uz-UZ") + " so'm";
-  return v.toLocaleString() + " " + currency;
-}
-
 // ─── Asosiy sahifa ────────────────────────────────────────────────────────────
 
 export default function DeliveryPage() {
-  useT();
+  const { t } = useT();
   const [activeTab, setActiveTab] = useState<Tab>("methods");
   const [showMethodForm, setShowMethodForm] = useState(false);
   const [editMethod, setEditMethod] = useState<DeliveryMethod | null>(null);
@@ -105,6 +83,28 @@ export default function DeliveryPage() {
     () => api<{ total: number; byStatus: Array<{ status: string; count: number }> }>("/delivery/stats"), [],
   );
 
+  const STATUS_CONF: Record<string, { color: string; bg: string; label: string; Icon: typeof Truck }> = {
+    PENDING:    { color: "#f59e0b", bg: "bg-amber-50 border-amber-200",   label: t("delivery.dStatus.PENDING"),   Icon: Clock },
+    ASSIGNED:   { color: "#3b82f6", bg: "bg-sky-50 border-sky-200",       label: t("delivery.dStatus.ASSIGNED"),   Icon: Truck },
+    PICKED_UP:  { color: "#8b5cf6", bg: "bg-violet-50 border-violet-200", label: t("delivery.dStatus.PICKED_UP"),  Icon: Package },
+    IN_TRANSIT: { color: "#06b6d4", bg: "bg-cyan-50 border-cyan-200",     label: t("delivery.dStatus.IN_TRANSIT"), Icon: Truck },
+    DELIVERED:  { color: "#84cc16", bg: "bg-leaf-50 border-leaf-200",     label: t("delivery.dStatus.DELIVERED"), Icon: CheckCircle2 },
+    FAILED:     { color: "#ef4444", bg: "bg-red-50 border-red-200",       label: t("delivery.dStatus.FAILED"),     Icon: XCircle },
+    RETURNED:   { color: "#64748b", bg: "bg-slate-100 border-slate-300",  label: t("delivery.dStatus.RETURNED"),   Icon: XCircle },
+  };
+
+  const TYPE_LABELS: Record<string, string> = {
+    FREE:        t("delivery.type.FREE"),
+    FLAT_RATE:   t("delivery.type.FLAT_RATE"),
+    BY_WEIGHT:   t("delivery.type.BY_WEIGHT"),
+    BY_DISTANCE: t("delivery.type.BY_DISTANCE"),
+  };
+
+  function formatPrice(v: number, currency = "UZS") {
+    if (currency === "UZS") return v.toLocaleString("uz-UZ") + " " + t("common.sum");
+    return v.toLocaleString() + " " + currency;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -114,9 +114,9 @@ export default function DeliveryPage() {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
       >
         <div>
-          <h1 className="text-2xl font-bold text-forest-900">Yetkazib berish</h1>
+          <h1 className="text-2xl font-bold text-forest-900">{t("delivery.title")}</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Zonalar, usullar va yetkazib berish buyurtmalari
+            {t("delivery.pageSubtitle")}
           </p>
         </div>
         {activeTab === "methods" && (
@@ -125,7 +125,7 @@ export default function DeliveryPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-forest-700 hover:bg-forest-800 text-white rounded-xl text-sm font-semibold transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Yangi usul
+            {t("delivery.newMethod")}
           </button>
         )}
         {activeTab === "zones" && (
@@ -134,7 +134,7 @@ export default function DeliveryPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-forest-700 hover:bg-forest-800 text-white rounded-xl text-sm font-semibold transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Yangi zona
+            {t("delivery.newZone")}
           </button>
         )}
       </motion.div>
@@ -143,10 +143,10 @@ export default function DeliveryPage() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Jami", value: stats.total, color: "#475569" },
-            { label: "Yo'lda", value: stats.byStatus.find(s => s.status === "IN_TRANSIT")?.count ?? 0, color: "#06b6d4" },
-            { label: "Yetkazildi", value: stats.byStatus.find(s => s.status === "DELIVERED")?.count ?? 0, color: "#10b981" },
-            { label: "Muammo", value: stats.byStatus.find(s => s.status === "FAILED")?.count ?? 0, color: "#ef4444" },
+            { label: t("delivery.stat.total"),     value: stats.total, color: "#475569" },
+            { label: t("delivery.stat.inTransit"), value: stats.byStatus.find(s => s.status === "IN_TRANSIT")?.count ?? 0, color: "#06b6d4" },
+            { label: t("delivery.stat.delivered"), value: stats.byStatus.find(s => s.status === "DELIVERED")?.count ?? 0, color: "#84cc16" },
+            { label: t("delivery.stat.failed"),    value: stats.byStatus.find(s => s.status === "FAILED")?.count ?? 0, color: "#ef4444" },
           ].map((s) => (
             <div
               key={s.label}
@@ -172,7 +172,7 @@ export default function DeliveryPage() {
               : { color: "#64748b" }
             }
           >
-            {tab === "methods" ? "Usullar" : tab === "zones" ? "Zonalar" : "Buyurtmalar"}
+            {tab === "methods" ? t("delivery.tab.methodsLabel") : tab === "zones" ? t("delivery.tab.zonesLabel") : t("delivery.tab.ordersLabel")}
           </button>
         ))}
       </div>
@@ -184,8 +184,8 @@ export default function DeliveryPage() {
           {!methodsLoading && (!methods || methods.length === 0) && (
             <div className="bg-white border border-cream-300 rounded-2xl p-8 text-center">
               <Truck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="font-medium text-forest-800 mb-1">Yetkazib berish usullari yo'q</p>
-              <p className="text-sm text-slate-500">Birinchi usulni yarating</p>
+              <p className="font-medium text-forest-800 mb-1">{t("delivery.methods.empty")}</p>
+              <p className="text-sm text-slate-500">{t("delivery.methods.emptyHint")}</p>
             </div>
           )}
           {methods?.map((method) => (
@@ -206,7 +206,7 @@ export default function DeliveryPage() {
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                     method.active ? "bg-leaf-100 text-forest-700 border-leaf-300/60" : "bg-slate-100 text-slate-500 border-slate-300"
                   }`}>
-                    {method.active ? "Faol" : "Nofaol"}
+                    {method.active ? t("delivery.active") : t("delivery.inactive")}
                   </span>
                   <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                     {TYPE_LABELS[method.type]}
@@ -214,38 +214,40 @@ export default function DeliveryPage() {
                 </div>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                   <span className="text-sm font-semibold text-forest-700">
-                    {method.type === "FREE" ? "Bepul" : formatPrice(method.price)}
+                    {method.type === "FREE" ? t("delivery.type.FREE") : formatPrice(method.price)}
                   </span>
                   {method.freeAbove && (
                     <span className="text-xs text-slate-500">
-                      {formatPrice(method.freeAbove)} dan bepul
+                      {t("delivery.freeAboveLabel", { price: formatPrice(method.freeAbove) })}
                     </span>
                   )}
                   <span className="text-xs text-slate-400">
-                    {method.minDays}–{method.maxDays} kun
+                    {method.minDays}–{method.maxDays} {t("delivery.days")}
                   </span>
                   {method.zone && (
-                    <span className="text-xs text-sky-600 flex items-center gap-1">
+                    <span className="text-xs text-forest-700 flex items-center gap-1">
                       <MapPin className="w-3 h-3" />{method.zone.name}
                     </span>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs text-slate-400">{method.usageCount} ta</span>
+                <span className="text-xs text-slate-400">{t("delivery.usageCount", { count: String(method.usageCount) })}</span>
                 <button
                   onClick={() => { setEditMethod(method); setShowMethodForm(true); }}
                   className="p-2 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100 transition-colors"
+                  title={t("common.edit")}
                 >
                   <Edit3 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm(`"${method.name}" o'chirilsinmi?`)) return;
+                    if (!confirm(t("delivery.confirmDelete", { name: method.name }))) return;
                     await api(`/delivery/methods/${method.id}`, { method: "DELETE" });
                     reloadMethods();
                   }}
-                  className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-red-50 transition-colors"
+                  className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title={t("common.delete")}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -262,8 +264,8 @@ export default function DeliveryPage() {
           {!zonesLoading && (!zones || zones.length === 0) && (
             <div className="bg-white border border-cream-300 rounded-2xl p-8 text-center">
               <MapPin className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="font-medium text-forest-800 mb-1">Yetkazib berish zonalari yo'q</p>
-              <p className="text-sm text-slate-500">Birinchi zonani yarating</p>
+              <p className="font-medium text-forest-800 mb-1">{t("delivery.zones.empty")}</p>
+              <p className="text-sm text-slate-500">{t("delivery.zones.emptyHint")}</p>
             </div>
           )}
           {zones?.map((zone) => (
@@ -273,28 +275,30 @@ export default function DeliveryPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center">
-                    <MapPin className="w-4.5 h-4.5 text-sky-600" />
+                  <div className="w-9 h-9 rounded-xl bg-leaf-100 flex items-center justify-center">
+                    <MapPin className="w-4.5 h-4.5 text-forest-700" />
                   </div>
                   <div>
                     <p className="font-semibold text-forest-800 text-sm">{zone.name}</p>
-                    <p className="text-xs text-slate-400">{zone.methods.length} ta usul</p>
+                    <p className="text-xs text-slate-400">{t("delivery.zones.methodCount", { count: String(zone.methods.length) })}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { setEditZone(zone); setShowZoneForm(true); }}
                     className="p-2 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100 transition-colors"
+                    title={t("common.edit")}
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={async () => {
-                      if (!confirm(`"${zone.name}" o'chirilsinmi?`)) return;
+                      if (!confirm(t("delivery.confirmDelete", { name: zone.name }))) return;
                       await api(`/delivery/zones/${zone.id}`, { method: "DELETE" });
                       reloadZones();
                     }}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-red-50 transition-colors"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title={t("common.delete")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -321,7 +325,7 @@ export default function DeliveryPage() {
           {!ordersLoading && (!ordersData?.items || ordersData.items.length === 0) && (
             <div className="bg-white border border-cream-300 rounded-2xl p-8 text-center">
               <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="font-medium text-forest-800">Yetkazib berish buyurtmalari yo'q</p>
+              <p className="font-medium text-forest-800">{t("delivery.orders.empty")}</p>
             </div>
           )}
           {ordersData?.items.map((dOrder) => {
@@ -414,6 +418,7 @@ function MethodFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useT();
   const isEdit = !!method;
   const [form, setForm] = useState({
     name: method?.name ?? "",
@@ -430,7 +435,7 @@ function MethodFormModal({
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
-    if (!form.name.trim()) { setError("Nom kiritish shart"); return; }
+    if (!form.name.trim()) { setError(t("delivery.form.nameRequired")); return; }
     setSaving(true);
     setError(null);
     try {
@@ -446,7 +451,7 @@ function MethodFormModal({
       }
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -468,8 +473,8 @@ function MethodFormModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-forest-800">{isEdit ? "Usulni tahrirlash" : "Yangi usul"}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100">
+          <h3 className="font-bold text-forest-800">{isEdit ? t("delivery.method.editTitle") : t("delivery.method.newTitle")}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100" title={t("common.close")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -483,32 +488,32 @@ function MethodFormModal({
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">Nomi *</label>
+            <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.name")} *</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Standart yetkazish"
+              placeholder={t("delivery.form.namePlaceholder")}
               className="w-full bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-leaf-500/60"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Tur</label>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.type")}</label>
               <select
                 value={form.type}
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as DeliveryMethod["type"] }))}
                 className="w-full bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none"
               >
-                <option value="FLAT_RATE">Belgilangan</option>
-                <option value="FREE">Bepul</option>
-                <option value="BY_WEIGHT">Og'irlik</option>
-                <option value="BY_DISTANCE">Masofa</option>
+                <option value="FLAT_RATE">{t("delivery.type.FLAT_RATE")}</option>
+                <option value="FREE">{t("delivery.type.FREE")}</option>
+                <option value="BY_WEIGHT">{t("delivery.type.BY_WEIGHT")}</option>
+                <option value="BY_DISTANCE">{t("delivery.type.BY_DISTANCE")}</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Narx (so'm)</label>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.price")}</label>
               <input
                 type="number"
                 value={form.price}
@@ -521,7 +526,7 @@ function MethodFormModal({
 
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">
-              Bepul yetkazish uchun minimal summa (ixtiyoriy)
+              {t("delivery.form.freeAbove")}
             </label>
             <input
               type="number"
@@ -534,7 +539,7 @@ function MethodFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Min kunlar</label>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.minDays")}</label>
               <input
                 type="number"
                 min={1}
@@ -544,7 +549,7 @@ function MethodFormModal({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Max kunlar</label>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.maxDays")}</label>
               <input
                 type="number"
                 min={1}
@@ -557,13 +562,13 @@ function MethodFormModal({
 
           {zones.length > 0 && (
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Zona (ixtiyoriy)</label>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.zone")}</label>
               <select
                 value={form.zoneId}
                 onChange={(e) => setForm((f) => ({ ...f, zoneId: e.target.value }))}
                 className="w-full bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none"
               >
-                <option value="">Barcha zonalar</option>
+                <option value="">{t("delivery.form.allZones")}</option>
                 {zones.map((z) => (
                   <option key={z.id} value={z.id}>{z.name}</option>
                 ))}
@@ -578,7 +583,7 @@ function MethodFormModal({
               onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm text-slate-700">Faol</span>
+            <span className="text-sm text-slate-700">{t("delivery.active")}</span>
           </label>
         </div>
 
@@ -587,7 +592,7 @@ function MethodFormModal({
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-cream-100 hover:bg-cream-200 transition-colors"
           >
-            Bekor
+            {t("common.cancel")}
           </button>
           <button
             onClick={save}
@@ -595,7 +600,7 @@ function MethodFormModal({
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("common.save") : t("delivery.create")}
           </button>
         </div>
       </motion.div>
@@ -608,6 +613,7 @@ function MethodFormModal({
 function ZoneFormModal({
   zone, onClose, onSaved,
 }: { zone: DeliveryZone | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useT();
   const isEdit = !!zone;
   const [form, setForm] = useState({
     name: zone?.name ?? "",
@@ -618,7 +624,7 @@ function ZoneFormModal({
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
-    if (!form.name.trim()) { setError("Nom kiritish shart"); return; }
+    if (!form.name.trim()) { setError(t("delivery.form.nameRequired")); return; }
     setSaving(true);
     setError(null);
     try {
@@ -631,7 +637,7 @@ function ZoneFormModal({
       else await api("/delivery/zones", { method: "POST", body });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setError(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -649,8 +655,8 @@ function ZoneFormModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-forest-800">{isEdit ? "Zonani tahrirlash" : "Yangi zona"}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100">
+          <h3 className="font-bold text-forest-800">{isEdit ? t("delivery.zone.editTitle") : t("delivery.zone.newTitle")}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100" title={t("common.close")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -661,39 +667,39 @@ function ZoneFormModal({
         )}
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">Nomi *</label>
+            <label className="text-xs font-medium text-slate-500 mb-1 block">{t("delivery.form.name")} *</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Toshkent shahri"
+              placeholder={t("delivery.zone.namePlaceholder")}
               className="w-full bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-leaf-500/60"
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">
-              Hududlar (vergul bilan)
+              {t("delivery.zone.regionsLabel")}
             </label>
             <textarea
               value={form.regions}
               onChange={(e) => setForm((f) => ({ ...f, regions: e.target.value }))}
-              placeholder="Yunusobod, Mirzo Ulug'bek, Chilonzor"
+              placeholder={t("delivery.zone.regionsPlaceholder")}
               rows={3}
               className="w-full bg-white border border-cream-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-leaf-500/60 resize-none"
             />
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active} onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))} className="rounded" />
-            <span className="text-sm text-slate-700">Faol</span>
+            <span className="text-sm text-slate-700">{t("delivery.active")}</span>
           </label>
         </div>
         <div className="flex gap-2 pt-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-cream-100 hover:bg-cream-200 transition-colors">
-            Bekor
+            {t("common.cancel")}
           </button>
           <button onClick={save} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("common.save") : t("delivery.create")}
           </button>
         </div>
       </motion.div>
@@ -706,9 +712,19 @@ function ZoneFormModal({
 function OrderDetailModal({
   order, onClose, onStatusUpdate,
 }: { order: DeliveryOrder; onClose: () => void; onStatusUpdate: () => void }) {
-  const conf = STATUS_CONF[order.status] ?? STATUS_CONF.PENDING;
+  const { t } = useT();
   const [updating, setUpdating] = useState(false);
   const toast = useAppToast();
+
+  const STATUS_CONF: Record<string, { color: string; bg: string; label: string; Icon: typeof Truck }> = {
+    PENDING:    { color: "#f59e0b", bg: "bg-amber-50 border-amber-200",   label: t("delivery.dStatus.PENDING"),   Icon: Clock },
+    ASSIGNED:   { color: "#3b82f6", bg: "bg-sky-50 border-sky-200",       label: t("delivery.dStatus.ASSIGNED"),   Icon: Truck },
+    PICKED_UP:  { color: "#8b5cf6", bg: "bg-violet-50 border-violet-200", label: t("delivery.dStatus.PICKED_UP"),  Icon: Package },
+    IN_TRANSIT: { color: "#06b6d4", bg: "bg-cyan-50 border-cyan-200",     label: t("delivery.dStatus.IN_TRANSIT"), Icon: Truck },
+    DELIVERED:  { color: "#84cc16", bg: "bg-leaf-50 border-leaf-200",     label: t("delivery.dStatus.DELIVERED"), Icon: CheckCircle2 },
+    FAILED:     { color: "#ef4444", bg: "bg-red-50 border-red-200",       label: t("delivery.dStatus.FAILED"),     Icon: XCircle },
+    RETURNED:   { color: "#64748b", bg: "bg-slate-100 border-slate-300",  label: t("delivery.dStatus.RETURNED"),   Icon: XCircle },
+  };
 
   const NEXT_STATUS: Record<string, string> = {
     PENDING: "ASSIGNED",
@@ -717,6 +733,7 @@ function OrderDetailModal({
     IN_TRANSIT: "DELIVERED",
   };
 
+  const conf = STATUS_CONF[order.status] ?? STATUS_CONF.PENDING;
   const nextStatus = NEXT_STATUS[order.status];
 
   const updateStatus = async (status: string) => {
@@ -725,7 +742,7 @@ function OrderDetailModal({
       await api(`/delivery/orders/${order.id}/status`, { method: "PATCH", body: { status } });
       onStatusUpdate();
     } catch {
-      toast.error("Holatni yangilashda xato");
+      toast.error(t("delivery.orders.updateError"));
     } finally {
       setUpdating(false);
     }
@@ -743,8 +760,8 @@ function OrderDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-forest-800">Yetkazib berish #{order.order.code}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100">
+          <h3 className="font-bold text-forest-800">{t("delivery.orders.detailTitle", { code: order.order.code })}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-forest-800 hover:bg-cream-100" title={t("common.close")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -757,30 +774,34 @@ function OrderDetailModal({
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-slate-400 text-xs">Mijoz</p>
+              <p className="text-slate-400 text-xs">{t("delivery.orders.customer")}</p>
               <p className="font-medium text-forest-800">{order.order.customer?.name ?? "—"}</p>
               {order.order.customer?.phone && <p className="text-slate-500 text-xs">{order.order.customer.phone}</p>}
             </div>
             <div>
-              <p className="text-slate-400 text-xs">Narx</p>
-              <p className="font-semibold text-forest-700">{order.price > 0 ? `${order.price.toLocaleString("uz-UZ")} so'm` : "Bepul"}</p>
+              <p className="text-slate-400 text-xs">{t("delivery.orders.price")}</p>
+              <p className="font-semibold text-forest-700">
+                {order.price > 0
+                  ? `${order.price.toLocaleString("uz-UZ")} ${t("common.sum")}`
+                  : t("delivery.type.FREE")}
+              </p>
             </div>
             {order.order.shippingAddress && (
               <div className="col-span-2">
-                <p className="text-slate-400 text-xs">Manzil</p>
+                <p className="text-slate-400 text-xs">{t("delivery.orders.address")}</p>
                 <p className="font-medium text-forest-800">{order.order.shippingAddress}</p>
               </div>
             )}
             {order.courierName && (
               <div>
-                <p className="text-slate-400 text-xs">Kuryer</p>
+                <p className="text-slate-400 text-xs">{t("delivery.orders.courier")}</p>
                 <p className="font-medium text-forest-800">{order.courierName}</p>
                 {order.courierPhone && <p className="text-slate-500 text-xs">{order.courierPhone}</p>}
               </div>
             )}
             {order.trackingCode && (
               <div>
-                <p className="text-slate-400 text-xs">Tracking</p>
+                <p className="text-slate-400 text-xs">{t("delivery.orders.tracking")}</p>
                 <p className="font-mono text-sm text-forest-800">{order.trackingCode}</p>
               </div>
             )}
@@ -794,7 +815,7 @@ function OrderDetailModal({
             className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
           >
             {updating && <Loader2 className="w-4 h-4 animate-spin" />}
-            → {STATUS_CONF[nextStatus]?.label} ga o'tkazish
+            {t("delivery.orders.advanceStatus", { label: STATUS_CONF[nextStatus]?.label ?? nextStatus })}
           </button>
         )}
 
@@ -802,9 +823,9 @@ function OrderDetailModal({
           <button
             onClick={() => updateStatus("FAILED")}
             disabled={updating}
-            className="w-full py-2.5 rounded-xl text-sm font-medium text-rose-600 bg-red-50 hover:bg-red-100 transition-colors"
+            className="w-full py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
           >
-            Yetkazib berilmadi
+            {t("delivery.orders.markFailed")}
           </button>
         )}
       </motion.div>

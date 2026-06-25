@@ -159,7 +159,7 @@ export default function LoginPage() {
                   required
                   value={tenantName}
                   onChange={(e) => setTenantName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
                   placeholder={t("login.tenantNamePlaceholder")}
                 />
               </div>
@@ -172,7 +172,7 @@ export default function LoginPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
                 />
               </div>
             </>
@@ -187,7 +187,7 @@ export default function LoginPage() {
               required={mode === "register"}
               value={tenantSlug}
               onChange={(e) => setTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
               placeholder="mening-dokonim"
               pattern="[a-z0-9-]+"
             />
@@ -200,7 +200,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
               placeholder="you@example.com"
               autoComplete="email"
             />
@@ -214,15 +214,15 @@ export default function LoginPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2.5 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 px-3 py-2 bg-rose-100 border border-rose-300 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-rose-600">{error}</p>
+            <div className="flex items-start gap-2 px-3 py-2 bg-red-100 border border-red-300 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 

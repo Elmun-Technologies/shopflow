@@ -14,10 +14,10 @@ const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
 function EmailStatusBadge({ status }: { status: EmailCampaignStatus }) {
   const map: Record<EmailCampaignStatus, string> = {
     draft: "bg-cream-200 text-slate-700",
-    scheduled: "bg-sky-100 text-sky-600 border border-sky-300",
-    sending: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30",
-    sent: "bg-leaf-100 text-forest-700 border border-leaf-400/50",
-    paused: "bg-orange-500/15 text-orange-600 border border-orange-500/30",
+    scheduled: "bg-blue-100 text-blue-600",
+    sending: "bg-amber-100 text-amber-600",
+    sent: "bg-leaf-100 text-forest-700",
+    paused: "bg-amber-100 text-amber-600",
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{emailCampaignStatusLabels[status]}</span>;
 }
@@ -77,7 +77,7 @@ export default function RassilkaPage() {
           <h1 className="text-2xl font-bold text-forest-800">{editItem ? t("rassilka.edit") : t("rassilka.new")}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-            <button form="email-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
+            <button form="email-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium">{t("common.save")}</button>
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export default function RassilkaPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("common.search")} className={inputClass + " pl-10"} />
         </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           {t("rassilka.add")}
         </button>
@@ -128,7 +128,7 @@ export default function RassilkaPage() {
             description={t("rassilka.empty.desc")}
             buttonText={t("rassilka.empty.btn")}
             onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
-            iconColor="text-sky-600"
+            iconColor="text-cream-300"
           />
         </motion.div>
       ) : (
@@ -156,7 +156,7 @@ export default function RassilkaPage() {
                   <td className={tdClass + " text-xs"}>{e.sent > 0 ? ((e.opened / e.sent) * 100).toFixed(1) : "—"}%</td>
                   <td className={tdClass + " text-right whitespace-nowrap"}>
                     <button onClick={() => { setEditItem(e); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => setPendingDelete(e.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setPendingDelete(e.id)} className="p-1.5 rounded text-slate-500 hover:text-red-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -174,7 +174,7 @@ export default function RassilkaPage() {
               <p className="text-sm text-slate-500 mb-6">{t("mkt.confirmDelete.body")}</p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-                <button onClick={() => { setEmails((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">{t("common.delete")}</button>
+                <button onClick={() => { setEmails((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-500 hover:bg-red-600 text-white font-medium">{t("common.delete")}</button>
               </div>
             </motion.div>
           </motion.div>
@@ -243,7 +243,7 @@ function EmailForm({ initial, error, onSave }: EmailFormProps) {
             <label htmlFor={`${id}-schedule`} className={labelClass}>{t("rassilka.form.scheduleTime")}</label>
             <input id={`${id}-schedule`} className={inputClass} type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </div>
-          {error && <div role="alert" className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div role="alert" className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-600">{error}</div>}
         </div>
       </div>
     </form>

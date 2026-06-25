@@ -127,9 +127,9 @@ export default function ProductsPage() {
       });
       clearSelection();
       refetch();
-      toast.success(res.summary || `${res.affected} ta yangilandi`);
+      toast.success(res.summary || t("products.bulk.updated", { n: res.affected }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Bulk operatsiya muvaffaqiyatsiz");
+      toast.error(err instanceof Error ? err.message : t("products.bulk.operationFailed"));
     } finally {
       setBulkBusy(false);
     }
@@ -137,7 +137,7 @@ export default function ProductsPage() {
 
   const handleBulkDelete = () => {
     if (selected.size === 0) return;
-    if (!confirm(`${selected.size} ta mahsulotni butunlay o'chirish?`)) return;
+    if (!confirm(t("products.bulk.deleteConfirm", { n: selected.size }))) return;
     runBulk({ ids: Array.from(selected), action: "delete" });
   };
   const handleBulkActive = (value: boolean) =>
@@ -329,7 +329,7 @@ export default function ProductsPage() {
             <button
               onClick={handleBulkDelete}
               disabled={bulkBusy}
-              className="px-2.5 py-1 bg-rose-200 hover:bg-rose-200 text-rose-600 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
+              className="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-600 disabled:opacity-50 rounded-md text-xs flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               {t("products.bulk.delete")}
@@ -444,6 +444,7 @@ function RestockModal({
   onDone: () => void;
 }) {
   const toast = useAppToast();
+  const { t } = useT();
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -452,7 +453,7 @@ function RestockModal({
     e.preventDefault();
     const qty = parseInt(quantity, 10);
     if (!qty || qty <= 0) {
-      toast.error("Miqdor 1 dan katta bo'lishi kerak");
+      toast.error(t("products.restock.quantityMin"));
       return;
     }
     setBusy(true);
@@ -461,10 +462,10 @@ function RestockModal({
         quantity: qty,
         note: note.trim() || undefined,
       });
-      toast.success(`+${res.added} qo'shildi. Yangi stok: ${res.stock}`);
+      toast.success(t("products.restock.added", { added: res.added, stock: res.stock }));
       onDone();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Stok qo'shilmadi");
+      toast.error(err instanceof Error ? err.message : t("products.restock.error"));
     } finally {
       setBusy(false);
     }
@@ -493,14 +494,14 @@ function RestockModal({
             <h3 className="text-base font-semibold text-forest-800 truncate">{product.name}</h3>
             <p className="text-xs text-slate-500 truncate">{product.sku}</p>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label="Yopish">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100" aria-label={t("common.close")}>
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
 
         <div className="flex items-center justify-between p-3 rounded-xl bg-cream-100/60 mb-4">
           <div className="text-center flex-1">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Hozir</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{t("products.restock.current")}</p>
             <p className="text-xl font-bold text-forest-800">{product.stock}</p>
           </div>
           <div className="text-center px-3">
@@ -508,7 +509,7 @@ function RestockModal({
             <PackagePlus className="w-5 h-5 text-leaf-500 mx-auto" />
           </div>
           <div className="text-center flex-1">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Yangi</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{t("products.restock.new")}</p>
             <p className={`text-xl font-bold ${newStock > product.stock ? "text-leaf-500" : "text-forest-800"}`}>
               {newStock}
             </p>
@@ -516,7 +517,7 @@ function RestockModal({
         </div>
 
         <label className="block mb-3">
-          <span className="text-xs text-slate-500 mb-1.5 block">Qo'shimcha miqdor</span>
+          <span className="text-xs text-slate-500 mb-1.5 block">{t("products.restock.quantity")}</span>
           <input
             type="number"
             min="1"
@@ -524,22 +525,22 @@ function RestockModal({
             autoFocus
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            placeholder="Masalan: 50"
+            placeholder={t("products.restock.quantityPlaceholder")}
             className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-lg font-semibold text-forest-800 focus:outline-none focus:border-leaf-500/60"
           />
         </label>
 
         <label className="block mb-4">
-          <span className="text-xs text-slate-500 mb-1.5 block">Izoh (ixtiyoriy)</span>
+          <span className="text-xs text-slate-500 mb-1.5 block">{t("products.restock.note")}</span>
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Masalan: Yetkazib beruvchi X, partiya №123"
+            placeholder={t("products.restock.notePlaceholder")}
             maxLength={500}
             className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
           />
-          <p className="text-[10px] text-slate-400 mt-1">Audit log'da yodda qolar — qaerdan kelganini yozib qo'ying.</p>
+          <p className="text-[10px] text-slate-400 mt-1">{t("products.restock.noteHint")}</p>
         </label>
 
         <div className="flex justify-end gap-2">
@@ -548,7 +549,7 @@ function RestockModal({
             onClick={onClose}
             className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
           >
-            Bekor qilish
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -556,7 +557,7 @@ function RestockModal({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
-            Stok qo'shish
+            {t("products.restock.title")}
           </button>
         </div>
       </motion.form>
@@ -589,7 +590,7 @@ function ProductCard({
   const bd = priceBreakdown(Number(product.price), tenant?.deliveryPct, tenant?.servicePct);
   return (
     <div className={`bg-white border rounded-xl p-4 transition-colors group ${
-      selected ? "border-emerald-500/60 ring-2 ring-emerald-500/20" : "border-cream-300 hover:border-cream-300"
+      selected ? "border-leaf-500/60 ring-2 ring-leaf-500/20" : "border-cream-300 hover:border-cream-300"
     }`}>
       <div className="w-full aspect-video bg-cream-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
         {product.imageUrl ? (
@@ -619,7 +620,7 @@ function ProductCard({
           <button
             onClick={onRestock}
             className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900"
-            title="Stok qo'shish"
+            title={t("products.restock.title")}
           >
             <PackagePlus className="w-3.5 h-3.5" />
           </button>
@@ -661,7 +662,7 @@ function ProductCard({
                 ? "bg-rose-100 text-rose-600 hover:bg-rose-200"
                 : "bg-amber-100 text-amber-700 hover:bg-amber-200"
             }`}
-            title="Stok qo'shish"
+            title={t("products.restock.title")}
           >
             <PackagePlus className="w-3 h-3" />
             {t("products.card.stock", { n: product.stock })}
@@ -772,8 +773,8 @@ function ProductFormModal({
       body: form,
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Yuklash xatosi" }));
-      throw new Error((err as { error?: string }).error || "Yuklash xatosi");
+      const err = await res.json().catch(() => ({ error: t("productForm.uploadError") }));
+      throw new Error((err as { error?: string }).error || t("productForm.uploadError"));
     }
     const { url } = (await res.json()) as { url: string };
     return url;
@@ -795,14 +796,14 @@ function ProductFormModal({
       const skipped = fileArr.length - toUpload.length;
       setImageToast(
         skipped > 0
-          ? `${toUpload.length} ta rasm yuklandi · ${skipped} ta o'tkazib yuborildi (limit ${MAX_IMAGES})`
+          ? t("productForm.imagesSkipped", { n: toUpload.length, skipped, max: MAX_IMAGES })
           : toUpload.length === 1
-            ? "Rasm yuklandi"
-            : `${toUpload.length} ta rasm yuklandi`,
+            ? t("productForm.imageUploaded")
+            : t("productForm.imagesUploaded", { n: toUpload.length }),
       );
       setTimeout(() => setImageToast(null), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Rasm yuklanmadi");
+      setError(e instanceof Error ? e.message : t("productForm.imageUploadError"));
     } finally {
       setUploading(false);
     }
@@ -876,10 +877,10 @@ function ProductFormModal({
         });
       }
       // Success state — 1.2 soniya ko'rsatib, keyin yopiladi
-      setSuccess(product ? "O'zgarishlar saqlandi" : "Mahsulot yaratildi");
+      setSuccess(product ? t("productForm.saveSuccess") : t("productForm.createSuccess"));
       setTimeout(() => onSaved(), 1200);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Xato");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -1041,7 +1042,7 @@ function ProductFormModal({
           />
 
           {/* Combo / qo'shimcha mahsulotlar (Amazon-style) */}
-          <Field label={`🎁 Combo qo'shimchalari (${comboAddons.length}) — Mini App'da "Bularni ham qo'shing"`}>
+          <Field label={t("productForm.combo.fieldLabelFull", { n: comboAddons.length })}>
             {comboAddons.length > 0 && (
               <div className="space-y-2 mb-2">
                 {comboAddons.map((addon, i) => (
@@ -1087,7 +1088,7 @@ function ProductFormModal({
                       type="button"
                       onClick={() => setComboAddons((prev) => prev.filter((_, j) => j !== i))}
                       className="text-slate-500 hover:text-rose-600 p-1"
-                      aria-label="O'chirish"
+                      aria-label={t("common.delete")}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1098,14 +1099,13 @@ function ProductFormModal({
             <button
               type="button"
               onClick={() => setComboPickerOpen(true)}
-              className="w-full py-2 border-2 border-dashed border-cream-300 hover:border-emerald-500/50 hover:bg-leaf-400/5 rounded-lg text-xs text-slate-500 hover:text-forest-700 transition-colors flex items-center justify-center gap-1"
+              className="w-full py-2 border-2 border-dashed border-cream-300 hover:border-leaf-500/50 hover:bg-leaf-400/5 rounded-lg text-xs text-slate-500 hover:text-forest-700 transition-colors flex items-center justify-center gap-1"
             >
               <Plus className="w-3.5 h-3.5" />
-              Qo'shimcha mahsulot qo'shish
+              {t("productForm.combo.addButton")}
             </button>
             <p className="text-[10px] text-slate-500 mt-1.5">
-              Mijoz Mini App'da bu mahsulotni ochganda "Bularni ham qo'shing" bo'limi ko'rinadi.
-              `default` belgisi — checkbox boshlang'ich tanlangan bo'ladi. `%` — combo bilan birga olganda chegirma.
+              {t("productForm.combo.hint")}
             </p>
           </Field>
 
@@ -1118,7 +1118,7 @@ function ProductFormModal({
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4" onClick={() => setComboPickerOpen(false)}>
               <div className="bg-white border border-cream-300 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="sticky top-0 bg-white border-b border-cream-300 px-4 py-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-forest-800">Mahsulot qo'shish</h3>
+                  <h3 className="text-sm font-semibold text-forest-800">{t("productForm.combo.pickerTitle")}</h3>
                   <button type="button" onClick={() => setComboPickerOpen(false)} className="p-1 text-slate-500 hover:text-forest-900">
                     <X className="w-4 h-4" />
                   </button>
@@ -1130,20 +1130,20 @@ function ProductFormModal({
                     </div>
                     <p className="text-sm font-medium text-forest-800">
                       {productsCatalog.length === 0
-                        ? "Hali boshqa mahsulotlar yo'q"
-                        : "Hamma mahsulotlar allaqachon qo'shilgan"}
+                        ? t("productForm.combo.emptyNone")
+                        : t("productForm.combo.emptyAll")}
                     </p>
                     <p className="text-xs text-slate-500 max-w-xs">
                       {productsCatalog.length === 0
-                        ? "Avval boshqa mahsulotlarni yarating — keyin shu mahsulot bilan birga combo sifatida bog'lashingiz mumkin (Mini App'da \"Bularni ham qo'shing\" sifatida ko'rinadi)."
-                        : "Yangi combo qo'shish uchun avval boshqa mahsulot yarating."}
+                        ? t("productForm.combo.emptyNoneHint")
+                        : t("productForm.combo.emptyAllHint")}
                     </p>
                     <button
                       type="button"
                       onClick={() => setComboPickerOpen(false)}
                       className="mt-1 px-4 py-1.5 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-slate-700"
                     >
-                      Tushunarli
+                      {t("productForm.combo.gotIt")}
                     </button>
                   </div>
                 ) : (
@@ -1193,7 +1193,7 @@ function ProductFormModal({
                 type="checkbox"
                 checked={featured}
                 onChange={(e) => setFeatured(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-cream-100 text-emerald-500 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-slate-600 bg-cream-100 text-leaf-500 focus:ring-leaf-500"
               />
               <span className="text-sm text-slate-700">
                 {t("productForm.featured")}
@@ -1204,7 +1204,7 @@ function ProductFormModal({
                 type="checkbox"
                 checked={active}
                 onChange={(e) => setActive(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-600 bg-cream-100 text-emerald-500 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-slate-600 bg-cream-100 text-leaf-500 focus:ring-leaf-500"
               />
               <span className="text-sm text-slate-700">{t("productForm.active")}</span>
             </label>
@@ -1261,16 +1261,16 @@ function ProductFormModal({
           .input {
             width: 100%;
             padding: 0.625rem 0.75rem;
-            background: rgb(30 41 59);
-            border: 1px solid rgb(51 65 85);
+            background: rgb(244 244 237);
+            border: 1px solid rgb(229 229 218);
             border-radius: 0.5rem;
-            color: white;
+            color: rgb(31 51 39);
             font-size: 0.875rem;
             outline: none;
             transition: border-color 0.15s;
           }
           .input:focus {
-            border-color: rgb(16 185 129);
+            border-color: rgb(132 204 22);
           }
         `}</style>
       </form>
@@ -1309,12 +1309,12 @@ function CategoriesModal({
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error || "Yuklash xatosi");
+        throw new Error(err.error || t("categoriesModal.imageUploadError"));
       }
       const { url } = (await res.json()) as { url: string };
       setNewImageUrl(url);
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Rasm yuklanmadi");
+      setUploadError(e instanceof Error ? e.message : t("categoriesModal.imageLoadError"));
     } finally {
       setUploading(false);
     }
@@ -1345,7 +1345,7 @@ function CategoriesModal({
   };
 
   const handleDelete = async (c: Category) => {
-    if (!confirm(`"${c.name}" kategoriyani o'chirish?`)) return;
+    if (!confirm(t("categoriesModal.deleteConfirm", { name: c.name }))) return;
     await categoriesApi.delete(c.id);
     onChanged();
   };
@@ -1376,19 +1376,19 @@ function CategoriesModal({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder={t("categoriesModal.newName")}
-            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
           />
           <input
             type="text"
             value={newSlug}
             onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
             placeholder={t("categoriesModal.slug")}
-            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 bg-cream-100 border border-cream-300 rounded-lg text-forest-800 text-sm focus:outline-none focus:border-leaf-500"
           />
           <label
             className={`flex items-center justify-center w-full h-20 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
               uploading
-                ? "border-emerald-500/50 bg-leaf-400/5"
+                ? "border-leaf-500/50 bg-leaf-400/5"
                 : newImageUrl
                   ? "border-cream-300"
                   : "border-cream-300 hover:border-slate-500 bg-cream-100/30"
@@ -1408,24 +1408,24 @@ function CategoriesModal({
             {uploading ? (
               <div className="flex items-center gap-2 text-xs text-forest-700">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Yuklanmoqda...
+                {t("categoriesModal.imageUploading")}
               </div>
             ) : newImageUrl ? (
               <div className="flex items-center gap-2">
                 <img src={newImageUrl} alt="preview" className="w-12 h-12 rounded object-cover" />
-                <span className="text-xs text-slate-500">Rasmni o'zgartirish</span>
+                <span className="text-xs text-slate-500">{t("categoriesModal.imageChange")}</span>
               </div>
             ) : (
-              <span className="text-xs text-slate-500">Rasm yuklash (ixtiyoriy)</span>
+              <span className="text-xs text-slate-500">{t("categoriesModal.imageOptional")}</span>
             )}
           </label>
           {newImageUrl && !uploading && (
             <button
               type="button"
               onClick={() => setNewImageUrl("")}
-              className="text-[11px] text-rose-600 hover:text-red-300"
+              className="text-[11px] text-rose-600 hover:text-rose-700"
             >
-              Rasmni olib tashlash
+              {t("categoriesModal.imageRemove")}
             </button>
           )}
           {uploadError && <p className="text-[11px] text-rose-600">{uploadError}</p>}
@@ -1436,13 +1436,13 @@ function CategoriesModal({
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <Plus className="w-3.5 h-3.5" />
-            Qo'shish
+            {t("common.add")}
           </button>
         </form>
 
         <div className="p-3">
           {categories.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-6">Hali kategoriya yo'q</p>
+            <p className="text-sm text-slate-500 text-center py-6">{t("categoriesModal.empty")}</p>
           ) : (
             categories.map((c) => (
               <div
@@ -1515,6 +1515,7 @@ function ImageGallery({
   onDragOver,
   onDragEnd,
 }: ImageGalleryProps) {
+  const { t } = useT();
   const [dropZoneActive, setDropZoneActive] = useState(false);
   const slotsLeft = MAX_IMAGES - images.length;
   const canAdd = slotsLeft > 0 && !uploading;
@@ -1531,7 +1532,7 @@ function ImageGallery({
   // Bo'sh holat — katta drop zone
   if (images.length === 0) {
     return (
-      <Field label="Mahsulot rasmlari">
+      <Field label={t("productForm.images.fieldLabel")}>
         <label
           onDragEnter={(e) => {
             e.preventDefault();
@@ -1542,9 +1543,9 @@ function ImageGallery({
           onDrop={handleFileDrop}
           className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
             uploading
-              ? "border-emerald-500/50 bg-leaf-400/5"
+              ? "border-leaf-500/50 bg-leaf-400/5"
               : dropZoneActive
-                ? "border-emerald-500 bg-leaf-100"
+                ? "border-leaf-500 bg-leaf-100"
                 : "border-cream-300 hover:border-slate-500 bg-cream-100/30"
           }`}
         >
@@ -1562,16 +1563,16 @@ function ImageGallery({
           {uploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 text-forest-700 animate-spin" />
-              <span className="text-xs text-forest-700">Yuklanmoqda...</span>
+              <span className="text-xs text-forest-700">{t("productForm.images.uploading")}</span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <ImagePlus className="w-10 h-10 text-slate-500" />
               <span className="text-sm font-medium text-slate-700">
-                Rasmlarni bu yerga sudrab tashlang yoki tanlang
+                {t("productForm.images.dropHint")}
               </span>
               <span className="text-[11px] text-slate-500">
-                Birinchi rasm — asosiy · 10 tagacha · JPEG, PNG, WebP, GIF · 8MB gacha
+                {t("productForm.images.formatHint")}
               </span>
             </div>
           )}
@@ -1582,7 +1583,7 @@ function ImageGallery({
 
   // Rasmlar bor — galereya
   return (
-    <Field label={`Mahsulot rasmlari (${images.length}/${MAX_IMAGES})`}>
+    <Field label={t("productForm.images.fieldLabelCount", { n: images.length, max: MAX_IMAGES })}>
       <div className="grid grid-cols-4 gap-2">
         {images.map((url, i) => {
           const isCover = i === 0;
@@ -1617,20 +1618,20 @@ function ImageGallery({
               onDragEnd={onDragEnd}
               className={`relative group ${isCover ? "col-span-2 row-span-2 aspect-[4/3]" : "aspect-square"} bg-cream-100 rounded-lg overflow-hidden cursor-move transition-all ${
                 isDragSource ? "opacity-40" : ""
-              } ${isDragTarget ? "ring-2 ring-emerald-500" : ""}`}
+              } ${isDragTarget ? "ring-2 ring-leaf-500" : ""}`}
             >
-              <img src={url} alt={isCover ? "Asosiy rasm" : `${i + 1}-rasm`} className="w-full h-full object-cover pointer-events-none" />
+              <img src={url} alt={isCover ? t("productForm.images.coverAlt") : t("productForm.images.indexAlt", { n: i + 1 })} className="w-full h-full object-cover pointer-events-none" />
 
               {/* Asosiy belgisi */}
               {isCover && (
                 <div className="absolute top-2 left-2 px-2 py-0.5 bg-leaf-400 text-forest-800 text-[10px] font-bold rounded shadow-lg">
-                  ASOSIY
+                  {t("productForm.images.cover")}
                 </div>
               )}
 
               {/* Tartib raqami (cover'dan tashqari) */}
               {!isCover && (
-                <div className="absolute top-1 left-1 w-5 h-5 bg-black/70 text-forest-800 text-[10px] font-medium rounded-full flex items-center justify-center">
+                <div className="absolute top-1 left-1 w-5 h-5 bg-black/70 text-white text-[10px] font-medium rounded-full flex items-center justify-center">
                   {i + 1}
                 </div>
               )}
@@ -1643,17 +1644,17 @@ function ImageGallery({
                       type="button"
                       onClick={() => onMakeCover(i)}
                       className="px-2 py-1 bg-leaf-400 hover:bg-leaf-500 rounded text-[10px] font-medium text-forest-800 shadow"
-                      title="Asosiy qilish"
+                      title={t("productForm.images.makeCoverTitle")}
                     >
                       <Star className="w-3 h-3 inline mr-0.5" />
-                      Asosiy
+                      {t("productForm.images.makeCover")}
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => onRemove(i)}
-                    className="w-7 h-7 bg-rose-500 hover:bg-rose-600 rounded flex items-center justify-center text-forest-800 shadow"
-                    title="O'chirish"
+                    className="w-7 h-7 bg-rose-500 hover:bg-rose-600 rounded flex items-center justify-center text-white shadow"
+                    title={t("common.delete")}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1675,7 +1676,7 @@ function ImageGallery({
             onDrop={handleFileDrop}
             className={`aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
               dropZoneActive
-                ? "border-emerald-500 bg-leaf-100"
+                ? "border-leaf-500 bg-leaf-100"
                 : "border-cream-300 hover:border-slate-500 bg-cream-100/30"
             }`}
           >
@@ -1690,20 +1691,20 @@ function ImageGallery({
               }}
             />
             <ImagePlus className="w-5 h-5 text-slate-500 mb-1" />
-            <span className="text-[10px] text-slate-500">Yana {slotsLeft} ta</span>
+            <span className="text-[10px] text-slate-500">{t("productForm.images.addMore", { n: slotsLeft })}</span>
           </label>
         )}
 
         {/* Yuklash holatida overlay */}
         {uploading && (
-          <div className="aspect-square flex items-center justify-center border-2 border-dashed border-emerald-500/50 rounded-lg bg-leaf-400/5">
+          <div className="aspect-square flex items-center justify-center border-2 border-dashed border-leaf-500/50 rounded-lg bg-leaf-400/5">
             <Loader2 className="w-5 h-5 text-forest-700 animate-spin" />
           </div>
         )}
       </div>
 
       <p className="text-[11px] text-slate-500 mt-2">
-        💡 <span className="text-slate-500">Birinchi rasm — asosiy</span> · rasmni sudrab tartibini o'zgartiring · hover qilib ⭐ "Asosiy" yoki 🗑 "O'chirish" tanlang
+        {t("productForm.images.galleryHint")}
       </p>
     </Field>
   );

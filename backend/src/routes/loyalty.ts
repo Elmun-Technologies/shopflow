@@ -181,44 +181,72 @@ export const loyaltyRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!customer) return reply.code(404).send({ error: "Mijoz topilmadi" });
 
-      const account = await app.prisma.loyaltyAccount.upsert({
+      await app.prisma.loyaltyAccount.upsert({
         where: { customerId: customer.id },
         create: { tenantId, customerId: customer.id, balance: 0, totalEarned: 0, totalSpent: 0 },
         update: {},
       });
 
-      const newBalance = Math.max(0, account.balance + data.amount);
-      const diff = newBalance - account.balance;
+      // Atomiklik (DI-7): read-modify-write o'rniga $transaction ichida
+      // compare-and-set. Balansni 0 dan past tushira olmaymiz (Math.max clamp),
+      // shuning uchun atomik increment yetmaydi — eski balansga bog'liq diff'ni
+      // tranzaksiya ichida hisoblab, faqat balans hali o'zgarmagan bo'lsa
+      // yozamiz. Concurrent adjust write'ni bekor qilsa (count=0), qayta urinamiz
+      // (lost update yo'q).
+      let result: { from: number; to: number; diff: number } | null = null;
+      for (let attempt = 0; attempt < 5 && result === null; attempt++) {
+        result = await app.prisma.$transaction(async (tx) => {
+          const acc = await tx.loyaltyAccount.findUniqueOrThrow({
+            where: { customerId: customer.id },
+            select: { id: true, balance: true },
+          });
 
-      if (diff === 0) return { balance: account.balance, changed: 0 };
+          const newBalance = Math.max(0, acc.balance + data.amount);
+          const diff = newBalance - acc.balance;
 
-      await Promise.all([
-        app.prisma.loyaltyAccount.update({
-          where: { id: account.id },
-          data: {
-            balance: newBalance,
-            ...(diff > 0 ? { totalEarned: { increment: diff } } : { totalSpent: { increment: -diff } }),
-          },
-        }),
-        app.prisma.loyaltyTransaction.create({
-          data: {
-            tenantId,
-            accountId: account.id,
-            type: "ADJUST",
-            amount: diff,
-            balance: newBalance,
-            description: data.description,
-          },
-        }),
-      ]);
+          if (diff === 0) return { from: acc.balance, to: acc.balance, diff: 0 };
+
+          // Compare-and-set: faqat balans biz o'qigan qiymatda bo'lsa yangilanadi.
+          // Boshqa concurrent transaction allaqachon o'zgartirib bo'lgan bo'lsa
+          // count=0 → null qaytarib, tashqi loop qayta urinadi.
+          const updated = await tx.loyaltyAccount.updateMany({
+            where: { id: acc.id, balance: acc.balance },
+            data: {
+              balance: newBalance,
+              ...(diff > 0 ? { totalEarned: { increment: diff } } : { totalSpent: { increment: -diff } }),
+            },
+          });
+          if (updated.count === 0) return null;
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              tenantId,
+              accountId: acc.id,
+              type: "ADJUST",
+              amount: diff,
+              balance: newBalance,
+              description: data.description,
+            },
+          });
+
+          return { from: acc.balance, to: newBalance, diff };
+        });
+      }
+
+      if (result === null) {
+        return reply.code(409).send({ error: "Balansni o'zgartirib bo'lmadi, qayta urinib ko'ring" });
+      }
+
+      const { from, to, diff } = result;
+      if (diff === 0) return { balance: to, changed: 0 };
 
       await logAuditFor(app.prisma, req.session, {
         action: "ADJUST", resourceType: "loyalty_account", resourceId: customer.id,
-        summary: `Ball balansi qo'lda o'zgartirildi: ${diff > 0 ? "+" : ""}${diff} (${account.balance} → ${newBalance}) — ${data.description}`,
-        changes: { customerId: customer.id, from: account.balance, to: newBalance, diff },
+        summary: `Ball balansi qo'lda o'zgartirildi: ${diff > 0 ? "+" : ""}${diff} (${from} → ${to}) — ${data.description}`,
+        changes: { customerId: customer.id, from, to, diff },
       });
 
-      return reply.code(201).send({ balance: newBalance, changed: diff });
+      return reply.code(201).send({ balance: to, changed: diff });
     });
 
     // Stats

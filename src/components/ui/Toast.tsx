@@ -8,6 +8,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { useT } from "../../i18n";
 
 type ToastKind = "success" | "error" | "info";
 
@@ -72,6 +73,7 @@ export function useAppToast(): AppToastContextValue {
 }
 
 function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
+  const { t } = useT();
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -94,13 +96,13 @@ function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => 
     },
     error: {
       Icon: AlertCircle,
-      cls: "bg-rose-100 border-rose-300 text-rose-600",
-      iconCls: "text-rose-600",
+      cls: "bg-red-100 border-red-300 text-red-600",
+      iconCls: "text-red-600",
     },
     info: {
       Icon: Info,
       cls: "bg-cream-100/90 border-cream-300 text-forest-700",
-      iconCls: "text-sky-600",
+      iconCls: "text-blue-600",
     },
   }[toast.kind];
 
@@ -121,7 +123,7 @@ function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => 
           setLeaving(true);
           setTimeout(onDismiss, 200);
         }}
-        aria-label="Yopish"
+        aria-label={t("common.close")}
         className="p-0.5 -mr-1 opacity-60 hover:opacity-100 transition-opacity"
       >
         <X className="w-4 h-4" />

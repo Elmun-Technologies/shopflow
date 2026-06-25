@@ -24,10 +24,10 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
     titleKey: "kpi.revenue",
     icon: DollarSign,
     format: (v, c) => formatCurrency(v, c),
-    accent: "#10b981",
-    iconBg: "rgba(16,185,129,0.1)",
-    iconColor: "#10b981",
-    sparkColor: "#10b981",
+    accent: "#7BC056",
+    iconBg: "rgba(123,192,86,0.12)",
+    iconColor: "#2D4938",
+    sparkColor: "#7BC056",
   },
   {
     key: "orders",
@@ -116,8 +116,8 @@ export default function KPICards() {
                   <div
                     className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[11px] font-semibold"
                     style={{
-                      backgroundColor: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
-                      color: isPositive ? "#059669" : "#dc2626",
+                      backgroundColor: isPositive ? "rgba(123,192,86,0.15)" : "rgba(239,68,68,0.1)",
+                      color: isPositive ? "#2D4938" : "#dc2626",
                     }}
                   >
                     {isPositive

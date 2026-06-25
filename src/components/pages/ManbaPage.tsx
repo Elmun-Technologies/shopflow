@@ -67,7 +67,7 @@ export default function ManbaPage() {
           <h1 className="text-2xl font-bold text-forest-800">{editItem ? t("manba.editTitle") : t("manba.newTitle")}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-            <button form="source-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
+            <button form="source-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium">{t("common.save")}</button>
           </div>
         </div>
 
@@ -104,7 +104,7 @@ export default function ManbaPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("common.search")} className={inputClass + " pl-10"} />
         </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           {t("manba.new")}
         </button>
@@ -118,7 +118,7 @@ export default function ManbaPage() {
             description={t("manba.empty.desc")}
             buttonText={t("manba.new")}
             onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
-            iconColor="text-yellow-400"
+            iconColor="text-cream-300"
           />
         </motion.div>
       ) : (
@@ -148,7 +148,7 @@ export default function ManbaPage() {
                   <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${s.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>{s.active ? t("mkt.active") : t("mkt.inactive")}</span></td>
                   <td className={tdClass + " text-right whitespace-nowrap"}>
                     <button onClick={() => { setEditItem(s); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => setPendingDelete(s.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setPendingDelete(s.id)} className="p-1.5 rounded text-slate-500 hover:text-red-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -166,7 +166,7 @@ export default function ManbaPage() {
               <p className="text-sm text-slate-500 mb-6">{t("mkt.confirmDelete.body")}</p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-                <button onClick={() => { setSources((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">{t("common.delete")}</button>
+                <button onClick={() => { setSources((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-500 hover:bg-red-600 text-white font-medium">{t("common.delete")}</button>
               </div>
             </motion.div>
           </motion.div>
@@ -240,12 +240,12 @@ function SourceForm({ initial, error, onSave }: SourceFormProps) {
           <h3 className="font-semibold text-forest-800">{t("mkt.col.status")}</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
-            <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
+            <div className={`w-5 h-5 rounded border ${active ? "bg-leaf-400 border-leaf-500" : "border-slate-300"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
             <span className="text-sm text-slate-700">{t("mkt.active")}</span>
           </label>
-          {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
+          {error && <div className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-600">{error}</div>}
         </div>
       </div>
     </form>

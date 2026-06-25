@@ -41,10 +41,28 @@ function translate(lang: Lang, key: string, params?: Record<string, string | num
   return interpolate(raw, params);
 }
 
+// ─── React'dan tashqari joylar uchun (utils/format.ts kabi) ──────────────────
+// Joriy til module-level singleton'da saqlanadi. LangProvider uni sinxron tutadi.
+// Til o'zgarganda butun daraxt qayta render bo'ladi → formatlovchilar yangi
+// qiymatni shu yerdan oladi.
+let currentLang: Lang = loadLang();
+export function getLang(): Lang {
+  return currentLang;
+}
+// React kontekstisiz tarjima — joriy (yoki berilgan) tilga.
+export function tStatic(
+  key: string,
+  params?: Record<string, string | number>,
+  lang: Lang = currentLang,
+): string {
+  return translate(lang, key, params);
+}
+
 export function LangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => loadLang());
 
   const setLang = (next: Lang) => {
+    currentLang = next; // module singleton'ni sinxron tut (format.ts uchun)
     setLangState(next);
     try { localStorage.setItem(LS_KEY, next); } catch { /* ignore */ }
     try { document.documentElement.lang = next; } catch { /* ignore */ }

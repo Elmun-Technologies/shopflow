@@ -85,7 +85,7 @@ export default function PromoPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: t("promo.stat.total"), value: codes.length, color: "#475569" },
-            { label: t("mkt.active"), value: codes.filter(c => c.active).length, color: "#10b981" },
+            { label: t("mkt.active"), value: codes.filter(c => c.active).length, color: "#5FA340" },
             { label: t("promo.stat.used"), value: codes.reduce((s, c) => s + c.usageCount, 0), color: "#3b82f6" },
             { label: t("promo.stat.expired"), value: codes.filter(c => c.endsAt && new Date(c.endsAt) < new Date()).length, color: "#f59e0b" },
           ].map((s) => (
@@ -146,7 +146,7 @@ export default function PromoPage() {
                       >
                         {code.code}
                         {copied === code.code
-                          ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          ? <CheckCircle2 className="w-3.5 h-3.5 text-leaf-500" />
                           : <Copy className="w-3 h-3 text-slate-400" />
                         }
                       </button>
@@ -193,7 +193,7 @@ export default function PromoPage() {
                           className="h-full rounded-full transition-all"
                           style={{
                             width: `${usagePct}%`,
-                            backgroundColor: usagePct >= 90 ? "#ef4444" : usagePct >= 60 ? "#f59e0b" : "#10b981",
+                            backgroundColor: usagePct >= 90 ? "#ef4444" : usagePct >= 60 ? "#f59e0b" : "#5FA340",
                           }}
                         />
                       </div>
@@ -220,7 +220,7 @@ export default function PromoPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(code.id, code.code)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-red-50 transition-colors"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

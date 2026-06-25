@@ -8,6 +8,7 @@ import { UserPlus, Loader2, Mail, Shield, Trash2, Check, X, Copy, Users } from "
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
+import { useT } from "../i18n";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "AGENT";
 
@@ -20,12 +21,14 @@ interface TeamUser {
   createdAt: string;
 }
 
-const ROLE_LABELS: Record<Role, { label: string; color: string; description: string }> = {
-  OWNER: { label: "Egasi", color: "bg-purple-100 text-purple-700 border-purple-300", description: "To'liq nazorat" },
-  ADMIN: { label: "Admin", color: "bg-leaf-100 text-forest-700 border-leaf-300/60", description: "Xodimlar va sozlamalar" },
-  MANAGER: { label: "Menejer", color: "bg-sky-100 text-sky-700 border-sky-300", description: "Buyurtma va mahsulotlar" },
-  AGENT: { label: "Agent", color: "bg-cream-200 text-slate-700 border-cream-300", description: "Faqat chat va buyurtmalar" },
-};
+function getRoleLabels(t: ReturnType<typeof useT>["t"]): Record<Role, { label: string; color: string; description: string }> {
+  return {
+    OWNER: { label: t("team.role.OWNER"), color: "bg-forest-100 text-forest-700 border-forest-200", description: t("team.role.OWNER.desc") },
+    ADMIN: { label: t("team.role.ADMIN"), color: "bg-leaf-100 text-forest-700 border-leaf-300/60", description: t("team.role.ADMIN.desc") },
+    MANAGER: { label: t("team.role.MANAGER"), color: "bg-blue-100 text-blue-700 border-blue-300", description: t("team.role.MANAGER.desc") },
+    AGENT: { label: t("team.role.AGENT"), color: "bg-cream-200 text-slate-700 border-cream-300", description: t("team.role.AGENT.desc") },
+  };
+}
 
 const ASSIGNABLE_ROLES: Role[] = ["ADMIN", "MANAGER", "AGENT"];
 
@@ -44,6 +47,7 @@ interface Props {
 }
 
 export function TeamSection({ currentUserId, currentUserRole }: Props) {
+  const { t } = useT();
   const toast = useAppToast();
   const confirm = useConfirm();
   const [users, setUsers] = useState<TeamUser[]>([]);
@@ -56,13 +60,14 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
   const [copied, setCopied] = useState(false);
 
   const canManage = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+  const ROLE_LABELS = getRoleLabels(t);
 
   const reload = async () => {
     try {
       const res = await api<TeamUser[]>("/settings/users");
       setUsers(res);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xodimlar ro'yxatini yuklab bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("team.toast.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -73,10 +78,10 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
     setBusyId(userId);
     try {
       await api(`/settings/users/${userId}`, { method: "PATCH", body: { role } });
-      toast.success("Rol yangilandi");
+      toast.success(t("team.toast.roleUpdated"));
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Rolni o'zgartirib bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("team.toast.roleFailed"));
     } finally {
       setBusyId(null);
     }
@@ -84,21 +89,21 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
 
   const toggleActive = async (user: TeamUser) => {
     const ok = await confirm({
-      title: user.active ? "Xodimni deaktivlashtirilsinmi?" : "Xodim yana faollashtirilsinmi?",
+      title: user.active ? t("team.confirm.deactivate.title") : t("team.confirm.activate.title"),
       description: user.active
-        ? "Xodim panel'ga kira olmaydi. Ma'lumotlari saqlanib qoladi."
-        : "Xodim panel'ga qaytadan kira oladi.",
-      confirmText: user.active ? "Deaktivlashtirish" : "Faollashtirish",
+        ? t("team.confirm.deactivate.desc")
+        : t("team.confirm.activate.desc"),
+      confirmText: user.active ? t("team.action.deactivate") : t("team.action.activate"),
       kind: user.active ? "danger" : "default",
     });
     if (!ok) return;
     setBusyId(user.id);
     try {
       await api(`/settings/users/${user.id}`, { method: "PATCH", body: { active: !user.active } });
-      toast.success(user.active ? "Deaktivlashtirildi" : "Faollashtirildi");
+      toast.success(user.active ? t("team.toast.deactivated") : t("team.toast.activated"));
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("team.toast.toggleFailed"));
     } finally {
       setBusyId(null);
     }
@@ -106,19 +111,19 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
 
   const remove = async (user: TeamUser) => {
     const ok = await confirm({
-      title: "Xodim o'chirilsinmi?",
-      description: `${user.name} (${user.email}) batamom o'chiriladi. Bu amalni qaytarib bo'lmaydi.`,
-      confirmText: "O'chirish",
+      title: t("team.confirm.remove.title"),
+      description: t("team.confirm.remove.desc", { name: user.name, email: user.email }),
+      confirmText: t("common.delete"),
       kind: "danger",
     });
     if (!ok) return;
     setBusyId(user.id);
     try {
       await api(`/settings/users/${user.id}`, { method: "DELETE" });
-      toast.success("Xodim o'chirildi");
+      toast.success(t("team.toast.removed"));
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "O'chirib bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("team.toast.removeFailed"));
     } finally {
       setBusyId(null);
     }
@@ -142,7 +147,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
       setTempPasswordModal({ email: res.user.email, password: res.tempPassword });
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Taklif yuborib bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("team.toast.inviteFailed"));
     } finally {
       setInviting(false);
     }
@@ -155,7 +160,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Ko'chirib bo'lmadi");
+      toast.error(t("team.toast.copyFailed"));
     }
   };
 
@@ -165,10 +170,10 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
         <div>
           <h2 className="text-base font-semibold text-forest-800 flex items-center gap-2">
             <Users className="w-4 h-4 text-leaf-500" />
-            Jamoa a'zolari
+            {t("team.title")}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Xodimlarni taklif qiling, rollar bering yoki deaktivlashtiring.
+            {t("team.subtitle")}
           </p>
         </div>
         {canManage && (
@@ -177,7 +182,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800 transition-colors"
           >
             <UserPlus className="w-4 h-4" />
-            Yangi xodim
+            {t("team.invite")}
           </button>
         )}
       </div>
@@ -185,12 +190,12 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
       <div className="rounded-xl border border-cream-300 bg-white overflow-hidden">
         {loading ? (
           <div className="py-12 flex items-center justify-center text-slate-500">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Yuklanmoqda…
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> {t("common.loading")}
           </div>
         ) : users.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">
             <Users className="w-10 h-10 mx-auto mb-2 text-cream-300" />
-            Hali jamoa a'zolari yo'q
+            {t("team.empty")}
           </div>
         ) : (
           <div className="divide-y divide-cream-300/60">
@@ -212,20 +217,20 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-forest-800 truncate">
                         {user.name}
-                        {isSelf && <span className="text-xs text-slate-400 font-normal ml-1.5">(siz)</span>}
+                        {isSelf && <span className="text-xs text-slate-400 font-normal ml-1.5">{t("team.self")}</span>}
                       </p>
                       <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${meta.color}`}>
                         {meta.label}
                       </span>
                       {!user.active && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cream-200 text-slate-500">Deaktiv</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cream-200 text-slate-500">{t("team.inactive")}</span>
                       )}
                     </div>
                     <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-0.5">
                       <Mail className="w-3 h-3" /> {user.email}
                     </p>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      Qo'shilgan: {formatDate(user.createdAt)}
+                      {t("team.joined", { date: formatDate(user.createdAt) })}
                     </p>
                   </div>
 
@@ -247,9 +252,9 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                         className={`p-1.5 rounded-lg disabled:opacity-50 ${
                           user.active
                             ? "text-slate-500 hover:text-amber-600 hover:bg-cream-100"
-                            : "text-emerald-600 hover:bg-leaf-100"
+                            : "text-forest-700 hover:bg-leaf-100"
                         }`}
-                        title={user.active ? "Deaktivlashtirish" : "Faollashtirish"}
+                        title={user.active ? t("team.action.deactivate") : t("team.action.activate")}
                       >
                         {busyId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> :
                           user.active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
@@ -257,8 +262,8 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                       <button
                         onClick={() => remove(user)}
                         disabled={busyId === user.id}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                        title="O'chirish"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        title={t("common.delete")}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -274,12 +279,12 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
       <div className="rounded-xl bg-cream-100/50 border border-cream-300 p-3 flex items-start gap-2">
         <Shield className="w-4 h-4 text-leaf-500 flex-shrink-0 mt-0.5" />
         <div className="text-xs text-slate-600">
-          <p className="font-medium text-forest-800 mb-1">Rollar haqida</p>
+          <p className="font-medium text-forest-800 mb-1">{t("team.rolesAbout")}</p>
           <ul className="space-y-0.5">
-            <li><strong>Egasi (Owner):</strong> to'liq nazorat. O'zgartirib bo'lmaydi.</li>
-            <li><strong>Admin:</strong> xodimlar, sozlamalar, integratsiyalar.</li>
-            <li><strong>Menejer:</strong> buyurtma, mahsulot, chat, marketing.</li>
-            <li><strong>Agent:</strong> faqat chat va buyurtma jarayoni.</li>
+            <li><strong>{t("team.rolesAbout.owner.name")}</strong> {t("team.rolesAbout.owner.text")}</li>
+            <li><strong>{t("team.rolesAbout.admin.name")}</strong> {t("team.rolesAbout.admin.text")}</li>
+            <li><strong>{t("team.rolesAbout.manager.name")}</strong> {t("team.rolesAbout.manager.text")}</li>
+            <li><strong>{t("team.rolesAbout.agent.name")}</strong> {t("team.rolesAbout.agent.text")}</li>
           </ul>
         </div>
       </div>
@@ -294,13 +299,13 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
             onClick={(e) => e.stopPropagation()}
             className="bg-white border border-cream-300 rounded-2xl p-5 max-w-md w-full"
           >
-            <h3 className="text-lg font-semibold text-forest-800 mb-1">Yangi xodim taklif qilish</h3>
+            <h3 className="text-lg font-semibold text-forest-800 mb-1">{t("team.inviteModal.title")}</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Xodim panel'ga kirishi uchun parol generatsiya qilinadi va sizga ko'rsatiladi.
+              {t("team.inviteModal.hint")}
             </p>
             <div className="space-y-3">
               <label className="block">
-                <span className="text-xs text-slate-500 mb-1 block">Ism Familya</span>
+                <span className="text-xs text-slate-500 mb-1 block">{t("team.inviteModal.name")}</span>
                 <input
                   type="text"
                   required
@@ -312,7 +317,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500 mb-1 block">Email</span>
+                <span className="text-xs text-slate-500 mb-1 block">{t("team.inviteModal.email")}</span>
                 <input
                   type="email"
                   required
@@ -323,7 +328,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500 mb-1 block">Rol</span>
+                <span className="text-xs text-slate-500 mb-1 block">{t("team.inviteModal.role")}</span>
                 <select
                   value={inviteForm.role}
                   onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as Role })}
@@ -341,7 +346,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                 onClick={() => setInviteOpen(false)}
                 className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
               >
-                Bekor qilish
+                {t("team.inviteModal.cancel")}
               </button>
               <button
                 type="submit"
@@ -349,7 +354,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
               >
                 {inviting && <Loader2 className="w-4 h-4 animate-spin" />}
-                Taklif qilish
+                {t("team.inviteModal.submit")}
               </button>
             </div>
           </motion.form>
@@ -369,13 +374,13 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                 <UserPlus className="w-4 h-4 text-forest-700" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-forest-800">Xodim qo'shildi</h3>
+                <h3 className="text-base font-semibold text-forest-800">{t("team.tempPwd.title")}</h3>
                 <p className="text-xs text-slate-500">{tempPasswordModal.email}</p>
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
               <p className="text-xs font-medium text-amber-800 mb-2">
-                ⚠️ Bu parol bir martagina ko'rsatiladi. Xodimga yuboring va ular birinchi kirishdan keyin o'zgartiradi.
+                {t("team.tempPwd.warning")}
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-white border border-amber-300 rounded px-3 py-2 text-sm font-mono text-amber-900 select-all">
@@ -386,7 +391,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
                   className="px-3 py-2 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-medium flex items-center gap-1.5"
                 >
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? "Ko'chirildi" : "Ko'chirish"}
+                  {copied ? t("team.tempPwd.copied") : t("team.tempPwd.copy")}
                 </button>
               </div>
             </div>
@@ -394,7 +399,7 @@ export function TeamSection({ currentUserId, currentUserRole }: Props) {
               onClick={() => setTempPasswordModal(null)}
               className="w-full px-3 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium"
             >
-              Tushundim, yopish
+              {t("team.tempPwd.gotIt")}
             </button>
           </motion.div>
         </div>

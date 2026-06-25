@@ -50,7 +50,7 @@ export default function WeeklySales() {
       className="bg-white border border-cream-300/80 rounded-2xl p-5"
     >
       <h3 className="text-base font-semibold text-forest-800">{t("widget.weeklySales")}</h3>
-      <p className="text-xs text-slate-500 mt-0.5 mb-3">Oxirgi 7 kun</p>
+      <p className="text-xs text-slate-500 mt-0.5 mb-3">{t("widget.last7Days")}</p>
 
       <div className="h-44">
         {loading ? (
@@ -59,7 +59,7 @@ export default function WeeklySales() {
           </div>
         ) : series.every((s) => s.sales === 0) ? (
           <div className="flex items-center justify-center h-full text-sm text-slate-500">
-            Bu hafta sotuvlar yo'q
+            {t("widget.weeklySalesEmpty")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -79,7 +79,7 @@ export default function WeeklySales() {
                 tickFormatter={(value) => formatCompactCurrency(Number(value), currency)}
                 width={42}
               />
-              <Tooltip content={<Tip />} cursor={{ fill: "#1e293b40" }} />
+              <Tooltip content={<Tip />} cursor={{ fill: "#E5E5DA80" }} />
               <Bar dataKey="sales" fill="url(#weeklyBarGrad)" radius={[16, 16, 16, 16]} maxBarSize={24} />
             </BarChart>
           </ResponsiveContainer>

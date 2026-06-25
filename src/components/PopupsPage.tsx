@@ -35,17 +35,17 @@ interface Popup {
   createdAt: string;
 }
 
-const KIND_LABEL: Record<PopupKind, string> = {
-  MODAL: "Modal (to'liq ekran)",
-  BANNER: "Banner (yuqori)",
-  TOAST: "Toast (kichik)",
+const KIND_KEY: Record<PopupKind, string> = {
+  MODAL: "popups.kind.modal",
+  BANNER: "popups.kind.banner",
+  TOAST: "popups.kind.toast",
 };
 
-const TRIGGER_LABEL: Record<PopupTrigger, string> = {
-  ON_OPEN: "App ochilganda",
-  AFTER_DELAY: "Kechikish bilan",
-  ON_TAB_CHANGE: "Tab bosilganda",
-  ON_CART_ABANDON: "Savatda mahsulot (Phase 2)",
+const TRIGGER_KEY: Record<PopupTrigger, string> = {
+  ON_OPEN: "popups.trigger.onOpen",
+  AFTER_DELAY: "popups.trigger.afterDelay",
+  ON_TAB_CHANGE: "popups.trigger.onTabChange",
+  ON_CART_ABANDON: "popups.trigger.onCartAbandon",
 };
 
 const popupsApi = {
@@ -70,7 +70,7 @@ export default function PopupsPage() {
       const res = await popupsApi.list();
       setPopups(res.popups);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Yuklashda xato");
+      toast.error(err instanceof Error ? err.message : t("popups.loadError"));
     } finally {
       setLoading(false);
     }
@@ -84,27 +84,27 @@ export default function PopupsPage() {
   const toggleActive = async (popup: Popup) => {
     try {
       await popupsApi.update(popup.id, { active: !popup.active });
-      toast.success(popup.active ? "Popup yashirildi" : "Popup yoqildi");
+      toast.success(popup.active ? t("popups.hidden") : t("popups.shown"));
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Yangilanmadi");
+      toast.error(err instanceof Error ? err.message : t("popups.updateError"));
     }
   };
 
   const remove = async (popup: Popup) => {
     const ok = await confirmDialog({
-      title: "Popup o'chirilsinmi?",
-      description: `"${popup.title}" butunlay o'chiriladi.`,
+      title: t("popups.deleteConfirmTitle"),
+      description: t("popups.deleteConfirmDesc", { title: popup.title }),
       kind: "danger",
-      confirmText: "O'chirish",
+      confirmText: t("common.delete"),
     });
     if (!ok) return;
     try {
       await popupsApi.remove(popup.id);
-      toast.success("Popup o'chirildi");
+      toast.success(t("popups.deleted"));
       refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "O'chirilmadi");
+      toast.error(err instanceof Error ? err.message : t("popups.deleteError"));
     }
   };
 
@@ -136,16 +136,16 @@ export default function PopupsPage() {
       ) : popups.length === 0 ? (
         <div className="bg-white border border-cream-300 rounded-xl py-20 px-6 text-center">
           <Megaphone className="w-12 h-12 text-cream-300 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-forest-800 mb-1">Hozircha popup yo'q</h3>
+          <h3 className="text-lg font-semibold text-forest-800 mb-1">{t("popups.emptyTitle")}</h3>
           <p className="text-sm text-slate-500 max-w-md mx-auto mb-4">
-            Birinchi popup'ingizni yarating — mijoz Mini App'ga kirganda chegirma, e'lon yoki taklif ko'rsatiladi.
+            {t("popups.emptyDesc")}
           </p>
           <button
             onClick={() => setCreating(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
           >
             <Plus className="w-4 h-4" />
-            Birinchi popup yaratish
+            {t("popups.createFirst")}
           </button>
         </div>
       ) : (
@@ -185,6 +185,7 @@ function PopupCard({
 }: {
   popup: Popup; onToggle: () => void; onEdit: () => void; onDelete: () => void;
 }) {
+  const { t } = useT();
   const ctr = popup.impressions > 0 ? Math.round((popup.clicks / popup.impressions) * 100) : 0;
   return (
     <div className="bg-white border border-cream-300 rounded-2xl p-4 hover:border-cream-300 transition-colors">
@@ -204,13 +205,13 @@ function PopupCard({
                 popup.active ? "bg-leaf-100 text-forest-700" : "bg-cream-100 text-slate-500"
               }`}
             >
-              {popup.active ? "Faol" : "O'chirilgan"}
+              {popup.active ? t("popups.active") : t("popups.inactive")}
             </span>
           </div>
           <p className="text-xs text-slate-500 line-clamp-2">{popup.body}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] text-slate-500">
-            <span className="px-2 py-0.5 bg-cream-100 rounded">{KIND_LABEL[popup.kind]}</span>
-            <span className="px-2 py-0.5 bg-cream-100 rounded">{TRIGGER_LABEL[popup.trigger]}</span>
+            <span className="px-2 py-0.5 bg-cream-100 rounded">{t(KIND_KEY[popup.kind])}</span>
+            <span className="px-2 py-0.5 bg-cream-100 rounded">{t(TRIGGER_KEY[popup.trigger])}</span>
             {popup.priority > 0 && <span>P:{popup.priority}</span>}
           </div>
         </div>
@@ -223,13 +224,13 @@ function PopupCard({
           {popup.impressions > 0 && <span>CTR: {ctr}%</span>}
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onToggle} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100" title={popup.active ? "Yashirish" : "Yoqish"}>
+          <button onClick={onToggle} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100" title={popup.active ? t("popups.hide") : t("popups.show")}>
             {popup.active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
-          <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100" title="Tahrirlash">
+          <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100" title={t("common.edit")}>
             <Edit2 className="w-4 h-4" />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-100" title="O'chirish">
+          <button onClick={onDelete} className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-100" title={t("common.delete")}>
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -260,10 +261,11 @@ function PopupEditor({
   });
   const [saving, setSaving] = useState(false);
   const toast = useAppToast();
+  const { t } = useT();
 
   const save = async () => {
     if (!form.title.trim() || !form.body.trim()) {
-      toast.error("Sarlavha va matn bo'sh bo'lmasin");
+      toast.error(t("popups.validationError"));
       return;
     }
     setSaving(true);
@@ -276,14 +278,14 @@ function PopupEditor({
       };
       if (isEdit && initial) {
         await popupsApi.update(initial.id, payload as never);
-        toast.success("Popup saqlandi");
+        toast.success(t("popups.saved"));
       } else {
         await popupsApi.create(payload as never);
-        toast.success("Popup yaratildi");
+        toast.success(t("popups.created"));
       }
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Saqlashda xato");
+      toast.error(err instanceof Error ? err.message : t("popups.saveError"));
     } finally {
       setSaving(false);
     }
@@ -296,40 +298,40 @@ function PopupEditor({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white border-b border-cream-300 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-forest-800">{isEdit ? "Popup tahrirlash" : "Yangi popup"}</h2>
+          <h2 className="text-base font-semibold text-forest-800">{isEdit ? t("popups.editTitle") : t("popups.newPopup")}</h2>
           <button onClick={onClose} className="p-1 -mr-1 text-slate-500 hover:text-forest-900">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-5 space-y-3">
-          <Field label="Sarlavha *" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
-          <FieldArea label="Matn *" value={form.body} onChange={(v) => setForm({ ...form, body: v })} />
-          <Field label="Rasm URL (ixtiyoriy)" value={form.imageUrl} onChange={(v) => setForm({ ...form, imageUrl: v })} placeholder="https://..." />
+          <Field label={t("popups.field.title")} value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
+          <FieldArea label={t("popups.field.body")} value={form.body} onChange={(v) => setForm({ ...form, body: v })} />
+          <Field label={t("popups.field.imageUrl")} value={form.imageUrl} onChange={(v) => setForm({ ...form, imageUrl: v })} placeholder="https://..." />
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="CTA tugma matni" value={form.ctaText} onChange={(v) => setForm({ ...form, ctaText: v })} placeholder="Xarid qilish" />
-            <Field label="CTA URL/yo'l" value={form.ctaUrl} onChange={(v) => setForm({ ...form, ctaUrl: v })} placeholder="/promotions" />
+            <Field label={t("popups.field.ctaText")} value={form.ctaText} onChange={(v) => setForm({ ...form, ctaText: v })} placeholder={t("popups.field.ctaTextPlaceholder")} />
+            <Field label={t("popups.field.ctaUrl")} value={form.ctaUrl} onChange={(v) => setForm({ ...form, ctaUrl: v })} placeholder="/promotions" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <SelectField
-              label="Turi"
+              label={t("popups.field.kind")}
               value={form.kind}
               onChange={(v) => setForm({ ...form, kind: v as PopupKind })}
-              options={(Object.entries(KIND_LABEL) as Array<[PopupKind, string]>).map(([k, l]) => ({ value: k, label: l }))}
+              options={(Object.entries(KIND_KEY) as Array<[PopupKind, string]>).map(([k, key]) => ({ value: k, label: t(key) }))}
             />
             <SelectField
-              label="Trigger"
+              label={t("popups.field.trigger")}
               value={form.trigger}
               onChange={(v) => setForm({ ...form, trigger: v as PopupTrigger })}
-              options={(Object.entries(TRIGGER_LABEL) as Array<[PopupTrigger, string]>).map(([k, l]) => ({ value: k, label: l }))}
+              options={(Object.entries(TRIGGER_KEY) as Array<[PopupTrigger, string]>).map(([k, key]) => ({ value: k, label: t(key) }))}
             />
           </div>
 
           {form.trigger === "AFTER_DELAY" && (
             <Field
-              label="Kechikish (soniya)"
+              label={t("popups.field.delaySec")}
               type="number"
               value={String(form.triggerDelaySec)}
               onChange={(v) => setForm({ ...form, triggerDelaySec: Number(v) || 0 })}
@@ -338,19 +340,19 @@ function PopupEditor({
 
           <div className="grid grid-cols-3 gap-3 pt-2 border-t border-cream-300">
             <Field
-              label="Maks. ko'rsatish (kishi/popup)"
+              label={t("popups.field.maxImpressions")}
               type="number"
               value={String(form.maxImpressionsPerUser)}
               onChange={(v) => setForm({ ...form, maxImpressionsPerUser: Number(v) || 0 })}
             />
             <Field
-              label="Cooldown (soat)"
+              label={t("popups.field.cooldown")}
               type="number"
               value={String(form.cooldownHours)}
               onChange={(v) => setForm({ ...form, cooldownHours: Number(v) || 0 })}
             />
             <Field
-              label="Prioritet"
+              label={t("popups.field.priority")}
               type="number"
               value={String(form.priority)}
               onChange={(v) => setForm({ ...form, priority: Number(v) || 0 })}
@@ -362,9 +364,9 @@ function PopupEditor({
               type="checkbox"
               checked={form.active}
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              className="w-4 h-4 rounded bg-cream-100 border-cream-300 text-emerald-500 focus:ring-emerald-500/50"
+              className="w-4 h-4 rounded bg-cream-100 border-cream-300 text-leaf-500 focus:ring-leaf-500/50"
             />
-            <span className="text-sm text-forest-700">Faol</span>
+            <span className="text-sm text-forest-700">{t("popups.active")}</span>
           </label>
         </div>
 
@@ -373,7 +375,7 @@ function PopupEditor({
             onClick={onClose}
             className="flex-1 py-2.5 text-sm text-slate-700 bg-cream-100 hover:bg-cream-200 rounded-lg font-medium"
           >
-            Bekor
+            {t("common.cancel")}
           </button>
           <button
             onClick={save}
@@ -381,7 +383,7 @@ function PopupEditor({
             className="flex-1 py-2.5 text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg font-semibold text-forest-800 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("common.save") : t("popups.create")}
           </button>
         </div>
       </div>

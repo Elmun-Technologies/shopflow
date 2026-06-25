@@ -55,7 +55,7 @@ export default function SalesGauge() {
         {change !== null && (
           <span
             className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-              positive ? "bg-leaf-100 text-forest-700" : "bg-rose-100 text-rose-600"
+              positive ? "bg-leaf-100 text-forest-700" : "bg-red-100 text-red-600"
             }`}
           >
             {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -84,7 +84,7 @@ export default function SalesGauge() {
           <motion.path
             d="M 20 100 A 80 80 0 0 1 180 100"
             fill="none"
-            stroke={positive ? "url(#gaugeGrad)" : "#f43f5e"}
+            stroke={positive ? "url(#gaugeGrad)" : "#ef4444"}
             strokeWidth="16"
             strokeLinecap="round"
             strokeDasharray={CIRC}

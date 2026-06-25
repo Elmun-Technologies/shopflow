@@ -42,12 +42,12 @@ const labelClass = "block text-xs font-medium text-slate-500 mb-1.5";
 
 function SegmentTypeBadge({ type }: { type: SegmentType }) {
   const colors: Record<SegmentType, string> = {
-    automatic: "bg-sky-100 text-sky-600 border border-sky-300",
-    manual: "bg-slate-600 text-forest-700",
-    smart: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
+    automatic: "bg-leaf-100 text-forest-700",
+    manual: "bg-slate-100 text-slate-600",
+    smart: "bg-blue-100 text-blue-600",
   };
   return (
-    <span className={`text-xs px-2.5 py-1 rounded-full border ${colors[type]}`}>
+    <span className={`text-xs px-2.5 py-1 rounded-full ${colors[type]}`}>
       {segmentTypeLabels[type]}
     </span>
   );
@@ -167,7 +167,7 @@ export default function SegmentsPage() {
           <h1 className="text-2xl font-bold text-forest-800">{editItem ? t("segments.editTitle") : t("segments.createTitle")}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-            <button form="segment-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
+            <button form="segment-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium">{t("common.save")}</button>
           </div>
         </div>
 
@@ -204,7 +204,7 @@ export default function SegmentsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("common.search")} className={inputClass + " pl-10"} />
         </div>
-        <button onClick={() => { setPageMode("create"); setEditItem(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
+        <button onClick={() => { setPageMode("create"); setEditItem(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
           {t("segments.new")}
         </button>
@@ -250,7 +250,7 @@ export default function SegmentsPage() {
                   <button onClick={() => { setEditItem(segment); setPageMode("edit"); }} className="p-2 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100" title={t("common.edit")}>
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setPendingDelete(segment.id)} className="p-2 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100" title={t("common.delete")}>
+                  <button onClick={() => setPendingDelete(segment.id)} className="p-2 rounded text-slate-500 hover:text-red-600 hover:bg-cream-100" title={t("common.delete")}>
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -268,7 +268,7 @@ export default function SegmentsPage() {
               <p className="text-sm text-slate-500 mb-6">{t("mkt.confirmDelete.body")}</p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
-                <button onClick={() => handleDelete(pendingDelete)} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">{t("common.delete")}</button>
+                <button onClick={() => handleDelete(pendingDelete)} className="px-4 py-2 rounded-lg text-sm bg-red-500 hover:bg-red-600 text-white font-medium">{t("common.delete")}</button>
               </div>
             </motion.div>
           </motion.div>
@@ -317,7 +317,7 @@ function BroadcastModal({
           <button
             onClick={() => text.trim() && onSend(text.trim())}
             disabled={!text.trim() || busy}
-            className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 disabled:opacity-50 text-forest-800 font-medium flex items-center gap-1.5"
+            className="px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium flex items-center gap-1.5"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {t("common.send")}
@@ -379,7 +379,7 @@ function SegmentForm({ initial, onSave }: SegmentFormProps) {
             <p className="text-sm text-slate-500">{t("segments.form.conditionsHint")}</p>
             <div className="p-3 rounded-lg bg-cream-100/50 border border-cream-300 space-y-2">
               <div className="flex items-center gap-2 text-sm text-slate-700">
-                <AlertCircle className="w-4 h-4 text-sky-600" />
+                <AlertCircle className="w-4 h-4 text-blue-600" />
                 <span>{t("segments.form.conditionsNote")}</span>
               </div>
             </div>
@@ -391,12 +391,12 @@ function SegmentForm({ initial, onSave }: SegmentFormProps) {
           <h3 className="font-semibold text-forest-800">{t("segments.form.status")}</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
-            <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
+            <div className={`w-5 h-5 rounded border ${active ? "bg-leaf-400 border-leaf-500" : "border-slate-300"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
             <span className="text-sm text-slate-700">{t("segments.active")}</span>
           </label>
-          <button type="submit" className="w-full mt-6 px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
+          <button type="submit" className="w-full mt-6 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 text-forest-800 font-medium">{t("common.save")}</button>
         </div>
       </div>
     </form>
@@ -463,7 +463,7 @@ function SegmentDetailView({ segment, onBack }: { segment: CustomerSegment; onBa
           {segmentMembers.slice(0, 10).map((member) => (
             <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-cream-100/50 border border-cream-300/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-forest-800 font-semibold text-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-leaf-400 to-leaf-600 flex items-center justify-center text-forest-800 font-semibold text-sm">
                   {member.firstName[0]}{member.lastName[0]}
                 </div>
                 <div>

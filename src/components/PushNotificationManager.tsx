@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
+import { useT } from "../i18n";
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -23,6 +24,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 
 export function PushNotificationManager() {
   const toast = useAppToast();
+  const { t } = useT();
   const [supported, setSupported] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [publicKey, setPublicKey] = useState("");
@@ -58,7 +60,7 @@ export function PushNotificationManager() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        toast.error("Ruxsat berilmadi. Brauzer sozlamalaridan yoqing.");
+        toast.error(t("push.permissionDenied"));
         return;
       }
       const reg = await navigator.serviceWorker.ready;
@@ -71,9 +73,9 @@ export function PushNotificationManager() {
       const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
       await api("/push/subscribe", { method: "POST", body: json });
       setSubscribed(true);
-      toast.success("Push bildirishnoma yoqildi");
+      toast.success(t("push.enabled"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Obuna bo'lib bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("push.subscribeFailed"));
     } finally {
       setBusy(false);
     }
@@ -90,9 +92,9 @@ export function PushNotificationManager() {
         await sub.unsubscribe();
       }
       setSubscribed(false);
-      toast.success("Push bildirishnoma o'chirildi");
+      toast.success(t("push.disabled"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setBusy(false);
     }
@@ -102,9 +104,9 @@ export function PushNotificationManager() {
     setBusy(true);
     try {
       const res = await api<{ sent: number }>("/push/test", { method: "POST" });
-      toast.success(`Yuborildi: ${res.sent} ta qurilmaga`);
+      toast.success(t("push.testSent", { count: res.sent }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setBusy(false);
     }
@@ -113,8 +115,8 @@ export function PushNotificationManager() {
   if (!supported) {
     return (
       <div className="bg-white rounded-2xl border border-cream-300 p-5">
-        <h3 className="text-base font-semibold text-forest-800 mb-1">Push bildirishnomalar</h3>
-        <p className="text-xs text-slate-500">Sizning brauzer push notifikatsiyalarni qo'llab-quvvatlamaydi.</p>
+        <h3 className="text-base font-semibold text-forest-800 mb-1">{t("push.title")}</h3>
+        <p className="text-xs text-slate-500">{t("push.unsupported")}</p>
       </div>
     );
   }
@@ -125,14 +127,14 @@ export function PushNotificationManager() {
         <div>
           <h3 className="text-base font-semibold text-forest-800 mb-1 flex items-center gap-2">
             {subscribed ? <Bell className="w-4 h-4 text-leaf-500" /> : <BellOff className="w-4 h-4 text-slate-400" />}
-            Push bildirishnomalar
+            {t("push.title")}
           </h3>
           <p className="text-xs text-slate-500">
             {!configured
-              ? "Server'da push notifikatsiya sozlanmagan (VAPID kalitlar yo'q)."
+              ? t("push.notConfigured")
               : subscribed
-              ? "Yangi buyurtma kelganda OS darajasida xabar olasiz — tab yopiq bo'lsa ham."
-              : "Yoqing — admin paneli yopiq bo'lsa ham yangi buyurtma haqida darhol bilasiz."}
+              ? t("push.activeDesc")
+              : t("push.enableDesc")}
           </p>
         </div>
       </div>
@@ -144,7 +146,7 @@ export function PushNotificationManager() {
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
           >
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Yoqish
+            {t("push.enable")}
           </button>
         ) : (
           <>
@@ -153,15 +155,15 @@ export function PushNotificationManager() {
               disabled={busy}
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-sm font-medium text-slate-700"
             >
-              Sinab ko'rish
+              {t("push.test")}
             </button>
             <button
               onClick={unsubscribe}
               disabled={busy}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg text-sm font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium"
             >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-              O'chirish
+              {t("push.disable")}
             </button>
           </>
         )}

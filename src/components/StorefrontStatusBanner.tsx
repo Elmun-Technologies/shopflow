@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Globe, X, Loader2 } from "lucide-react";
 import { vitrinaApi } from "../api/endpoints";
 import { useAppToast } from "./ui/Toast";
+import { useT } from "../i18n";
 
 const DISMISSED_KEY = "shopflow.storefrontBannerDismissed";
 
@@ -16,6 +17,7 @@ interface Props {
 
 export function StorefrontStatusBanner({ onOpenVitrina }: Props) {
   const toast = useAppToast();
+  const { t } = useT();
   const [published, setPublished] = useState<boolean | null>(null);
   const [layout, setLayout] = useState<{ blocks: unknown[]; brand?: Record<string, unknown> } | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -53,9 +55,9 @@ export function StorefrontStatusBanner({ onOpenVitrina }: Props) {
         published: true,
       });
       setPublished(true);
-      toast.success("Do'kon nashr qilindi");
+      toast.success(t("storefrontBanner.published"));
     } catch {
-      toast.error("Nashr qilishda xato. Qayta urinib ko'ring.");
+      toast.error(t("storefrontBanner.publishError"));
     } finally {
       setPublishing(false);
     }
@@ -82,10 +84,9 @@ export function StorefrontStatusBanner({ onOpenVitrina }: Props) {
             <Globe className="w-4 h-4 text-amber-700" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-900">Do'koningiz yashirin holatda</p>
+            <p className="text-sm font-semibold text-amber-900">{t("storefrontBanner.title")}</p>
             <p className="text-xs text-amber-700 leading-tight mt-0.5">
-              Mijozlar Telegram Mini App'ni ochsa <strong>"Do'kon yopiq"</strong> xabarini ko'radi.
-              Sotuvni boshlash uchun do'konni nashr qiling.
+              {t("storefrontBanner.descBefore")} <strong>{t("storefrontBanner.descClosed")}</strong> {t("storefrontBanner.descAfter")}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -95,21 +96,21 @@ export function StorefrontStatusBanner({ onOpenVitrina }: Props) {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 text-xs font-semibold rounded-lg transition-colors"
             >
               {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-              {publishing ? "Nashr qilinmoqda…" : "Nashr qilish"}
+              {publishing ? t("storefrontBanner.publishing") : t("storefrontBanner.publish")}
             </button>
             {onOpenVitrina && (
               <button
                 onClick={onOpenVitrina}
                 className="hidden sm:inline-block px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 rounded-lg transition-colors"
               >
-                Vitrinaga o'tish
+                {t("storefrontBanner.goToVitrina")}
               </button>
             )}
             <button
               onClick={handleDismiss}
               className="p-1.5 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
-              aria-label="Yopish"
-              title="Ushbu sessiyada yopish"
+              aria-label={t("storefrontBanner.dismissSession")}
+              title={t("storefrontBanner.dismissSession")}
             >
               <X className="w-4 h-4" />
             </button>

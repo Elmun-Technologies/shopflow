@@ -31,13 +31,13 @@ interface Props {
 
 // Faqat ranglar — labellar t() orqali (leads.status.{X})
 const statusStyle: Record<LeadStatus, { color: string; bg: string }> = {
-  NEW: { color: "text-sky-600", bg: "bg-sky-100 border-sky-300" },
-  CONTACTED: { color: "text-amber-500", bg: "bg-amber-100 border-amber-300" },
+  NEW: { color: "text-blue-600", bg: "bg-blue-100 border-blue-300" },
+  CONTACTED: { color: "text-amber-600", bg: "bg-amber-100 border-amber-300" },
   QUALIFIED: { color: "text-violet-600", bg: "bg-violet-100 border-violet-300" },
-  PROPOSAL: { color: "text-cyan-600", bg: "bg-cyan-100 border-cyan-500/20" },
+  PROPOSAL: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300" },
   NEGOTIATION: { color: "text-orange-600", bg: "bg-orange-100 border-orange-300" },
   WON: { color: "text-forest-700", bg: "bg-leaf-100 border-leaf-300/60" },
-  LOST: { color: "text-rose-600", bg: "bg-rose-100 border-rose-300" },
+  LOST: { color: "text-red-600", bg: "bg-red-100 border-red-300" },
 };
 
 const allStatuses: LeadStatus[] = [
@@ -123,13 +123,13 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
             </div>
           ) : error || !lead ? (
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-              <AlertCircle className="w-10 h-10 text-rose-600 mb-3" />
-              <p className="text-sm text-slate-700">{error?.message ?? "Lid topilmadi"}</p>
+              <AlertCircle className="w-10 h-10 text-red-600 mb-3" />
+              <p className="text-sm text-slate-700">{error?.message ?? t("leadDetail.notFound")}</p>
               <button
                 onClick={onClose}
                 className="mt-4 px-3 py-1.5 text-xs bg-cream-100 rounded-lg text-slate-700"
               >
-                Yopish
+                {t("common.close")}
               </button>
             </div>
           ) : (
@@ -184,20 +184,20 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
               <div className="flex-1 overflow-y-auto p-5 space-y-5">
                 {/* Info grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <InfoRow icon={Phone} label="Telefon" value={lead.phone} />
-                  <InfoRow icon={Mail} label="Email" value={lead.email} />
-                  <InfoRow icon={Building2} label="Kompaniya" value={lead.company} />
-                  <InfoRow icon={MapPin} label="Manzil" value={lead.location} />
+                  <InfoRow icon={Phone} label={t("leadDetail.phone")} value={lead.phone} />
+                  <InfoRow icon={Mail} label={t("leadDetail.email")} value={lead.email} />
+                  <InfoRow icon={Building2} label={t("leadDetail.company")} value={lead.company} />
+                  <InfoRow icon={MapPin} label={t("leadDetail.location")} value={lead.location} />
                   <InfoRow
                     icon={Tag}
-                    label="Qiymat"
+                    label={t("leadDetail.value")}
                     value={formatCompactCurrency(Number(lead.value), currency)}
                   />
                 </div>
 
                 {lead.notes && (
                   <div className="bg-cream-100/50 border border-cream-300 rounded-lg p-3">
-                    <p className="text-xs text-slate-500 mb-1">Izoh</p>
+                    <p className="text-xs text-slate-500 mb-1">{t("leadDetail.note")}</p>
                     <p className="text-sm text-forest-700 whitespace-pre-wrap">{lead.notes}</p>
                   </div>
                 )}
@@ -206,7 +206,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                 <div>
                   <h3 className="text-sm font-semibold text-forest-800 mb-3">{t("leadDetail.interactions")}</h3>
                   {lead.interactions.length === 0 ? (
-                    <p className="text-xs text-slate-500">Aloqa yo'q</p>
+                    <p className="text-xs text-slate-500">{t("leadDetail.noInteractions")}</p>
                   ) : (
                     <div className="space-y-3">
                       {lead.interactions.map((interaction) => (
@@ -223,7 +223,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
                     rows={3}
-                    placeholder="Lid haqida eslatma yozing..."
+                    placeholder={t("leadDetail.notePlaceholder")}
                     className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
                   />
                   <button
@@ -232,7 +232,7 @@ export default function LeadDetailModal({ leadId, onClose, onUpdated }: Props) {
                     className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800 transition-all"
                   >
                     {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    Qo'shish
+                    {t("common.add")}
                   </button>
                 </div>
               </div>
