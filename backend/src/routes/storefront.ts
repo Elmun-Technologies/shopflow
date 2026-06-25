@@ -5,7 +5,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { notifyCustomer } from "../lib/telegram-notify.js";
-import { verifyTelegramInitData, getBotTokenForTenant } from "../lib/telegram-auth.js";
+import { authStorefrontCustomer } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
@@ -581,13 +581,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/storefront/:tenantSlug/orders?tgUserId=12345
   app.get("/:tenantSlug/orders", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
-    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+    const { tgUserId, initData } = z.object({
+      tgUserId: z.coerce.number().int().positive(),
+      initData: z.string().optional(),
+    }).parse(req.query);
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
       select: { id: true, currency: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
@@ -638,6 +644,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/storefront/:tenantSlug/profile?tgUserId=12345&firstName=...&lastName=...&username=...&ref=referrerTgId
   const profileQuerySchema = z.object({
     tgUserId: z.coerce.number().int().positive(),
+    initData: z.string().optional(),
     firstName: z.string().max(80).optional(),
     lastName: z.string().max(80).optional(),
     username: z.string().max(80).optional(),
@@ -652,6 +659,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, q.tgUserId, q.initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const tgId = BigInt(q.tgUserId);
     let customer = await app.prisma.customer.findFirst({
@@ -748,20 +758,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    // initData berilgan bo'lsa — HMAC tekshiruvi
-    if (data.initData) {
-      const botToken = await getBotTokenForTenant(app.prisma as never, tenant.id);
-      if (botToken) {
-        const result = verifyTelegramInitData(data.initData, botToken);
-        if (!result.valid) {
-          return reply.code(401).send({ error: "Telegram autentifikatsiya muvaffaqiyatsiz" });
-        }
-        // initData dagi userId va so'rovdagi tgUserId mos kelishi shart
-        if (result.userId && result.userId !== data.tgUserId) {
-          return reply.code(403).send({ error: "Foydalanuvchi mos kelmadi" });
-        }
-      }
-    }
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, data.tgUserId, data.initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const tgId = BigInt(data.tgUserId);
     const customer = await app.prisma.customer.findFirst({
@@ -825,23 +823,6 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     isDefault: z.boolean().optional(),
   });
 
-  // Helper: address endpoint'larida tgUserId forge bo'lmasligini ta'minlash uchun
-  // initData HMAC tekshiruvi (bot token bo'lsa). initData kelmasa, eski kabi
-  // qoldiramiz (backward compat) — lekin yangi mijoz Mini App'lari uni yuboradi.
-  async function verifyAddressOwner(
-    tenantId: string,
-    tgUserId: number,
-    initData: string | undefined,
-  ): Promise<{ ok: true } | { ok: false; error: string }> {
-    if (!initData) return { ok: true };
-    const botToken = await getBotTokenForTenant(app.prisma as never, tenantId);
-    if (!botToken) return { ok: true };
-    const check = verifyTelegramInitData(initData, botToken);
-    if (!check.valid) return { ok: false, error: "Telegram autentifikatsiya muvaffaqiyatsiz" };
-    if (check.userId && check.userId !== tgUserId) return { ok: false, error: "Telegram foydalanuvchi mos kelmadi" };
-    return { ok: true };
-  }
-
   app.post("/:tenantSlug/addresses", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
     const data = addressSchema.parse(req.body);
@@ -851,8 +832,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    const auth = await verifyAddressOwner(tenant.id, data.tgUserId, data.initData);
-    if (!auth.ok) return reply.code(401).send({ error: auth.error });
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, data.tgUserId, data.initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
@@ -897,8 +878,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     const tgUserId = data.tgUserId;
     if (tgUserId == null) return reply.code(400).send({ error: "tgUserId kerak" });
 
-    const auth = await verifyAddressOwner(tenant.id, tgUserId, data.initData);
-    if (!auth.ok) return reply.code(401).send({ error: auth.error });
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, data.initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
@@ -946,8 +927,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    const auth = await verifyAddressOwner(tenant.id, tgUserId, initData);
-    if (!auth.ok) return reply.code(401).send({ error: auth.error });
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
@@ -970,13 +951,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Returns full product objects so the cabinet renders without a join
   app.get("/:tenantSlug/wishlist", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
-    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+    const { tgUserId, initData } = z.object({
+      tgUserId: z.coerce.number().int().positive(),
+      initData: z.string().optional(),
+    }).parse(req.query);
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
@@ -1021,13 +1008,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/storefront/:tenantSlug/referrals?tgUserId=12345
   app.get("/:tenantSlug/referrals", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
-    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+    const { tgUserId, initData } = z.object({
+      tgUserId: z.coerce.number().int().positive(),
+      initData: z.string().optional(),
+    }).parse(req.query);
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const me = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
@@ -1083,16 +1076,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    // initData HMAC tekshiruvi
-    if (data.initData) {
-      const botToken = await getBotTokenForTenant(app.prisma as never, tenant.id);
-      if (botToken) {
-        const check = verifyTelegramInitData(data.initData, botToken);
-        if (!check.valid || (check.userId && check.userId !== data.tgUserId)) {
-          return reply.code(401).send({ error: "Telegram autentifikatsiya muvaffaqiyatsiz" });
-        }
-      }
-    }
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, data.tgUserId, data.initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },
@@ -1122,13 +1107,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
   // Wishlist — o'chirish (productId orqali, idempotent)
   app.delete("/:tenantSlug/wishlist/:productId", async (req, reply) => {
     const params = z.object({ tenantSlug: z.string(), productId: z.string() }).parse(req.params);
-    const { tgUserId } = z.object({ tgUserId: z.coerce.number().int().positive() }).parse(req.query);
+    const { tgUserId, initData } = z.object({
+      tgUserId: z.coerce.number().int().positive(),
+      initData: z.string().optional(),
+    }).parse(req.query);
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: params.tenantSlug },
       select: { id: true },
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
@@ -1201,16 +1192,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    // initData tekshiruvi
-    if (data.initData) {
-      const botToken = await getBotTokenForTenant(app.prisma as never, tenant.id);
-      if (botToken) {
-        const check = verifyTelegramInitData(data.initData, botToken);
-        if (!check.valid || (check.userId && check.userId !== data.tgUserId)) {
-          return reply.code(401).send({ error: "Telegram autentifikatsiya muvaffaqiyatsiz" });
-        }
-      }
-    }
+    const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, data.tgUserId, data.initData);
+    if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const customer = await app.prisma.customer.findFirst({
       where: { tenantId: tenant.id, telegramUserId: BigInt(data.tgUserId) },

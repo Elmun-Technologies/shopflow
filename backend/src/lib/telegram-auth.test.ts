@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 import { createHmac } from "node:crypto";
-import { verifyTelegramInitData } from "./telegram-auth.js";
+import { verifyTelegramInitData, authStorefrontCustomer } from "./telegram-auth.js";
 
 const BOT_TOKEN = "123456:TEST-BOT-TOKEN-abcdef";
 
@@ -69,5 +69,56 @@ describe("verifyTelegramInitData", () => {
     const res = verifyTelegramInitData(initData, BOT_TOKEN);
     expect(res.valid).toBe(true);
     expect(res.userId).toBeUndefined();
+  });
+});
+
+// Mock prisma — getBotTokenForTenant ichidagi channel.findFirst'ni qaytaradi
+function mockPrisma(botToken: string | null) {
+  return {
+    channel: {
+      findFirst: async () => (botToken === null ? null : { config: { botToken } }),
+    },
+  };
+}
+
+describe("authStorefrontCustomer (storefront IDOR himoyasi)", () => {
+  const now = () => Math.floor(Date.now() / 1000);
+
+  it("bot token yo'q tenant — initData talab qilmaydi (legacy ok)", async () => {
+    const res = await authStorefrontCustomer(mockPrisma(null) as never, "t1", 42, undefined);
+    expect(res.ok).toBe(true);
+  });
+
+  it("bot token bor, initData yo'q — 401 (bypass yopildi)", async () => {
+    const res = await authStorefrontCustomer(mockPrisma(BOT_TOKEN) as never, "t1", 42, undefined);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe(401);
+  });
+
+  it("bot token bor, soxta initData — 401", async () => {
+    const res = await authStorefrontCustomer(mockPrisma(BOT_TOKEN) as never, "t1", 42, "user=%7B%7D&hash=deadbeef");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe(401);
+  });
+
+  it("to'g'ri imzo lekin BOSHQA userId — 403 (forged tgUserId rad etiladi)", async () => {
+    const initData = signInitData({ auth_date: String(now()), user: encodeURIComponent(JSON.stringify({ id: 999 })) });
+    // So'rovda tgUserId=42, lekin imzolangan initData'da userId=999 → mos emas
+    const res = await authStorefrontCustomer(mockPrisma(BOT_TOKEN) as never, "t1", 42, initData);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe(403);
+  });
+
+  it("to'g'ri imzo va MOS userId — qabul qiladi", async () => {
+    const initData = signInitData({ auth_date: String(now()), user: encodeURIComponent(JSON.stringify({ id: 42 })) });
+    const res = await authStorefrontCustomer(mockPrisma(BOT_TOKEN) as never, "t1", 42, initData);
+    expect(res.ok).toBe(true);
+  });
+
+  it("to'g'ri imzo lekin user maydoni yo'q — 403 (userId mos kelishi shart)", async () => {
+    const initData = signInitData({ auth_date: String(now()), query_id: "X" });
+    const res = await authStorefrontCustomer(mockPrisma(BOT_TOKEN) as never, "t1", 42, initData);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe(403);
   });
 });

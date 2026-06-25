@@ -74,3 +74,25 @@ export async function getBotTokenForTenant(
   const cfg = channel.config as Record<string, unknown> | null;
   return (cfg?.botToken as string) ?? null;
 }
+
+// Storefront customer-scoped (mijozga oid) endpoint auth.
+// Tenant'da faol TELEGRAM bot token bo'lsa — `initData` MAJBURIY va undagi userId
+// so'rovdagi `tgUserId` bilan mos kelishi shart. Bu IDOR'ni yopadi: tgUserId ommaviy
+// va terilishi mumkin, lekin initData HMAC bilan imzolangan (forge qilib bo'lmaydi).
+// Bot token yo'q (Telegramsiz tenant) bo'lsa, verify imkonsiz — eski rejim (ok).
+export async function authStorefrontCustomer(
+  prisma: { channel: { findFirst: (args: unknown) => Promise<{ config: unknown } | null> } },
+  tenantId: string,
+  tgUserId: number,
+  initData: string | undefined,
+): Promise<{ ok: true } | { ok: false; code: number; error: string }> {
+  const botToken = await getBotTokenForTenant(prisma, tenantId);
+  if (!botToken) return { ok: true };
+  if (!initData) return { ok: false, code: 401, error: "Avtorizatsiya talab qilinadi (initData)" };
+  const check = verifyTelegramInitData(initData, botToken);
+  if (!check.valid) return { ok: false, code: 401, error: "initData yaroqsiz yoki muddati o'tgan" };
+  if (check.userId === undefined || check.userId !== tgUserId) {
+    return { ok: false, code: 403, error: "Telegram foydalanuvchi mos kelmadi" };
+  }
+  return { ok: true };
+}

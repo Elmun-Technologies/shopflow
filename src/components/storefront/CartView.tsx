@@ -16,6 +16,12 @@ interface CartItem {
   imageUrl: string | null;
 }
 
+// Telegram WebApp signed initData — backend customer-scoped so'rovlarni
+// shu string orqali tasdiqlaydi (tgUserId yolg'iz yetarli emas).
+function tgInitData(): string {
+  return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp?.initData ?? "";
+}
+
 function fmt(price: number, currency: string): string {
   if (currency === "UZS") return price.toLocaleString("uz-UZ") + " so'm";
   if (currency === "USD") return "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2 });
@@ -112,7 +118,7 @@ function CartViewInner({
       const res = await fetch(`${API_BASE}/storefront/${storeSlug}/promo/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, total: selectedSubtotal, tgUserId }),
+        body: JSON.stringify({ code, total: selectedSubtotal, tgUserId, initData: tgInitData() }),
       });
       const body = await res.json().catch(() => ({})) as { discount?: number; promoCodeId?: string; error?: string };
       if (!res.ok || !body.discount) {
