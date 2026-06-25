@@ -50,6 +50,9 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@shop-flow.uz}
+      # Google OAuth (ixtiyoriy — sozlansa admin panelda "Google bilan kirish" yoqiladi).
+      # Frontend uchun build vaqtida VITE_GOOGLE_CLIENT_ID ham xuddi shu qiymat bilan kerak.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # Sentry (ixtiyoriy)
       SENTRY_DSN: ${SENTRY_DSN:-}
       # Sezgir 3rd-party tokenlar shifrlash kaliti (alohida, JWT'dan farqli)

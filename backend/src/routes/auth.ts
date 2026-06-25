@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import argon2 from "argon2";
 import { createHash, randomBytes } from "node:crypto";
+import { OAuth2Client } from "google-auth-library";
+import type { UserRole } from "@prisma/client";
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
 const ACCESS_TOKEN_TTL = "15m"; // 15 daqiqa
@@ -11,6 +13,30 @@ function generateRefreshToken() {
   const hash = createHash("sha256").update(raw).digest("hex");
   return { raw, hash };
 }
+
+// Google OAuth — ID-token tekshirish uchun. GOOGLE_CLIENT_ID .env'dan (prod'da majburiy).
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// Google sign-up'da nom/email'dan band bo'lmagan tenant slug generatsiya qiladi
+async function uniqueTenantSlug(
+  prisma: { tenant: { findUnique: (args: { where: { slug: string } }) => Promise<unknown> } },
+  base: string,
+): Promise<string> {
+  const root = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "store";
+  let candidate = root;
+  for (let i = 0; i < 50; i++) {
+    const exists = await prisma.tenant.findUnique({ where: { slug: candidate } });
+    if (!exists) return candidate;
+    candidate = `${root}-${randomBytes(2).toString("hex")}`;
+  }
+  return `${root}-${randomBytes(4).toString("hex")}`;
+}
+
+const googleSchema = z.object({
+  idToken: z.string().min(10),
+  tenantSlug: z.string().optional(),
+});
 
 const registerSchema = z.object({
   tenantName: z.string().min(2).max(80),
@@ -74,6 +100,85 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
+  // Google sign-in / sign-up — frontend imzolangan Google ID-token yuboradi.
+  // Email mavjud → sign in (googleId bog'lanadi); mavjud emas → yangi tenant + owner (sign up).
+  app.post("/google", { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
+    const data = googleSchema.parse(req.body);
+    if (!GOOGLE_CLIENT_ID) {
+      return reply.code(503).send({ error: "Google kirish sozlanmagan (GOOGLE_CLIENT_ID yo'q)" });
+    }
+
+    // ID-token tekshirish — imzo (Google JWKS) + audience + issuer + muddat
+    const payload = await googleClient
+      .verifyIdToken({ idToken: data.idToken, audience: GOOGLE_CLIENT_ID })
+      .then((t) => t.getPayload())
+      .catch(() => null);
+    if (!payload?.email || !payload.email_verified || !payload.sub) {
+      return reply.code(401).send({ error: "Google token yaroqsiz yoki email tasdiqlanmagan" });
+    }
+    const email = payload.email.toLowerCase();
+    const googleId = payload.sub;
+    const displayName = payload.name ?? email.split("@")[0];
+
+    // Mavjud user(lar) — login bilan bir xil mantiq (bir email bir nechta tenantda bo'lishi mumkin)
+    const users = await app.prisma.user.findMany({
+      where: { email, active: true, ...(data.tenantSlug ? { tenant: { slug: data.tenantSlug } } : {}) },
+      include: { tenant: true },
+    });
+    if (users.length > 1 && !data.tenantSlug) {
+      return reply.code(409).send({
+        error: "Bir nechta tenant topildi",
+        tenants: users.map((u) => ({ slug: u.tenant.slug, name: u.tenant.name })),
+      });
+    }
+
+    let userId: string;
+    let userRole: UserRole;
+    let userEmail: string;
+    let userName: string;
+    let tenant: { id: string; slug: string; name: string; currency: string; deliveryPct: number; servicePct: number };
+    let created = false;
+
+    if (users.length >= 1) {
+      // SIGN IN — mavjud hisob; googleId'ni bog'laymiz (hali bog'lanmagan bo'lsa)
+      const u = users[0];
+      if (u.googleId !== googleId) {
+        await app.prisma.user.update({ where: { id: u.id }, data: { googleId } }).catch(() => null);
+      }
+      userId = u.id; userRole = u.role; userEmail = u.email; userName = u.name;
+      tenant = u.tenant;
+    } else {
+      // SIGN UP — yangi tenant + owner (parolsiz, googleId bilan). Nomni keyin Sozlamalarda o'zgartiradi.
+      const slug = await uniqueTenantSlug(app.prisma, displayName);
+      const t = await app.prisma.tenant.create({
+        data: { slug, name: displayName, users: { create: { email, name: displayName, role: "OWNER", googleId } } },
+        include: { users: true },
+      });
+      const owner = t.users[0];
+      userId = owner.id; userRole = owner.role; userEmail = owner.email; userName = owner.name;
+      tenant = t;
+      created = true;
+    }
+
+    const accessToken = app.jwt.sign(
+      { userId, tenantId: tenant.id, role: userRole, email: userEmail },
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+    const { raw: refreshRaw, hash: refreshHash } = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+    await app.prisma.refreshToken.create({
+      data: { userId, tokenHash: refreshHash, expiresAt, userAgent: (req.headers["user-agent"] as string) ?? null },
+    });
+
+    return reply.code(created ? 201 : 200).send({
+      token: accessToken,
+      refreshToken: refreshRaw,
+      expiresIn: 15 * 60,
+      user: { id: userId, email: userEmail, name: userName, role: userRole },
+      tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, currency: tenant.currency, deliveryPct: tenant.deliveryPct, servicePct: tenant.servicePct },
+    });
+  });
+
   app.post("/login", { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
     const data = loginSchema.parse(req.body);
 
@@ -97,6 +202,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const user = users[0];
+    if (!user.passwordHash) {
+      return reply.code(401).send({ error: "Bu hisob Google orqali kiradi — Google bilan kiring" });
+    }
     const valid = await argon2.verify(user.passwordHash, data.password);
     if (!valid) {
       return reply.code(401).send({ error: "Email yoki parol noto'g'ri" });
@@ -216,11 +324,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     // Parol o'zgartirish — joriy parolni tekshiramiz
     let passwordHash: string | undefined;
     if (data.newPassword) {
-      if (!data.currentPassword) {
-        return reply.code(400).send({ error: "Joriy parol kiritilishi shart" });
+      if (user.passwordHash) {
+        // Mavjud parol bor — joriy parolni tekshiramiz
+        if (!data.currentPassword) {
+          return reply.code(400).send({ error: "Joriy parol kiritilishi shart" });
+        }
+        const valid = await argon2.verify(user.passwordHash, data.currentPassword);
+        if (!valid) return reply.code(401).send({ error: "Joriy parol noto'g'ri" });
       }
-      const valid = await argon2.verify(user.passwordHash, data.currentPassword);
-      if (!valid) return reply.code(401).send({ error: "Joriy parol noto'g'ri" });
+      // Google-only hisob (parol yo'q) — joriy parolsiz yangi parol o'rnatishi mumkin
       passwordHash = await argon2.hash(data.newPassword);
     }
 

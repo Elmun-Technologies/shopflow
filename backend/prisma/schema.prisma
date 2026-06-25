@@ -74,7 +74,8 @@ model User {
   tenantId     String
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email        String
-  passwordHash String
+  passwordHash String?
+  googleId     String?  @unique
   name         String
   role         UserRole @default(AGENT)
   active       Boolean  @default(true)
