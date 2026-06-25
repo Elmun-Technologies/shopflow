@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Mail, Loader2, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
+import { useT } from "../i18n";
 
 type Frequency = "daily" | "weekly" | "monthly" | null;
 
@@ -15,13 +16,14 @@ interface NotifSettings {
   lastReportSentAt: string | null;
 }
 
-const FREQ_LABEL: Record<Exclude<Frequency, null>, string> = {
-  daily: "Har kuni",
-  weekly: "Har hafta",
-  monthly: "Har oy",
+const FREQ_KEY: Record<Exclude<Frequency, null>, string> = {
+  daily: "emailReports.freq.daily",
+  weekly: "emailReports.freq.weekly",
+  monthly: "emailReports.freq.monthly",
 };
 
 export function EmailReportsSection() {
+  const { t } = useT();
   const toast = useAppToast();
   const [smtpConfigured, setSmtpConfigured] = useState(false);
   const [settings, setSettings] = useState<NotifSettings | null>(null);
@@ -58,9 +60,9 @@ export function EmailReportsSection() {
         body: { ...patch, emailRecipients: recipients },
       });
       setSettings(updated);
-      toast.success("Saqlandi");
+      toast.success(t("emailReports.toast.saved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("emailReports.toast.error"));
     } finally {
       setBusy(false);
     }
@@ -73,9 +75,9 @@ export function EmailReportsSection() {
         method: "POST",
         body: { frequency: settings?.reportFrequency ?? "daily" },
       });
-      if (res.ok) toast.success(`Yuborildi: ${res.sent} ta email manziliga`);
+      if (res.ok) toast.success(t("emailReports.toast.sent", { count: res.sent }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Yuborilmadi");
+      toast.error(err instanceof Error ? err.message : t("emailReports.toast.notSent"));
     } finally {
       setBusy(false);
     }
@@ -85,10 +87,10 @@ export function EmailReportsSection() {
     setBusy(true);
     try {
       const res = await api<{ ok: boolean; reason?: string }>("/reports/verify", { method: "POST" });
-      if (res.ok) toast.success("SMTP ulanish muvaffaqiyatli");
-      else toast.error(`SMTP xato: ${res.reason ?? "noma'lum"}`);
+      if (res.ok) toast.success(t("emailReports.toast.smtpOk"));
+      else toast.error(t("emailReports.toast.smtpError", { reason: res.reason ?? t("emailReports.unknown") }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Xato");
+      toast.error(err instanceof Error ? err.message : t("emailReports.toast.error"));
     } finally {
       setBusy(false);
     }
@@ -98,7 +100,7 @@ export function EmailReportsSection() {
     return (
       <div className="bg-white rounded-2xl border border-cream-300 p-5">
         <div className="flex items-center gap-2 text-slate-400">
-          <Loader2 className="w-4 h-4 animate-spin" /> Yuklanmoqda…
+          <Loader2 className="w-4 h-4 animate-spin" /> {t("common.loading")}
         </div>
       </div>
     );
@@ -110,16 +112,16 @@ export function EmailReportsSection() {
         <div>
           <h3 className="text-base font-semibold text-forest-800 mb-1 flex items-center gap-2">
             <Mail className="w-4 h-4 text-leaf-500" />
-            Email hisobotlar
+            {t("emailReports.title")}
           </h3>
           <p className="text-xs text-slate-500">
             {smtpConfigured ? (
               <span className="inline-flex items-center gap-1 text-emerald-600">
-                <CheckCircle2 className="w-3 h-3" /> SMTP sozlangan
+                <CheckCircle2 className="w-3 h-3" /> {t("emailReports.smtpConfigured")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-amber-600">
-                <AlertCircle className="w-3 h-3" /> SMTP server'da sozlanmagan (.env'da SMTP_* o'rnating)
+                <AlertCircle className="w-3 h-3" /> {t("emailReports.smtpNotConfigured")}
               </span>
             )}
           </p>
@@ -131,13 +133,13 @@ export function EmailReportsSection() {
             disabled={busy}
             className="text-xs text-slate-500 hover:text-forest-800 underline"
           >
-            Ulanishni tekshirish
+            {t("emailReports.verifyConnection")}
           </button>
         )}
       </div>
 
       <div>
-        <label className="text-xs text-slate-500 mb-1.5 block">Qabul qiluvchilar (vergul bilan)</label>
+        <label className="text-xs text-slate-500 mb-1.5 block">{t("emailReports.recipients")}</label>
         <input
           type="text"
           value={recipientsDraft}
@@ -145,11 +147,11 @@ export function EmailReportsSection() {
           placeholder="admin@example.com, owner@example.com"
           className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
         />
-        <p className="text-[10px] text-slate-400 mt-1">Maks 10 ta email.</p>
+        <p className="text-[10px] text-slate-400 mt-1">{t("emailReports.maxEmails")}</p>
       </div>
 
       <div>
-        <label className="text-xs text-slate-500 mb-1.5 block">Avtomatik hisobotlar</label>
+        <label className="text-xs text-slate-500 mb-1.5 block">{t("emailReports.autoReports")}</label>
         <div className="grid grid-cols-4 gap-2">
           {(["daily", "weekly", "monthly"] as const).map((f) => (
             <button
@@ -163,7 +165,7 @@ export function EmailReportsSection() {
                   : "bg-cream-100 hover:bg-cream-200 text-slate-700"
               }`}
             >
-              {FREQ_LABEL[f]}
+              {t(FREQ_KEY[f])}
             </button>
           ))}
           <button
@@ -174,12 +176,12 @@ export function EmailReportsSection() {
               !settings?.emailNotificationsEnabled ? "bg-cream-200 text-slate-700" : "bg-cream-100 hover:bg-cream-200 text-slate-500"
             }`}
           >
-            O'chiq
+            {t("emailReports.off")}
           </button>
         </div>
         {settings?.lastReportSentAt && (
           <p className="text-[10px] text-slate-400 mt-2">
-            Oxirgi yuborilgan: {new Date(settings.lastReportSentAt).toLocaleString("uz-UZ")}
+            {t("emailReports.lastSent")} {new Date(settings.lastReportSentAt).toLocaleString("uz-UZ")}
           </p>
         )}
       </div>
@@ -191,7 +193,7 @@ export function EmailReportsSection() {
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-sm font-medium text-slate-700"
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-          Manzillarni saqlash
+          {t("emailReports.saveAddresses")}
         </button>
         <button
           onClick={sendNow}
@@ -199,7 +201,7 @@ export function EmailReportsSection() {
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 rounded-lg text-sm font-medium text-forest-800"
         >
           <Send className="w-4 h-4" />
-          Hozir yuborish (sinov)
+          {t("emailReports.sendNow")}
         </button>
       </div>
     </div>

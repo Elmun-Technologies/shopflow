@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { api } from "../../api/client";
 import { useAsync } from "../../hooks/useAsync";
+import { useT } from "../../i18n";
 
 interface SmsStatus {
   configured: boolean;
@@ -23,12 +24,13 @@ interface Segment {
 const cls = "w-full bg-cream-100 border border-cream-300 rounded-xl px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 transition-colors";
 
 const SMS_TEMPLATES = [
-  { label: "Yangi aksiya", text: "Salom! Bizda yangi aksiya boshlanadi. Batafsil ma'lumot uchun do'konimizga tashrif buyuring." },
-  { label: "Buyurtma tayyorlandi", text: "Buyurtmangiz tayyor. Kurer tez orada yetkazib beradi. Rahmat!" },
-  { label: "Tug'ilgan kun", text: "Tug'ilgan kuningiz bilan! Do'konimizdan maxsus chegirma sifatida 10% beramiz." },
+  { labelKey: "sms.tpl.promo.label", textKey: "sms.tpl.promo.text" },
+  { labelKey: "sms.tpl.ready.label", textKey: "sms.tpl.ready.text" },
+  { labelKey: "sms.tpl.birthday.label", textKey: "sms.tpl.birthday.text" },
 ];
 
 export default function SmsPage() {
+  const { t } = useT();
   const { data: smsStatus } = useAsync<SmsStatus>(() => api("/sms/status"), []);
   const { data: segments } = useAsync<Segment[]>(() => api("/segments"), []);
 
@@ -51,8 +53,8 @@ export default function SmsPage() {
       : null;
 
   const sendBulk = async () => {
-    if (!message.trim()) { setResult({ type: "error", text: "Xabar matni kiritish shart" }); return; }
-    if (targetType === "segment" && !segmentId) { setResult({ type: "error", text: "Segment tanlash shart" }); return; }
+    if (!message.trim()) { setResult({ type: "error", text: t("sms.err.messageRequired") }); return; }
+    if (targetType === "segment" && !segmentId) { setResult({ type: "error", text: t("sms.err.segmentRequired") }); return; }
     setSending(true);
     setResult(null);
     try {
@@ -63,18 +65,18 @@ export default function SmsPage() {
           ...(targetType === "segment" ? { segmentId } : {}),
         },
       });
-      setResult({ type: "success", text: "SMS jo'natish navbatga qo'yildi. Natija biroz vaqtdan so'ng ko'rinadi." });
+      setResult({ type: "success", text: t("sms.toast.queued") });
       setMessage("");
     } catch (e) {
-      setResult({ type: "error", text: e instanceof Error ? e.message : "SMS jo'natishda xato" });
+      setResult({ type: "error", text: e instanceof Error ? e.message : t("sms.err.sendFailed") });
     } finally {
       setSending(false);
     }
   };
 
   const sendTest = async () => {
-    if (!message.trim()) { setResult({ type: "error", text: "Xabar matni kiritish shart" }); return; }
-    if (!testPhone.trim()) { setResult({ type: "error", text: "Test uchun telefon kiritish shart" }); return; }
+    if (!message.trim()) { setResult({ type: "error", text: t("sms.err.messageRequired") }); return; }
+    if (!testPhone.trim()) { setResult({ type: "error", text: t("sms.err.testPhoneRequired") }); return; }
     setTestSending(true);
     setResult(null);
     try {
@@ -82,9 +84,9 @@ export default function SmsPage() {
         method: "POST",
         body: { phone: testPhone, message: message.trim() },
       });
-      setResult({ type: "success", text: `Test SMS ${testPhone} raqamiga jo'natildi` });
+      setResult({ type: "success", text: t("sms.toast.testSent", { phone: testPhone }) });
     } catch (e) {
-      setResult({ type: "error", text: e instanceof Error ? e.message : "Test SMS xato" });
+      setResult({ type: "error", text: e instanceof Error ? e.message : t("sms.err.testFailed") });
     } finally {
       setTestSending(false);
     }
@@ -104,9 +106,9 @@ export default function SmsPage() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-2xl font-bold text-forest-900">SMS Marketing</h1>
+        <h1 className="text-2xl font-bold text-forest-900">{t("sms.title")}</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Mijozlarga ommaviy SMS xabarlar yuborish (Eskiz.uz)
+          {t("sms.subtitle")}
         </p>
       </motion.div>
 
@@ -122,18 +124,18 @@ export default function SmsPage() {
           <>
             <CheckCircle2 className="w-5 h-5 text-forest-700 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-forest-800">Eskiz.uz ulanган</p>
-              <p className="text-xs text-forest-700/70">SMS jo'natishga tayyor</p>
+              <p className="text-sm font-semibold text-forest-800">{t("sms.status.connected")}</p>
+              <p className="text-xs text-forest-700/70">{t("sms.status.ready")}</p>
             </div>
           </>
         ) : (
           <>
             <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-amber-800">SMS provayder sozlanmagan</p>
+              <p className="text-sm font-semibold text-amber-800">{t("sms.status.notConfigured")}</p>
               <p className="text-xs text-amber-700">
-                Server'da <code className="bg-amber-100 px-1 rounded">ESKIZ_LOGIN</code> va{" "}
-                <code className="bg-amber-100 px-1 rounded">ESKIZ_PASSWORD</code> env o'zgaruvchilarini o'rnating
+                {t("sms.status.envBefore")} <code className="bg-amber-100 px-1 rounded">ESKIZ_LOGIN</code> {t("common.and")}{" "}
+                <code className="bg-amber-100 px-1 rounded">ESKIZ_PASSWORD</code> {t("sms.status.envAfter")}
               </p>
             </div>
           </>
@@ -142,19 +144,19 @@ export default function SmsPage() {
 
       {/* Compose */}
       <div className="bg-white border border-cream-300/80 rounded-2xl p-5 space-y-4">
-        <h2 className="font-semibold text-forest-800">Xabar yozish</h2>
+        <h2 className="font-semibold text-forest-800">{t("sms.compose.title")}</h2>
 
         {/* Templates */}
         <div>
-          <p className="text-xs font-medium text-slate-500 mb-2">Shablonlar:</p>
+          <p className="text-xs font-medium text-slate-500 mb-2">{t("sms.compose.templates")}</p>
           <div className="flex flex-wrap gap-2">
-            {SMS_TEMPLATES.map((t) => (
+            {SMS_TEMPLATES.map((tpl) => (
               <button
-                key={t.label}
-                onClick={() => setMessage(t.text)}
+                key={tpl.labelKey}
+                onClick={() => setMessage(t(tpl.textKey))}
                 className="px-3 py-1.5 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-xs font-medium text-slate-600 transition-colors"
               >
-                {t.label}
+                {t(tpl.labelKey)}
               </button>
             ))}
           </div>
@@ -167,14 +169,14 @@ export default function SmsPage() {
             onChange={(e) => setMessage(e.target.value)}
             rows={4}
             maxLength={480}
-            placeholder="Xabar matni (maks. 480 belgi)..."
+            placeholder={t("sms.compose.placeholder")}
             className="w-full bg-cream-100 border border-cream-300 rounded-xl px-3 py-2.5 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 resize-none"
           />
           <div className="flex items-center justify-between mt-1">
-            <p className="text-xs text-slate-400">{charCount}/480 belgi</p>
+            <p className="text-xs text-slate-400">{t("sms.compose.charCount", { count: charCount })}</p>
             {charCount > 0 && (
               <p className="text-xs text-slate-400">
-                ≈ {smsCount} SMS ({smsCount > 1 ? "ko'p qismli" : "oddiy"})
+                ≈ {smsCount} SMS ({smsCount > 1 ? t("sms.compose.multipart") : t("sms.compose.single")})
               </p>
             )}
           </div>
@@ -182,7 +184,7 @@ export default function SmsPage() {
 
         {/* Recipient selector */}
         <div>
-          <p className="text-xs font-medium text-slate-500 mb-2">Kimga yuborish:</p>
+          <p className="text-xs font-medium text-slate-500 mb-2">{t("sms.recipient.label")}</p>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button
               onClick={() => setTargetType("all")}
@@ -193,7 +195,7 @@ export default function SmsPage() {
               }`}
             >
               <Users className="w-4 h-4" />
-              Barcha mijozlar
+              {t("sms.recipient.all")}
             </button>
             <button
               onClick={() => setTargetType("segment")}
@@ -204,7 +206,7 @@ export default function SmsPage() {
               }`}
             >
               <Zap className="w-4 h-4" />
-              Segment
+              {t("sms.recipient.segment")}
             </button>
           </div>
 
@@ -214,10 +216,10 @@ export default function SmsPage() {
               onChange={(e) => setSegmentId(e.target.value)}
               className={cls}
             >
-              <option value="">Segmentni tanlang...</option>
+              <option value="">{t("sms.recipient.selectSegment")}</option>
               {segments?.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} ({s.cachedCount} ta mijoz)
+                  {s.name} ({t("sms.recipient.customerCount", { count: s.cachedCount })})
                 </option>
               ))}
             </select>
@@ -226,7 +228,7 @@ export default function SmsPage() {
           {estimatedCount !== null && estimatedCount > 0 && (
             <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
               <MessageSquare className="w-3 h-3" />
-              ~{estimatedCount} ta SMS jo'natiladi
+              {t("sms.recipient.estimate", { count: estimatedCount })}
             </p>
           )}
         </div>
@@ -256,16 +258,16 @@ export default function SmsPage() {
             className="flex-1 py-3 rounded-xl text-sm font-semibold text-white bg-forest-700 hover:bg-forest-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            {sending ? "Jo'natilmoqda..." : "Yuborish"}
+            {sending ? t("sms.sending") : t("sms.send")}
           </button>
         </div>
       </div>
 
       {/* Test SMS */}
       <div className="bg-white border border-cream-300/80 rounded-2xl p-5 space-y-3">
-        <h2 className="font-semibold text-forest-800">Test SMS yuborish</h2>
+        <h2 className="font-semibold text-forest-800">{t("sms.test.title")}</h2>
         <p className="text-xs text-slate-500">
-          Katta guruhga yuborishdan oldin bitta raqamga test qiling
+          {t("sms.test.hint")}
         </p>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -284,7 +286,7 @@ export default function SmsPage() {
             className="px-5 py-2.5 bg-sky-100 hover:bg-sky-200 border border-sky-200 text-sky-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             {testSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Test
+            {t("sms.test.btn")}
           </button>
         </div>
       </div>

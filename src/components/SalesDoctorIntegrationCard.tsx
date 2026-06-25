@@ -10,6 +10,7 @@ import {
 import { salesDoctorApi, type SalesDoctorStatus, type SalesDoctorReference } from "../api/endpoints";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
+import { useT } from "../i18n";
 
 const STATUS_BADGE_CLS: Record<SalesDoctorStatus["status"], string> = {
   CONNECTED: "bg-leaf-100 text-forest-700",
@@ -18,11 +19,11 @@ const STATUS_BADGE_CLS: Record<SalesDoctorStatus["status"], string> = {
   DISCONNECTED: "bg-cream-200 text-slate-700",
 };
 
-const STATUS_LABEL: Record<SalesDoctorStatus["status"], string> = {
-  CONNECTED: "Ulangan",
-  CONNECTING: "Ulanmoqda",
-  ERROR: "Xato",
-  DISCONNECTED: "Uzilgan",
+const STATUS_LABEL_KEYS: Record<SalesDoctorStatus["status"], string> = {
+  CONNECTED: "salesdoctor.status.CONNECTED",
+  CONNECTING: "salesdoctor.status.CONNECTING",
+  ERROR: "salesdoctor.status.ERROR",
+  DISCONNECTED: "salesdoctor.status.DISCONNECTED",
 };
 
 function formatDate(iso: string | null | undefined): string {
@@ -35,6 +36,7 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 export function SalesDoctorIntegrationCard() {
+  const { t } = useT();
   const toast = useAppToast();
   const confirmDialog = useConfirm();
   const [status, setStatus] = useState<SalesDoctorStatus | null>(null);
@@ -58,19 +60,19 @@ export function SalesDoctorIntegrationCard() {
 
   const disconnect = async () => {
     const ok = await confirmDialog({
-      title: "Sales Doctor uzilsinmi?",
-      description: "Hisob o'chiriladi va keyingi buyurtmalar SD'ga yuborilmaydi. Mahsulot/mijoz ID mapping saqlanadi.",
+      title: t("salesdoctor.disconnectConfirmTitle"),
+      description: t("salesdoctor.disconnectConfirmDesc"),
       kind: "danger",
-      confirmText: "Uzish",
+      confirmText: t("salesdoctor.disconnect"),
     });
     if (!ok) return;
     setBusy(true);
     try {
       await salesDoctorApi.disconnect();
-      toast.success("Sales Doctor uzildi");
+      toast.success(t("salesdoctor.toast.disconnected"));
       await refreshStatus();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Uzilmadi");
+      toast.error(err instanceof Error ? err.message : t("salesdoctor.toast.disconnectFailed"));
     } finally {
       setBusy(false);
     }
@@ -81,11 +83,14 @@ export function SalesDoctorIntegrationCard() {
     try {
       const res = await salesDoctorApi.pullCatalog();
       toast.success(
-        `Pull: ${res.customers.linked + res.customers.created} mijoz, ${res.products.linked + res.products.created} mahsulot`,
+        t("salesdoctor.toast.pull", {
+          customers: res.customers.linked + res.customers.created,
+          products: res.products.linked + res.products.created,
+        }),
       );
       await refreshStatus();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Pull xato");
+      toast.error(err instanceof Error ? err.message : t("salesdoctor.toast.pullFailed"));
     } finally {
       setBusy(false);
     }
@@ -95,9 +100,9 @@ export function SalesDoctorIntegrationCard() {
     setBusy(true);
     try {
       const r = await salesDoctorApi.test();
-      toast.success(`Ulanish ishlamoqda — ${r.agentCount} ta agent topildi`);
+      toast.success(t("salesdoctor.toast.testOk", { count: r.agentCount }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Test xato");
+      toast.error(err instanceof Error ? err.message : t("salesdoctor.toast.testFailed"));
     } finally {
       setBusy(false);
     }
@@ -107,7 +112,7 @@ export function SalesDoctorIntegrationCard() {
     return (
       <div className="bg-white border border-cream-300 rounded-2xl p-5 flex items-center gap-3">
         <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-        <span className="text-sm text-slate-500">Sales Doctor holati yuklanmoqda…</span>
+        <span className="text-sm text-slate-500">{t("salesdoctor.loadingStatus")}</span>
       </div>
     );
   }
@@ -127,16 +132,16 @@ export function SalesDoctorIntegrationCard() {
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-semibold text-forest-800">Sales Doctor</h3>
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLS[status?.status ?? "DISCONNECTED"]}`}>
-              {STATUS_LABEL[status?.status ?? "DISCONNECTED"]}
+              {t(STATUS_LABEL_KEYS[status?.status ?? "DISCONNECTED"])}
             </span>
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-cream-100 text-slate-500">🇺🇿 UZ</span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Sotuv CRM — buyurtma yaratilganda avtomatik tushadi, status sync, RFM
+            {t("salesdoctor.subtitle")}
           </p>
           {isConnected && (
             <p className="text-[11px] text-slate-400 mt-1.5">
-              {status?.domain} · oxirgi sync: {formatDate(status?.lastSyncAt)}
+              {status?.domain} · {t("salesdoctor.lastSync")} {formatDate(status?.lastSyncAt)}
             </p>
           )}
         </div>
@@ -146,7 +151,7 @@ export function SalesDoctorIntegrationCard() {
             disabled={busy}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-leaf-400 hover:bg-leaf-500 text-forest-800 disabled:opacity-50"
           >
-            Ulash
+            {t("salesdoctor.connect")}
           </button>
         ) : (
           <div className="flex items-center gap-1.5">
@@ -154,14 +159,14 @@ export function SalesDoctorIntegrationCard() {
               onClick={test}
               disabled={busy}
               className="p-2 rounded-lg text-slate-500 hover:text-forest-800 hover:bg-cream-100 disabled:opacity-50"
-              title="Test ulanish"
+              title={t("salesdoctor.testConnection")}
             >
               <RefreshCw className={`w-4 h-4 ${busy ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={() => setShowDefaults(true)}
               className="p-2 rounded-lg text-slate-500 hover:text-forest-800 hover:bg-cream-100"
-              title="Sozlash"
+              title={t("salesdoctor.configure")}
             >
               <SettingsIcon className="w-4 h-4" />
             </button>
@@ -169,7 +174,7 @@ export function SalesDoctorIntegrationCard() {
               onClick={disconnect}
               disabled={busy}
               className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-              title="Uzish"
+              title={t("salesdoctor.disconnect")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -184,16 +189,16 @@ export function SalesDoctorIntegrationCard() {
             <div className="mb-3 flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
               <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-xs font-semibold text-amber-800">Sozlash yakunlanmagan</p>
+                <p className="text-xs font-semibold text-amber-800">{t("salesdoctor.setupIncomplete")}</p>
                 <p className="text-[11px] text-amber-700 mt-0.5">
-                  Buyurtmalar yuborilishi uchun Agent, Narx turi va Sklad tanlash kerak.
+                  {t("salesdoctor.setupIncompleteDesc")}
                 </p>
               </div>
               <button
                 onClick={() => setShowDefaults(true)}
                 className="text-[11px] font-semibold text-amber-900 hover:underline"
               >
-                Sozlash
+                {t("salesdoctor.configure")}
               </button>
             </div>
           )}
@@ -206,10 +211,10 @@ export function SalesDoctorIntegrationCard() {
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-            <Stat label="Pending" value={status?.pendingRetries ?? 0} color="text-amber-600" />
-            <Stat label="Xatolar" value={status?.failedRetries ?? 0} color="text-rose-600" />
-            <Stat label="Agent" value={status?.defaults?.agentSdId ? "✓" : "—"} color="text-slate-700" />
-            <Stat label="Sklad" value={status?.defaults?.warehouseSdId ? "✓" : "—"} color="text-slate-700" />
+            <Stat label={t("salesdoctor.stat.pending")} value={status?.pendingRetries ?? 0} color="text-amber-600" />
+            <Stat label={t("salesdoctor.stat.errors")} value={status?.failedRetries ?? 0} color="text-rose-600" />
+            <Stat label={t("salesdoctor.stat.agent")} value={status?.defaults?.agentSdId ? "✓" : "—"} color="text-slate-700" />
+            <Stat label={t("salesdoctor.stat.warehouse")} value={status?.defaults?.warehouseSdId ? "✓" : "—"} color="text-slate-700" />
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -219,15 +224,15 @@ export function SalesDoctorIntegrationCard() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-cream-300 hover:bg-cream-100 text-forest-800 disabled:opacity-50"
             >
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              SD'dan olib kelish
+              {t("salesdoctor.pullFromSd")}
             </button>
             <button
               disabled
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-cream-300 text-slate-400 cursor-not-allowed"
-              title="Bu funksiya tez orada"
+              title={t("salesdoctor.comingSoon")}
             >
               <Upload className="w-3.5 h-3.5" />
-              ShopFlow'dan push
+              {t("salesdoctor.pushFromShopflow")}
             </button>
           </div>
         </div>
@@ -273,6 +278,7 @@ function ConnectModal({
   onClose: () => void;
   onConnected: () => void;
 }) {
+  const { t } = useT();
   const toast = useAppToast();
   const [domain, setDomain] = useState("");
   const [login, setLogin] = useState("");
@@ -290,10 +296,10 @@ function ConnectModal({
         login: login.trim(),
         password,
       });
-      toast.success("Sales Doctor ulandi");
+      toast.success(t("salesdoctor.toast.connected"));
       onConnected();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Ulanish muvaffaqiyatsiz";
+      const msg = err instanceof Error ? err.message : t("salesdoctor.toast.connectFailed");
       setError(msg);
     } finally {
       setBusy(false);
@@ -309,8 +315,8 @@ function ConnectModal({
       >
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="text-lg font-semibold text-forest-800">Sales Doctor'ga ulanish</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Domain va login ma'lumotlarini kiriting.</p>
+            <h3 className="text-lg font-semibold text-forest-800">{t("salesdoctor.connectModalTitle")}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{t("salesdoctor.connectModalDesc")}</p>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100">
             <X className="w-4 h-4 text-slate-500" />
@@ -325,7 +331,7 @@ function ConnectModal({
 
         <div className="space-y-3">
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Domain</span>
+            <span className="text-xs text-slate-500 mb-1 block">{t("salesdoctor.domain")}</span>
             <input
               required
               autoFocus
@@ -335,10 +341,10 @@ function ConnectModal({
               placeholder="mijoz.salesdoctor.uz"
               className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
             />
-            <p className="text-[10px] text-slate-400 mt-1">Sales Doctor instansiyangiz manzili (https:// kerakmas)</p>
+            <p className="text-[10px] text-slate-400 mt-1">{t("salesdoctor.domainHelper")}</p>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Login</span>
+            <span className="text-xs text-slate-500 mb-1 block">{t("salesdoctor.login")}</span>
             <input
               required
               type="text"
@@ -348,7 +354,7 @@ function ConnectModal({
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500 mb-1 block">Parol</span>
+            <span className="text-xs text-slate-500 mb-1 block">{t("salesdoctor.password")}</span>
             <input
               required
               type="password"
@@ -357,7 +363,7 @@ function ConnectModal({
               className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              Parol shifrlangan holda saqlanadi (AES-256-GCM). Token eskirsa avtomatik qayta login bo'ladi.
+              {t("salesdoctor.passwordHelper")}
             </p>
           </label>
         </div>
@@ -368,7 +374,7 @@ function ConnectModal({
             onClick={onClose}
             className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
           >
-            Bekor
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -376,7 +382,7 @@ function ConnectModal({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
           >
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Ulash
+            {t("salesdoctor.connect")}
           </button>
         </div>
       </form>
@@ -391,6 +397,7 @@ function DefaultsModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useT();
   const toast = useAppToast();
   const [refs, setRefs] = useState<{
     agents: SalesDoctorReference[];
@@ -412,7 +419,7 @@ function DefaultsModal({
         if (s.defaults?.priceTypeSdId) setPriceTypeId(s.defaults.priceTypeSdId);
         if (s.defaults?.warehouseSdId) setWarehouseId(s.defaults.warehouseSdId);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "References olinmadi");
+        toast.error(err instanceof Error ? err.message : t("salesdoctor.toast.refsFailed"));
       } finally {
         setLoading(false);
       }
@@ -423,7 +430,7 @@ function DefaultsModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agentId || !priceTypeId || !warehouseId) {
-      toast.error("Barcha 3 ta maydon to'ldirilishi kerak");
+      toast.error(t("salesdoctor.allFieldsRequired"));
       return;
     }
     setBusy(true);
@@ -433,10 +440,10 @@ function DefaultsModal({
         defaultPriceTypeSdId: priceTypeId,
         defaultWarehouseSdId: warehouseId,
       });
-      toast.success("Saqlandi");
+      toast.success(t("salesdoctor.toast.saved"));
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Saqlanmadi");
+      toast.error(err instanceof Error ? err.message : t("salesdoctor.toast.notSaved"));
     } finally {
       setBusy(false);
     }
@@ -451,9 +458,9 @@ function DefaultsModal({
       >
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="text-lg font-semibold text-forest-800">Sozlash</h3>
+            <h3 className="text-lg font-semibold text-forest-800">{t("salesdoctor.defaultsTitle")}</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Buyurtmalar uchun default Agent, Narx turi va Sklad tanlang.
+              {t("salesdoctor.defaultsDesc")}
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-cream-100">
@@ -463,34 +470,37 @@ function DefaultsModal({
 
         {loading ? (
           <div className="py-8 flex items-center justify-center text-slate-500">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Yuklanmoqda…
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> {t("common.loading")}
           </div>
         ) : refs ? (
           <div className="space-y-3">
             <SelectField
-              label="Agent"
+              label={t("salesdoctor.agent")}
               value={agentId}
               onChange={setAgentId}
               options={refs.agents}
-              placeholder="Agent tanlang…"
+              placeholder={t("salesdoctor.agentPlaceholder")}
+              emptyText={t("salesdoctor.noRecordsOfType")}
             />
             <SelectField
-              label="Narx turi"
+              label={t("salesdoctor.priceType")}
               value={priceTypeId}
               onChange={setPriceTypeId}
               options={refs.priceTypes}
-              placeholder="Narx turi tanlang…"
+              placeholder={t("salesdoctor.priceTypePlaceholder")}
+              emptyText={t("salesdoctor.noRecordsOfType")}
             />
             <SelectField
-              label="Sklad"
+              label={t("salesdoctor.warehouse")}
               value={warehouseId}
               onChange={setWarehouseId}
               options={refs.warehouses}
-              placeholder="Sklad tanlang…"
+              placeholder={t("salesdoctor.warehousePlaceholder")}
+              emptyText={t("salesdoctor.noRecordsOfType")}
             />
           </div>
         ) : (
-          <p className="text-sm text-rose-600">References olinmadi.</p>
+          <p className="text-sm text-rose-600">{t("salesdoctor.refsNotLoaded")}</p>
         )}
 
         <div className="flex justify-end gap-2 mt-5">
@@ -499,7 +509,7 @@ function DefaultsModal({
             onClick={onClose}
             className="px-3 py-2 rounded-lg text-sm bg-cream-100 hover:bg-cream-200 text-slate-700"
           >
-            Bekor
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -507,7 +517,7 @@ function DefaultsModal({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm bg-leaf-400 hover:bg-leaf-500 disabled:opacity-50 text-forest-800 font-medium"
           >
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-            Saqlash
+            {t("common.save")}
           </button>
         </div>
       </form>
@@ -521,12 +531,14 @@ function SelectField({
   onChange,
   options,
   placeholder,
+  emptyText,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: SalesDoctorReference[];
   placeholder: string;
+  emptyText: string;
 }) {
   return (
     <label className="block">
@@ -542,7 +554,7 @@ function SelectField({
           <option key={o.id} value={o.id}>{o.name}</option>
         ))}
       </select>
-      {options.length === 0 && <p className="text-[10px] text-rose-500 mt-1">SD'da ushbu turdagi yozuvlar yo'q</p>}
+      {options.length === 0 && <p className="text-[10px] text-rose-500 mt-1">{emptyText}</p>}
     </label>
   );
 }
