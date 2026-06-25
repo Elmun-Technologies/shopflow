@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
@@ -19,6 +19,7 @@ if (process.env.SENTRY_DSN) {
 }
 import { prismaPlugin } from "./plugins/prisma.js";
 import { authPlugin } from "./plugins/auth.js";
+import { sanitizeUrl } from "./lib/log-sanitize.js";
 import { registerMetrics } from "./lib/metrics.js";
 import { authRoutes } from "./routes/auth.js";
 import { tenantRoutes } from "./routes/tenants.js";
@@ -78,12 +79,31 @@ const app = Fastify({
         "req.body.token",
         "req.body.encryptedSecret",
         "req.body.initData",
+        "req.query.token",
+        "req.query.access_token",
+        "req.query.api_key",
+        "req.query.apikey",
         "*.password",
         "*.secretKey",
         "*.cashierKey",
         "*.token",
       ],
       censor: "[REDACTED]",
+    },
+    // SECURITY (M2): Fastify'ning standart req serializeri `req.url`'ni log'ga
+    // yozadi — bu query string'ni (`?token=...`) o'z ichiga oladi. Pino redact
+    // faqat strukturalangan maydonlarni yashiradi, URL'ni emas. Shu serializer
+    // URL ichidagi maxfiy token query parametrini log'dan oldin tozalaydi.
+    serializers: {
+      req(request: FastifyRequest) {
+        return {
+          method: request.method,
+          url: sanitizeUrl(request.url),
+          host: request.headers?.host,
+          remoteAddress: request.ip,
+          remotePort: request.socket?.remotePort,
+        };
+      },
     },
     transport:
       process.env.NODE_ENV === "production"
@@ -159,11 +179,11 @@ app.setErrorHandler((err, req, reply) => {
     if (err.code === "P2025") {
       return reply.code(404).send({ error: "Yozuv topilmadi" });
     }
-    app.log.error({ err, url: req.url }, "Prisma error");
+    app.log.error({ err, url: sanitizeUrl(req.url) }, "Prisma error");
     return reply.code(500).send({ error: "Ma'lumotlar bazasi xatosi" });
   }
   if (err instanceof Prisma.PrismaClientValidationError) {
-    app.log.warn({ err, url: req.url }, "Prisma validation error");
+    app.log.warn({ err, url: sanitizeUrl(req.url) }, "Prisma validation error");
     return reply.code(400).send({ error: "Noto'g'ri so'rov ma'lumotlari" });
   }
   const httpErr = err as { statusCode?: number; message?: string };
@@ -171,7 +191,7 @@ app.setErrorHandler((err, req, reply) => {
   if (httpErr.statusCode === 429) {
     return reply.code(429).send({ error: "Juda ko'p so'rov. Biroz kutib turing." });
   }
-  app.log.error({ err, url: req.url, method: req.method }, "Unhandled error");
+  app.log.error({ err, url: sanitizeUrl(req.url), method: req.method }, "Unhandled error");
   // Sentry'ga yuborish — faqat 500 darajadagi xatolar
   if (!httpErr.statusCode || httpErr.statusCode >= 500) {
     Sentry.captureException(err);
