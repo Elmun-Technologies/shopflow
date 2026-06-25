@@ -166,10 +166,44 @@ function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {
   );
 }
 
+// ─── URL ↔ sahifa sinxronizatsiyasi ──────────────────────────────────────────
+// Admin navigatsiyasi state-based. URL manzil satrida ko'rinishi, brauzer "orqaga"/
+// "oldinga" va refresh to'g'ri sahifani ochishi uchun History API bilan bog'laymiz.
+const PAGE_PATH: Record<Page, string> = {
+  dashboard: "/",
+  orders: "/orders",
+  products: "/products",
+  leads: "/leads",
+  customers: "/customers",
+  segments: "/segments",
+  chat: "/chat",
+  platforms: "/platforms",
+  payments: "/payments",
+  delivery: "/delivery",
+  uibuilder: "/uibuilder",
+  marketing: "/marketing",
+  analytics: "/analytics",
+  settings: "/settings",
+};
+
+function pageToPath(page: Page, sub: MarketingSub): string {
+  return page === "marketing" ? `/marketing/${sub}` : PAGE_PATH[page];
+}
+
+function parseLocation(): { page: Page; sub: MarketingSub | null } {
+  const path = window.location.pathname;
+  if (path.startsWith("/marketing")) {
+    const sub = path.split("/")[2] || null;
+    return { page: "marketing", sub: sub as MarketingSub | null };
+  }
+  const found = (Object.entries(PAGE_PATH) as [Page, string][]).find(([, p]) => p === path);
+  return { page: found ? found[0] : "dashboard", sub: null };
+}
+
 function AppShell() {
   const { user, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState<Page>("dashboard");
-  const [marketingSub, setMarketingSub] = useState<MarketingSub>("rassilka");
+  const [currentPage, setCurrentPage] = useState<Page>(() => parseLocation().page);
+  const [marketingSub, setMarketingSub] = useState<MarketingSub>(() => parseLocation().sub ?? "rassilka");
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
@@ -205,6 +239,25 @@ function AppShell() {
     const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // currentPage/marketingSub → URL (manzil satri yangilanadi, history yoziladi)
+  useEffect(() => {
+    const path = pageToPath(currentPage, marketingSub);
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, "", path);
+    }
+  }, [currentPage, marketingSub]);
+
+  // Brauzer "orqaga"/"oldinga" tugmasi → sahifani tiklash
+  useEffect(() => {
+    const onPop = () => {
+      const loc = parseLocation();
+      setCurrentPage(loc.page);
+      if (loc.sub) setMarketingSub(loc.sub);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   if (loading) {
