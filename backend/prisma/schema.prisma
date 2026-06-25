@@ -264,6 +264,18 @@ model Product {
   imageUrl    String? // asosiy rasm URL
   images      String[] @default([]) // qo'shimcha rasmlar
 
+  // Public API (v1) uchun barqaror URL identifikatori — tenant ichida unique.
+  // Mavjud mahsulotlarga backfill qilinadi, yangilarda name'dan avto-generatsiya.
+  // Nullable: db push xavfsiz bo'lishi uchun (eski qatorlar NULL → backfill).
+  slug   String?
+  // Ishlab chiqarilgan davlat — public /products filtri (origin) uchun.
+  origin String?
+  // Boy marketing kontenti (public API Product detali uchun). Ixtiyoriy.
+  // Shakl: { tagline, highlights[], benefits[], ingredients[], howToUse,
+  //          faq[], servings, bespoke, ... } yoki per-locale: { uz:{...}, ru:{...} }.
+  // Admin UI alohida PR'da — hozircha DB/seed orqali to'ldiriladi.
+  content Json?
+
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
@@ -294,11 +306,13 @@ model Product {
   reviews Review[]
 
   @@unique([tenantId, sku])
+  @@unique([tenantId, slug])
   @@unique([tenantId, moyskladId])
   @@unique([tenantId, salesDoctorId])
   @@index([tenantId, active])
   @@index([tenantId, featured])
   @@index([tenantId, saleCampaignId])
+  @@index([tenantId, origin])
 }
 
 enum ProductSource {

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { DollarSign, ShoppingBag, Users, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
@@ -64,8 +64,8 @@ const cards: Array<CardConfig & { key: "revenue" | "orders" | "customers" | "con
 export default function KPICards() {
   const { tenant } = useAuth();
   const { t } = useT();
-  const { data, loading } = useAsync(() => dashboardApi.kpis(), []);
-  const { data: dailySales } = useAsync(() => dashboardApi.dailySales(14), []);
+  const { data, loading } = useQueryAsync(["dashboard", "kpis"], () => dashboardApi.kpis());
+  const { data: dailySales } = useQueryAsync(["dashboard", "dailySales", 14], () => dashboardApi.dailySales(14));
   const currency = tenant?.currency ?? "UZS";
 
   if (loading) return <KPICardsSkeleton />;

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Inbox, ArrowRight, Loader2 } from "lucide-react";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
@@ -51,7 +51,7 @@ export default function RecentOrders() {
   const { tenant } = useAuth();
   const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
-  const { data, loading } = useAsync(() => dashboardApi.recentOrders(), []);
+  const { data, loading } = useQueryAsync(["dashboard", "recentOrders"], () => dashboardApi.recentOrders());
   const orders = data ?? [];
 
   return (

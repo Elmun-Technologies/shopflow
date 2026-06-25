@@ -4,15 +4,8 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { createHash, randomBytes } from "node:crypto";
 import argon2 from "argon2";
-
-function generateApiKey(): { key: string; prefix: string; hash: string } {
-  const raw = `sf_${randomBytes(28).toString("hex")}`;
-  const prefix = raw.slice(0, 10);
-  const hash = createHash("sha256").update(raw).digest("hex");
-  return { key: raw, prefix, hash };
-}
+import { generateApiKey } from "../lib/api-key.js";
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.authenticate);

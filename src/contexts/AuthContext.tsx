@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { auth as authApi } from "../api/endpoints";
 import { setToken, setRefreshToken, clearAuth } from "../api/client";
 import { api } from "../api/client";
+import { queryClient } from "../api/queryClient";
 import type { User, Tenant } from "../types/api";
 
 interface AuthState {
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onUnauthorized = () => {
       setUser(null);
       setTenant(null);
+      queryClient.clear(); // keshlangan tenant ma'lumotlarini tozalash
     };
     window.addEventListener("shopflow:unauthorized", onUnauthorized);
     return () => window.removeEventListener("shopflow:unauthorized", onUnauthorized);
@@ -100,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAuth();
     setUser(null);
     setTenant(null);
+    queryClient.clear(); // keshlangan tenant ma'lumotlarini tozalash (tenant-leak oldini olish)
   }, []);
 
   const value = useMemo(

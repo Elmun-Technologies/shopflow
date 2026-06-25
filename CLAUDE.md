@@ -200,13 +200,14 @@ shopflow/
 - ✅ Docker Compose: Postgres + Backend + Frontend + Caddy (HTTPS) + Backup
 - ✅ VPS bootstrap skripti + OPS.md / SECURITY.md
 - ✅ Sentry error tracking + Pino log redaction
+- ✅ Prometheus metrics — `/metrics` (HTTP counter/histogram/in-flight + Node default: CPU/xotira/event-loop/GC). Prod'da `METRICS_TOKEN` himoya, Caddy'dan tashqarida (ichki). Hujjat: `OPS.md` → Monitoring
 - ✅ JWT refresh tokens + API keys + AES-256-GCM secret encryption
 - ✅ initData security (Telegram WebApp + storefront mutation endpoints)
 - ✅ SSRF himoyasi (outbound webhooks)
 - ✅ Per-tenant rate limit, mem_limit, deep healthcheck (DB ping)
 - ✅ Real-time SSE (15s polling o'rniga)
 - ✅ PWA — installable + offline shell (Service Worker, manifest)
-- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention)
+- ✅ Avtomatik kunlik DB backup (docker service, 7 kun retention) + **offsite** (S3/R2/B2/MinIO, `BACKUP_S3_*` — `scripts/backup.sh`)
 - ✅ Graceful shutdown (SIGTERM → workers stop)
 - ✅ Multi-tenant webhook URLs
 
@@ -257,6 +258,8 @@ shopflow/
 - ✅ **Reports PDF** — AnalyticsPage'dan hisobot generatori
 - ✅ **Order/Customer/Lead create modallari** (admin tugmalari)
 - ✅ **Single-product do'kon rejimi** — Vitrina'da "Do'kon turi: Ko'p mahsulotli / Bitta mahsulot" toggle. Single rejimda bitta mahsulotga qaratilgan landing (galereya/sharhlar/badge/taymer toggle), savatsiz to'g'ridan-to'g'ri "Buyurtma berish". `Storefront.storeMode` + `singleProductId`. Bot `/start` o'zgarmaydi — storefront rejimga qarab render qiladi.
+- ✅ **Public API v1** — tashqi mijoz websaytlari uchun barqaror, API-kalit himoyalangan kontrakt (`/api/v1`). 6 endpoint: `GET /categories`, `/products` (filtr/sort/sahifalash), `/products/{slug}`, `/products/{id}/upsells` (ProductAddon), `/promotions` (free shipping), `POST /orders` (server-side narx, atomik stock, WEBSITE kanali, SSE/webhook). Bearer `sf_...` → tenant (`authenticateApiKey`). `?locale=uz|ru|en`. Pul butun UZS, rasm absolyut HTTPS, GET'lar 300s kesh. Shakl: `lib/public-shape.ts`, kontrakt: **`PUBLIC_API.md`**. Kalit: Sozlamalar → API yoki `npm run create-api-key -- <slug>`.
+  - Schema o'zgarishi: `Product.slug` (tenant ichida unique, URL identifikatori) + `Product.origin` (filtr) + `Product.content` (JSON — tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). Slug create'da avto-generatsiya + `npm run backfill-slugs` (mavjudlar). **Deploy'da `prisma db push` kerak.** Boy kontent admin UI — alohida PR (hozircha DB/seed orqali).
 - ✅ **Single-product landing konstruktori** — multi rejimdek to'liq seksiya builder. `SingleConfig` endi tartiblangan `sections[]` (eski 5-boolean shaklga backward-compat `normalizeSingleConfig`). Editor: doimiy "skelet" (galereya → narx → CTA, qulflangan) + qo'shimcha bo'limlar (ishonch belgilari / sharhlar / haftalik xaridorlar / tezkor info / aksiya taymeri / tavsif / yetkazib berish / combo) — drag + strelka bilan tartiblanadi, eye toggle bilan yoqiladi. **Storefront'ga to'liq ulangan**: `StorePage` single PDP body bo'limlarni saqlangan tartib + holatga qarab chizadi (multi rejim PDP o'zgarmagan). Yangi `CountdownBanner` (kun oxirigacha jonli ortga hisob).
 
 ### Marketing
@@ -271,7 +274,7 @@ shopflow/
 ## 🛣 Kelajakda (TODO / ideas)
 
 ### Qolgan
-- [ ] **Prisma migrations folder** — hozir `db push` (production risk, alohida coordinated migration)
+- ✅ **Prisma migrations** — `db push` → versiyalangan `prisma migrate`. Baseline `0_init`, self-baselining entrypoint (`scripts/db-migrate.mjs`) mavjud prod DB'ni avtomatik baseline qiladi (qo'lda amal kerak emas). CI: `migrate deploy` + drift-check. Hujjat: **`MIGRATIONS.md`**.
 - [ ] **Push notifications** — Service Worker bor, VAPID setup qoldi
 - [ ] **Email reports** — PDF tayyor, SMTP credentials kerak
 - [ ] **Eskiz SMS real API** — tenant credential kerak

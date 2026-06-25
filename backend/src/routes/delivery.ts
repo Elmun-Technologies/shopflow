@@ -4,7 +4,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { logAudit } from "../lib/audit.js";
+import { logAudit, logAuditFor } from "../lib/audit.js";
 
 const zoneSchema = z.object({
   name: z.string().min(1).max(80),
@@ -54,15 +54,19 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.post("/zones", async (req, reply) => {
+  app.post("/zones", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = zoneSchema.parse(req.body);
     const zone = await app.prisma.deliveryZone.create({
       data: { tenantId: req.session.tenantId, ...data },
     });
+    await logAuditFor(app.prisma, req.session, {
+      action: "CREATE", resourceType: "delivery_zone", resourceId: zone.id,
+      summary: `Yetkazish zonasi yaratildi: ${zone.name}`,
+    });
     return reply.code(201).send(zone);
   });
 
-  app.patch<{ Params: { id: string } }>("/zones/:id", async (req, reply) => {
+  app.patch<{ Params: { id: string } }>("/zones/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = zoneSchema.partial().parse(req.body);
     const existing = await app.prisma.deliveryZone.findFirst({
       where: { id: req.params.id, tenantId: req.session.tenantId },
@@ -73,6 +77,10 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
       data,
     });
     if (affected.count === 0) return reply.code(404).send({ error: "Zona topilmadi" });
+    await logAuditFor(app.prisma, req.session, {
+      action: "UPDATE", resourceType: "delivery_zone", resourceId: req.params.id,
+      summary: `Yetkazish zonasi tahrirlandi: ${existing.name}`, changes: data,
+    });
     return app.prisma.deliveryZone.findFirstOrThrow({
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
@@ -86,6 +94,10 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!existing) return reply.code(404).send({ error: "Zona topilmadi" });
     await app.prisma.deliveryZone.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
+    await logAuditFor(app.prisma, req.session, {
+      action: "DELETE", resourceType: "delivery_zone", resourceId: req.params.id,
+      summary: `Yetkazish zonasi o'chirildi: ${existing.name}`,
+    });
     return { ok: true };
   });
 
@@ -108,7 +120,7 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
     }));
   });
 
-  app.post("/methods", async (req, reply) => {
+  app.post("/methods", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = methodSchema.parse(req.body);
     if (data.zoneId) {
       const zone = await app.prisma.deliveryZone.findFirst({
@@ -119,17 +131,29 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
     const method = await app.prisma.deliveryMethod.create({
       data: { tenantId: req.session.tenantId, ...data },
     });
+    await logAuditFor(app.prisma, req.session, {
+      action: "CREATE", resourceType: "delivery_method", resourceId: method.id,
+      summary: `Yetkazish usuli yaratildi: ${method.name}`,
+    });
     return reply.code(201).send({ ...method, price: Number(method.price) });
   });
 
-  app.patch<{ Params: { id: string } }>("/methods/:id", async (req, reply) => {
+  app.patch<{ Params: { id: string } }>("/methods/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = methodSchema.partial().parse(req.body);
     const existing = await app.prisma.deliveryMethod.findFirst({
       where: { id: req.params.id, tenantId: req.session.tenantId },
     });
     if (!existing) return reply.code(404).send({ error: "Usul topilmadi" });
-    const updated = await app.prisma.deliveryMethod.update({
-      where: { id: req.params.id }, data,
+    // Defense-in-depth: tenantId'ni update where'iga ham qo'shamiz
+    await app.prisma.deliveryMethod.updateMany({
+      where: { id: req.params.id, tenantId: req.session.tenantId }, data,
+    });
+    const updated = await app.prisma.deliveryMethod.findFirstOrThrow({
+      where: { id: req.params.id, tenantId: req.session.tenantId },
+    });
+    await logAuditFor(app.prisma, req.session, {
+      action: "UPDATE", resourceType: "delivery_method", resourceId: req.params.id,
+      summary: `Yetkazish usuli tahrirlandi: ${updated.name}`, changes: data,
     });
     return { ...updated, price: Number(updated.price) };
   });
@@ -142,6 +166,10 @@ export const deliveryRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!existing) return reply.code(404).send({ error: "Usul topilmadi" });
     await app.prisma.deliveryMethod.deleteMany({ where: { id: req.params.id, tenantId: req.session.tenantId } });
+    await logAuditFor(app.prisma, req.session, {
+      action: "DELETE", resourceType: "delivery_method", resourceId: req.params.id,
+      summary: `Yetkazish usuli o'chirildi: ${existing.name}`,
+    });
     return { ok: true };
   });
 

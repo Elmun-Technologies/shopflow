@@ -132,9 +132,17 @@ services:
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_URL: postgresql://${POSTGRES_USER:-shopflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopflow}
-      RETENTION_DAYS: "7"
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: ${RETENTION_DAYS:-7}
+      # Offsite backup (ixtiyoriy) — .env'da to'ldiring (S3 / Cloudflare R2 / Backblaze B2 / MinIO)
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      AWS_DEFAULT_REGION: ${BACKUP_S3_REGION:-auto}
     volumes:
       - backup_data:/backups
+      - ./scripts:/scripts:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -145,18 +153,12 @@ services:
     command:
       - |
         echo "[backup] kunlik backup loop boshlandi"
+        if [ -n "$$BACKUP_S3_BUCKET" ]; then
+          echo "[backup] offsite yoqilgan ($$BACKUP_S3_BUCKET) — aws-cli o'rnatilmoqda"
+          apk add --no-cache aws-cli >/dev/null 2>&1 || echo "[backup] aws-cli o'rnatib bo'lmadi — faqat local backup"
+        fi
         while true; do
-          DATE=$$(date +%Y%m%d_%H%M%S)
-          FILE="/backups/shopflow_$$DATE.sql.gz"
-          echo "[backup] $$DATE: pg_dump boshlandi"
-          if pg_dump "$$DATABASE_URL" | gzip > "$$FILE"; then
-            echo "[backup] $$DATE: yakunlandi → $$FILE"
-          else
-            echo "[backup] $$DATE: XATO" >&2
-            rm -f "$$FILE"
-          fi
-          # Eski backuplarni o'chirish
-          find /backups -type f -name 'shopflow_*.sql.gz' -mtime +$$RETENTION_DAYS -delete 2>/dev/null || true
+          sh /scripts/backup.sh || echo "[backup] backup sikli xatosi"
           sleep 86400
         done
 

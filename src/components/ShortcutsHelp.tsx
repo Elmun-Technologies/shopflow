@@ -4,9 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Keyboard, X } from "lucide-react";
 import { SHORTCUTS_LIST } from "../hooks/useGlobalShortcuts";
 import { useT } from "../i18n";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useT();
+  // Focus-trap + Escape + fokus tiklash (modal a11y)
+  const panelRef = useFocusTrap<HTMLDivElement>(open, onClose);
   return (
     <AnimatePresence>
       {open && (
@@ -24,6 +27,10 @@ export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () =>
             exit={{ scale: 0.95, y: 10 }}
             transition={{ duration: 0.18 }}
             onClick={(e) => e.stopPropagation()}
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("shortcuts.title")}
             className="bg-white border border-cream-300 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
             <div className="flex items-center justify-between p-4 border-b border-cream-300">
