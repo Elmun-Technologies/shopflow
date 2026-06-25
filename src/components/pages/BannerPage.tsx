@@ -4,6 +4,7 @@ import { Search, Plus, Pencil, Trash2, ChevronLeft, Image } from "lucide-react";
 import type { MarketingBanner, BannerPlacement } from "../../data/marketingData";
 import { initialBanners, bannerPlacementLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
+import { useT } from "../../i18n";
 
 const inputClass = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60 focus:ring-1 focus:ring-leaf-500/20";
 const labelClass = "block text-xs font-medium text-slate-500 mb-1.5";
@@ -16,6 +17,7 @@ function CTRBadge({ impressions, clicks }: { impressions: number; clicks: number
 }
 
 export default function BannerPage() {
+  const { t } = useT();
   const [banners, setBanners] = useState<MarketingBanner[]>(initialBanners);
   const [search, setSearch] = useState("");
   const [pageMode, setPageMode] = useState<"list" | "create" | "edit">("list");
@@ -42,7 +44,7 @@ export default function BannerPage() {
 
   const handleSave = (data: Omit<MarketingBanner, "id" | "impressions" | "clicks">) => {
     if (!data.title.trim()) {
-      setFormError("Sarlavha bo'sh bo'lishi mumkin emas");
+      setFormError(t("mkt.err.titleRequired"));
       return;
     }
     if (editItem) {
@@ -65,11 +67,11 @@ export default function BannerPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-cream-300">
-          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-cream-100" aria-label="Orqaga"><ChevronLeft className="w-5 h-5" /></button>
-          <h1 className="text-2xl font-bold text-forest-800">{editItem ? "Bannerni tahrirlash" : "Yangi banner"}</h1>
+          <button onClick={() => { setPageMode("list"); setEditItem(null); setFormError(null); }} className="p-2 rounded-lg hover:bg-cream-100" aria-label={t("common.back")}><ChevronLeft className="w-5 h-5" /></button>
+          <h1 className="text-2xl font-bold text-forest-800">{editItem ? t("banner.editTitle") : t("banner.newTitle")}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
-            <button form="banner-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">Saqlash</button>
+            <button onClick={() => { setPageMode("list"); setEditItem(null); }} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
+            <button form="banner-form" type="submit" className="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-leaf-400 text-forest-800 font-medium">{t("common.save")}</button>
           </div>
         </div>
 
@@ -82,20 +84,20 @@ export default function BannerPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-forest-800">Bannerlar</h1>
-          <p className="text-sm text-slate-500 mt-1">Reklama bannerlarini boshqaring</p>
+          <h1 className="text-2xl font-bold text-forest-800">{t("banner.title")}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t("banner.subtitle")}</p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Bannerlar</p>
+            <p className="text-[10px] text-slate-500 uppercase">{t("banner.title")}</p>
             <p className="text-lg font-semibold text-forest-800">{stats.totalBanners}</p>
           </div>
           <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Tashrif</p>
+            <p className="text-[10px] text-slate-500 uppercase">{t("banner.stat.impressions")}</p>
             <p className="text-lg font-semibold text-forest-800">{stats.impressions.toLocaleString()}</p>
           </div>
           <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
-            <p className="text-[10px] text-slate-500 uppercase">Bostirishlar</p>
+            <p className="text-[10px] text-slate-500 uppercase">{t("banner.stat.clicks")}</p>
             <p className="text-lg font-semibold text-forest-700">{stats.clicks.toLocaleString()}</p>
           </div>
         </div>
@@ -104,11 +106,11 @@ export default function BannerPage() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Qidirish..." className={inputClass + " pl-10"} />
+          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("common.search")} className={inputClass + " pl-10"} />
         </div>
         <button onClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-leaf-400 text-forest-800 rounded-lg text-sm font-medium">
           <Plus className="w-4 h-4" />
-          Yangi banner
+          {t("banner.new")}
         </button>
       </div>
 
@@ -116,9 +118,9 @@ export default function BannerPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cream-300 bg-white/50 overflow-hidden">
           <EmptyState
             icon={Image}
-            title="Banner yarating"
-            description="Hali banner yaratilmagan. Reklama bannerlarini joylashtirish uchun birinchi bannerni yarating."
-            buttonText="Yangi banner"
+            title={t("banner.empty.title")}
+            description={t("banner.empty.desc")}
+            buttonText={t("banner.new")}
             onButtonClick={() => { setPageMode("create"); setEditItem(null); setFormError(null); }}
             iconColor="text-orange-600"
           />
@@ -128,13 +130,13 @@ export default function BannerPage() {
           <table className="w-full min-w-[800px]">
             <thead className="bg-white/80">
               <tr>
-                <th className={thClass}>Sarlavha</th>
-                <th className={thClass}>Joylashuvi</th>
-                <th className={thClass}>Tashrif</th>
-                <th className={thClass}>Bostirishlar</th>
-                <th className={thClass}>CTR</th>
-                <th className={thClass}>Holat</th>
-                <th className={`${thClass} text-right`}>Amallar</th>
+                <th className={thClass}>{t("banner.col.title")}</th>
+                <th className={thClass}>{t("banner.col.placement")}</th>
+                <th className={thClass}>{t("banner.stat.impressions")}</th>
+                <th className={thClass}>{t("banner.stat.clicks")}</th>
+                <th className={thClass}>{t("banner.col.ctr")}</th>
+                <th className={thClass}>{t("mkt.col.status")}</th>
+                <th className={`${thClass} text-right`}>{t("mkt.col.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -145,7 +147,7 @@ export default function BannerPage() {
                   <td className={tdClass}>{b.impressions.toLocaleString()}</td>
                   <td className={tdClass}>{b.clicks.toLocaleString()}</td>
                   <td className={tdClass}><CTRBadge impressions={b.impressions} clicks={b.clicks} /></td>
-                  <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${b.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>{b.active ? "Faol" : "O'chiq"}</span></td>
+                  <td className={tdClass}><span className={`inline-block px-2 py-1 rounded text-xs font-medium ${b.active ? "bg-leaf-100 text-forest-700" : "bg-cream-200/70 text-slate-500"}`}>{b.active ? t("mkt.active") : t("mkt.inactive")}</span></td>
                   <td className={tdClass + " text-right whitespace-nowrap"}>
                     <button onClick={() => { setEditItem(b); setPageMode("edit"); }} className="p-1.5 rounded text-slate-500 hover:text-forest-900 hover:bg-cream-100"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => setPendingDelete(b.id)} className="p-1.5 rounded text-slate-500 hover:text-rose-600 hover:bg-cream-100"><Trash2 className="w-4 h-4" /></button>
@@ -154,7 +156,7 @@ export default function BannerPage() {
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && <div className="py-12 text-center text-slate-500 text-sm">Ma'lumot topilmadi</div>}
+          {filtered.length === 0 && <div className="py-12 text-center text-slate-500 text-sm">{t("mkt.noData")}</div>}
         </motion.div>
       )}
 
@@ -162,11 +164,11 @@ export default function BannerPage() {
         {pendingDelete && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70" onClick={() => setPendingDelete(null)}>
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white border border-cream-300 rounded-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-              <p className="text-forest-800 font-medium mb-2">O'chirishni tasdiqlang</p>
-              <p className="text-sm text-slate-500 mb-6">Bu amalni qaytarib bo'lmaydi.</p>
+              <p className="text-forest-800 font-medium mb-2">{t("mkt.confirmDelete.title")}</p>
+              <p className="text-sm text-slate-500 mb-6">{t("mkt.confirmDelete.body")}</p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">Bekor</button>
-                <button onClick={() => { setBanners((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">O'chirish</button>
+                <button onClick={() => setPendingDelete(null)} className="px-4 py-2 rounded-lg text-sm text-slate-700 hover:bg-cream-100">{t("common.cancel")}</button>
+                <button onClick={() => { setBanners((prev) => prev.filter((x) => x.id !== pendingDelete)); setPendingDelete(null); }} className="px-4 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-500 text-forest-800 font-medium">{t("common.delete")}</button>
               </div>
             </motion.div>
           </motion.div>
@@ -183,6 +185,7 @@ interface BannerFormProps {
 }
 
 function BannerForm({ initial, error, onSave }: BannerFormProps) {
+  const { t } = useT();
   const id = useId();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [placement, setPlacement] = useState<BannerPlacement>(initial?.placement ?? "home_hero");
@@ -201,38 +204,38 @@ function BannerForm({ initial, error, onSave }: BannerFormProps) {
     <form id="banner-form" onSubmit={handleSubmit} className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-forest-800">Banner ma'lumotlari</h3>
+          <h3 className="font-semibold text-forest-800">{t("banner.form.section")}</h3>
           <div>
-            <label htmlFor={`${id}-title`} className={labelClass}>Sarlavha</label>
+            <label htmlFor={`${id}-title`} className={labelClass}>{t("banner.col.title")}</label>
             <input id={`${id}-title`} className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
-            <label htmlFor={`${id}-placement`} className={labelClass}>Joylashuvi</label>
+            <label htmlFor={`${id}-placement`} className={labelClass}>{t("banner.col.placement")}</label>
             <select id={`${id}-placement`} className={inputClass} value={placement} onChange={(e) => setPlacement(e.target.value as BannerPlacement)}>
-              <option value="home_hero">Bosh sahifa (hero)</option>
-              <option value="category_top">Kategoriya ustida</option>
-              <option value="cart_sidebar">Savat yon panel</option>
-              <option value="checkout">To'lov sahifasi</option>
+              <option value="home_hero">{t("banner.placement.homeHero")}</option>
+              <option value="category_top">{t("banner.placement.categoryTop")}</option>
+              <option value="cart_sidebar">{t("banner.placement.cartSidebar")}</option>
+              <option value="checkout">{t("banner.placement.checkout")}</option>
             </select>
           </div>
           <div>
-            <label htmlFor={`${id}-image`} className={labelClass}>Rasm URL</label>
+            <label htmlFor={`${id}-image`} className={labelClass}>{t("banner.form.imageUrl")}</label>
             <input id={`${id}-image`} className={inputClass} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
           </div>
           <div>
-            <label htmlFor={`${id}-target`} className={labelClass}>Maqsad URL</label>
+            <label htmlFor={`${id}-target`} className={labelClass}>{t("banner.form.targetUrl")}</label>
             <input id={`${id}-target`} className={inputClass} value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} placeholder="https://..." />
           </div>
         </div>
         <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-forest-800">Muddati</h3>
+          <h3 className="font-semibold text-forest-800">{t("mkt.form.period")}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor={`${id}-start`} className={labelClass}>Boshlang'ich sana</label>
+              <label htmlFor={`${id}-start`} className={labelClass}>{t("mkt.form.startDate")}</label>
               <input id={`${id}-start`} type="date" className={inputClass} value={startAt} onChange={(e) => setStartAt(e.target.value)} />
             </div>
             <div>
-              <label htmlFor={`${id}-end`} className={labelClass}>Tugallanish sanasi</label>
+              <label htmlFor={`${id}-end`} className={labelClass}>{t("mkt.form.endDate")}</label>
               <input id={`${id}-end`} type="date" className={inputClass} value={endAt} onChange={(e) => setEndAt(e.target.value)} />
             </div>
           </div>
@@ -240,13 +243,13 @@ function BannerForm({ initial, error, onSave }: BannerFormProps) {
       </div>
       <div className="space-y-4">
         <div className="rounded-xl border border-cream-300 bg-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-forest-800">Holat</h3>
+          <h3 className="font-semibold text-forest-800">{t("mkt.col.status")}</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" className="sr-only" checked={active} onChange={(e) => setActive(e.target.checked)} />
             <div className={`w-5 h-5 rounded border ${active ? "bg-emerald-600 border-emerald-500" : "border-slate-600"}`}>
               {active && <div className="w-full h-full flex items-center justify-center text-forest-800 text-xs">✓</div>}
             </div>
-            <span className="text-sm text-slate-700">Faol</span>
+            <span className="text-sm text-slate-700">{t("mkt.active")}</span>
           </label>
           {error && <div className="rounded-lg border border-red-500/40 bg-rose-100 px-3 py-2 text-sm text-red-300">{error}</div>}
         </div>
