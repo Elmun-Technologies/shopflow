@@ -14,6 +14,7 @@ import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
 import TrafficSources from "./components/TrafficSources";
 import LowStockAlert from "./components/LowStockAlert";
+import ProfitBreakdown from "./components/ProfitBreakdown";
 import { StorefrontStatusBanner } from "./components/StorefrontStatusBanner";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -137,6 +138,8 @@ function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {
       </motion.div>
 
       <KPICards />
+
+      <ProfitBreakdown />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div className="lg:col-span-2">
