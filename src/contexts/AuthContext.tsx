@@ -12,6 +12,7 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   login: (email: string, password: string, tenantSlug?: string) => Promise<void>;
+  loginWithGoogle: (idToken: string, tenantSlug?: string) => Promise<void>;
   register: (data: {
     tenantName: string;
     tenantSlug: string;
@@ -76,6 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback<AuthState["loginWithGoogle"]>(async (idToken, tenantSlug) => {
+    setError(null);
+    try {
+      const res = await authApi.google(idToken, tenantSlug);
+      setToken(res.token);
+      if (res.refreshToken) setRefreshToken(res.refreshToken);
+      setUser(res.user);
+      setTenant(res.tenant);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Kirish muvaffaqiyatsiz";
+      setError(msg);
+      throw err;
+    }
+  }, []);
+
   const register = useCallback<AuthState["register"]>(async (data) => {
     setError(null);
     try {
@@ -106,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, tenant, loading, error, login, register, logout }),
-    [user, tenant, loading, error, login, register, logout],
+    () => ({ user, tenant, loading, error, login, loginWithGoogle, register, logout }),
+    [user, tenant, loading, error, login, loginWithGoogle, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

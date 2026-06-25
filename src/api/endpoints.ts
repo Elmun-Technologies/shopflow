@@ -26,6 +26,12 @@ export const auth = {
       body: { email, password, tenantSlug },
     }),
 
+  google: (idToken: string, tenantSlug?: string) =>
+    api<{ token: string; refreshToken?: string; user: User; tenant: Tenant }>("/auth/google", {
+      method: "POST",
+      body: { idToken, tenantSlug },
+    }),
+
   register: (data: {
     tenantName: string;
     tenantSlug: string;

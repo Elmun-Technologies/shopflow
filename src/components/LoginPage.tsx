@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Store, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { ApiError } from "../api/client";
 import { useT } from "../i18n";
 
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? "";
+const GIS_SRC = "https://accounts.google.com/gsi/client";
+
+interface TenantOption {
+  slug: string;
+  name: string;
+}
+
 export default function LoginPage() {
-  const { login, register, error } = useAuth();
+  const { login, loginWithGoogle, register, error } = useAuth();
   const { t } = useT();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -14,6 +23,11 @@ export default function LoginPage() {
   const [tenantName, setTenantName] = useState("");
   const [tenantSlug, setTenantSlug] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Google multi-tenant (409) — kelgan credential'ni saqlab, tashkilot tanlatamiz
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const pendingCredential = useRef<string | null>(null);
+  const [googleTenants, setGoogleTenants] = useState<TenantOption[] | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +44,88 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   };
+
+  // Google bilan kirish — credential olib, backend'ga yuboramiz.
+  // 409 (bir nechta tenant) bo'lsa — tashkilot tanlash ro'yxatini ko'rsatamiz.
+  const submitGoogle = async (credential: string, slug?: string) => {
+    setSubmitting(true);
+    try {
+      await loginWithGoogle(credential, slug);
+      // Muvaffaqiyat — AuthContext user'ni o'rnatadi, App ilovaga o'tadi.
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const data = err.data as { tenants?: TenantOption[] } | undefined;
+        if (data?.tenants?.length) {
+          pendingCredential.current = credential;
+          setGoogleTenants(data.tenants);
+          return;
+        }
+      }
+      // boshqa xatolar AuthContext.error orqali ko'rsatiladi
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTenantPick = (slug: string) => {
+    const credential = pendingCredential.current;
+    if (!credential) return;
+    setGoogleTenants(null);
+    void submitGoogle(credential, slug);
+  };
+
+  // Google Identity Services skriptini yuklash va tugmani render qilish
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    let cancelled = false;
+
+    const renderButton = () => {
+      if (cancelled || !window.google || !googleButtonRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response: { credential: string }) => {
+          void submitGoogle(response.credential);
+        },
+      });
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        width: 320,
+        text: "continue_with",
+      });
+    };
+
+    if (window.google) {
+      renderButton();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let script = document.querySelector<HTMLScriptElement>(`script[src="${GIS_SRC}"]`);
+    const onLoad = () => renderButton();
+
+    if (!script) {
+      script = document.createElement("script");
+      script.src = GIS_SRC;
+      script.async = true;
+      script.defer = true;
+      script.addEventListener("load", onLoad);
+      document.head.appendChild(script);
+    } else {
+      script.addEventListener("load", onLoad);
+    }
+
+    return () => {
+      cancelled = true;
+      script?.removeEventListener("load", onLoad);
+    };
+    // submitGoogle har renderda barqaror emas, lekin ref orqali ishlagani uchun
+    // qayta-yuklamaymiz — faqat client id o'zgarsa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-cream-50 flex items-center justify-center p-6">
@@ -138,6 +234,40 @@ export default function LoginPage() {
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {mode === "login" ? t("login.submit.login") : t("login.submit.register")}
           </button>
+
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <div className="flex items-center gap-3 pt-1">
+                <div className="h-px flex-1 bg-cream-300" />
+                <span className="text-xs text-slate-400 uppercase tracking-wide">
+                  {t("auth.orContinue")}
+                </span>
+                <div className="h-px flex-1 bg-cream-300" />
+              </div>
+
+              {googleTenants ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-500">{t("auth.googleMultiTenant")}</p>
+                  {googleTenants.map((tn) => (
+                    <button
+                      key={tn.slug}
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => handleTenantPick(tn.slug)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-cream-100 hover:bg-cream-200 disabled:opacity-50 border border-cream-300 rounded-lg text-forest-800 text-sm font-medium transition-colors"
+                    >
+                      <span>{tn.name}</span>
+                      <span className="text-xs text-slate-400">{tn.slug}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex justify-center" aria-label={t("auth.googleSignIn")}>
+                  <div ref={googleButtonRef} />
+                </div>
+              )}
+            </>
+          )}
 
           <button
             type="button"
