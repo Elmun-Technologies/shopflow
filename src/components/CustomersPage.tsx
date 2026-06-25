@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Plus, Loader2, Users, Mail, Phone, MapPin, AlertCircle, Download, Crown, Heart, Sparkles, AlertTriangle, Moon, Snowflake, X } from "lucide-react";
 import { exportToCsv } from "../utils/exportCsv";
 import { TableRowsSkeleton } from "./ui/Skeleton";
-import { useAsync } from "../hooks/useAsync";
+import { useQueryAsync } from "../hooks/useQueryAsync";
 import { customersApi, type RfmSegment } from "../api/endpoints";
 import { useAppToast } from "./ui/Toast";
 import { formatDate } from "../utils/format";
@@ -70,8 +70,8 @@ export default function CustomersPage() {
     () => ({ page, pageSize, search: search || undefined }),
     [page, search],
   );
-  const { data, loading, error, refetch } = useAsync(() => customersApi.list(params), [page, search]);
-  const { data: rfm } = useAsync(() => customersApi.rfm(), []);
+  const { data, loading, error, refetch } = useQueryAsync(["customers", "list", params], () => customersApi.list(params));
+  const { data: rfm } = useQueryAsync(["customers", "rfm"], () => customersApi.rfm());
 
   // RFM segmentlarini mijoz ID bo'yicha mapping — jadval'da badge ko'rsatish uchun
   const segmentById = useMemo(() => {
