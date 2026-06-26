@@ -6,9 +6,6 @@ import Header from "./components/Header";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import KPICards from "./components/KPICards";
-import RevenueChart from "./components/RevenueChart";
-import SalesByCategory from "./components/SalesByCategory";
-import WeeklySales from "./components/WeeklySales";
 import SalesGauge from "./components/SalesGauge";
 import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
@@ -57,6 +54,12 @@ const SettingsPage = lazy(() => import("./components/SettingsPage"));
 const UIBuilderPage = lazy(() => import("./components/UIBuilderPage"));
 const StorePage = lazy(() => import("./components/StorePage"));
 
+// Recharts-og'ir dashboard grafiklar — lazy (recharts initial bundle'dan chiqadi).
+// KPI raqamlari + gauge + traffic darhol render bo'ladi, grafiklar oqib keladi.
+const RevenueChart = lazy(() => import("./components/RevenueChart"));
+const SalesByCategory = lazy(() => import("./components/SalesByCategory"));
+const WeeklySales = lazy(() => import("./components/WeeklySales"));
+
 type Page =
   | "dashboard"
   | "orders"
@@ -80,6 +83,13 @@ function PageLoader() {
       <span className="sr-only">{t("common.loading")}</span>
       <PageSkeleton />
     </div>
+  );
+}
+
+// Lazy grafiklar yuklanayotganda — karta shaklidagi skeleton (layout shift yo'q)
+function ChartFallback({ className = "" }: { className?: string }) {
+  return (
+    <div className={`bg-white rounded-2xl border border-cream-300 animate-pulse ${className}`} />
   );
 }
 
@@ -134,12 +144,18 @@ function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div className="lg:col-span-2">
-          <RevenueChart />
+          <Suspense fallback={<ChartFallback className="h-80" />}>
+            <RevenueChart />
+          </Suspense>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           <SalesGauge />
-          <SalesByCategory />
-          <WeeklySales />
+          <Suspense fallback={<ChartFallback className="h-64" />}>
+            <SalesByCategory />
+          </Suspense>
+          <Suspense fallback={<ChartFallback className="h-64" />}>
+            <WeeklySales />
+          </Suspense>
         </div>
       </div>
 

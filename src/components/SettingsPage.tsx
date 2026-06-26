@@ -2,19 +2,20 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Save, Eye, EyeOff,
-  Globe, CheckCircle2, AlertCircle, Copy, Plus,
-  Trash2, RefreshCw, Clock, Monitor, Smartphone, ChevronRight, Loader2,
+  Globe, CheckCircle2, AlertCircle,
+  Monitor, Smartphone, ChevronRight, Loader2,
   Key, User, Store, Bell, Puzzle, Shield, Users,
 } from "lucide-react";
 import {
   settingsTabOrder,
   initialProfile, initialStore, initialNotifications,
-  loginHistory, initialSecurity, initialApiKeys,
+  loginHistory, initialSecurity,
 } from "../data/settingsData";
 import type {
   SettingsTab, ProfileSettings, StoreSettings, NotificationGroup,
-  SecuritySettings, ApiKey,
+  SecuritySettings,
 } from "../data/settingsData";
+import { ApiKeysSection } from "./ApiKeysSection";
 import { IntegrationsHub } from "./IntegrationsHub";
 import { BrowserNotifSection } from "./BrowserNotifSection";
 import { PushNotificationManager } from "./PushNotificationManager";
@@ -61,14 +62,12 @@ export default function SettingsPage() {
     JSON.parse(JSON.stringify(initialNotifications))
   );
   const [security, setSecurity] = useState<SecuritySettings>({ ...initialSecurity });
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(JSON.parse(JSON.stringify(initialApiKeys)));
   const [showPassword, setShowPassword] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   // Narx tarkibi foizlari (faqat boshqaruv ko'rinishi) — tenant'dan to'ldiriladi
   const [deliveryPct, setDeliveryPct] = useState<number>(DEFAULT_DELIVERY_PCT);
   const [servicePct, setServicePct] = useState<number>(DEFAULT_SERVICE_PCT);
@@ -164,19 +163,11 @@ export default function SettingsPage() {
     }
   };
 
-  const copyKey = (key: string, id: string) => {
-    navigator.clipboard.writeText(key);
-    setCopiedKey(id);
-    setTimeout(() => setCopiedKey(null), 1500);
-  };
-
   const toggleNotification = (id: string, channel: "email" | "push" | "sms") => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, [channel]: !n[channel] } : n))
     );
   };
-
-  const maskKey = (key: string) => key.slice(0, 10) + "•".repeat(16) + key.slice(-4);
 
   const renderProfile = () => (
     <div className="space-y-6">
@@ -516,63 +507,7 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderApi = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h4 className="text-sm text-forest-800 font-semibold">{t("settings.api.title")}</h4>
-          <p className="text-xs text-slate-500 mt-0.5">{t("settings.api.hint")}</p>
-        </div>
-        <button className="flex items-center gap-1.5 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-xs font-medium rounded-lg transition-colors">
-          <Plus className="w-3.5 h-3.5" />
-          {t("settings.api.newKey")}
-        </button>
-      </div>
-      {apiKeys.map((ak) => (
-        <div key={ak.id} className={`bg-cream-100/50 border rounded-xl p-4 transition-all ${ak.active ? "border-cream-300 hover:border-cream-300" : "border-cream-300/50 opacity-60"}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Key className="w-4 h-4 text-slate-500" />
-              <span className="text-sm text-forest-800 font-semibold">{ak.name}</span>
-              {!ak.active && <span className="text-[10px] text-slate-400 bg-cream-100 px-2 py-0.5 rounded-full">{t("settings.api.disabled")}</span>}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => copyKey(ak.key, ak.id)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-200 transition-colors"
-                title={t("settings.api.copy")}
-              >
-                {copiedKey === ak.id ? <CheckCircle2 className="w-3.5 h-3.5 text-forest-700" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                onClick={() => setApiKeys((prev) => prev.map((k) => k.id === ak.id ? { ...k, active: !k.active } : k))}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-200 transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-              <button className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-100 transition-colors">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg px-3 py-2 font-mono text-xs text-slate-500 mb-3">
-            {maskKey(ak.key)}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex flex-wrap gap-1.5">
-              {ak.permissions.map((p) => (
-                <span key={p} className="text-[10px] text-slate-500 bg-cream-100 px-2 py-0.5 rounded-md">{p}</span>
-              ))}
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-slate-400">
-              <Clock className="w-3 h-3" />
-              {ak.lastUsed}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  const renderApi = () => <ApiKeysSection />;
 
   const tabRenderers: Record<SettingsTab, () => React.ReactNode> = {
     profile: renderProfile,

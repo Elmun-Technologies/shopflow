@@ -1,12 +1,40 @@
 import { motion } from "framer-motion";
 import { DollarSign, ShoppingBag, Users, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { useQueryAsync } from "../hooks/useQueryAsync";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import { useT } from "../i18n";
 import { KPICardsSkeleton } from "./ui/Skeleton";
+
+// Yengil inline SVG sparkline — recharts o'rniga (bundle'dan 395kb chiqarish uchun).
+// Dashboard birinchi yuklanishida og'ir grafik kutubxonasi kerak emas.
+function MiniSparkline({ data, color, gradId }: { data: number[]; color: string; gradId: string }) {
+  const W = 100, H = 40;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = max - min || 1;
+  const n = data.length;
+  const pts = data.map((v, i) => {
+    const x = n > 1 ? (i / (n - 1)) * W : 0;
+    const y = H - ((v - min) / span) * (H - 4) - 2; // 2px padding yuqori/past
+    return [x, y] as const;
+  });
+  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const area = `${line} L${W},${H} L0,${H} Z`;
+  return (
+    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradId})`} stroke="none" />
+      <path d={line} fill="none" stroke={color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
 
 interface CardConfig {
   titleKey: string;
@@ -140,28 +168,14 @@ export default function KPICards() {
                 {t(cfg.titleKey)}
               </p>
 
-              {/* Sparkline */}
+              {/* Sparkline — yengil inline SVG (recharts'siz) */}
               <div className="mt-4 h-10">
                 {spark && spark.length > 1 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={spark} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                      <defs>
-                        <linearGradient id={`kpi-grad-${cfg.key}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={cfg.sparkColor} stopOpacity={0.25} />
-                          <stop offset="100%" stopColor={cfg.sparkColor} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <Area
-                        type="monotone"
-                        dataKey="v"
-                        stroke={cfg.sparkColor}
-                        strokeWidth={1.5}
-                        fill={`url(#kpi-grad-${cfg.key})`}
-                        isAnimationActive={false}
-                        dot={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <MiniSparkline
+                    data={spark.map((d) => d.v)}
+                    color={cfg.sparkColor}
+                    gradId={`kpi-grad-${cfg.key}`}
+                  />
                 ) : (
                   <p className="text-xs flex items-center h-full" style={{ color: "#cbd5e1" }}>
                     {stat.change !== 0 ? t("kpi.vsLastMonth") : t("kpi.noData")}
