@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Settings, Eye, CheckCircle2, XCircle, Clock,
+  Search, Settings, Eye, EyeOff, CheckCircle2, XCircle, Clock,
   Banknote, MousePointerClick, CreditCard, CalendarClock, Wallet,
   TrendingUp, ChevronLeft, ChevronRight,
   Copy, ExternalLink, BookOpen, Save, X,
@@ -13,6 +13,7 @@ import {
 } from "../data/paymentsData";
 import type { PaymentMethod, PaymentConfig } from "../data/paymentsData";
 import { api } from "../api/client";
+import { exportToCsv } from "../utils/exportCsv";
 
 // Backend'dan keladigan format (frontend'da redacted config bilan)
 interface ApiMethod {
@@ -145,7 +146,26 @@ export default function PaymentsPage() {
   const [itemsPerPage] = useState(10);
   const [savedMessage, setSavedMessage] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [testMode, setTestMode] = useState<Record<string, boolean>>({});
+  // Config modal — tahrirlanadigan nusxa (oldin input'lar uncontrolled edi, Save tahrirni yo'qotardi)
+  const [configDraft, setConfigDraft] = useState<PaymentConfig>({});
+  const [showSecret, setShowSecret] = useState<{ apiKey?: boolean; secretKey?: boolean; password?: boolean }>({});
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Modal ochilganda configDraft'ni tanlangan metod konfiguratsiyasi bilan to'ldiramiz
+  useEffect(() => {
+    if (selectedMethod) {
+      setConfigDraft({ ...selectedMethod.config });
+      setShowSecret({});
+    }
+  }, [selectedMethod]);
+
+  const setCfg = (patch: Partial<PaymentConfig>) => setConfigDraft((d) => ({ ...d, ...patch }));
+  const copyField = (text: string, field: string) => {
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    }).catch(() => null);
+  };
 
   // Backend'dan methods + transactions yuklash
   useEffect(() => {
@@ -190,6 +210,31 @@ export default function PaymentsPage() {
 
   const totalPages = Math.ceil(filteredTxns.length / itemsPerPage);
   const paginatedTxns = filteredTxns.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleExportTxns = () => {
+    if (filteredTxns.length === 0) return;
+    exportToCsv({
+      filename: `transactions-${new Date().toISOString().slice(0, 10)}`,
+      columns: [
+        { key: "id", label: "ID" },
+        { key: "order", label: t("payments.th.order") },
+        { key: "method", label: t("payments.th.method") },
+        { key: "amount", label: t("payments.th.amount") },
+        { key: "currency", label: t("orders.col.currency") },
+        { key: "status", label: t("payments.th.status") },
+        { key: "date", label: t("payments.th.date") },
+      ],
+      rows: filteredTxns.map((tx) => ({
+        id: tx.id,
+        order: tx.orderId ?? "",
+        method: tx.method?.name ?? "",
+        amount: tx.amount,
+        currency: tx.currency,
+        status: tx.status,
+        date: tx.createdAt,
+      })),
+    });
+  };
 
   const reload = async () => {
     const [m, t] = await Promise.all([
@@ -528,7 +573,7 @@ export default function PaymentsPage() {
               <option value="failed">{t("payments.txn.failed")}</option>
               <option value="refunded">{t("payments.txn.refunded")}</option>
             </select>
-            <button className="flex items-center gap-1 px-2 py-1 bg-cream-100 border border-cream-300 rounded-lg text-xs text-slate-500 hover:text-forest-900 transition-all">
+            <button onClick={handleExportTxns} disabled={filteredTxns.length === 0} className="flex items-center gap-1 px-2 py-1 bg-cream-100 border border-cream-300 rounded-lg text-xs text-slate-500 hover:text-forest-900 transition-all disabled:opacity-50">
               <Download className="w-3 h-3" />
               {t("payments.export")}
             </button>
@@ -644,21 +689,21 @@ export default function PaymentsPage() {
                     <p className="text-xs text-slate-500">{t("payments.cfg.testModeHint")}</p>
                   </div>
                   <button
-                    onClick={() => setTestMode((prev) => ({ ...prev, [selectedMethod.id]: !(prev[selectedMethod.id] ?? selectedMethod.config.testMode) }))}
-                    className={`relative w-11 h-6 rounded-full transition-all ${(testMode[selectedMethod.id] ?? selectedMethod.config.testMode) ? "bg-amber-500" : "bg-cream-200"}`}
+                    onClick={() => setCfg({ testMode: !configDraft.testMode })}
+                    className={`relative w-11 h-6 rounded-full transition-all ${configDraft.testMode ? "bg-amber-500" : "bg-cream-200"}`}
                   >
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${(testMode[selectedMethod.id] ?? selectedMethod.config.testMode) ? "left-5" : "left-0.5"}`} />
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${configDraft.testMode ? "left-5" : "left-0.5"}`} />
                   </button>
                 </div>
 
-                {/* Config fields */}
+                {/* Config fields — controlled (configDraft) */}
                 {selectedMethod.config.merchantId !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Merchant ID</label>
                     <div className="flex items-center gap-2">
-                      <input defaultValue={selectedMethod.config.merchantId} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors" title={t("payments.cfg.copy")}>
-                        <Copy className="w-4 h-4" />
+                      <input value={configDraft.merchantId ?? ""} onChange={(e) => setCfg({ merchantId: e.target.value })} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button onClick={() => copyField(configDraft.merchantId ?? "", "merchantId")} className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors" title={t("payments.cfg.copy")}>
+                        {copiedField === "merchantId" ? <CheckCircle2 className="w-4 h-4 text-leaf-600" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -666,16 +711,16 @@ export default function PaymentsPage() {
                 {selectedMethod.config.serviceId !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Service ID</label>
-                    <input defaultValue={selectedMethod.config.serviceId} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <input value={configDraft.serviceId ?? ""} onChange={(e) => setCfg({ serviceId: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.apiKey !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">API Key</label>
                     <div className="flex items-center gap-2">
-                      <input type="password" defaultValue={selectedMethod.config.apiKey} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
-                        <Eye className="w-4 h-4" />
+                      <input type={showSecret.apiKey ? "text" : "password"} value={configDraft.apiKey ?? ""} onChange={(e) => setCfg({ apiKey: e.target.value })} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button onClick={() => setShowSecret((s) => ({ ...s, apiKey: !s.apiKey }))} className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
+                        {showSecret.apiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -684,9 +729,9 @@ export default function PaymentsPage() {
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Secret Key</label>
                     <div className="flex items-center gap-2">
-                      <input type="password" defaultValue={selectedMethod.config.secretKey} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
-                        <Eye className="w-4 h-4" />
+                      <input type={showSecret.secretKey ? "text" : "password"} value={configDraft.secretKey ?? ""} onChange={(e) => setCfg({ secretKey: e.target.value })} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button onClick={() => setShowSecret((s) => ({ ...s, secretKey: !s.secretKey }))} className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
+                        {showSecret.secretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -694,28 +739,33 @@ export default function PaymentsPage() {
                 {selectedMethod.config.terminalId !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Terminal ID</label>
-                    <input defaultValue={selectedMethod.config.terminalId} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <input value={configDraft.terminalId ?? ""} onChange={(e) => setCfg({ terminalId: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.login !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Login</label>
-                    <input defaultValue={selectedMethod.config.login} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <input value={configDraft.login ?? ""} onChange={(e) => setCfg({ login: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
                 {selectedMethod.config.password !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.password")}</label>
-                    <input type="password" defaultValue={selectedMethod.config.password} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <div className="flex items-center gap-2">
+                      <input type={showSecret.password ? "text" : "password"} value={configDraft.password ?? ""} onChange={(e) => setCfg({ password: e.target.value })} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                      <button onClick={() => setShowSecret((s) => ({ ...s, password: !s.password }))} className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
+                        {showSecret.password ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedMethod.config.webhookUrl && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Webhook URL</label>
                     <div className="flex items-center gap-2">
-                      <input defaultValue={selectedMethod.config.webhookUrl} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-slate-500" readOnly />
-                      <button className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors">
-                        <Copy className="w-4 h-4" />
+                      <input value={configDraft.webhookUrl ?? ""} className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-slate-500" readOnly />
+                      <button onClick={() => copyField(configDraft.webhookUrl ?? "", "webhookUrl")} className="p-2 rounded-lg bg-cream-100 text-slate-500 hover:text-forest-900 transition-colors" title={t("payments.cfg.copy")}>
+                        {copiedField === "webhookUrl" ? <CheckCircle2 className="w-4 h-4 text-leaf-600" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -723,32 +773,33 @@ export default function PaymentsPage() {
                 {selectedMethod.config.redirectUrl !== undefined && (
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">Redirect URL</label>
-                    <input defaultValue={selectedMethod.config.redirectUrl} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <input value={configDraft.redirectUrl ?? ""} onChange={(e) => setCfg({ redirectUrl: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.minAmount")}</label>
-                    <input type="number" defaultValue={selectedMethod.config.minAmount} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <input type="number" value={configDraft.minAmount ?? ""} onChange={(e) => setCfg({ minAmount: e.target.value === "" ? undefined : Number(e.target.value) })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                   <div>
                     <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.maxAmount")}</label>
-                    <input type="number" defaultValue={selectedMethod.config.maxAmount} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                    <input type="number" value={configDraft.maxAmount ?? ""} onChange={(e) => setCfg({ maxAmount: e.target.value === "" ? undefined : Number(e.target.value) })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                   </div>
                 </div>
 
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">{t("payments.cfg.commission")}</label>
-                  <input type="number" step="0.1" defaultValue={selectedMethod.config.commissionPercent} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
+                  <input type="number" step="0.1" value={configDraft.commissionPercent ?? ""} onChange={(e) => setCfg({ commissionPercent: e.target.value === "" ? undefined : Number(e.target.value) })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <label className="text-xs text-slate-500">{t("payments.cfg.autoConfirm")}</label>
                   <button
-                    className={`relative w-8 h-4 rounded-full transition-all ${selectedMethod.config.autoConfirm ? "bg-leaf-400" : "bg-cream-200"}`}
+                    onClick={() => setCfg({ autoConfirm: !configDraft.autoConfirm })}
+                    className={`relative w-8 h-4 rounded-full transition-all ${configDraft.autoConfirm ? "bg-leaf-400" : "bg-cream-200"}`}
                   >
-                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${selectedMethod.config.autoConfirm ? "left-4" : "left-0.5"}`} />
+                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${configDraft.autoConfirm ? "left-4" : "left-0.5"}`} />
                   </button>
                 </div>
 
@@ -771,7 +822,7 @@ export default function PaymentsPage() {
 
               <div className="flex items-center justify-end gap-2 p-6 pt-0">
                 <button onClick={() => { setShowConfig(false); setSelectedMethod(null); }} className="px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 transition-all">{t("common.cancel")}</button>
-                <button onClick={() => saveConfig(selectedMethod.id, selectedMethod.config)} className="flex items-center gap-1.5 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-sm font-medium rounded-lg transition-all">
+                <button onClick={() => saveConfig(selectedMethod.id, configDraft)} disabled={busyId === selectedMethod.id} className="flex items-center gap-1.5 px-4 py-2 bg-leaf-400 hover:bg-leaf-500 text-forest-800 text-sm font-medium rounded-lg transition-all disabled:opacity-50">
                   <Save className="w-4 h-4" />
                   {t("common.save")}
                 </button>
