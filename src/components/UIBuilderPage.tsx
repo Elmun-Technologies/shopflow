@@ -543,8 +543,8 @@ export default function UIBuilderPage() {
       case "trustBadges":
         return (
           <div className="flex gap-2">
-            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><ShieldCheck className="w-3 h-3" />Asl mahsulot</div>
-            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><Crown className="w-3 h-3" />Kafolat</div>
+            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><ShieldCheck className="w-3 h-3" />{t("ui.preview.authentic")}</div>
+            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><Crown className="w-3 h-3" />{t("ui.preview.warranty")}</div>
           </div>
         );
       case "reviews":
@@ -558,15 +558,15 @@ export default function UIBuilderPage() {
         return (
           <div className="flex items-center gap-1.5 text-xs text-forest-700">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Bu hafta 24 kishi sotib oldi</span>
+            <span>{t("ui.preview.weeklyBuyers")}</span>
           </div>
         );
       case "stats":
         return (
           <div className="flex flex-wrap gap-1.5">
-            <span className="text-[10px] text-slate-600 bg-cream-100 px-2 py-0.5 rounded-md">{selectedSingleProduct?.categoryName ?? "Kategoriya"}</span>
-            <span className="text-[10px] text-forest-700 bg-leaf-100 px-2 py-0.5 rounded-md">Mavjud</span>
-            <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">Bestseller</span>
+            <span className="text-[10px] text-slate-600 bg-cream-100 px-2 py-0.5 rounded-md">{selectedSingleProduct?.categoryName ?? t("ui.preview.category")}</span>
+            <span className="text-[10px] text-forest-700 bg-leaf-100 px-2 py-0.5 rounded-md">{t("ui.preview.inStock")}</span>
+            <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{t("ui.preview.bestseller")}</span>
           </div>
         );
       case "timer":
@@ -577,19 +577,19 @@ export default function UIBuilderPage() {
           </div>
         );
       case "description":
-        return <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">Mahsulot tavsifi shu yerda ko'rsatiladi.</p>;
+        return <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">{t("ui.preview.descPlaceholder")}</p>;
       case "delivery":
         return (
           <div className="flex items-center gap-2 text-xs text-slate-600 border-t border-cream-300 pt-2">
             <Truck className="w-3.5 h-3.5 text-forest-700" />
-            <span>Tez yetkazib berish</span>
+            <span>{t("ui.preview.fastDelivery")}</span>
           </div>
         );
       case "combo":
         return (
           <div className="flex items-center gap-2 text-xs text-slate-600 bg-cream-100 rounded-lg px-3 py-2">
             <Plus className="w-3.5 h-3.5 text-forest-700" />
-            <span>Qo'shimcha mahsulotlar</span>
+            <span>{t("ui.preview.extraProducts")}</span>
           </div>
         );
       default:
@@ -823,7 +823,7 @@ export default function UIBuilderPage() {
                   <input value={brand.phone} onChange={(e) => setBrand({ ...brand, phone: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1.5 block">Email</label>
+                  <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.email")}</label>
                   <input value={brand.email} onChange={(e) => setBrand({ ...brand, email: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
                 </div>
                 <div>

@@ -344,7 +344,7 @@ function ChannelSetupHelp({
         return (
           <>
             <Step n={1}>
-              Telegram'da{" "}
+              {t("platforms.setup.tg.step1.pre")}{" "}
               <a
                 href="https://t.me/BotFather"
                 target="_blank"
@@ -353,18 +353,16 @@ function ChannelSetupHelp({
               >
                 @BotFather
               </a>
-              'ga yozing → <code>/newbot</code> → nomini va username'ini bering. Sizga <strong>bot token</strong>
-              beradi (masalan: <code>123456:ABCdef...</code>)
+              {t("platforms.setup.tg.step1.post", { newbot: "/newbot", example: "123456:ABCdef..." })}
             </Step>
             <Step n={2}>
-              Brauzer adres satriga quyidagi URL'ni kiriting (TOKEN ni o'zgartirib):
+              {t("platforms.setup.tg.step2")}
               <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto break-all whitespace-pre-wrap">
                 {`https://api.telegram.org/bot<TOKEN>/setWebhook?url=${webhookUrl}`}
               </pre>
             </Step>
             <Step n={3}>
-              Javob <code>{`{"ok":true,"result":true}`}</code> bo'lsa, tayyor. Endi botingizga yozilgan har bir
-              xabar avtomatik <strong>Lidlar</strong> sahifasiga keladi.
+              {t("platforms.setup.tg.step3.pre")} <code>{`{"ok":true,"result":true}`}</code> {t("platforms.setup.tg.step3.post")}
             </Step>
           </>
         );
@@ -372,7 +370,7 @@ function ChannelSetupHelp({
       case "LANDING_PAGE":
         return (
           <>
-            <Step n={1}>Veb-saytingizdagi forma'ni quyidagicha sozlang:</Step>
+            <Step n={1}>{t("platforms.setup.website.step1")}</Step>
             <Step n={2}>
               <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto whitespace-pre-wrap break-all">
 {`<script>
@@ -404,30 +402,30 @@ fetch("${webhookUrl}", {
               >
                 Meta for Developers
               </a>{" "}
-              → App yarating (Business type)
+              {t("platforms.setup.meta.step1.post")}
             </Step>
             <Step n={2}>
-              App'ga Webhook qo'shing. Callback URL sifatida quyidagini kiriting:
+              {t("platforms.setup.meta.step2")}
               <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto break-all">
                 {webhookUrl}
               </pre>
             </Step>
             <Step n={3}>
-              ⚠️ Meta HTTPS talab qiladi. Domain va SSL sertifikat kerak (hozir HTTP'da ishlamaydi).
+              {t("platforms.setup.meta.step3")}
             </Step>
           </>
         );
       default:
         return (
           <>
-            <Step n={1}>Tashqi platforma webhook'iga quyidagi URL'ni kiriting:</Step>
+            <Step n={1}>{t("platforms.setup.generic.step1")}</Step>
             <Step n={2}>
               <pre className="mt-1 p-2 bg-cream-50 rounded text-[10px] text-slate-700 font-mono overflow-x-auto break-all">
                 {webhookUrl}
               </pre>
             </Step>
             <Step n={3}>
-              Body formati: <code>{`{"name":"...","phone":"...","email":"...","notes":"..."}`}</code>
+              {t("platforms.setup.generic.step3.pre")} <code>{`{"name":"...","phone":"...","email":"...","notes":"..."}`}</code>
             </Step>
           </>
         );
