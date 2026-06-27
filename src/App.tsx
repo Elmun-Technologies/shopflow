@@ -161,7 +161,7 @@ function DashboardPage({ onNavigate }: { onNavigate?: (page: Page) => void } = {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div className="lg:col-span-2">
-          <RecentOrders />
+          <RecentOrders onViewAll={() => onNavigate?.("orders")} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           <TopProducts />

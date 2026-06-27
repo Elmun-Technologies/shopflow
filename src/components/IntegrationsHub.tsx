@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2, Plus, Settings as SettingsIcon, X, Search, Sparkles, ExternalLink,
+  CheckCircle2, Plus, Settings as SettingsIcon, X, Search, Sparkles,
   CreditCard, MessageSquare, Truck, BarChart3, Boxes, Megaphone, Wrench, Briefcase,
 } from "lucide-react";
 import { integrations, integrationCategories, type IntegrationItem, type IntegrationCategory } from "../data/integrationsData";
@@ -497,15 +497,7 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-cream-300 flex items-center justify-between gap-2">
-          <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            className="text-xs text-slate-500 hover:text-forest-800 flex items-center gap-1"
-          >
-            {t("integrations.docs")}
-            <ExternalLink className="w-3 h-3" />
-          </a>
+        <div className="p-4 border-t border-cream-300 flex items-center justify-end gap-2">
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}

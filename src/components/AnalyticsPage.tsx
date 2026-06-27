@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users,
-  Target, RotateCcw, ArrowUpRight, ArrowDownRight, ChevronRight,
+  Target, RotateCcw, ArrowUpRight, ArrowDownRight,
   Download, Receipt, Loader2, FileText,
 } from "lucide-react";
 import { timeRangeLabels } from "../data/analyticsData";
@@ -429,9 +429,6 @@ export default function AnalyticsPage() {
               <h3 className="text-sm font-semibold text-forest-800">{t("analytics.topProducts.title")}</h3>
               <p className="text-xs text-slate-500 mt-0.5">{t("analytics.topProducts.subtitle")}</p>
             </div>
-            <button className="text-xs text-forest-700 hover:text-forest-700 flex items-center gap-1">
-              {t("analytics.topProducts.all")} <ChevronRight className="w-3 h-3" />
-            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">

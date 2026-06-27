@@ -4,21 +4,15 @@ import {
   Search,
   Filter,
   Send,
-  Paperclip,
-  Smile,
-  MoreHorizontal,
   Phone,
-  Mail,
   Clock,
   CheckCheck,
   Check,
   MessageSquare,
   Target,
-  Zap,
   Star,
   Ban,
   Archive,
-  Tag,
   BarChart3,
   CornerDownLeft,
   Headphones,
@@ -275,6 +269,18 @@ export default function ChatPage() {
     }
   };
 
+  // Suhbat holatini o'zgartirish — backend PATCH /chats/:id (real)
+  const handleStatusChange = async (chatId: string, status: "archived" | "spam") => {
+    try {
+      await api(`/chats/${chatId}`, { method: "PATCH", body: { status: status.toUpperCase() } });
+      setChatList((prev) => prev.map((c) => (c.id === chatId ? { ...c, status } : c)));
+      setActiveChat((prev) => (prev && prev.id === chatId ? { ...prev, status } : prev));
+      toast.success(t(status === "archived" ? "chat.action.archived" : "chat.action.markedSpam"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("chat.sendFailed"));
+    }
+  };
+
   const handleQuickReply = (text: string) => {
     setMessageText(text);
     setShowQuickReplies(false);
@@ -307,13 +313,12 @@ export default function ChatPage() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 flex-shrink-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 flex-shrink-0">
         {[
           { label: t("chat.stats.active"), value: activeCount, icon: MessageSquare, color: "text-forest-700", alert: false },
           { label: t("chat.stats.waiting"), value: waitingCount, icon: Clock, color: "text-amber-500", alert: waitingCount > 0 },
           { label: t("chat.stats.resolvedToday"), value: resolvedToday, icon: CheckCheck, color: "text-blue-600", alert: false },
           { label: t("chat.stats.potential"), value: (totalPotentialValue / 1000000).toFixed(1) + "M", icon: Target, color: "text-forest-700", alert: false },
-          { label: t("chat.stats.avgResponse"), value: "42s", icon: Zap, color: "text-leaf-500", alert: false },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -597,15 +602,15 @@ export default function ChatPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
-                    <Phone className="w-4 h-4" />
-                  </button>
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
-                    <Mail className="w-4 h-4" />
-                  </button>
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+                  {activeChat.customerPhone && (
+                    <a
+                      href={`tel:${activeChat.customerPhone.replace(/\s/g, "")}`}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all"
+                      title={activeChat.customerPhone}
+                    >
+                      <Phone className="w-4 h-4" />
+                    </a>
+                  )}
                 </div>
               </div>
 
@@ -689,11 +694,8 @@ export default function ChatPage() {
                   )}
                 </AnimatePresence>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setShowQuickReplies(!showQuickReplies)} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
+                  <button onClick={() => setShowQuickReplies(!showQuickReplies)} title={t("chat.quickReplies")} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
                     <CornerDownLeft className="w-4 h-4" />
-                  </button>
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
-                    <Paperclip className="w-4 h-4" />
                   </button>
                   <input
                     type="text"
@@ -703,9 +705,6 @@ export default function ChatPage() {
                     placeholder={t("chat.messagePlaceholder")}
                     className="flex-1 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 placeholder-slate-400 focus:outline-none focus:border-leaf-500/60"
                   />
-                  <button className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-all">
-                    <Smile className="w-4 h-4" />
-                  </button>
                   <button
                     onClick={handleSendMessage}
                     disabled={!messageText.trim()}
@@ -764,15 +763,19 @@ export default function ChatPage() {
 
               <div className="mt-4 pt-4 border-t border-cream-300 space-y-2">
                 <p className="text-[10px] text-slate-500 mb-2">{t("chat.info.actions")}</p>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all">
+                <button
+                  onClick={() => handleStatusChange(activeChat.id, "archived")}
+                  disabled={activeChat.status === "archived"}
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all disabled:opacity-50"
+                >
                   <Archive className="w-3.5 h-3.5" />
                   {t("chat.action.archive")}
                 </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 rounded-lg text-xs text-forest-800 transition-all">
-                  <Tag className="w-3.5 h-3.5" />
-                  {t("chat.action.addTag")}
-                </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-xs text-red-600 transition-all">
+                <button
+                  onClick={() => handleStatusChange(activeChat.id, "spam")}
+                  disabled={activeChat.status === "spam"}
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-xs text-red-600 transition-all disabled:opacity-50"
+                >
                   <Ban className="w-3.5 h-3.5" />
                   {t("chat.action.markSpam")}
                 </button>

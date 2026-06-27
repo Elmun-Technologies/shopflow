@@ -468,7 +468,7 @@ function AdminNotifyPanel() {
     try {
       await api("/settings/notifications", {
         method: "PATCH",
-        body: JSON.stringify({ adminTelegramChatId: chatId.trim() || null }),
+        body: { adminTelegramChatId: chatId.trim() || null },
       });
       toast.success(t("voronka.admin.saved"));
     } catch {
@@ -537,10 +537,10 @@ export default function VoronkaPage() {
 
   const handleSave = async (data: Omit<BotSequence, "id" | "createdAt" | "_count" | "completedCount">) => {
     if (modalSeq && "id" in modalSeq && modalSeq.id) {
-      await api(`/bot-sequences/${modalSeq.id}`, { method: "PATCH", body: JSON.stringify(data) });
+      await api(`/bot-sequences/${modalSeq.id}`, { method: "PATCH", body: data });
       toast.success(t("voronka.toast.updated"));
     } else {
-      await api("/bot-sequences", { method: "POST", body: JSON.stringify(data) });
+      await api("/bot-sequences", { method: "POST", body: data });
       toast.success(t("voronka.toast.created"));
     }
     await load();
@@ -562,7 +562,7 @@ export default function VoronkaPage() {
   const handleToggle = async (seq: BotSequence) => {
     await api(`/bot-sequences/${seq.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ active: !seq.active }),
+      body: { active: !seq.active },
     });
     await load();
   };
