@@ -2,18 +2,16 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Save, Eye, EyeOff,
-  Globe, CheckCircle2, AlertCircle,
-  Monitor, Smartphone, ChevronRight, Loader2,
-  Key, User, Store, Bell, Puzzle, Shield, Users,
+  CheckCircle2, AlertCircle,
+  ChevronRight, Loader2,
+  Key, User, Store, Bell, Puzzle, Users,
 } from "lucide-react";
 import {
   settingsTabOrder,
   initialProfile, initialStore, initialNotifications,
-  loginHistory, initialSecurity,
 } from "../data/settingsData";
 import type {
   SettingsTab, ProfileSettings, StoreSettings, NotificationGroup,
-  SecuritySettings,
 } from "../data/settingsData";
 import { ApiKeysSection } from "./ApiKeysSection";
 import { IntegrationsHub } from "./IntegrationsHub";
@@ -27,10 +25,6 @@ import { AuthContext } from "../contexts/AuthContext";
 import { useT } from "../i18n";
 import { DEFAULT_DELIVERY_PCT, DEFAULT_SERVICE_PCT, priceBreakdown } from "../utils/pricing";
 import { formatCurrency } from "../utils/format";
-
-const deviceIcon: Record<string, React.ElementType> = {
-  Chrome: Monitor, Safari: Smartphone, Firefox: Globe, Edge: Monitor,
-};
 
 function InputField({ label, value, onChange, type = "text" }: {
   label: string; value: string; onChange: (v: string) => void; type?: string;
@@ -61,7 +55,6 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState<NotificationGroup[]>(
     JSON.parse(JSON.stringify(initialNotifications))
   );
-  const [security, setSecurity] = useState<SecuritySettings>({ ...initialSecurity });
   const [showPassword, setShowPassword] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -183,10 +176,9 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <InputField label={t("settings.profile.firstName")} value={profile.firstName} onChange={(v) => setProfile({ ...profile, firstName: v })} />
         <InputField label={t("settings.profile.lastName")} value={profile.lastName} onChange={(v) => setProfile({ ...profile, lastName: v })} />
-        <InputField label={t("settings.profile.email")} value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} type="email" />
-        <InputField label={t("settings.profile.phone")} value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: v })} />
-        <InputField label={t("settings.profile.timezone")} value={profile.timezone} onChange={(v) => setProfile({ ...profile, timezone: v })} />
-        <InputField label={t("settings.profile.language")} value={profile.language} onChange={(v) => setProfile({ ...profile, language: v })} />
+        <div className="md:col-span-2">
+          <InputField label={t("settings.profile.email")} value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} type="email" />
+        </div>
       </div>
 
       {/* Parolni o'zgartirish — Saqlash bosilganda yangi parol bo'lsa serverga jo'natiladi */}
@@ -240,40 +232,12 @@ export default function SettingsPage() {
         </div>
         <div>
           <h3 className="text-forest-800 font-semibold">{store.name}</h3>
-          <p className="text-xs text-slate-500">{store.city} · {store.currency}</p>
+          <p className="text-xs text-slate-500">{store.currency}</p>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <InputField label={t("settings.store.name")} value={store.name} onChange={(v) => setStore({ ...store, name: v })} />
-        <InputField label={t("settings.store.city")} value={store.city} onChange={(v) => setStore({ ...store, city: v })} />
-        <div className="md:col-span-2">
-          <InputField label={t("settings.store.description")} value={store.description} onChange={(v) => setStore({ ...store, description: v })} />
-        </div>
-        <div className="md:col-span-2">
-          <InputField label={t("settings.store.address")} value={store.address} onChange={(v) => setStore({ ...store, address: v })} />
-        </div>
-        <InputField label={t("settings.store.workingHours")} value={store.workingHours} onChange={(v) => setStore({ ...store, workingHours: v })} />
         <InputField label={t("settings.store.currency")} value={store.currency} onChange={(v) => setStore({ ...store, currency: v })} />
-      </div>
-      <div className="border-t border-cream-300 pt-4">
-        <h4 className="text-sm font-semibold text-forest-800 mb-3">{t("settings.store.delivery")}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.minOrder")}</label>
-            <input type="number" value={store.minOrderAmount} onChange={(e) => setStore({ ...store, minOrderAmount: +e.target.value })}
-              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.deliveryFee")}</label>
-            <input type="number" value={store.deliveryFee} onChange={(e) => setStore({ ...store, deliveryFee: +e.target.value })}
-              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.store.freeDeliveryFrom")}</label>
-            <input type="number" value={store.freeDeliveryFrom} onChange={(e) => setStore({ ...store, freeDeliveryFrom: +e.target.value })}
-              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-          </div>
-        </div>
       </div>
 
       {/* Narx tarkibi foizlari — faqat boshqaruv ko'rinishi (mijoz to'loviga ta'sir qilmaydi) */}
@@ -331,6 +295,19 @@ export default function SettingsPage() {
             </div>
           );
         })()}
+      </div>
+
+      {/* Tenant data export — JSON yuklab olish */}
+      <div className="border-t border-cream-300 pt-4">
+        <h4 className="text-sm font-semibold text-forest-800 mb-1">{t("settings.export.title")}</h4>
+        <p className="text-xs text-slate-500 mb-3">{t("settings.export.desc")}</p>
+        <a
+          href={`${API_BASE}/tenant-export?token=${encodeURIComponent(typeof window !== "undefined" ? localStorage.getItem("shopflow.token") ?? "" : "")}`}
+          download
+          className="inline-flex items-center gap-2 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
+        >
+          {t("settings.export.button")}
+        </a>
       </div>
     </div>
   );
@@ -390,122 +367,6 @@ export default function SettingsPage() {
     />
   );
 
-  const renderSecurity = () => (
-    <div className="space-y-6">
-      {/* 2FA */}
-      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h4 className="text-sm text-forest-800 font-semibold">{t("settings.sec.2fa.title")}</h4>
-            <p className="text-xs text-slate-500 mt-1">{t("settings.sec.2fa.hint")}</p>
-          </div>
-          <button
-            onClick={() => setSecurity({ ...security, twoFactorEnabled: !security.twoFactorEnabled })}
-            className={`w-12 h-7 rounded-full transition-all relative ${security.twoFactorEnabled ? "bg-leaf-400" : "bg-cream-200"}`}
-          >
-            <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${security.twoFactorEnabled ? "left-6" : "left-1"}`} />
-          </button>
-        </div>
-        {security.twoFactorEnabled && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-slate-500">{t("settings.sec.2fa.method")}</span>
-            {(["sms", "app"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setSecurity({ ...security, twoFactorMethod: m })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  security.twoFactorMethod === m ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"
-                }`}
-              >
-                {m === "sms" ? "SMS" : "Authenticator"}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Password */}
-      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
-        <h4 className="text-sm text-forest-800 font-semibold mb-1">{t("settings.sec.password")}</h4>
-        <p className="text-xs text-slate-500 mb-4">{t("settings.sec.lastChanged", { date: security.lastPasswordChange })}</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="relative">
-            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.sec.newPassword")}</label>
-            <input type={showPassword ? "text" : "password"} placeholder="••••••••"
-              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60 pr-10" />
-            <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-slate-500 hover:text-forest-900">
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1.5 block">{t("settings.sec.confirmPassword")}</label>
-            <input type="password" placeholder="••••••••"
-              className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2.5 text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60" />
-          </div>
-        </div>
-      </div>
-
-      {/* Session */}
-      <div className="bg-cream-100/50 border border-cream-300 rounded-xl p-5">
-        <h4 className="text-sm text-forest-800 font-semibold mb-1">{t("settings.sec.session.title")}</h4>
-        <p className="text-xs text-slate-500 mb-3">{t("settings.sec.session.hint")}</p>
-        <div className="flex items-center gap-2">
-          {[15, 30, 60, 120].map((m) => (
-            <button
-              key={m}
-              onClick={() => setSecurity({ ...security, sessionTimeout: m })}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                security.sessionTimeout === m ? "bg-leaf-400 text-forest-800" : "bg-cream-100 text-slate-500 hover:text-forest-900"
-              }`}
-            >
-              {m} min
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Login History */}
-      <div>
-        <h4 className="text-sm text-forest-800 font-semibold mb-3">{t("settings.sec.loginHistory")}</h4>
-        <div className="space-y-2">
-          {loginHistory.map((l) => {
-            const browser = l.device.split(" — ")[0];
-            const DevIcon = deviceIcon[browser] || Monitor;
-            return (
-              <div key={l.id} className="flex items-center justify-between bg-cream-100/50 border border-cream-300 rounded-xl px-4 py-3 hover:border-cream-300 transition-colors">
-                <div className="flex items-center gap-3">
-                  <DevIcon className="w-4 h-4 text-slate-500" />
-                  <div>
-                    <p className="text-sm text-forest-800">{l.device}</p>
-                    <p className="text-[11px] text-slate-500">{l.location} · {l.ip}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`text-xs font-medium ${l.status === "success" ? "text-forest-700" : "text-red-600"}`}>
-                    {l.status === "success" ? t("settings.sec.loginSuccess") : t("settings.sec.loginFailed")}
-                  </span>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{l.date}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tenant data export — JSON yuklab olish */}
-      <div className="bg-white rounded-2xl border border-cream-300 p-5">
-        <h3 className="text-base font-semibold text-forest-800 mb-1">{t("settings.export.title")}</h3>
-        <p className="text-xs text-slate-500 mb-3">{t("settings.export.desc")}</p>
-        <a
-          href={`${API_BASE}/tenant-export?token=${encodeURIComponent(typeof window !== "undefined" ? localStorage.getItem("shopflow.token") ?? "" : "")}`}
-          download
-          className="inline-flex items-center gap-2 px-3 py-2 bg-leaf-400 hover:bg-leaf-500 rounded-lg text-sm font-medium text-forest-800"
-        >
-          {t("settings.export.button")}
-        </a>
-      </div>
-    </div>
-  );
 
   const renderApi = () => <ApiKeysSection />;
 
@@ -515,13 +376,12 @@ export default function SettingsPage() {
     team: renderTeam,
     notifications: renderNotifications,
     integrations: renderIntegrations,
-    security: renderSecurity,
     api: renderApi,
   };
 
   const tabIcons: Record<SettingsTab, React.ElementType> = {
     profile: User, store: Store, team: Users, notifications: Bell,
-    integrations: Puzzle, security: Shield, api: Key,
+    integrations: Puzzle, api: Key,
   };
 
   return (

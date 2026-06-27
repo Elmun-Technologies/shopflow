@@ -1,7 +1,7 @@
 /** Settings moduli — lokal demo ma'lumotlari */
 
 // ─── Settings Tabs ────────────────────────────────────────────────────────────
-export type SettingsTab = "profile" | "store" | "team" | "notifications" | "integrations" | "security" | "api";
+export type SettingsTab = "profile" | "store" | "team" | "notifications" | "integrations" | "api";
 
 export const settingsTabLabels: Record<SettingsTab, string> = {
   profile: "Profil",
@@ -9,7 +9,6 @@ export const settingsTabLabels: Record<SettingsTab, string> = {
   team: "Jamoa",
   notifications: "Bildirishnomalar",
   integrations: "Integratsiyalar",
-  security: "Xavfsizlik",
   api: "API",
 };
 
@@ -19,11 +18,10 @@ export const settingsTabIcons: Record<SettingsTab, string> = {
   team: "Users",
   notifications: "Bell",
   integrations: "Puzzle",
-  security: "Shield",
   api: "Key",
 };
 
-export const settingsTabOrder: SettingsTab[] = ["profile", "store", "team", "notifications", "integrations", "security", "api"];
+export const settingsTabOrder: SettingsTab[] = ["profile", "store", "team", "notifications", "integrations", "api"];
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 export interface ProfileSettings {

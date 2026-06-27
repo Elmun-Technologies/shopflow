@@ -8,9 +8,10 @@ import { NotificationsPanel } from "./NotificationsPanel";
 interface HeaderProps {
   onMobileMenuOpen?: () => void;
   onNotifNavigate?: (page: "orders" | "leads") => void;
+  onOpenSettings?: () => void;
 }
 
-export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProps = {}) {
+export default function Header({ onMobileMenuOpen, onNotifNavigate, onOpenSettings }: HeaderProps = {}) {
   const { user, tenant, logout } = useAuth();
   const { t } = useT();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -184,6 +185,10 @@ export default function Header({ onMobileMenuOpen, onNotifNavigate }: HeaderProp
                   <button
                     type="button"
                     role="menuitem"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      onOpenSettings?.();
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-cream-100"
                     style={{ color: "#475569" }}
                   >

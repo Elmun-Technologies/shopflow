@@ -364,6 +364,7 @@ function AppShell() {
         <Header
           onMobileMenuOpen={() => setMobileSidebarOpen(true)}
           onNotifNavigate={(page) => setCurrentPage(page)}
+          onOpenSettings={() => setCurrentPage("settings")}
         />
         <StorefrontStatusBanner onOpenVitrina={() => setCurrentPage("uibuilder")} />
         <main className="p-4 md:p-6">
