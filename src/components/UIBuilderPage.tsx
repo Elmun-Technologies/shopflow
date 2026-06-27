@@ -7,7 +7,7 @@ import {
   Grid3X3, Zap, Sun, Heart, LayoutGrid, List, LayoutTemplate as LayoutIcon,
   Play, Megaphone, X, Type, Phone, Mail, MapPin, ShoppingBag,
   Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Loader2, Globe,
-  ShieldCheck, Star, Info, Truck, Tag, Lock,
+  ShieldCheck, Star, Info, Truck, Tag, Lock, AlertTriangle,
 } from "lucide-react";
 import {
   blockDefinitions, templates, defaultBrandSettings, categoryColors,
@@ -1020,8 +1020,16 @@ export default function UIBuilderPage() {
                     ))}
                   </div>
 
-                  {/* Qo'shimcha bo'limlar — drag/strelka bilan tartiblanadi */}
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("ui.single.optionalLabel")}</p>
+                  {/* Qo'shimcha bo'limlar — grip bilan sudrab yoki strelka bilan tartiblanadi */}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("ui.single.optionalLabel")}</p>
+                    <span className="text-[10px] font-medium text-leaf-600 bg-leaf-100 px-2 py-0.5 rounded-full">
+                      {t("ui.single.optionalCount", { n: singleSections.filter((s) => s.enabled).length })}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mb-2 flex items-center gap-1">
+                    <GripVertical className="w-3 h-3" />{t("ui.single.reorderHint")}
+                  </p>
                   <div className="space-y-1.5">
                     {singleSections.map((sec, index) => {
                       const meta = singleSectionMeta.find((m) => m.key === sec.key);
@@ -1029,8 +1037,6 @@ export default function UIBuilderPage() {
                       return (
                         <div
                           key={sec.key}
-                          draggable
-                          onDragStart={() => setSingleDragIndex(index)}
                           onDragEnter={() => setSingleDragOver(index)}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
@@ -1040,42 +1046,60 @@ export default function UIBuilderPage() {
                             setSingleDragOver(null);
                           }}
                           onDragEnd={() => { setSingleDragIndex(null); setSingleDragOver(null); }}
-                          className={`group flex items-center gap-2 p-2 rounded-lg border transition-all cursor-move ${
-                            sec.enabled ? "bg-white border-cream-300" : "bg-cream-100/40 border-cream-300/50 opacity-60"
+                          className={`relative group flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                            sec.enabled ? "bg-white border-cream-300" : "bg-cream-100/50 border-cream-300/60"
                           } ${singleDragOver === index && singleDragIndex !== index ? "border-leaf-400/60 bg-leaf-400/5" : ""} ${singleDragIndex === index ? "opacity-40" : ""}`}
                         >
+                          {/* Drop indikatori */}
+                          {singleDragOver === index && singleDragIndex !== index && (
+                            <span className="absolute -top-1 left-2 right-2 h-0.5 rounded-full bg-leaf-400" />
+                          )}
+                          {/* Tartib strelkalari (touch/klaviatura uchun) */}
                           <div className="flex flex-col -my-0.5">
                             <button
                               onClick={() => moveSingleSection(index, index - 1)}
                               disabled={index === 0}
-                              className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
+                              className="p-1 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
                               title={t("ui.moveUp")}
                             >
-                              <ArrowUp className="w-3 h-3" />
+                              <ArrowUp className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => moveSingleSection(index, index + 1)}
                               disabled={index === singleSections.length - 1}
-                              className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
+                              className="p-1 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
                               title={t("ui.moveDown")}
                             >
-                              <ArrowDown className="w-3 h-3" />
+                              <ArrowDown className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                          <GripVertical className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                          {/* Grip = haqiqiy drag tutqichi */}
+                          <div
+                            draggable
+                            onDragStart={() => setSingleDragIndex(index)}
+                            className="cursor-grab active:cursor-grabbing p-1 -m-1 text-slate-300 hover:text-forest-700 transition-colors flex-shrink-0"
+                            title={t("ui.single.reorderHint")}
+                          >
+                            <GripVertical className="w-4 h-4" />
+                          </div>
                           <div className="w-7 h-7 bg-cream-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Icon className="w-3.5 h-3.5 text-slate-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-forest-800 truncate">{meta ? t(meta.labelKey) : sec.key}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className={`text-xs truncate ${sec.enabled ? "text-forest-800" : "text-slate-400"}`}>{meta ? t(meta.labelKey) : sec.key}</p>
+                              {!sec.enabled && (
+                                <span className="text-[9px] text-slate-400 bg-cream-200 px-1.5 py-0.5 rounded-full flex-shrink-0">{t("ui.single.disabledPill")}</span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-500 truncate">{meta ? t(meta.descKey) : ""}</p>
                           </div>
                           <button
                             onClick={() => toggleSingleSection(sec.key)}
-                            className={`relative w-9 h-5 rounded-full transition-all flex-shrink-0 ${sec.enabled ? "bg-leaf-400" : "bg-cream-200"}`}
-                            title={sec.enabled ? t("ui.single.locked") : ""}
+                            className={`relative w-10 h-6 rounded-full transition-all flex-shrink-0 ${sec.enabled ? "bg-leaf-400" : "bg-cream-200"}`}
+                            title={sec.enabled ? t("ui.single.disabledPill") : ""}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${sec.enabled ? "left-[18px]" : "left-0.5"}`} />
+                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${sec.enabled ? "left-[18px]" : "left-0.5"}`} />
                           </button>
                         </div>
                       );
@@ -1097,7 +1121,10 @@ export default function UIBuilderPage() {
                   </div>
 
                   {singleSections.every((s) => !s.enabled) && (
-                    <p className="text-[10px] text-amber-600 mt-3 text-center">{t("ui.single.allOff")}</p>
+                    <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                      <p className="text-[11px] text-amber-700">{t("ui.single.allOff")}</p>
+                    </div>
                   )}
                 </div>
               </div>
