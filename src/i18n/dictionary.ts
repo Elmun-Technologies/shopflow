@@ -51,6 +51,7 @@ export const dictionary: Record<string, Entry> = {
   "pdp.beFirst": { uz: "Birinchi bo'lib yozing!", ru: "Будьте первым!" },
   "pdp.totalReviews": { uz: "{count} ta sharh", ru: "{count} отзывов" },
   "pdp.comboTitle": { uz: "🎁 Bularni ham qo'shing", ru: "🎁 Добавьте к заказу" },
+  "pdp.noCombo": { uz: "Qo'shimcha mahsulotlar tez orada", ru: "Сопутствующие товары скоро" },
 
   // ─── Storefront: Catalog (home + filters) ────────────
   "catalog.searchPlaceholder": { uz: "Mahsulot qidirish…", ru: "Поиск товара…" },
