@@ -2197,6 +2197,7 @@ export const dictionary: Record<string, Entry> = {
   "ui.preview.fastDelivery": { uz: "Tez yetkazib berish", ru: "Быстрая доставка" },
   "ui.preview.extraProducts": { uz: "Qo'shimcha mahsulotlar", ru: "Дополнительные товары" },
   "ui.preview.category": { uz: "Kategoriya", ru: "Категория" },
+  "ui.preview.sampleTag": { uz: "namuna", ru: "образец" },
   "ui.brand.email": { uz: "Email", ru: "Email" },
 
   // ── ProductsPage combo ──
