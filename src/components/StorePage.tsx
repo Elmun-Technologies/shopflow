@@ -169,6 +169,12 @@ function calcDiscountPct(price: number, oldPrice: number | null | undefined): nu
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+// Kombo chegirma foizini xavfsiz oraliqqa cheklash (0–99) — manfiy/100%+ qiymatlar
+// narxni manfiy yoki noto'g'ri qilib qo'ymasligi uchun.
+function clampPct(n: number): number {
+  return Math.min(99, Math.max(0, Math.round(n)));
+}
+
 const FAV_KEY = (slug: string) => `shopflow:store:${slug}:favorites`;
 function loadFavorites(slug: string): Set<string> {
   try {
@@ -1403,12 +1409,11 @@ function StoreInner({ slug }: { slug: string }) {
     // Admin Vitrina'da saqlangan bo'lim tartibi/holatiga qarab body bo'limlari
     // chiziladi. Multi rejimda (oddiy PDP) tartib o'zgarmaydi.
     const singleSectionList = isSingle ? normalizeSingleConfig(data.brand?.singleConfig).sections : [];
-    const singleEnabled = (k: SingleSectionKey) => singleSectionList.some((s) => s.key === k && s.enabled);
 
-    // Reyting chipi — sarlavha ostida (har ikki rejimda). Single'da "reviews"
-    // bo'limi o'chirilgan bo'lsa yashiriladi.
+    // Reyting chipi — sarlavha ostida (har ikki rejimda). Sharhlar mavjud bo'lsa
+    // doim ko'rinadi; "reviews" bo'limi toggle'i faqat to'liq sharhlar ro'yxatini boshqaradi.
     const ratingChipEl =
-      (selectedProduct.reviewCount ?? 0) > 0 && (!isSingle || singleEnabled("reviews")) ? (
+      (selectedProduct.reviewCount ?? 0) > 0 ? (
         <div className="flex items-center gap-1.5 mb-3">
           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
           <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
@@ -1581,8 +1586,9 @@ function StoreInner({ slug }: { slug: string }) {
             if (!ap.active) return null;
             const isSelected = selectedAddons.has(ap.id);
             const origPrice = Number(ap.price);
-            const finalPrice = addon.discountPct > 0
-              ? Math.round(origPrice * (1 - addon.discountPct / 100))
+            const pct = clampPct(addon.discountPct);
+            const finalPrice = pct > 0
+              ? Math.round(origPrice * (1 - pct / 100))
               : origPrice;
             const isOut = ap.stock <= 0;
             return (
@@ -1634,10 +1640,10 @@ function StoreInner({ slug }: { slug: string }) {
                           {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
                         </span>
                       </span>
-                      {addon.discountPct > 0 && (
+                      {pct > 0 && (
                         <>
                           <span className="text-[10px] text-slate-500 line-through">{origPrice.toLocaleString("uz-UZ")}</span>
-                          <span className="text-[10px] font-bold text-rose-300">−{addon.discountPct}%</span>
+                          <span className="text-[10px] font-bold text-rose-300">−{pct}%</span>
                         </>
                       )}
                     </div>
@@ -1828,8 +1834,9 @@ function StoreInner({ slug }: { slug: string }) {
               if (!selectedAddons.has(addon.addonProduct.id)) continue;
               const ap = addon.addonProduct;
               const orig = Number(ap.price);
-              const fp = addon.discountPct > 0
-                ? Math.round(orig * (1 - addon.discountPct / 100))
+              const pct = clampPct(addon.discountPct);
+              const fp = pct > 0
+                ? Math.round(orig * (1 - pct / 100))
                 : orig;
               comboTotal += fp;
               // Pseudo-StoreProduct for addToCart
