@@ -1082,7 +1082,7 @@ function ProductFormModal({
                         }}
                         className="w-3 h-3"
                       />
-                      <span>default</span>
+                      <span>{t("products.combo.default")}</span>
                     </label>
                     <button
                       type="button"

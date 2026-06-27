@@ -47,7 +47,7 @@ function relTime(iso: string, t: (key: string, vars?: Record<string, string | nu
   return new Date(iso).toLocaleDateString("uz-UZ", { month: "short", day: "numeric" });
 }
 
-export default function RecentOrders() {
+export default function RecentOrders({ onViewAll }: { onViewAll?: () => void } = {}) {
   const { tenant } = useAuth();
   const { t } = useT();
   const currency = tenant?.currency ?? "UZS";
@@ -66,7 +66,7 @@ export default function RecentOrders() {
           <h3 className="text-base font-semibold text-forest-800">{t("widget.recentOrders")}</h3>
           <p className="text-xs text-slate-500 mt-0.5">{t("widget.recentOrders.subtitle")}</p>
         </div>
-        <button className="text-xs font-medium text-forest-700 hover:text-forest-800 flex items-center gap-1">
+        <button onClick={onViewAll} className="text-xs font-medium text-forest-700 hover:text-forest-800 flex items-center gap-1">
           {t("orders.viewDetails")}
           <ArrowRight className="w-3 h-3" />
         </button>

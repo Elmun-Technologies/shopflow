@@ -1749,6 +1749,9 @@ export const dictionary: Record<string, Entry> = {
   "chat.action.addTag": { uz: "Teg qo'shish", ru: "Добавить тег" },
   "chat.action.archive": { uz: "Arxivlash", ru: "Архивировать" },
   "chat.action.markSpam": { uz: "Spam deb belgilash", ru: "Отметить как спам" },
+  "chat.action.archived": { uz: "Suhbat arxivlandi", ru: "Чат архивирован" },
+  "chat.action.markedSpam": { uz: "Spam deb belgilandi", ru: "Отмечено как спам" },
+  "chat.quickReplies": { uz: "Tezkor javoblar", ru: "Быстрые ответы" },
   "chat.agentActive": { uz: "faol", ru: "активных" },
   "chat.agentPerformance": { uz: "Agentlar samaradorligi", ru: "Эффективность агентов" },
   "chat.agentResolved": { uz: "yakun", ru: "закрыто" },
@@ -2150,4 +2153,52 @@ export const dictionary: Record<string, Entry> = {
   "voronka.tmpl.BIRTHDAY.1": { uz: "Tug'ilgan kuningiz bilan! 🎂🎉 Siz uchun maxsus sovg'a — bugun 20% chegirma!", ru: "С днём рождения! 🎂🎉 Для вас особый подарок — сегодня скидка 20%!" },
   "voronka.tmpl.WEEKLY.1": { uz: "Xayrli juma! 🛍️ Hafta uchun eng yaxshi takliflarimiz bilan tanishing!", ru: "Доброй пятницы! 🛍️ Ознакомьтесь с лучшими предложениями недели!" },
   "voronka.tmpl.WEEKLY.2": { uz: "Yangi mahsulotlar keldi! Katalogni ko'ring 👀", ru: "Поступили новинки! Загляните в каталог 👀" },
+
+  // ── Raqam qisqartmalari (Analytics formatters) ──
+  "common.abbr.billion": { uz: "mlrd", ru: "млрд" },
+  "common.abbr.million": { uz: "mln", ru: "млн" },
+  "common.abbr.thousand": { uz: "ming", ru: "тыс" },
+
+  // ── MoySklad toast / dialog xabarlari ──
+  "moysklad.connected": { uz: "MoySklad ulandi: {account}", ru: "МойСклад подключён: {account}" },
+  "moysklad.defaultAccount": { uz: "hisob", ru: "аккаунт" },
+  "moysklad.connectFailed": { uz: "Ulanish muvaffaqiyatsiz", ru: "Не удалось подключиться" },
+  "moysklad.disconnectConfirmTitle": { uz: "MoySklad ulanishini uzasizmi?", ru: "Отключить МойСклад?" },
+  "moysklad.disconnectConfirmDesc": { uz: "Sinxronlangan ma'lumotlar saqlanib qoladi, faqat token o'chiriladi.", ru: "Синхронизированные данные сохранятся, удалится только токен." },
+  "moysklad.disconnectConfirmAction": { uz: "Uzish", ru: "Отключить" },
+  "moysklad.disconnected": { uz: "MoySklad ulanishi uzildi", ru: "МойСклад отключён" },
+  "moysklad.disconnectError": { uz: "Uzilishda xato", ru: "Ошибка при отключении" },
+  "moysklad.syncStarted": { uz: "Sinxronizatsiya boshlandi", ru: "Синхронизация началась" },
+  "moysklad.syncStartError": { uz: "Sinxronizatsiyani boshlashda xato", ru: "Ошибка при запуске синхронизации" },
+  "moysklad.webhooksRegistered": { uz: "{count} ta webhook ro'yxatdan o'tkazildi", ru: "Зарегистрировано вебхуков: {count}" },
+  "moysklad.webhooksPartial": { uz: "{registered} ta webhook ro'yxatdan o'tdi, {failed} ta xato", ru: "Зарегистрировано вебхуков: {registered}, ошибок: {failed}" },
+  "moysklad.webhooksError": { uz: "Webhook'larni ro'yxatdan o'tkazishda xato", ru: "Ошибка при регистрации вебхуков" },
+
+  // ── Platforma sozlash qadamlari ──
+  "platforms.setup.tg.step1.pre": { uz: "Telegram'da", ru: "В Telegram напишите" },
+  "platforms.setup.tg.step1.post": { uz: "'ga yozing → {newbot} → nomini va username'ini bering. Sizga bot token beradi (masalan: {example})", ru: "→ {newbot} → задайте имя и username. Вы получите bot token (например: {example})" },
+  "platforms.setup.tg.step2": { uz: "Brauzer adres satriga quyidagi URL'ni kiriting (TOKEN ni o'zgartirib):", ru: "Введите в адресную строку браузера следующий URL (заменив TOKEN):" },
+  "platforms.setup.tg.step3.pre": { uz: "Javob", ru: "Если ответ" },
+  "platforms.setup.tg.step3.post": { uz: "bo'lsa, tayyor. Endi botingizga yozilgan har bir xabar avtomatik Lidlar sahifasiga keladi.", ru: "— готово. Теперь каждое сообщение вашему боту автоматически попадает на страницу Лиды." },
+  "platforms.setup.website.step1": { uz: "Veb-saytingizdagi forma'ni quyidagicha sozlang:", ru: "Настройте форму на вашем сайте следующим образом:" },
+  "platforms.setup.meta.step1.post": { uz: "→ App yarating (Business type)", ru: "→ создайте App (тип Business)" },
+  "platforms.setup.meta.step2": { uz: "App'ga Webhook qo'shing. Callback URL sifatida quyidagini kiriting:", ru: "Добавьте Webhook в App. В качестве Callback URL укажите следующее:" },
+  "platforms.setup.meta.step3": { uz: "⚠️ Meta HTTPS talab qiladi. Domain va SSL sertifikat kerak (hozir HTTP'da ishlamaydi).", ru: "⚠️ Meta требует HTTPS. Нужны домен и SSL-сертификат (по HTTP сейчас не работает)." },
+  "platforms.setup.generic.step1": { uz: "Tashqi platforma webhook'iga quyidagi URL'ni kiriting:", ru: "Укажите следующий URL в вебхуке внешней платформы:" },
+  "platforms.setup.generic.step3.pre": { uz: "Body formati:", ru: "Формат body:" },
+
+  // ── UIBuilder single-product preview (admin mock) ──
+  "ui.preview.authentic": { uz: "Asl mahsulot", ru: "Оригинальный товар" },
+  "ui.preview.warranty": { uz: "Kafolat", ru: "Гарантия" },
+  "ui.preview.weeklyBuyers": { uz: "Bu hafta 24 kishi sotib oldi", ru: "На этой неделе купили 24 человека" },
+  "ui.preview.inStock": { uz: "Mavjud", ru: "В наличии" },
+  "ui.preview.bestseller": { uz: "Bestseller", ru: "Хит продаж" },
+  "ui.preview.descPlaceholder": { uz: "Mahsulot tavsifi shu yerda ko'rsatiladi.", ru: "Здесь будет показано описание товара." },
+  "ui.preview.fastDelivery": { uz: "Tez yetkazib berish", ru: "Быстрая доставка" },
+  "ui.preview.extraProducts": { uz: "Qo'shimcha mahsulotlar", ru: "Дополнительные товары" },
+  "ui.preview.category": { uz: "Kategoriya", ru: "Категория" },
+  "ui.brand.email": { uz: "Email", ru: "Email" },
+
+  // ── ProductsPage combo ──
+  "products.combo.default": { uz: "asosiy", ru: "по умолчанию" },
 };

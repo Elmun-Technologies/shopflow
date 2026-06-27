@@ -235,7 +235,7 @@ function CampaignEditor({
 
   const [form, setForm] = useState({
     name: "",
-    label: "Распродажа",
+    label: "",
     badgeColor: "RED" as BadgeColor,
     active: true,
     priority: 0,

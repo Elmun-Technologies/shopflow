@@ -57,7 +57,7 @@ export function ApiKeysSection() {
     try {
       const created = await api<CreatedKey>("/settings/api-keys", {
         method: "POST",
-        body: JSON.stringify({ name: newName.trim(), scopes: [] }),
+        body: { name: newName.trim(), scopes: [] },
       });
       setRevealed(created);
       setCreateModalOpen(false);
@@ -76,7 +76,7 @@ export function ApiKeysSection() {
     try {
       await api(`/settings/api-keys/${k.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ active: !k.active }),
+        body: { active: !k.active },
       });
     } catch {
       setKeys((prev) => prev.map((x) => x.id === k.id ? { ...x, active: k.active } : x));

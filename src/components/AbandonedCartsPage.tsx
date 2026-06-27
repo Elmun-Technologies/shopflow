@@ -6,6 +6,7 @@ import {
   ShoppingCart, Bell, Trash2, Loader2, Package as PackageIcon, CheckCircle2,
 } from "lucide-react";
 import { api } from "../api/client";
+import { formatCurrency } from "../utils/format";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
 import { useT } from "../i18n";
@@ -47,11 +48,6 @@ const abandonedApi = {
   remind: (id: string) => api<{ ok: boolean }>(`/abandoned-carts/${id}/remind`, { method: "POST" }),
   remove: (id: string) => api<void>(`/abandoned-carts/${id}`, { method: "DELETE" }),
 };
-
-function formatPrice(n: number, currency: string): string {
-  if (currency === "UZS") return `${n.toLocaleString("uz-UZ")} so'm`;
-  return `${n.toLocaleString()} ${currency}`;
-}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -137,7 +133,7 @@ export default function AbandonedCartsPage() {
           <SummaryCard label={t("abandonedCarts.summary.total")} value={data.summary.total.toString()} />
           <SummaryCard
             label={t("abandonedCarts.summary.atRisk")}
-            value={formatPrice(data.summary.atRisk, data.summary.currency)}
+            value={formatCurrency(data.summary.atRisk, data.summary.currency)}
             accent="amber"
           />
           <SummaryCard
@@ -180,7 +176,7 @@ export default function AbandonedCartsPage() {
                       </span>
                       <span className="text-[10px] text-slate-500">·</span>
                       <span className="text-sm font-semibold text-amber-600">
-                        {formatPrice(cart.total, cart.currency)}
+                        {formatCurrency(cart.total, cart.currency)}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500 mb-2">

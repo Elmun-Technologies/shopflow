@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users,
-  Target, RotateCcw, ArrowUpRight, ArrowDownRight, ChevronRight,
+  Target, RotateCcw, ArrowUpRight, ArrowDownRight,
   Download, Receipt, Loader2, FileText,
 } from "lucide-react";
 import { timeRangeLabels } from "../data/analyticsData";
@@ -19,7 +19,7 @@ import { openReportPrint } from "../utils/printReport";
 import { priceBreakdown } from "../utils/pricing";
 import { formatCurrency } from "../utils/format";
 import { useAppToast } from "./ui/Toast";
-import { useT } from "../i18n";
+import { useT, tStatic } from "../i18n";
 
 // AnalyticsTimeRange → DashboardPeriod konvertatsiya
 const toPeriod = (r: AnalyticsTimeRange): DashboardPeriod => {
@@ -43,9 +43,9 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 const formatNumber = (n: number): string => {
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + " mlrd";
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + " mln";
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + " ming";
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + " " + tStatic("common.abbr.billion");
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + " " + tStatic("common.abbr.million");
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + " " + tStatic("common.abbr.thousand");
   return n.toLocaleString();
 };
 
@@ -75,7 +75,7 @@ const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
 };
 
 export default function AnalyticsPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const { tenant } = useAuth();
   const toast = useAppToast();
   const [timeRange, setTimeRange] = useState<AnalyticsTimeRange>("month");
@@ -166,16 +166,16 @@ export default function AnalyticsPage() {
   type AdaptedKpi = { id: string; label: string; value: string; change: number; trend: "up" | "down"; icon: string; color: string };
   const analyticsKPIs = useMemo<AdaptedKpi[]>(() => {
     if (!kpis) return [];
-    const fmt = (n: number) => n >= 1e9 ? (n / 1e9).toFixed(1) + " mlrd" : n >= 1e6 ? (n / 1e6).toFixed(1) + " mln" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toLocaleString();
+    const fmt = (n: number) => n >= 1e9 ? (n / 1e9).toFixed(1) + " " + t("common.abbr.billion") : n >= 1e6 ? (n / 1e6).toFixed(1) + " " + t("common.abbr.million") : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toLocaleString();
     // API dan avgOrder va returnRate kelsa ularni ishlatamiz, aks holda hisoblaymiz
     const avgOrderVal = kpis.avgOrder?.value ?? (kpis.orders.value > 0 ? kpis.revenue.value / kpis.orders.value : 0);
     const returnRateVal = kpis.returnRate?.value ?? 0;
     return [
-      { id: "revenue", label: t("analytics.kpi.revenue"), value: fmt(kpis.revenue.value) + " so'm", change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
+      { id: "revenue", label: t("analytics.kpi.revenue"), value: formatCurrency(kpis.revenue.value), change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
       { id: "orders", label: t("analytics.kpi.orders"), value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", icon: "ShoppingCart", color: "#3b82f6" },
       { id: "customers", label: t("analytics.kpi.customers"), value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", icon: "Users", color: "#8b5cf6" },
       { id: "conversion", label: t("analytics.kpi.conversion"), value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", icon: "Target", color: "#f59e0b" },
-      { id: "avg", label: t("analytics.kpi.avgOrder"), value: fmt(avgOrderVal) + " so'm", change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", icon: "Receipt", color: "#06b6d4" },
+      { id: "avg", label: t("analytics.kpi.avgOrder"), value: formatCurrency(avgOrderVal), change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", icon: "Receipt", color: "#06b6d4" },
       { id: "returns", label: t("analytics.kpi.returns"), value: returnRateVal.toFixed(1) + "%", change: Math.round(kpis.returnRate?.change ?? 0), trend: returnRateVal <= 5 ? "up" : "down", icon: "RotateCcw", color: "#94a3b8" },
     ];
   }, [kpis, t]);
@@ -429,9 +429,6 @@ export default function AnalyticsPage() {
               <h3 className="text-sm font-semibold text-forest-800">{t("analytics.topProducts.title")}</h3>
               <p className="text-xs text-slate-500 mt-0.5">{t("analytics.topProducts.subtitle")}</p>
             </div>
-            <button className="text-xs text-forest-700 hover:text-forest-700 flex items-center gap-1">
-              {t("analytics.topProducts.all")} <ChevronRight className="w-3 h-3" />
-            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -801,7 +798,7 @@ export default function AnalyticsPage() {
         className="mt-8 pt-6 border-t border-cream-300"
       >
         <p className="text-xs text-slate-400 text-center">
-          {t("analytics.footer")} · ShopFlow Analytics · {new Date().toLocaleDateString("uz-UZ")}
+          {t("analytics.footer")} · ShopFlow Analytics · {new Date().toLocaleDateString(lang === "ru" ? "ru-RU" : "uz-UZ")}
         </p>
       </motion.div>
     </>

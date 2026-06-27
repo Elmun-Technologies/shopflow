@@ -76,9 +76,9 @@ export function MoyskladIntegrationCard() {
       setShowConnect(false);
       setToken("");
       await refreshStatus();
-      toast.success(`MoySklad ulandi: ${res.accountName ?? "hisob"}`);
+      toast.success(t("moysklad.connected", { account: res.accountName ?? t("moysklad.defaultAccount") }));
     } catch (err) {
-      setConnectError(err instanceof Error ? err.message : "Ulanish muvaffaqiyatsiz");
+      setConnectError(err instanceof Error ? err.message : t("moysklad.connectFailed"));
     } finally {
       setConnecting(false);
     }
@@ -86,19 +86,19 @@ export function MoyskladIntegrationCard() {
 
   const handleDisconnect = async () => {
     const ok = await confirmDialog({
-      title: "MoySklad ulanishini uzasizmi?",
-      description: "Sinxronlangan ma'lumotlar saqlanib qoladi, faqat token o'chiriladi.",
-      confirmText: "Uzish",
-      cancelText: "Bekor",
+      title: t("moysklad.disconnectConfirmTitle"),
+      description: t("moysklad.disconnectConfirmDesc"),
+      confirmText: t("moysklad.disconnectConfirmAction"),
+      cancelText: t("common.cancel"),
       kind: "danger",
     });
     if (!ok) return;
     try {
       await moyskladApi.disconnect();
       await refreshStatus();
-      toast.success("MoySklad ulanishi uzildi");
+      toast.success(t("moysklad.disconnected"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Uzilishda xato");
+      toast.error(err instanceof Error ? err.message : t("moysklad.disconnectError"));
     }
   };
 
@@ -108,10 +108,10 @@ export function MoyskladIntegrationCard() {
       const { jobId } = await moyskladApi.startSync();
       const job = await moyskladApi.getJob(jobId);
       setActiveJob(job);
-      toast.info("Sinxronizatsiya boshlandi");
+      toast.info(t("moysklad.syncStarted"));
     } catch (err) {
       setSyncing(false);
-      toast.error(err instanceof Error ? err.message : "Sinxronizatsiyani boshlashda xato");
+      toast.error(err instanceof Error ? err.message : t("moysklad.syncStartError"));
     }
   };
 
@@ -119,13 +119,13 @@ export function MoyskladIntegrationCard() {
     try {
       const res = await moyskladApi.subscribeWebhooks();
       if (res.errors.length) {
-        toast.error(`${res.registered} ta webhook ro'yxatdan o'tdi, ${res.errors.length} ta xato`);
+        toast.error(t("moysklad.webhooksPartial", { registered: res.registered, failed: res.errors.length }));
       } else {
-        toast.success(`${res.registered} ta webhook ro'yxatdan o'tkazildi`);
+        toast.success(t("moysklad.webhooksRegistered", { count: res.registered }));
       }
       refreshStatus();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Webhook'larni ro'yxatdan o'tkazishda xato");
+      toast.error(err instanceof Error ? err.message : t("moysklad.webhooksError"));
     }
   };
 
