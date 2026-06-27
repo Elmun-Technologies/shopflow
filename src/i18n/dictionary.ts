@@ -51,6 +51,7 @@ export const dictionary: Record<string, Entry> = {
   "pdp.beFirst": { uz: "Birinchi bo'lib yozing!", ru: "Будьте первым!" },
   "pdp.totalReviews": { uz: "{count} ta sharh", ru: "{count} отзывов" },
   "pdp.comboTitle": { uz: "🎁 Bularni ham qo'shing", ru: "🎁 Добавьте к заказу" },
+  "pdp.noCombo": { uz: "Qo'shimcha mahsulotlar tez orada", ru: "Сопутствующие товары скоро" },
 
   // ─── Storefront: Catalog (home + filters) ────────────
   "catalog.searchPlaceholder": { uz: "Mahsulot qidirish…", ru: "Поиск товара…" },
@@ -421,6 +422,9 @@ export const dictionary: Record<string, Entry> = {
   },
   "ui.single.coreLabel": { uz: "Asosiy — doimo ko'rsatiladi", ru: "Основное — показывается всегда" },
   "ui.single.optionalLabel": { uz: "Qo'shimcha bo'limlar", ru: "Дополнительные разделы" },
+  "ui.single.optionalCount": { uz: "{n} yoqilgan", ru: "{n} включено" },
+  "ui.single.reorderHint": { uz: "Tutqichdan ushlab sudrang yoki strelka bilan tartiblang", ru: "Перетащите за ручку или используйте стрелки" },
+  "ui.single.disabledPill": { uz: "o'chirilgan", ru: "выключено" },
   "ui.single.locked": { uz: "Doimiy", ru: "Всегда" },
   "ui.single.coreGallery": { uz: "Rasm galereyasi", ru: "Галерея фото" },
   "ui.single.coreGallery.d": { uz: "Mahsulot rasmlari karuseli", ru: "Карусель фото товара" },
@@ -2197,6 +2201,7 @@ export const dictionary: Record<string, Entry> = {
   "ui.preview.fastDelivery": { uz: "Tez yetkazib berish", ru: "Быстрая доставка" },
   "ui.preview.extraProducts": { uz: "Qo'shimcha mahsulotlar", ru: "Дополнительные товары" },
   "ui.preview.category": { uz: "Kategoriya", ru: "Категория" },
+  "ui.preview.sampleTag": { uz: "namuna", ru: "образец" },
   "ui.brand.email": { uz: "Email", ru: "Email" },
 
   // ── ProductsPage combo ──

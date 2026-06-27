@@ -7,7 +7,7 @@ import {
   Grid3X3, Zap, Sun, Heart, LayoutGrid, List, LayoutTemplate as LayoutIcon,
   Play, Megaphone, X, Type, Phone, Mail, MapPin, ShoppingBag,
   Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Loader2, Globe,
-  ShieldCheck, Star, Info, Truck, Tag, Lock,
+  ShieldCheck, Star, Info, Truck, Tag, Lock, AlertTriangle,
 } from "lucide-react";
 import {
   blockDefinitions, templates, defaultBrandSettings, categoryColors,
@@ -17,6 +17,11 @@ import type { UIBlock, BrandSettings, SingleSection, SingleSectionKey } from "..
 import { vitrinaApi, productsApi, categoriesApi } from "../api/endpoints";
 import type { Product, Category } from "../types/api";
 import { useT } from "../i18n";
+import {
+  GalleryPreview, PricePreview, CtaPreview,
+  renderSinglePreviewSection as renderSharedPreviewSection,
+  type SinglePreviewProduct,
+} from "./storefront/SingleProductSections";
 
 const iconMap: Record<string, React.ElementType> = {
   Image, Sparkles, Percent, TrendingUp, Crown, Calendar, Grid3X3, Zap, Sun, Heart,
@@ -31,6 +36,9 @@ type PreviewProduct = {
   oldPrice?: number;
   imageUrl?: string;
   categoryName?: string;
+  description?: string;
+  stock: number;
+  featured: boolean;
 };
 
 function toPreviewProduct(p: Product): PreviewProduct {
@@ -41,6 +49,9 @@ function toPreviewProduct(p: Product): PreviewProduct {
     oldPrice: p.oldPrice != null ? Number(p.oldPrice) : undefined,
     imageUrl: p.imageUrl ?? undefined,
     categoryName: p.category?.name,
+    description: p.description ?? undefined,
+    stock: Number(p.stock ?? 0),
+    featured: Boolean(p.featured),
   };
 }
 
@@ -303,6 +314,8 @@ export default function UIBuilderPage() {
         id: `placeholder-${i}`,
         name: `Mahsulot ${i + 1}`,
         price: 0,
+        stock: 0,
+        featured: false,
       }));
     }
     return result;
@@ -537,103 +550,45 @@ export default function UIBuilderPage() {
     }
   };
 
-  // Bitta qo'shimcha bo'lim preview'i (admin mock) — storefront tartibiga mos.
-  const renderSinglePreviewSection = (key: SingleSectionKey) => {
-    switch (key) {
-      case "trustBadges":
-        return (
-          <div className="flex gap-2">
-            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><ShieldCheck className="w-3 h-3" />{t("ui.preview.authentic")}</div>
-            <div className="flex items-center gap-1 text-[10px] text-forest-700 bg-leaf-100 rounded-lg px-2 py-1"><Crown className="w-3 h-3" />{t("ui.preview.warranty")}</div>
-          </div>
-        );
-      case "reviews":
-        return (
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span className="text-amber-500">★★★★★</span>
-            <span>4.8 · 36 sharh</span>
-          </div>
-        );
-      case "weeklyBuyers":
-        return (
-          <div className="flex items-center gap-1.5 text-xs text-forest-700">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>{t("ui.preview.weeklyBuyers")}</span>
-          </div>
-        );
-      case "stats":
-        return (
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-[10px] text-slate-600 bg-cream-100 px-2 py-0.5 rounded-md">{selectedSingleProduct?.categoryName ?? t("ui.preview.category")}</span>
-            <span className="text-[10px] text-forest-700 bg-leaf-100 px-2 py-0.5 rounded-md">{t("ui.preview.inStock")}</span>
-            <span className="text-[10px] text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">{t("ui.preview.bestseller")}</span>
-          </div>
-        );
-      case "timer":
-        return (
-          <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="font-mono">08:45:22</span>
-          </div>
-        );
-      case "description":
-        return <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">{t("ui.preview.descPlaceholder")}</p>;
-      case "delivery":
-        return (
-          <div className="flex items-center gap-2 text-xs text-slate-600 border-t border-cream-300 pt-2">
-            <Truck className="w-3.5 h-3.5 text-forest-700" />
-            <span>{t("ui.preview.fastDelivery")}</span>
-          </div>
-        );
-      case "combo":
-        return (
-          <div className="flex items-center gap-2 text-xs text-slate-600 bg-cream-100 rounded-lg px-3 py-2">
-            <Plus className="w-3.5 h-3.5 text-forest-700" />
-            <span>{t("ui.preview.extraProducts")}</span>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  // Single-product landing preview — tanlangan mahsulotdan fokuslangan sahifa.
-  // Bo'limlar saqlangan tartibda (yoqilganlari) ko'rsatiladi.
+  // Single-product landing preview — mijoz ko'radigan sahifaning AYNAN ko'rinishi (WYSIWYG).
+  // Tanlangan mahsulotning REAL ma'lumoti + dark Telegram tema (storefront bilan bir xil).
+  // Admin'da bo'lmagan maydonlar (sharh soni, haftalik xaridorlar, kombo) "namuna" sifatida.
   const renderSingleLandingPreview = () => {
     const p = selectedSingleProduct;
     if (!p) {
       return (
         <div className="py-10 text-center">
-          <Package className="w-10 h-10 text-cream-300 mx-auto mb-2" />
-          <p className="text-xs text-slate-500">{t("ui.single.noProduct")}</p>
+          <Package className="w-10 h-10 text-slate-700 mx-auto mb-2" />
+          <p className="text-xs text-slate-400">{t("ui.single.noProduct")}</p>
         </div>
       );
     }
-    const discount = p.oldPrice && p.oldPrice > p.price ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+    const vm: SinglePreviewProduct = {
+      name: p.name,
+      price: p.price,
+      oldPrice: p.oldPrice,
+      currency: "UZS",
+      imageUrl: p.imageUrl,
+      description: p.description,
+      stock: p.stock,
+      featured: p.featured,
+      categoryName: p.categoryName,
+      // Storefront-only maydonlar — admin API bermaydi → namuna qiymatlar
+      reviewCount: 36,
+      avgRating: 4.8,
+      weeklyBuyers: 24,
+      comboCount: 2,
+    };
+    const deliveryStr = new Date(Date.now() + 2 * 86_400_000).toLocaleDateString("uz-UZ", { day: "numeric", month: "long" });
+    const opts = { deliveryStr, timerLabel: t("single.timerLabel"), timerColor: brand.primaryColor };
     return (
-      <div className="space-y-3">
-        {/* Galereya (doimiy) */}
-        <div className="w-full aspect-[4/3] bg-cream-100 rounded-2xl overflow-hidden flex items-center justify-center">
-          {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" /> : <Package className="w-12 h-12 text-cream-300" />}
-        </div>
-        {/* Narx va nomi (doimiy) */}
-        <div>
-          <p className="text-base font-bold text-forest-800">{p.name}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xl font-bold text-forest-700">{p.price.toLocaleString()} so'm</span>
-            {p.oldPrice != null && <span className="text-sm text-slate-400 line-through">{p.oldPrice.toLocaleString()}</span>}
-            {discount > 0 && <span className="text-[10px] font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">-{discount}%</span>}
-          </div>
-        </div>
-        {/* Qo'shimcha bo'limlar — saqlangan tartibda */}
+      <div className="space-y-4">
+        <GalleryPreview vm={vm} />
+        <PricePreview vm={vm} />
         {singleSections.filter((s) => s.enabled).map((s) => (
-          <div key={s.key}>{renderSinglePreviewSection(s.key)}</div>
+          <div key={s.key}>{renderSharedPreviewSection(s.key, vm, opts)}</div>
         ))}
-        {/* Buyurtma tugmasi (doimiy) */}
-        <button className="w-full py-2.5 rounded-xl bg-leaf-400 text-forest-800 text-sm font-semibold flex items-center justify-center gap-2">
-          <ShoppingBag className="w-4 h-4" />
-          {t("single.buy")}
-        </button>
+        <CtaPreview vm={vm} />
       </div>
     );
   };
@@ -1065,8 +1020,16 @@ export default function UIBuilderPage() {
                     ))}
                   </div>
 
-                  {/* Qo'shimcha bo'limlar — drag/strelka bilan tartiblanadi */}
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{t("ui.single.optionalLabel")}</p>
+                  {/* Qo'shimcha bo'limlar — grip bilan sudrab yoki strelka bilan tartiblanadi */}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t("ui.single.optionalLabel")}</p>
+                    <span className="text-[10px] font-medium text-leaf-600 bg-leaf-100 px-2 py-0.5 rounded-full">
+                      {t("ui.single.optionalCount", { n: singleSections.filter((s) => s.enabled).length })}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mb-2 flex items-center gap-1">
+                    <GripVertical className="w-3 h-3" />{t("ui.single.reorderHint")}
+                  </p>
                   <div className="space-y-1.5">
                     {singleSections.map((sec, index) => {
                       const meta = singleSectionMeta.find((m) => m.key === sec.key);
@@ -1074,8 +1037,6 @@ export default function UIBuilderPage() {
                       return (
                         <div
                           key={sec.key}
-                          draggable
-                          onDragStart={() => setSingleDragIndex(index)}
                           onDragEnter={() => setSingleDragOver(index)}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
@@ -1085,42 +1046,60 @@ export default function UIBuilderPage() {
                             setSingleDragOver(null);
                           }}
                           onDragEnd={() => { setSingleDragIndex(null); setSingleDragOver(null); }}
-                          className={`group flex items-center gap-2 p-2 rounded-lg border transition-all cursor-move ${
-                            sec.enabled ? "bg-white border-cream-300" : "bg-cream-100/40 border-cream-300/50 opacity-60"
+                          className={`relative group flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                            sec.enabled ? "bg-white border-cream-300" : "bg-cream-100/50 border-cream-300/60"
                           } ${singleDragOver === index && singleDragIndex !== index ? "border-leaf-400/60 bg-leaf-400/5" : ""} ${singleDragIndex === index ? "opacity-40" : ""}`}
                         >
+                          {/* Drop indikatori */}
+                          {singleDragOver === index && singleDragIndex !== index && (
+                            <span className="absolute -top-1 left-2 right-2 h-0.5 rounded-full bg-leaf-400" />
+                          )}
+                          {/* Tartib strelkalari (touch/klaviatura uchun) */}
                           <div className="flex flex-col -my-0.5">
                             <button
                               onClick={() => moveSingleSection(index, index - 1)}
                               disabled={index === 0}
-                              className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
+                              className="p-1 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
                               title={t("ui.moveUp")}
                             >
-                              <ArrowUp className="w-3 h-3" />
+                              <ArrowUp className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => moveSingleSection(index, index + 1)}
                               disabled={index === singleSections.length - 1}
-                              className="p-0.5 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
+                              className="p-1 text-slate-300 hover:text-forest-700 disabled:opacity-20 transition-colors"
                               title={t("ui.moveDown")}
                             >
-                              <ArrowDown className="w-3 h-3" />
+                              <ArrowDown className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                          <GripVertical className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                          {/* Grip = haqiqiy drag tutqichi */}
+                          <div
+                            draggable
+                            onDragStart={() => setSingleDragIndex(index)}
+                            className="cursor-grab active:cursor-grabbing p-1 -m-1 text-slate-300 hover:text-forest-700 transition-colors flex-shrink-0"
+                            title={t("ui.single.reorderHint")}
+                          >
+                            <GripVertical className="w-4 h-4" />
+                          </div>
                           <div className="w-7 h-7 bg-cream-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Icon className="w-3.5 h-3.5 text-slate-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-forest-800 truncate">{meta ? t(meta.labelKey) : sec.key}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className={`text-xs truncate ${sec.enabled ? "text-forest-800" : "text-slate-400"}`}>{meta ? t(meta.labelKey) : sec.key}</p>
+                              {!sec.enabled && (
+                                <span className="text-[9px] text-slate-400 bg-cream-200 px-1.5 py-0.5 rounded-full flex-shrink-0">{t("ui.single.disabledPill")}</span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-500 truncate">{meta ? t(meta.descKey) : ""}</p>
                           </div>
                           <button
                             onClick={() => toggleSingleSection(sec.key)}
-                            className={`relative w-9 h-5 rounded-full transition-all flex-shrink-0 ${sec.enabled ? "bg-leaf-400" : "bg-cream-200"}`}
-                            title={sec.enabled ? t("ui.single.locked") : ""}
+                            className={`relative w-10 h-6 rounded-full transition-all flex-shrink-0 ${sec.enabled ? "bg-leaf-400" : "bg-cream-200"}`}
+                            title={sec.enabled ? t("ui.single.disabledPill") : ""}
                           >
-                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${sec.enabled ? "left-[18px]" : "left-0.5"}`} />
+                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${sec.enabled ? "left-[18px]" : "left-0.5"}`} />
                           </button>
                         </div>
                       );
@@ -1142,7 +1121,10 @@ export default function UIBuilderPage() {
                   </div>
 
                   {singleSections.every((s) => !s.enabled) && (
-                    <p className="text-[10px] text-amber-600 mt-3 text-center">{t("ui.single.allOff")}</p>
+                    <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                      <p className="text-[11px] text-amber-700">{t("ui.single.allOff")}</p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1252,40 +1234,64 @@ export default function UIBuilderPage() {
                 </div>
                 <div className="flex-1 overflow-y-auto p-3">
                   <div className={`mx-auto ${previewMode === "mobile" ? "w-[320px]" : "w-full"}`}>
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-cream-300">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-forest-800" style={{ backgroundColor: brand.primaryColor }}>
-                          {brand.logo}
-                        </div>
-                        <span className="text-xs font-semibold text-forest-800">{brand.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Search className="w-3.5 h-3.5 text-slate-500" />
-                        <ShoppingBag className="w-3.5 h-3.5 text-slate-500" />
-                      </div>
-                    </div>
-
-                    {/* Blocks (multi) yoki Single-product landing preview */}
                     {isSingle ? (
-                      renderSingleLandingPreview()
+                      /* Dark Telegram phone mock — mijoz ko'radigan single sahifa (WYSIWYG) */
+                      <div className="rounded-2xl bg-slate-950 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-forest-800" style={{ backgroundColor: brand.primaryColor }}>
+                              {brand.logo}
+                            </div>
+                            <span className="text-xs font-semibold text-white">{brand.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Search className="w-3.5 h-3.5 text-slate-500" />
+                            <ShoppingBag className="w-3.5 h-3.5 text-slate-500" />
+                          </div>
+                        </div>
+                        <div className="p-4">{renderSingleLandingPreview()}</div>
+                        <div className="px-4 py-4 border-t border-slate-800 text-center">
+                          <p className="text-[10px] text-slate-500">{brand.name} © {new Date().getFullYear()}</p>
+                          <div className="flex items-center justify-center gap-3 mt-2">
+                            {brand.phone && <Phone className="w-3 h-3 text-slate-600" />}
+                            {brand.email && <Mail className="w-3 h-3 text-slate-600" />}
+                            {brand.address && <MapPin className="w-3 h-3 text-slate-600" />}
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="space-y-3">
-                        {blocks.filter((b) => b.enabled).map((block) => (
-                          <div key={block.id}>{renderPreviewBlock(block, previewMode === "mobile")}</div>
-                        ))}
-                      </div>
-                    )}
+                      <>
+                        {/* Header (light) */}
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-cream-300">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-forest-800" style={{ backgroundColor: brand.primaryColor }}>
+                              {brand.logo}
+                            </div>
+                            <span className="text-xs font-semibold text-forest-800">{brand.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Search className="w-3.5 h-3.5 text-slate-500" />
+                            <ShoppingBag className="w-3.5 h-3.5 text-slate-500" />
+                          </div>
+                        </div>
 
-                    {/* Footer */}
-                    <div className="mt-6 pt-4 border-t border-cream-300 text-center">
-                      <p className="text-[10px] text-slate-500">{brand.name} © 2025</p>
-                      <div className="flex items-center justify-center gap-3 mt-2">
-                        {brand.phone && <Phone className="w-3 h-3 text-slate-400" />}
-                        {brand.email && <Mail className="w-3 h-3 text-slate-400" />}
-                        {brand.address && <MapPin className="w-3 h-3 text-slate-400" />}
-                      </div>
-                    </div>
+                        <div className="space-y-3">
+                          {blocks.filter((b) => b.enabled).map((block) => (
+                            <div key={block.id}>{renderPreviewBlock(block, previewMode === "mobile")}</div>
+                          ))}
+                        </div>
+
+                        {/* Footer (light) */}
+                        <div className="mt-6 pt-4 border-t border-cream-300 text-center">
+                          <p className="text-[10px] text-slate-500">{brand.name} © {new Date().getFullYear()}</p>
+                          <div className="flex items-center justify-center gap-3 mt-2">
+                            {brand.phone && <Phone className="w-3 h-3 text-slate-400" />}
+                            {brand.email && <Mail className="w-3 h-3 text-slate-400" />}
+                            {brand.address && <MapPin className="w-3 h-3 text-slate-400" />}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.div>

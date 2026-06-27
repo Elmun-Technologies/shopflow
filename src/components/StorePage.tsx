@@ -169,6 +169,12 @@ function calcDiscountPct(price: number, oldPrice: number | null | undefined): nu
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 }
 
+// Kombo chegirma foizini xavfsiz oraliqqa cheklash (0–99) — manfiy/100%+ qiymatlar
+// narxni manfiy yoki noto'g'ri qilib qo'ymasligi uchun.
+function clampPct(n: number): number {
+  return Math.min(99, Math.max(0, Math.round(n)));
+}
+
 const FAV_KEY = (slug: string) => `shopflow:store:${slug}:favorites`;
 function loadFavorites(slug: string): Set<string> {
   try {
@@ -340,7 +346,7 @@ function CountdownBanner({ label, color }: { label: string; color: string }) {
   const m = Math.floor((remaining % 3_600_000) / 60_000);
   const s = Math.floor((remaining % 60_000) / 1000);
   return (
-    <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 border border-rose-500/30 bg-rose-500/10">
+    <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 border border-rose-500/30 bg-rose-500/10">
       <div className="flex items-center gap-2 text-rose-300">
         <Clock className="w-4 h-4 flex-shrink-0" />
         <span className="text-sm font-medium">{label}</span>
@@ -521,6 +527,7 @@ function StoreInner({ slug }: { slug: string }) {
   const [profileInitialView, setProfileInitialView] = useState<"menu" | "orders" | undefined>(undefined);
   // PDP — reviews va form
   const [productReviews, setProductReviews] = useState<StoreReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm, setReviewForm] = useState<{ open: boolean; rating: number; text: string; busy: boolean }>({
     open: false,
     rating: 5,
@@ -672,6 +679,7 @@ function StoreInner({ slug }: { slug: string }) {
     setTrustSheet(null);
     setDescExpanded(false);
     setProductReviews([]);
+    setReviewsLoading(false);
     setReviewForm({ open: false, rating: 5, text: "", busy: false });
     if (!selectedProduct) {
       setSelectedAddons(new Set());
@@ -686,10 +694,12 @@ function StoreInner({ slug }: { slug: string }) {
     setSelectedAddons(defaults);
     // Reviews yuklash
     if ((selectedProduct.reviewCount ?? 0) > 0) {
+      setReviewsLoading(true);
       fetch(`${API_BASE}/storefront/${encodeURIComponent(slug)}/products/${selectedProduct.id}/reviews`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
         .then((data: { items: StoreReview[] }) => setProductReviews(data.items))
-        .catch(() => null);
+        .catch(() => null)
+        .finally(() => setReviewsLoading(false));
     }
   }, [selectedProduct, slug]);
 
@@ -1403,12 +1413,11 @@ function StoreInner({ slug }: { slug: string }) {
     // Admin Vitrina'da saqlangan bo'lim tartibi/holatiga qarab body bo'limlari
     // chiziladi. Multi rejimda (oddiy PDP) tartib o'zgarmaydi.
     const singleSectionList = isSingle ? normalizeSingleConfig(data.brand?.singleConfig).sections : [];
-    const singleEnabled = (k: SingleSectionKey) => singleSectionList.some((s) => s.key === k && s.enabled);
 
-    // Reyting chipi — sarlavha ostida (har ikki rejimda). Single'da "reviews"
-    // bo'limi o'chirilgan bo'lsa yashiriladi.
+    // Reyting chipi — sarlavha ostida (har ikki rejimda). Sharhlar mavjud bo'lsa
+    // doim ko'rinadi; "reviews" bo'limi toggle'i faqat to'liq sharhlar ro'yxatini boshqaradi.
     const ratingChipEl =
-      (selectedProduct.reviewCount ?? 0) > 0 && (!isSingle || singleEnabled("reviews")) ? (
+      (selectedProduct.reviewCount ?? 0) > 0 ? (
         <div className="flex items-center gap-1.5 mb-3">
           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
           <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
@@ -1419,7 +1428,7 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Ishonch belgilari
     const trustBadgesEl = (
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={() => { haptic.light(); setTrustSheet("original"); }}
@@ -1443,7 +1452,7 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Tezkor ma'lumot (kategoriya, mavjudlik, bestseller)
     const statsEl = (
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2">
         {selectedProduct.category && (
           <span className="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-1 rounded-md">
             {selectedProduct.category.name}
@@ -1466,7 +1475,7 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Social proof — haftalik xaridorlar
     const weeklyBuyersEl = weeklyBuyers > 0 ? (
-      <div className="flex items-center gap-1.5 text-xs text-slate-300 mb-4">
+      <div className="flex items-center gap-1.5 text-xs text-slate-300">
         <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
         <span>{t("pdp.weeklyBuyers", { count: weeklyBuyers })}</span>
       </div>
@@ -1499,7 +1508,7 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Yetkazib berish
     const deliveryEl = (
-      <div className="mt-5 pt-5 border-t border-slate-800 flex items-start gap-3">
+      <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
           <Truck className="w-5 h-5 text-sky-400" />
         </div>
@@ -1512,7 +1521,7 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Sharhlar (to'liq ro'yxat)
     const reviewsEl = (
-      <div className="mt-5 pt-5 border-t border-slate-800">
+      <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
             <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -1531,10 +1540,30 @@ function StoreInner({ slug }: { slug: string }) {
             </button>
           )}
         </div>
-        {productReviews.length === 0 ? (
-          <p className="text-xs text-slate-500 italic">
-            {t("pdp.noReviews")} {telegramUser?.userId ? t("pdp.beFirst") : ""}
-          </p>
+        {reviewsLoading ? (
+          <div className="space-y-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-slate-900 rounded-xl p-3 border border-slate-800 animate-pulse">
+                <div className="h-3 w-24 bg-slate-800 rounded mb-2" />
+                <div className="h-2.5 w-full bg-slate-800 rounded" />
+                <div className="h-2.5 w-2/3 bg-slate-800 rounded mt-1.5" />
+              </div>
+            ))}
+          </div>
+        ) : productReviews.length === 0 ? (
+          <div className="flex flex-col items-center text-center py-5 px-3 bg-slate-900/50 rounded-xl border border-slate-800">
+            <Star className="w-7 h-7 text-slate-700 mb-2" />
+            <p className="text-xs text-slate-400">{t("pdp.noReviews")}</p>
+            {telegramUser?.userId && (
+              <button
+                type="button"
+                onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
+                className="mt-3 px-4 py-2 rounded-xl bg-slate-800 text-sky-400 text-xs font-medium active:scale-[0.98] transition-transform"
+              >
+                {t("pdp.beFirst")}
+              </button>
+            )}
+          </div>
         ) : (
           <div className="space-y-3">
             {productReviews.slice(0, 5).map((rv) => (
@@ -1566,7 +1595,7 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Combo / qo'shimcha mahsulotlar
     const comboEl = selectedProduct.comboAddons && selectedProduct.comboAddons.length > 0 ? (
-      <div className="mt-5 pt-5 border-t border-slate-800">
+      <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
             {t("pdp.comboTitle")}
@@ -1581,8 +1610,9 @@ function StoreInner({ slug }: { slug: string }) {
             if (!ap.active) return null;
             const isSelected = selectedAddons.has(ap.id);
             const origPrice = Number(ap.price);
-            const finalPrice = addon.discountPct > 0
-              ? Math.round(origPrice * (1 - addon.discountPct / 100))
+            const pct = clampPct(addon.discountPct);
+            const finalPrice = pct > 0
+              ? Math.round(origPrice * (1 - pct / 100))
               : origPrice;
             const isOut = ap.stock <= 0;
             return (
@@ -1634,10 +1664,10 @@ function StoreInner({ slug }: { slug: string }) {
                           {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
                         </span>
                       </span>
-                      {addon.discountPct > 0 && (
+                      {pct > 0 && (
                         <>
                           <span className="text-[10px] text-slate-500 line-through">{origPrice.toLocaleString("uz-UZ")}</span>
-                          <span className="text-[10px] font-bold text-rose-300">−{addon.discountPct}%</span>
+                          <span className="text-[10px] font-bold text-rose-300">−{pct}%</span>
                         </>
                       )}
                     </div>
@@ -1647,6 +1677,13 @@ function StoreInner({ slug }: { slug: string }) {
             );
           })}
         </div>
+      </div>
+    ) : isSingle ? (
+      // Single rejimda kombo bo'limi yoqilgan, lekin mahsulotda qo'shimcha yo'q —
+      // bo'lim jim yo'qolmasligi uchun ohista maslahat.
+      <div className="flex items-center gap-2 text-xs text-slate-500">
+        <Plus className="w-4 h-4 text-slate-600" />
+        <span>{t("pdp.noCombo")}</span>
       </div>
     ) : null;
 
@@ -1740,7 +1777,8 @@ function StoreInner({ slug }: { slug: string }) {
           className="flex-1 overflow-y-auto"
           onScroll={(e) => {
             const top = (e.target as HTMLDivElement).scrollTop;
-            const next = top > 180;
+            // Gisterezis — chegara atrofida miltillamaslik uchun (yoq >180, o'chir <140)
+            const next = pdpScrolled ? top > 140 : top > 180;
             if (next !== pdpScrolled) setPdpScrolled(next);
           }}
         >
@@ -1788,7 +1826,7 @@ function StoreInner({ slug }: { slug: string }) {
 
             {/* Ishonch belgilari — multi rejimda sarlavhadan tepada.
                 Single rejimda konstruktor tartibida (pastda) chiziladi. */}
-            {!isSingle && trustBadgesEl}
+            {!isSingle && <div className="mb-4">{trustBadgesEl}</div>}
 
             {/* Title */}
             <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
@@ -1797,21 +1835,31 @@ function StoreInner({ slug }: { slug: string }) {
             {ratingChipEl}
 
             {/* Body bo'limlari — single rejimda konstruktor tartibida (yoqilganlari),
-                multi rejimda standart tartibda */}
-            {isSingle ? (
-              singleSectionList
-                .filter((s) => s.enabled)
-                .map((s) => <div key={s.key}>{singleSectionEl(s.key)}</div>)
-            ) : (
-              <>
-                {statsEl}
-                {weeklyBuyersEl}
-                {descriptionEl}
-                {deliveryEl}
-                {reviewsEl}
-                {comboEl}
-              </>
-            )}
+                multi rejimda standart tartibda. Bir xil oraliq + chiziq + kirish animatsiyasi. */}
+            {(() => {
+              const ordered: Array<{ key: string; el: React.ReactNode }> = isSingle
+                ? singleSectionList.filter((s) => s.enabled).map((s) => ({ key: s.key, el: singleSectionEl(s.key) }))
+                : [
+                    { key: "stats", el: statsEl },
+                    { key: "weeklyBuyers", el: weeklyBuyersEl },
+                    { key: "description", el: descriptionEl },
+                    { key: "delivery", el: deliveryEl },
+                    { key: "reviews", el: reviewsEl },
+                    { key: "combo", el: comboEl },
+                  ];
+              const visible = ordered.filter((b) => b.el);
+              return visible.map((b, i) => (
+                <div
+                  key={b.key}
+                  className={`animate-in fade-in slide-in-from-bottom-1 duration-300 ${
+                    i > 0 ? "mt-5 pt-5 border-t border-slate-800" : "mt-4"
+                  }`}
+                  style={{ animationDelay: `${Math.min(i * 40, 240)}ms`, animationFillMode: "both" }}
+                >
+                  {b.el}
+                </div>
+              ));
+            })()}
           </div>
         </div>
 
@@ -1828,8 +1876,9 @@ function StoreInner({ slug }: { slug: string }) {
               if (!selectedAddons.has(addon.addonProduct.id)) continue;
               const ap = addon.addonProduct;
               const orig = Number(ap.price);
-              const fp = addon.discountPct > 0
-                ? Math.round(orig * (1 - addon.discountPct / 100))
+              const pct = clampPct(addon.discountPct);
+              const fp = pct > 0
+                ? Math.round(orig * (1 - pct / 100))
                 : orig;
               comboTotal += fp;
               // Pseudo-StoreProduct for addToCart
