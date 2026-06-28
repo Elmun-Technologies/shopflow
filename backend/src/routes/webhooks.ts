@@ -172,10 +172,25 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       }
 
       if (from?.id) {
-        await app.prisma.customer.updateMany({
-          where: { tenantId, telegramUserId: BigInt(from.id) },
-          data: { language: newLang },
+        // Buyurtma bermagan bot foydalanuvchisi uchun ham Customer yozuvi yaratamiz
+        const tgId = BigInt(from.id);
+        const existingCust = await app.prisma.customer.findFirst({
+          where: { tenantId, telegramUserId: tgId },
+          select: { id: true },
         });
+        if (existingCust) {
+          await app.prisma.customer.update({ where: { id: existingCust.id }, data: { language: newLang } });
+        } else {
+          await app.prisma.customer.create({
+            data: {
+              tenantId,
+              telegramUserId: tgId,
+              telegramUsername: (from as { username?: string }).username,
+              name: [from.first_name, from.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi",
+              language: newLang,
+            },
+          });
+        }
       }
 
       if (token && cbChatId) {
