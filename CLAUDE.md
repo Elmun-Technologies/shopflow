@@ -273,16 +273,24 @@ shopflow/
 
 ## 🛣 Kelajakda (TODO / ideas)
 
-### Qolgan
-- ✅ **Prisma migrations** — `db push` → versiyalangan `prisma migrate`. Baseline `0_init`, self-baselining entrypoint (`scripts/db-migrate.mjs`) mavjud prod DB'ni avtomatik baseline qiladi (qo'lda amal kerak emas). CI: `migrate deploy` + drift-check. Hujjat: **`MIGRATIONS.md`**.
-- [ ] **Push notifications** — Service Worker bor, VAPID setup qoldi
-- [ ] **Email reports** — PDF tayyor, SMTP credentials kerak
-- [ ] **Eskiz SMS real API** — tenant credential kerak
-- [ ] **Yandex Go delivery** — tashqi hisob kerak
-- [ ] **API access logs UI** — Settings → API tab'da audit ko'rsatish
-- [ ] **Tenant data export** — Settings'da "Yuklab olish" tugmasi (JSON/CSV)
+### Qolgan (faqat tashqi credential/hisob kerak — kod tayyor)
+Har biri uchun ulanish yo'riqnomasi: **`INTEGRATIONS.md`**.
+- [ ] **Push notifications** — kod to'liq (VAPID lib + SW + UI + DB). `.env`'ga VAPID kalitlar kerak. Buyurtmada avto-trigger hali yo'q (qo'lda test bor).
+- [ ] **Email reports** — kod to'liq (nodemailer + soatlik scheduler + UI). SMTP kerak. Eslatma: O'zbekistonda email marketing kuchsiz.
+- [ ] **Eskiz SMS** — kod to'liq (token auth + bulk + UI). `.env`'ga login/parol kerak. Avto-trigger yo'q; per-tenant credential rejalashtirilgan.
+- [ ] **Yandex Go delivery** — **faqat STUB**: umumiy delivery CRUD bor, lekin Yandex API kodi YO'Q. Provayder klient + webhook + Yandex Pro hisob kerak (qurilishi lozim).
+
+### Ixtiyoriy
 - [ ] **List virtualization** — agar 1000+ qator sekin scroll bo'lsa (hozir pagination 20)
-- [ ] **Bundle size optimization** — recharts vendor 395kb (lazy chunk yoki light chart lib)
+- [ ] **StorePage to'liq dedup** — reviews/combo ham ulashilgan komponentga (hozir ataylab StorePage'da, chunki async/interaktiv)
+
+### ✅ Yaqinda bajarilgan
+- ✅ **Prisma migrations** — versiyalangan `prisma migrate` + drift-check (`MIGRATIONS.md`)
+- ✅ **API access logs UI** — Settings → API tab real backend (`ApiKeysSection`) + "oxirgi ishlatilgan" audit
+- ✅ **Tenant data export** — Settings → Do'kon → JSON eksport
+- ✅ **Bundle optimization** — recharts initial bundle'dan chiqarildi (lazy + function-form `manualChunks`); `index` 502→309kb
+- ✅ **To'liq admin audit** — soxta data / o'lik tugma / tarjima tuzatishlari; **double-encode API bug** (bot sekanslar + API kalitlar runtime'da buzilgan edi)
+- ✅ **Single-product sayqal** — WYSIWYG konstruktor preview (real mahsulot ma'lumoti), grip drag-drop, single sahifa polish; ulashilgan **`src/components/storefront/SingleProductSections.tsx`** (konstruktor preview + live storefront bir komponentdan — WYSIWYG kafolati)
 
 ---
 
