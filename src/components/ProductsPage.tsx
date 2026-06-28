@@ -27,7 +27,7 @@ import { useAppToast } from "./ui/Toast";
 const MAX_IMAGES = 10;
 import { useQueryAsync } from "../hooks/useQueryAsync";
 import { productsApi, categoriesApi } from "../api/endpoints";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import { priceBreakdown } from "../utils/pricing";
@@ -838,8 +838,12 @@ function ProductFormModal({
     setSaving(true);
     setError(null);
     try {
+      // SKU bo'sh bo'lsa name'dan avto-generate (harflar + raqamlar, max 20)
+      const finalSku = sku.trim() ||
+        name.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20) ||
+        `SKU${Date.now().toString().slice(-8)}`;
       const data = {
-        sku,
+        sku: finalSku,
         name,
         description: description || undefined,
         // Vergulli formatdan toza raqamga
@@ -880,7 +884,16 @@ function ProductFormModal({
       setSuccess(product ? t("productForm.saveSuccess") : t("productForm.createSuccess"));
       setTimeout(() => onSaved(), 1200);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.error"));
+      if (err instanceof ApiError && err.status === 400 && err.data && typeof err.data === "object" && "details" in err.data) {
+        const details = (err.data as { details?: Array<{ path: string; message: string }> }).details;
+        if (details?.length) {
+          setError(details.map(d => `${d.path || "maydon"}: ${d.message}`).join(" · "));
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : t("common.error"));
+      }
     } finally {
       setSaving(false);
     }
@@ -941,6 +954,7 @@ function ProductFormModal({
             <input
               type="text"
               required
+              maxLength={200}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("productForm.namePlaceholder")}
@@ -951,6 +965,7 @@ function ProductFormModal({
           <Field label={t("productForm.description")}>
             <textarea
               rows={3}
+              maxLength={2000}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("productForm.descriptionPlaceholder")}
