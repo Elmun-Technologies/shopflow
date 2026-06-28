@@ -175,10 +175,9 @@ export const integrations: IntegrationItem[] = [
     category: "delivery",
     color: "#FFCC00",
     initials: "YG",
-    status: "available",
+    status: "soon",
     region: "UZ",
-    recommended: true,
-    setupHint: "Yandex Pro hisobi va API token kerak.",
+    setupHint: "Tez orada — Yandex Pro hisobi va API integratsiyasi kerak (hozircha qurilmagan).",
   },
   {
     id: "uzum-tezkor",
