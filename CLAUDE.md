@@ -311,7 +311,9 @@ npm run build       # vite build
 
 # Production deploy
 ssh root@83.229.86.232
-cd /opt/shopflow && git fetch origin && git reset --hard origin/main && docker compose up -d --build shopflow
+cd /opt/shopflow && git fetch origin && git reset --hard origin/main && docker compose up -d --build
+# MUHIM: xizmat nomisiz — frontend (shopflow) VA backend ikkalasi ham qayta quriladi.
+# Faqat `--build shopflow` desangiz backend (DB migratsiya/drift-heal) yangilanmaydi!
 ```
 
 **Production server:** `83.229.86.232` (root)
