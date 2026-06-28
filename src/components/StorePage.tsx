@@ -2072,7 +2072,7 @@ function StoreInner({ slug }: { slug: string }) {
     return (
       <div
         key={product.id}
-        className={`bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group ${
+        className={`bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group border border-slate-800/60 ${
           outOfStock ? "opacity-70" : ""
         }`}
         onClick={() => setSelectedProduct(product)}
@@ -2120,9 +2120,19 @@ function StoreInner({ slug }: { slug: string }) {
         </div>
 
         {/* Info */}
-        <div className="p-2.5">
-          {/* Price line — WB-style: big bold + small struck */}
-          <div className="flex items-baseline gap-1.5 mb-1">
+        <div className="p-3">
+          {/* Name — mahsulot identifikatori birinchi */}
+          <p className="text-xs font-medium text-white leading-snug line-clamp-2 mb-1.5">{product.name}</p>
+
+          {/* Low stock indicator */}
+          {lowStock && (
+            <p className="text-[10px] text-amber-300 mb-1.5 leading-tight">
+              ⚡ Faqat {product.stock} ta qoldi
+            </p>
+          )}
+
+          {/* Price line — katta qalin + kichik o'chirilgan */}
+          <div className="flex items-baseline gap-1.5 mb-2.5">
             <span className="text-sm font-bold text-white">
               {price.toLocaleString("uz-UZ")}
               <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
@@ -2134,16 +2144,6 @@ function StoreInner({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* Name */}
-          <p className="text-[11px] text-slate-300 line-clamp-3 leading-tight mb-2 min-h-[28px]">{product.name}</p>
-
-          {/* Low stock indicator */}
-          {lowStock && (
-            <p className="text-[10px] text-amber-300 mb-1 leading-tight">
-              ⚡ Faqat {product.stock} ta qoldi
-            </p>
-          )}
-
           {/* Add to cart */}
           <button
             onClick={(e) => {
@@ -2151,7 +2151,7 @@ function StoreInner({ slug }: { slug: string }) {
               if (!outOfStock) addToCart(product);
             }}
             disabled={outOfStock}
-            className="w-full py-1.5 rounded-lg flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+            className="w-full py-2 rounded-xl flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
             style={{
               backgroundColor: outOfStock ? "#475569" : qty > 0 ? "#10b981" : primaryColor,
             }}
@@ -2388,11 +2388,15 @@ function StoreInner({ slug }: { slug: string }) {
 
     // If no layout blocks saved, show default products view
     if (enabledBlocks.length === 0) {
+      const activeLabel = selectedCategoryId
+        ? (categories.find((c) => c.id === selectedCategoryId)?.name ?? t("catalog.allProducts"))
+        : t("catalog.allProducts");
       return (
         <div className="p-4">
-          {selectedCategoryId === null && categories.length > 0 && (
-            <h2 className="text-sm font-semibold text-white mb-3">{t("catalog.allProducts")}</h2>
-          )}
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-white">{activeLabel}</h2>
+            <span className="text-xs text-slate-500">{filteredProducts.length} ta</span>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {filteredProducts.map(renderProductCard)}
           </div>
@@ -2737,13 +2741,14 @@ function StoreInner({ slug }: { slug: string }) {
                   <div className="grid grid-cols-2 gap-3">
                     {showSkeleton
                       ? Array.from({ length: skeletonCount }, (_, i) => (
-                          <div key={i} className="bg-slate-900 rounded-2xl overflow-hidden opacity-50">
+                          <div key={i} className="bg-slate-900 rounded-2xl overflow-hidden opacity-50 border border-slate-800/60">
                             <div className="aspect-square bg-slate-800 flex items-center justify-center">
                               <Package className="w-10 h-10 text-cream-300" />
                             </div>
-                            <div className="p-2.5 space-y-1.5">
+                            <div className="p-3 space-y-2">
                               <div className="h-2.5 bg-slate-800 rounded-full w-3/4" />
                               <div className="h-2.5 bg-slate-800 rounded-full w-1/2" />
+                              <div className="h-7 bg-slate-800 rounded-xl w-full" />
                             </div>
                           </div>
                         ))
