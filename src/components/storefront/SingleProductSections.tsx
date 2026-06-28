@@ -111,33 +111,51 @@ export function PricePreview({ vm }: { vm: SinglePreviewProduct }) {
   );
 }
 
-export function TrustBadgesPreview() {
+export function TrustBadgesPreview({ onOpenOriginal, onOpenWarranty }: { onOpenOriginal?: () => void; onOpenWarranty?: () => void } = {}) {
   const { t } = useT();
+  const cls = "flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl";
+  const btnCls = `${cls} active:scale-[0.98] transition-transform`;
   return (
     <div className="flex gap-2">
-      <div className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl">
-        <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-        <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
-      </div>
-      <div className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl">
-        <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
-        <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
-      </div>
+      {onOpenOriginal ? (
+        <button type="button" onClick={onOpenOriginal} className={btnCls}>
+          <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+        </button>
+      ) : (
+        <div className={cls}>
+          <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+        </div>
+      )}
+      {onOpenWarranty ? (
+        <button type="button" onClick={onOpenWarranty} className={btnCls}>
+          <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
+          <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+        </button>
+      ) : (
+        <div className={cls}>
+          <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
+          <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
+        </div>
+      )}
     </div>
   );
 }
 
-export function RatingChipPreview({ vm }: { vm: SinglePreviewProduct }) {
+export function RatingChipPreview({ vm, sample = true, className = "" }: { vm: SinglePreviewProduct; sample?: boolean; className?: string }) {
   const { t } = useT();
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center gap-1.5 ${className}`}>
       <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
       <span className="text-sm font-semibold text-white">{vm.avgRating.toFixed(1)}</span>
       <span className="text-xs text-slate-500">·</span>
       <span className="text-xs text-slate-400">{t("pdp.totalReviews", { count: vm.reviewCount })}</span>
-      <SampleTag />
+      {sample && <SampleTag />}
     </div>
   );
 }
@@ -161,21 +179,31 @@ export function StatsPreview({ vm }: { vm: SinglePreviewProduct }) {
   );
 }
 
-export function WeeklyBuyersPreview({ vm }: { vm: SinglePreviewProduct }) {
+export function WeeklyBuyersPreview({ vm, sample = true }: { vm: SinglePreviewProduct; sample?: boolean }) {
   const { t } = useT();
   return (
     <div className="flex items-center gap-1.5 text-xs text-slate-300">
       <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
       <span>{t("pdp.weeklyBuyers", { count: vm.weeklyBuyers })}</span>
-      <SampleTag />
+      {sample && <SampleTag />}
     </div>
   );
 }
 
-export function DescriptionPreview({ vm }: { vm: SinglePreviewProduct }) {
+export function DescriptionPreview({ vm, expanded, onToggle, isLong = true }: { vm: SinglePreviewProduct; expanded?: boolean; onToggle?: () => void; isLong?: boolean }) {
+  const { t } = useT();
   if (!vm.description) return null;
+  // Konstruktor (onToggle yo'q) — doim qisqartirilgan. Live store — expanded'ga qarab.
+  const clamp = onToggle ? (!expanded && isLong) : true;
   return (
-    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap line-clamp-4">{vm.description}</p>
+    <div className="relative">
+      <p className={`text-sm text-slate-300 leading-relaxed whitespace-pre-wrap ${clamp ? "line-clamp-4" : ""}`}>{vm.description}</p>
+      {onToggle && isLong && (
+        <button type="button" onClick={onToggle} className="mt-2 text-sm font-medium text-sky-400 active:opacity-70">
+          {expanded ? t("pdp.readLess") : t("pdp.readMore")}
+        </button>
+      )}
+    </div>
   );
 }
 
