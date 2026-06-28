@@ -8,10 +8,14 @@
 //   - yo'q, lekin "Tenant" jadvali bor (legacy) → 0_init baseline + migrate deploy
 //   - ikkalasi ham yo'q (bo'sh DB)              → migrate deploy (hammasi)
 //
-// Shu tariqa auto-deploy hech qanday qo'lda amalsiz xavfsiz o'tadi.
+// So'ng: SCHEMA DRIFT tekshiruvi. Legacy DB 0_init baseline qilinganda, agar u
+// 0_init'dagi ba'zi ustunlardan kechroq qo'shilganlarini (db push orqali) olmagan
+// bo'lsa, baseline ularni "qo'llangan" deb belgilaydi-yu, ustunlar yaratilmaydi
+// → runtime'da "Ma'lumotlar bazasi xatosi" (P2022). Drift bo'lsa `db push` bilan
+// qo'shimcha (additiv) ustun/jadvallarni xavfsiz moslashtiramiz.
 
 import { PrismaClient } from "@prisma/client";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 
 const run = (cmd) => execSync(cmd, { stdio: "inherit" });
 
@@ -41,6 +45,34 @@ async function detectState() {
   }
 }
 
+// Prisma schema bilan haqiqiy DB o'rtasidagi drift'ni tekshirish va, agar bo'lsa,
+// db push bilan moslashtirish. db push faqat additiv o'zgarishlarni avtomatik
+// qo'llaydi; destruktiv (ma'lumot yo'qotuvchi) o'zgarish bo'lsa xato beradi (xavfsiz).
+function healDrift() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    console.warn("[db-migrate] DATABASE_URL yo'q — drift tekshiruvi o'tkazib yuborildi.");
+    return;
+  }
+  const diff = spawnSync(
+    "npx",
+    ["prisma", "migrate", "diff", "--from-url", dbUrl, "--to-schema-datamodel", "prisma/schema.prisma", "--exit-code"],
+    { stdio: "pipe", encoding: "utf8" },
+  );
+  // exit 0 = drift yo'q, 2 = drift bor, boshqa = xato
+  if (diff.status === 0) {
+    console.log("[db-migrate] Drift yo'q — DB schema bilan mos.");
+    return;
+  }
+  if (diff.status === 2) {
+    console.log("[db-migrate] ⚠️ Schema drift aniqlandi — `prisma db push` bilan moslashtirilmoqda...");
+    run("npx prisma db push --skip-generate");
+    console.log("[db-migrate] ✅ Schema drift bartaraf etildi.");
+    return;
+  }
+  console.warn("[db-migrate] Drift tekshiruvi natija bermadi (status " + diff.status + "):", (diff.stderr || "").trim());
+}
+
 async function main() {
   const { hasMigrations, hasTenant } = await detectState();
 
@@ -55,6 +87,10 @@ async function main() {
 
   console.log("[db-migrate] prisma migrate deploy...");
   run("npx prisma migrate deploy");
+
+  // Baseline/legacy DB drift'ini bartaraf etish (Ma'lumotlar bazasi xatosi sababini).
+  healDrift();
+
   console.log("[db-migrate] ✅ Migratsiyalar tayyor.");
 }
 
