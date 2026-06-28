@@ -279,6 +279,7 @@ type StoreCategory = {
   name: string;
   slug: string;
   parentId: string | null;
+  imageUrl?: string | null;
 };
 
 type StoreBlock = {
@@ -2304,10 +2305,13 @@ function StoreInner({ slug }: { slug: string }) {
                         className="bg-slate-900 rounded-2xl p-3.5 text-left active:scale-[0.98] transition-transform border border-slate-800/60"
                       >
                         <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white mb-2.5"
-                          style={{ backgroundColor: primaryColor + "25" }}
+                          className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold text-white mb-2.5"
+                          style={cat.imageUrl ? {} : { backgroundColor: primaryColor + "25" }}
                         >
-                          {cat.name[0]?.toUpperCase() ?? "?"}
+                          {cat.imageUrl
+                            ? <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                            : (cat.name[0]?.toUpperCase() ?? "?")
+                          }
                         </div>
                         <p className="text-sm font-medium text-white leading-tight line-clamp-2">{cat.name}</p>
                         <p className="text-[11px] text-slate-500 mt-1">{t("catalog.productCount", { n: count })}</p>
@@ -2463,8 +2467,11 @@ function StoreInner({ slug }: { slug: string }) {
                         className={`rounded-2xl p-3 text-center transition-colors ${selectedCategoryId === cat.id ? "ring-2" : "bg-slate-900"} ${cats.length === 0 ? "opacity-40 cursor-default" : ""}`}
                         style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor + "20" } : {}}
                       >
-                        <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-1.5" style={{ backgroundColor: primaryColor + "25" }}>
-                          <span className="text-base">{cat.name[0]}</span>
+                        <div className="w-10 h-10 mx-auto rounded-full overflow-hidden flex items-center justify-center mb-1.5" style={(cat as StoreCategory).imageUrl ? {} : { backgroundColor: primaryColor + "25" }}>
+                          {(cat as StoreCategory).imageUrl
+                            ? <img src={(cat as StoreCategory).imageUrl!} alt={cat.name} className="w-full h-full object-cover" />
+                            : <span className="text-base">{cat.name[0]}</span>
+                          }
                         </div>
                         <p className="text-[11px] text-white">{cat.name}</p>
                       </button>
@@ -2513,9 +2520,12 @@ function StoreInner({ slug }: { slug: string }) {
                           className="w-16 h-16 rounded-full p-0.5"
                           style={{ background: `linear-gradient(135deg, ${primaryColor}, #ec4899)` }}
                         >
-                          <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-lg font-bold text-white">
-                            {cat.name[0]}
-                          </div>
+                          {(cat as StoreCategory).imageUrl
+                            ? <img src={(cat as StoreCategory).imageUrl!} alt={cat.name} className="w-full h-full rounded-full object-cover" />
+                            : <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-lg font-bold text-white">
+                                {cat.name[0]}
+                              </div>
+                          }
                         </div>
                         <span className="text-[10px] text-slate-300 max-w-[64px] truncate">{cat.name}</span>
                       </button>
@@ -2700,9 +2710,16 @@ function StoreInner({ slug }: { slug: string }) {
             case "category_products": {
               const count = (s.count as number) || 4;
               const catName = s.category as string | undefined;
-              let blockProds = catName
-                ? products.filter((p) => p.category?.name === catName)
-                : products;
+              // ID orqali moslashtirish — nom case-insensitive yoki slug bo'yicha
+              const targetCat = catName
+                ? categories.find((c) =>
+                    c.name.toLowerCase() === catName.toLowerCase() ||
+                    c.slug === catName.toLowerCase().replace(/\s+/g, "-")
+                  )
+                : null;
+              let blockProds = targetCat
+                ? products.filter((p) => p.categoryId === targetCat.id)
+                : catName ? [] : products;
               blockProds = blockProds.slice(0, count);
               // Mahsulot yo'q bo'lsa skeleton placeholder ko'rsat
               const showSkeleton = blockProds.length === 0;
