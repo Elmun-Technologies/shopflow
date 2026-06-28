@@ -17,6 +17,16 @@ import { PopupHost } from "./storefront/PopupHost";
 import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
 import { formatUzPhone, isValidUzPhone } from "../utils/phone";
 import { normalizeSingleConfig, type SingleSectionKey } from "../data/uiBuilderData";
+import {
+  CountdownBanner,
+  RatingChipPreview as RatingChipSection,
+  TrustBadgesPreview as TrustBadgesSection,
+  StatsPreview as StatsSection,
+  WeeklyBuyersPreview as WeeklyBuyersSection,
+  DescriptionPreview as DescriptionSection,
+  DeliveryPreview as DeliverySection,
+  type SinglePreviewProduct,
+} from "./storefront/SingleProductSections";
 
 // Profile sahifasi katta — faqat foydalanuvchi ochsa yuklaymiz
 const ProfilePage = lazy(() => import("./storefront/ProfilePage").then((m) => ({ default: m.ProfilePage })));
@@ -325,38 +335,7 @@ function injectAnalytics(brand: StoreBrand) {
   }
 }
 
-// Bugun yarim tunigacha qolgan millisekund.
-function msUntilMidnight(): number {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  return Math.max(0, midnight.getTime() - now.getTime());
-}
-
-// Single-product landing aksiya taymeri — kun oxirigacha ortga hisob (FOMO).
-// Persistsiz: har kuni yarim tunda yangilanadi.
-function CountdownBanner({ label, color }: { label: string; color: string }) {
-  const [remaining, setRemaining] = useState(msUntilMidnight);
-  useEffect(() => {
-    const id = setInterval(() => setRemaining(msUntilMidnight()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const h = Math.floor(remaining / 3_600_000);
-  const m = Math.floor((remaining % 3_600_000) / 60_000);
-  const s = Math.floor((remaining % 60_000) / 1000);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 border border-rose-500/30 bg-rose-500/10">
-      <div className="flex items-center gap-2 text-rose-300">
-        <Clock className="w-4 h-4 flex-shrink-0" />
-        <span className="text-sm font-medium">{label}</span>
-      </div>
-      <span className="text-lg font-bold font-mono tracking-wider text-white" style={{ color }}>
-        {pad(h)}:{pad(m)}:{pad(s)}
-      </span>
-    </div>
-  );
-}
+// CountdownBanner + msUntilMidnight → storefront/SingleProductSections.tsx (ulashilgan)
 
 type StorefrontData = {
   tenant: { id: string; name: string; slug: string; currency: string };
@@ -1416,108 +1395,57 @@ function StoreInner({ slug }: { slug: string }) {
 
     // Reyting chipi — sarlavha ostida (har ikki rejimda). Sharhlar mavjud bo'lsa
     // doim ko'rinadi; "reviews" bo'limi toggle'i faqat to'liq sharhlar ro'yxatini boshqaradi.
+    // Ulashilgan bo'limlar uchun view-model (konstruktor preview bilan bir xil shakl)
+    const sectionVm: SinglePreviewProduct = {
+      name: selectedProduct.name,
+      price,
+      oldPrice: oldPrice ?? undefined,
+      currency: data.tenant.currency,
+      imageUrl: selectedProduct.imageUrl ?? undefined,
+      description: desc || undefined,
+      stock: selectedProduct.stock,
+      featured: !!selectedProduct.featured,
+      categoryName: selectedProduct.category?.name,
+      reviewCount: selectedProduct.reviewCount ?? 0,
+      avgRating: selectedProduct.avgRating ?? 0,
+      weeklyBuyers,
+      comboCount: selectedProduct.comboAddons?.length ?? 0,
+    };
+
     const ratingChipEl =
       (selectedProduct.reviewCount ?? 0) > 0 ? (
-        <div className="flex items-center gap-1.5 mb-3">
-          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-          <span className="text-sm font-semibold text-white">{(selectedProduct.avgRating ?? 0).toFixed(1)}</span>
-          <span className="text-xs text-slate-500">·</span>
-          <span className="text-xs text-slate-400">{t("pdp.totalReviews", { count: selectedProduct.reviewCount ?? 0 })}</span>
-        </div>
+        <RatingChipSection vm={sectionVm} sample={false} className="mb-3" />
       ) : null;
 
     // Ishonch belgilari
     const trustBadgesEl = (
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => { haptic.light(); setTrustSheet("original"); }}
-          className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
-        >
-          <BadgeCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          <span className="text-xs font-medium text-white">{t("pdp.original")}</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
-        </button>
-        <button
-          type="button"
-          onClick={() => { haptic.light(); setTrustSheet("warranty"); }}
-          className="flex-1 flex items-center gap-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl active:scale-[0.98] transition-transform"
-        >
-          <ShieldCheck className="w-4 h-4 text-sky-400 flex-shrink-0" />
-          <span className="text-xs font-medium text-white">{t("pdp.warranty")}</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-500 ml-auto" />
-        </button>
-      </div>
+      <TrustBadgesSection
+        onOpenOriginal={() => { haptic.light(); setTrustSheet("original"); }}
+        onOpenWarranty={() => { haptic.light(); setTrustSheet("warranty"); }}
+      />
     );
 
     // Tezkor ma'lumot (kategoriya, mavjudlik, bestseller)
-    const statsEl = (
-      <div className="flex flex-wrap items-center gap-2">
-        {selectedProduct.category && (
-          <span className="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-1 rounded-md">
-            {selectedProduct.category.name}
-          </span>
-        )}
-        {selectedProduct.stock > 0 ? (
-          <span className="text-[11px] text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded-md">
-            {t("pdp.available")}
-          </span>
-        ) : (
-          <span className="text-[11px] text-rose-300 bg-rose-500/10 px-2 py-1 rounded-md">
-            {t("pdp.outOfStock")}
-          </span>
-        )}
-        {selectedProduct.featured && (
-          <span className="text-[11px] text-amber-300 bg-amber-500/10 px-2 py-1 rounded-md">{t("pdp.bestseller")}</span>
-        )}
-      </div>
-    );
+    const statsEl = <StatsSection vm={sectionVm} />;
 
     // Social proof — haftalik xaridorlar
-    const weeklyBuyersEl = weeklyBuyers > 0 ? (
-      <div className="flex items-center gap-1.5 text-xs text-slate-300">
-        <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
-        <span>{t("pdp.weeklyBuyers", { count: weeklyBuyers })}</span>
-      </div>
-    ) : null;
+    const weeklyBuyersEl = weeklyBuyers > 0 ? <WeeklyBuyersSection vm={sectionVm} sample={false} /> : null;
 
     // Aksiya taymeri — faqat single rejim konstruktorida
     const timerEl = <CountdownBanner label={t("single.timerLabel")} color={primaryColor} />;
 
     // Tavsif
     const descriptionEl = desc ? (
-      <div className="relative">
-        <p
-          className={`text-sm text-slate-300 leading-relaxed whitespace-pre-wrap ${
-            !descExpanded && descIsLong ? "line-clamp-4" : ""
-          }`}
-        >
-          {desc}
-        </p>
-        {descIsLong && (
-          <button
-            type="button"
-            onClick={() => { haptic.light(); setDescExpanded((v) => !v); }}
-            className="mt-2 text-sm font-medium text-sky-400 active:opacity-70"
-          >
-            {descExpanded ? t("pdp.readLess") : t("pdp.readMore")}
-          </button>
-        )}
-      </div>
+      <DescriptionSection
+        vm={sectionVm}
+        expanded={descExpanded}
+        isLong={descIsLong}
+        onToggle={() => { haptic.light(); setDescExpanded((v) => !v); }}
+      />
     ) : null;
 
     // Yetkazib berish
-    const deliveryEl = (
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
-          <Truck className="w-5 h-5 text-sky-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white">{t("pdp.delivery", { date: deliveryStr })}</div>
-          <div className="text-xs text-slate-400 mt-0.5">{t("pdp.deliveryNote")}</div>
-        </div>
-      </div>
-    );
+    const deliveryEl = <DeliverySection dateStr={deliveryStr} />;
 
     // Sharhlar (to'liq ro'yxat)
     const reviewsEl = (
