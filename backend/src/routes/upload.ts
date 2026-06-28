@@ -1,7 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { Readable } from "node:stream";
-import { createWriteStream } from "node:fs";
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -44,28 +42,27 @@ export const uploadRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "Faqat rasm fayllari: JPEG, PNG, WebP, GIF" });
     }
 
-    // Magic bytes ni tekshirish — aslida mos kelmaydigan faylni rad etish
+    // Butun faylni bufferga o'qish (MAX_SIZE=8MB bilan cheklangan).
+    // for-await iterator va pipe() ni aralashtirib bo'lmaydi — stream yarim iste'mol
+    // bo'lsa pipe() finish eventini olmaydi va promise hech qachon resolve bo'lmaydi.
     const chunks: Buffer[] = [];
-    const headerSize = 12;
-    let consumed = 0;
     for await (const chunk of data.file) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      consumed += chunk.length;
-      if (consumed >= headerSize) break;
     }
 
-    const header = Buffer.concat(chunks);
-    const detectedMime = detectMagicMime(header);
+    if (data.file.truncated) {
+      return reply.code(413).send({ error: `Rasm hajmi ${MAX_SIZE / 1024 / 1024}MB dan oshmasligi kerak` });
+    }
 
+    const fileBuffer = Buffer.concat(chunks);
+
+    // Magic bytes tekshiruvi — Content-Type'ga ishonib bo'lmaydi
+    const detectedMime = detectMagicMime(fileBuffer);
     if (!detectedMime || !ALLOWED_MIMES.has(detectedMime)) {
-      // Stream bo'sh qolmasligi uchun to'liq o'qib tashlash
-      for await (const _ of data.file) { /* drain */ }
       return reply.code(400).send({ error: "Fayl turi mos kelmayapti (magic bytes tekshiruvi muvaffaqiyatsiz)" });
     }
 
     const ext = EXT_MAP[detectedMime] ?? ".jpg";
-    // Defense-in-depth: tenant subdirektoriya. Path traversal'dan himoya uchun
-    // tenantId'ni filtrlaymiz (CUID — faqat alfanumerik, lekin xavfsizroq bo'lsin).
     const tenantSeg = String(req.session.tenantId).replace(/[^a-zA-Z0-9_-]/g, "");
     if (!tenantSeg) return reply.code(403).send({ error: "Tenant kontekst yo'q" });
     const tenantDir = path.join(UPLOADS_DIR, tenantSeg);
@@ -73,22 +70,9 @@ export const uploadRoutes: FastifyPluginAsync = async (app) => {
     const filename = `${crypto.randomUUID()}${ext}`;
     const filepath = path.join(tenantDir, filename);
 
-    // Header qismi + qolgan stream ni birlashtirish
-    const headStream = Readable.from(header);
-    const writeStream = createWriteStream(filepath);
-
     try {
-      await new Promise<void>((resolve, reject) => {
-        writeStream.on("error", reject);
-        writeStream.on("finish", resolve);
-        headStream.pipe(writeStream, { end: false });
-        headStream.on("end", () => {
-          data.file.pipe(writeStream);
-        });
-        data.file.on("error", reject);
-      });
+      await writeFile(filepath, fileBuffer);
     } catch (err) {
-      // Yozish muvaffaqiyatsiz bo'lsa — faylni tozalash
       unlink(filepath).catch(() => null);
       throw err;
     }
