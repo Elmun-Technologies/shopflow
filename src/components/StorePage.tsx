@@ -485,6 +485,7 @@ function StoreInner({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<StoreView>("home");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [catalogMode, setCatalogMode] = useState<"categories" | "products">("categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart(slug));
@@ -2133,7 +2134,7 @@ function StoreInner({ slug }: { slug: string }) {
           </div>
 
           {/* Name */}
-          <p className="text-[11px] text-slate-300 line-clamp-2 leading-tight mb-2 min-h-[28px]">{product.name}</p>
+          <p className="text-[11px] text-slate-300 line-clamp-3 leading-tight mb-2 min-h-[28px]">{product.name}</p>
 
           {/* Low stock indicator */}
           {lowStock && (
@@ -2231,90 +2232,148 @@ function StoreInner({ slug }: { slug: string }) {
 
   // ---- CATALOG ----
   if (view === "catalog") {
+    const showCatGrid = catalogMode === "categories" && !searchQuery;
+    const selectedCat = categories.find((c) => c.id === selectedCategoryId);
+    const catProductCount = (catId: string) =>
+      data.products.filter((p) => (p as { categoryId?: string }).categoryId === catId).length;
+
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <h2 className="text-base font-semibold text-white mb-2 px-1">Katalog</h2>
-          {/* Search bar */}
+        {/* Sticky header */}
+        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+          <div className="flex items-center gap-2 mb-2">
+            {!showCatGrid && (
+              <button
+                onClick={() => { setSelectedCategoryId(null); setCatalogMode("categories"); setSearchQuery(""); }}
+                className="p-1.5 -ml-1.5 rounded-lg text-slate-400 active:text-white active:bg-slate-800"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <h2 className="text-base font-semibold text-white flex-1">
+              {showCatGrid ? "Katalog" : (selectedCat?.name || t("catalog.allProducts"))}
+            </h2>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="search"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); if (e.target.value) { setSelectedCategoryId(null); setCatalogMode("products"); } }}
               placeholder={t("catalog.searchPlaceholder")}
-              className="w-full bg-slate-800 rounded-xl pl-9 pr-9 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              className="w-full bg-slate-800 rounded-xl pl-9 pr-9 py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-white">
+              <button onClick={() => { setSearchQuery(""); setCatalogMode("categories"); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500">
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
         </div>
-        {categories.length > 0 && (
-          <div className="bg-slate-950 border-b border-slate-800 px-3 py-2 overflow-x-auto whitespace-nowrap flex gap-2">
+
+        {showCatGrid ? (
+          /* ── Kategoriyalar gridi ── */
+          <div className="flex-1 overflow-y-auto pb-24">
+            {/* Barcha mahsulotlar shortcut */}
             <button
-              onClick={() => setSelectedCategoryId(null)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                !selectedCategoryId ? "text-white" : "bg-slate-800 text-slate-400"
-              }`}
-              style={!selectedCategoryId ? { backgroundColor: primaryColor } : {}}
+              onClick={() => { setSelectedCategoryId(null); setCatalogMode("products"); }}
+              className="w-full flex items-center justify-between px-4 py-3.5 border-b border-slate-800 active:bg-slate-900/80 transition-colors"
             >
-              {t("catalog.allCategories")}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl" style={{ backgroundColor: primaryColor + "20" }}>
+                  🛍️
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-white">{t("catalog.allProducts")}</p>
+                  <p className="text-[11px] text-slate-500">{t("catalog.productCount", { n: data.products.length })}</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-600" />
             </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategoryId(cat.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                  selectedCategoryId === cat.id ? "text-white" : "bg-slate-800 text-slate-400"
-                }`}
-                style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor } : {}}
-              >
-                {cat.name}
-              </button>
-            ))}
+
+            {categories.length > 0 ? (
+              <div className="p-4">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-3">Kategoriyalar</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {categories.map((cat) => {
+                    const count = catProductCount(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => { setSelectedCategoryId(cat.id); setCatalogMode("products"); }}
+                        className="bg-slate-900 rounded-2xl p-3.5 text-left active:scale-[0.98] transition-transform border border-slate-800/60"
+                      >
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white mb-2.5"
+                          style={{ backgroundColor: primaryColor + "25" }}
+                        >
+                          {cat.name[0]?.toUpperCase() ?? "?"}
+                        </div>
+                        <p className="text-sm font-medium text-white leading-tight line-clamp-2">{cat.name}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{t("catalog.productCount", { n: count })}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="py-16 text-center">
+                <Package className="w-10 h-10 mx-auto text-slate-600 mb-3" />
+                <p className="text-sm text-slate-400">Kategoriyalar yo'q</p>
+              </div>
+            )}
           </div>
-        )}
-        {/* Sort + result count bar */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/50">
-          <span className="text-[11px] text-slate-500">{t("catalog.productCount", { n: filteredProducts.length })}</span>
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="appearance-none bg-slate-800 border border-slate-700 text-xs text-white pl-3 pr-8 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-            >
-              <option value="popular">{t("catalog.sort.popular")}</option>
-              <option value="price_asc">{t("catalog.sort.priceAsc")}</option>
-              <option value="price_desc">{t("catalog.sort.priceDesc")}</option>
-              <option value="newest">{t("catalog.sort.newest")}</option>
-            </select>
-            <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 rotate-90 pointer-events-none" />
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto pb-24 p-3">
-          {filteredProducts.length === 0 ? (
-            <div className="py-16 text-center">
-              <Package className="w-12 h-12 mx-auto text-cream-300 mb-3" />
-              <p className="text-sm text-slate-400">
-                {searchQuery ? t("catalog.empty.search", { q: searchQuery }) : t("catalog.empty.category")}
-              </p>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="mt-3 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
+        ) : (
+          /* ── Mahsulotlar ro'yxati ── */
+          <>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/50">
+              <span className="text-[11px] text-slate-500">{t("catalog.productCount", { n: filteredProducts.length })}</span>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="appearance-none bg-slate-800 border border-slate-700 text-xs text-white pl-3 pr-8 py-1.5 rounded-lg focus:outline-none"
                 >
-                  {t("catalog.clearSearch")}
-                </button>
+                  <option value="popular">{t("catalog.sort.popular")}</option>
+                  <option value="price_asc">{t("catalog.sort.priceAsc")}</option>
+                  <option value="price_desc">{t("catalog.sort.priceDesc")}</option>
+                  <option value="newest">{t("catalog.sort.newest")}</option>
+                </select>
+                <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 rotate-90 pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto pb-24 p-3">
+              {filteredProducts.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Package className="w-12 h-12 mx-auto text-slate-600 mb-3" />
+                  <p className="text-sm text-slate-400">
+                    {searchQuery ? t("catalog.empty.search", { q: searchQuery }) : t("catalog.empty.category")}
+                  </p>
+                  {searchQuery && (
+                    <button
+                      onClick={() => { setSearchQuery(""); setCatalogMode("categories"); }}
+                      className="mt-3 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
+                    >
+                      {t("catalog.clearSearch")}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
               )}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
-          )}
-        </div>
-        <BottomNav active="catalog" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
+          </>
+        )}
+
+        <BottomNav
+          active="catalog"
+          cartCount={cartCount}
+          primaryColor={primaryColor}
+          onChange={(tab) => {
+            if (tab === "catalog") { setCatalogMode("categories"); setSelectedCategoryId(null); }
+            setView(TAB_VIEWS[tab]);
+          }}
+        />
         {selectedProduct && renderProductDetail()}
       </div>
     );
