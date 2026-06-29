@@ -806,6 +806,7 @@ function StoreInner({ slug }: { slug: string }) {
       setOrderResult(result);
       setCart([]);
       setView("success");
+      requestAnimationFrame(() => window.scrollTo(0, 0));
       twa?.HapticFeedback?.notificationOccurred("success");
       // Online to'lov tanlangan bo'lsa — provayder sahifasiga yo'naltiramiz
       if (result.paymentUrl) {
