@@ -793,7 +793,7 @@ function StoreInner({ slug }: { slug: string }) {
     try {
       const tgUser = twa?.initDataUnsafe?.user;
       const result = await submitCheckout(slug, {
-        customer: form,
+        customer: { ...form, lat: form.lat ?? undefined, lng: form.lng ?? undefined },
         items: cart.map((i) => ({ productId: i.productId, qty: i.qty })),
         telegram: tgUser ? {
           userId: tgUser.id,
