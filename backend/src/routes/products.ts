@@ -35,9 +35,15 @@ function toJsonInput(v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull
   return v as Prisma.InputJsonValue;
 }
 
+const LOW_STOCK_THRESHOLD = 5; // Dashboard LowStockAlert bilan bir xil
+
 const listQuery = z.object({
   search: z.string().optional(),
   categoryId: z.string().optional(),
+  // Ko'rinish holati: barchasi / faol (sotuvda) / yashirin
+  status: z.enum(["all", "active", "inactive"]).default("all"),
+  // Zaxira holati: barchasi / kam qolgan (<5, 0 ni ham) / tugagan (0)
+  stock: z.enum(["all", "low", "out"]).default("all"),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(200).default(50),
 });
@@ -50,6 +56,10 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const where = {
       tenantId: req.session.tenantId,
       ...(q.categoryId && { categoryId: q.categoryId }),
+      ...(q.status === "active" && { active: true }),
+      ...(q.status === "inactive" && { active: false }),
+      ...(q.stock === "low" && { stock: { lt: LOW_STOCK_THRESHOLD } }),
+      ...(q.stock === "out" && { stock: { lte: 0 } }),
       ...(q.search && {
         OR: [
           { name: { contains: q.search, mode: "insensitive" as const } },

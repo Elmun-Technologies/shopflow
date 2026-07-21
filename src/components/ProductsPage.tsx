@@ -61,6 +61,8 @@ export default function ProductsPage() {
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
   const [page, setPage] = useState(1);
   const pageSize = 24;
   const [editing, setEditing] = useState<Product | null>(null);
@@ -78,8 +80,10 @@ export default function ProductsPage() {
       pageSize,
       search: search || undefined,
       categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+      status: statusFilter,
+      stock: stockFilter,
     }),
-    [page, search, categoryFilter],
+    [page, search, categoryFilter, statusFilter, stockFilter],
   );
   const { data, loading, error, refetch } = useQueryAsync(["products", "list", params], () => productsApi.list(params));
   const { data: categories, refetch: refetchCategories } = useQueryAsync(["categories", "list"], () => categoriesApi.list());
@@ -87,6 +91,16 @@ export default function ProductsPage() {
   const products = data?.items ?? [];
   const total = data?.total ?? 0;
   const cats = categories ?? [];
+
+  const hasActiveFilters =
+    !!search || categoryFilter !== "all" || statusFilter !== "all" || stockFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setStockFilter("all");
+    setPage(1);
+  };
 
   const handleDelete = async (p: Product) => {
     if (!confirm(t("products.deleteConfirm", { name: p.name }))) return;
@@ -224,6 +238,30 @@ export default function ProductsPage() {
             </option>
           ))}
         </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as typeof statusFilter);
+            setPage(1);
+          }}
+          className="px-3 py-2.5 bg-white border border-cream-300 rounded-lg text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+        >
+          <option value="all">{t("products.filter.allStatus")}</option>
+          <option value="active">{t("products.filter.active")}</option>
+          <option value="inactive">{t("products.filter.inactive")}</option>
+        </select>
+        <select
+          value={stockFilter}
+          onChange={(e) => {
+            setStockFilter(e.target.value as typeof stockFilter);
+            setPage(1);
+          }}
+          className="px-3 py-2.5 bg-white border border-cream-300 rounded-lg text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+        >
+          <option value="all">{t("products.filter.allStock")}</option>
+          <option value="low">{t("products.filter.lowStock")}</option>
+          <option value="out">{t("products.filter.outStock")}</option>
+        </select>
       </div>
 
       {loading ? (
@@ -256,11 +294,19 @@ export default function ProductsPage() {
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white border border-cream-300 rounded-xl">
           <Package className="w-12 h-12 text-cream-300 mb-3" />
           <p className="text-base font-semibold text-forest-800">
-            {search ? t("products.empty.search") : t("products.empty.none")}
+            {hasActiveFilters ? t("products.empty.filtered") : t("products.empty.none")}
           </p>
           <p className="text-sm text-slate-500 mt-1 max-w-md">
-            {t("products.empty.hint")}
+            {hasActiveFilters ? t("products.empty.filteredHint") : t("products.empty.hint")}
           </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="mt-4 px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800"
+            >
+              {t("products.filter.clear")}
+            </button>
+          )}
         </div>
       ) : (
         <>
