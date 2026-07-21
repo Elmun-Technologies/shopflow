@@ -29,6 +29,7 @@ import { publishToTenant } from "../lib/sse-bus.js";
 import { pushToTenantAdmins } from "../lib/web-push.js";
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
+import { createOrderCodeWithRetry } from "../lib/codes.js";
 
 // Shaping uchun mahsulot bilan birga kerakli relation'lar.
 const PRODUCT_INCLUDE = {
@@ -439,44 +440,39 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
     ].filter(Boolean) as string[];
     const shippingAddress = [data.delivery.region, data.delivery.address].filter(Boolean).join(", ") || null;
 
-    // Buyurtma + stock kamaytirish — atomic.
+    // Buyurtma + stock kamaytirish — atomic. Kod race-safe (P2002 retry): concurrent
+    // websayt buyurtmalari bir xil ORD-NNNN olib qolsa, ilgari 500 qaytardi — endi
+    // yangi kod bilan qayta yaratiladi (admin/storefront yo'llari kabi).
     let order: { id: string; code: string };
     try {
-      order = await app.prisma.$transaction(async (tx) => {
-        const prefix = "ORD-";
-        const last = await tx.order.findFirst({
-          where: { tenantId, code: { startsWith: prefix } },
-          orderBy: { createdAt: "desc" },
-          select: { code: true },
-        });
-        const lastNum = last ? Number(last.code.slice(prefix.length)) || 7000 : 7000;
-        const code = `${prefix}${lastNum + 1}`;
+      order = await createOrderCodeWithRetry(app.prisma, tenantId, (code) =>
+        app.prisma.$transaction(async (tx) => {
+          for (const i of lineItems) {
+            const res = await tx.product.updateMany({
+              where: { id: i.productId, tenantId, stock: { gte: i.qty } },
+              data: { stock: { decrement: i.qty } },
+            });
+            if (res.count === 0) throw new Error(`OUT_OF_STOCK:${i.productId}`);
+          }
 
-        for (const i of lineItems) {
-          const res = await tx.product.updateMany({
-            where: { id: i.productId, tenantId, stock: { gte: i.qty } },
-            data: { stock: { decrement: i.qty } },
+          const created = await tx.order.create({
+            data: {
+              tenantId,
+              code,
+              status: "PENDING",
+              total,
+              currency: tenant.currency,
+              notes: noteParts.join(" | ") || null,
+              customerId: customer!.id,
+              channelId: websiteChannel?.id,
+              shippingAddress,
+              items: { create: lineItems.map((i) => ({ productId: i.productId, qty: i.qty, price: i.price })) },
+            },
+            select: { id: true, code: true },
           });
-          if (res.count === 0) throw new Error(`OUT_OF_STOCK:${i.productId}`);
-        }
-
-        const created = await tx.order.create({
-          data: {
-            tenantId,
-            code,
-            status: "PENDING",
-            total,
-            currency: tenant.currency,
-            notes: noteParts.join(" | ") || null,
-            customerId: customer!.id,
-            channelId: websiteChannel?.id,
-            shippingAddress,
-            items: { create: lineItems.map((i) => ({ productId: i.productId, qty: i.qty, price: i.price })) },
-          },
-          select: { id: true, code: true },
-        });
-        return created;
-      });
+          return created;
+        }),
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.startsWith("OUT_OF_STOCK:")) {

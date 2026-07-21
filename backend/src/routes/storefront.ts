@@ -13,6 +13,7 @@ import { publishToTenant } from "../lib/sse-bus.js";
 import { pushToTenantAdmins } from "../lib/web-push.js";
 import { buildClickPaymentUrl } from "../lib/click-client.js";
 import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
+import { createOrderCodeWithRetry } from "../lib/codes.js";
 import type { PrismaClient } from "@prisma/client";
 
 // Promo kodni inline tekshirish (import tsikli oldini olish)
@@ -301,24 +302,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
 
-    // Promo kod tekshiruvi
-    let promoCodeId: string | null = null;
-    let promoDiscount = 0;
-    if (data.promoCode) {
-      const promoResult = await applyPromoValidation(
-        app.prisma, tenant.id, data.promoCode, subtotal,
-        null, // customerId keyinroq aniqlanadi
-      );
-      if (promoResult.valid) {
-        promoCodeId = promoResult.promoCodeId;
-        promoDiscount = promoResult.discount;
-      }
-      // Noto'g'ri promo kod checkout'ni to'xtatmaydi — shunchaki e'tiborsiz qoldiriladi
-    }
-
-    const total = subtotal - promoDiscount;
-
-    // Mijozni topish yoki yaratish — avval Telegram userId bo'yicha, keyin telefon bo'yicha
+    // Mijozni topish yoki yaratish — avval Telegram userId bo'yicha, keyin telefon bo'yicha.
+    // MUHIM: promo tekshiruvidan OLDIN aniqlanadi — perUserLimit (har mijoz uchun limit)
+    // customerId'ga tayanadi. Aks holda "bir marta ishlatiladigan" kodni cheksiz qayta
+    // ishlatish mumkin bo'lardi (checkout'ni to'g'ridan-to'g'ri chaqirib).
     const tgUserId = data.telegram?.userId ? BigInt(data.telegram.userId) : null;
     let customer = null as Awaited<ReturnType<typeof app.prisma.customer.findFirst>> | null;
     if (tgUserId) {
@@ -350,6 +337,22 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    // Promo kod tekshiruvi — endi mijoz aniq, perUserLimit ham tekshiriladi
+    let promoCodeId: string | null = null;
+    let promoDiscount = 0;
+    if (data.promoCode) {
+      const promoResult = await applyPromoValidation(
+        app.prisma, tenant.id, data.promoCode, subtotal, customer.id,
+      );
+      if (promoResult.valid) {
+        promoCodeId = promoResult.promoCodeId;
+        promoDiscount = promoResult.discount;
+      }
+      // Noto'g'ri promo kod checkout'ni to'xtatmaydi — shunchaki e'tiborsiz qoldiriladi
+    }
+
+    const total = subtotal - promoDiscount;
+
     // Kanal — agar mavjud bo'lsa
     let channelId: string | undefined;
     if (data.channelSlug) {
@@ -372,80 +375,74 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     ].filter(Boolean);
 
     // Order yaratish + stock kamaytirish — atomic transaction ichida.
-    // Order kodi ham shu transaction ichida hisoblanadi (race condition yo'q).
+    // Order kodi race-safe: createOrderCodeWithRetry P2002 (dublikat kod)'da qayta
+    // urinadi. Concurrent checkout'lar bir xil ORD-NNNN olib qolsa, ilgari 500 xato
+    // qaytarardi — endi yangi kod bilan qayta yaratiladi.
     let order;
     try {
-      order = await app.prisma.$transaction(async (tx) => {
-      // Order kodi — tenant uchun oxirgi ORD-NNNN ni LOCK bilan olamiz
-      const prefix = "ORD-";
-      const last = await tx.order.findFirst({
-        where: { tenantId: tenant.id, code: { startsWith: prefix } },
-        orderBy: { createdAt: "desc" },
-        select: { code: true },
-      });
-      const lastNum = last ? Number(last.code.slice(prefix.length)) || 7000 : 7000;
-      const code = `${prefix}${lastNum + 1}`;
-
-      // Stock kamaytirish — atomic SQL: faqat stock >= qty bo'lganda
-      // muvaffaqiyatli o'tadi. Concurrent checkout'larda oversell oldini oladi
-      // (updateMany count=0 → transaction qaytariladi).
-      for (const item of items) {
-        if (item.stock !== null && item.stock !== undefined) {
-          const res = await tx.product.updateMany({
-            where: { id: item.productId, tenantId: tenant.id, stock: { gte: item.qty } },
-            data: { stock: { decrement: item.qty } },
-          });
-          if (res.count === 0) {
-            // Concurrent boshqa checkout stockni nolga tushirgan — buyurtmani bekor qilamiz
-            throw new Error(`OUT_OF_STOCK:${item.productId}`);
+      order = await createOrderCodeWithRetry(app.prisma, tenant.id, (code) =>
+        app.prisma.$transaction(async (tx) => {
+          // Stock kamaytirish — atomic SQL: faqat stock >= qty bo'lganda
+          // muvaffaqiyatli o'tadi. Concurrent checkout'larda oversell oldini oladi
+          // (updateMany count=0 → transaction qaytariladi).
+          for (const item of items) {
+            if (item.stock !== null && item.stock !== undefined) {
+              const res = await tx.product.updateMany({
+                where: { id: item.productId, tenantId: tenant.id, stock: { gte: item.qty } },
+                data: { stock: { decrement: item.qty } },
+              });
+              if (res.count === 0) {
+                // Concurrent boshqa checkout stockni nolga tushirgan — buyurtmani bekor qilamiz
+                throw new Error(`OUT_OF_STOCK:${item.productId}`);
+              }
+            }
           }
-        }
-      }
 
-      const order = await tx.order.create({
-        data: {
-          tenantId: tenant.id,
-          code,
-          status: "PENDING",
-          total,
-          currency: tenant.currency,
-          notes: noteParts.join(" | ") || null,
-          customerId: customer.id,
-          channelId,
-          shippingAddress: data.customer.address || null,
-          shippingLat: data.customer.lat ?? null,
-          shippingLng: data.customer.lng ?? null,
-          promoCodeId,
-          promoDiscount: promoDiscount > 0 ? promoDiscount : null,
-          items: {
-            create: items.map((i) => ({
-              productId: i.productId,
-              qty: i.qty,
-              price: i.price,
-            })),
-          },
-        },
-        include: { items: true },
-      });
+          const created = await tx.order.create({
+            data: {
+              tenantId: tenant.id,
+              code,
+              status: "PENDING",
+              total,
+              currency: tenant.currency,
+              notes: noteParts.join(" | ") || null,
+              customerId: customer.id,
+              channelId,
+              shippingAddress: data.customer.address || null,
+              shippingLat: data.customer.lat ?? null,
+              shippingLng: data.customer.lng ?? null,
+              promoCodeId,
+              promoDiscount: promoDiscount > 0 ? promoDiscount : null,
+              items: {
+                create: items.map((i) => ({
+                  productId: i.productId,
+                  qty: i.qty,
+                  price: i.price,
+                })),
+              },
+            },
+            include: { items: true },
+          });
 
-      // Promo foydalanishini yozib qo'yamiz + usageCount oshiramiz
-      if (promoCodeId && promoDiscount > 0) {
-        await tx.promoUsage.create({
-          data: {
-            tenantId: tenant.id,
-            promoCodeId,
-            customerId: customer.id,
-            orderId: order.id,
-          },
-        });
-        await tx.promoCode.update({
-          where: { id: promoCodeId },
-          data: { usageCount: { increment: 1 } },
-        });
-      }
+          // Promo foydalanishini yozib qo'yamiz + usageCount oshiramiz
+          if (promoCodeId && promoDiscount > 0) {
+            await tx.promoUsage.create({
+              data: {
+                tenantId: tenant.id,
+                promoCodeId,
+                customerId: customer.id,
+                orderId: created.id,
+              },
+            });
+            await tx.promoCode.update({
+              where: { id: promoCodeId },
+              data: { usageCount: { increment: 1 } },
+            });
+          }
 
-      return order;
-      });
+          return created;
+        }),
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.startsWith("OUT_OF_STOCK:")) {
