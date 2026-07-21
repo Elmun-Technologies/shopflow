@@ -5,6 +5,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import argon2 from "argon2";
+import { randomInt } from "node:crypto";
 import { generateApiKey } from "../lib/api-key.js";
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
@@ -213,10 +214,12 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
     });
     if (existing) return reply.code(409).send({ error: "Bu email allaqachon ro'yxatda" });
 
-    // 12 belgili o'qiladigan parol — ambiguous belgilarsiz (0/O/1/l)
+    // 12 belgili o'qiladigan parol — ambiguous belgilarsiz (0/O/1/l).
+    // MUHIM: bu login credential (SMTP hali ulanmagan) — kriptografik CSPRNG
+    // (crypto.randomInt) ishlatiladi, Math.random() EMAS (bashorat qilinadigan).
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
     const tempPassword = Array.from({ length: 12 }, () =>
-      alphabet[Math.floor(Math.random() * alphabet.length)],
+      alphabet[randomInt(alphabet.length)],
     ).join("");
     const passwordHash = await argon2.hash(tempPassword);
 

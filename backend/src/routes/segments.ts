@@ -432,7 +432,23 @@ export const segmentRoutes: FastifyPluginAsync = async (app) => {
           where: { segmentId: id, tenantId: req.session.tenantId },
           select: { customerId: true },
         });
-        customerIds = members.map((m) => m.customerId);
+        const memberIds = members.map((m) => m.customerId);
+        // MUHIM: MANUAL segment ham promo opt-out'ni hurmat qilishi shart
+        // (AUTOMATIC branch kabi). Aks holda reklama xabarlarini o'chirgan mijoz
+        // ham qo'lda segmentga qo'shilgan bo'lsa xabar olardi (compliance).
+        if (memberIds.length > 0) {
+          const optedIn = await app.prisma.customer.findMany({
+            where: {
+              tenantId: req.session.tenantId,
+              id: { in: memberIds },
+              telegramUserId: { not: null },
+              notifyPromotions: true,
+            },
+            select: { id: true },
+            take: 1000,
+          });
+          customerIds = optedIn.map((c) => c.id);
+        }
       } else {
         const where = conditionsToWhere((seg.conditions as unknown as CondInput[]) ?? [], req.session.tenantId);
         const customers = await app.prisma.customer.findMany({

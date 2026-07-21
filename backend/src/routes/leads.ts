@@ -48,6 +48,31 @@ const listQuerySchema = z.object({
 export const leadRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.authenticate);
 
+  // channelId/assigneeId tenant ichida ekanini tekshiradi. Aks holda boshqa
+  // tenant'ning Channel/User id'sini yozish mumkin edi → include join orqali
+  // o'sha tenant nomlari sizib chiqardi (cross-tenant leak). Bo'sh string
+  // e'tiborsiz (unset). Xato bo'lsa qisqa xabar qaytaradi, aks holda null.
+  const validateLeadRefs = async (
+    tenantId: string,
+    data: { channelId?: string; assigneeId?: string },
+  ): Promise<string | null> => {
+    if (data.channelId) {
+      const ch = await app.prisma.channel.findFirst({
+        where: { id: data.channelId, tenantId },
+        select: { id: true },
+      });
+      if (!ch) return "Kanal topilmadi";
+    }
+    if (data.assigneeId) {
+      const u = await app.prisma.user.findFirst({
+        where: { id: data.assigneeId, tenantId },
+        select: { id: true },
+      });
+      if (!u) return "Mas'ul xodim topilmadi";
+    }
+    return null;
+  };
+
   app.get("/", async (req) => {
     const q = listQuerySchema.parse(req.query);
     const where = {
@@ -136,9 +161,11 @@ export const leadRoutes: FastifyPluginAsync = async (app) => {
     return lead;
   });
 
-  app.post("/", async (req) => {
+  app.post("/", async (req, reply) => {
     const data = createLeadSchema.parse(req.body);
     const tenantId = req.session.tenantId;
+    const refErr = await validateLeadRefs(tenantId, data);
+    if (refErr) return reply.code(400).send({ error: refErr });
     const code = await nextLeadCode(app.prisma, tenantId);
     const lead = await app.prisma.lead.create({
       data: {
@@ -160,6 +187,9 @@ export const leadRoutes: FastifyPluginAsync = async (app) => {
       where: { id, tenantId: req.session.tenantId },
     });
     if (!lead) return reply.code(404).send({ error: "Not found" });
+
+    const refErr = await validateLeadRefs(req.session.tenantId, data);
+    if (refErr) return reply.code(400).send({ error: refErr });
 
     return app.prisma.$transaction(async (tx) => {
       const affected = await tx.lead.updateMany({
