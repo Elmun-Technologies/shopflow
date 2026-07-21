@@ -19,8 +19,16 @@ import {
   EyeOff,
   Upload,
   PackagePlus,
+  ChevronDown,
+  Globe,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
+import ProductContentEditor, {
+  parseProductContent,
+  serializeProductContent,
+  type ContentLocale,
+  type ProductContentState,
+} from "./ProductContentEditor";
 import { Skeleton } from "./ui/Skeleton";
 import { useAppToast } from "./ui/Toast";
 
@@ -758,6 +766,18 @@ function ProductFormModal({
   const [uploading, setUploading] = useState(false);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
+  // Public API v1 maydonlari — slug (barqaror URL identifikatori), origin (kelib chiqishi),
+  // va boy marketing kontenti (per-locale JSON). Bo'sh bo'lsa: slug name'dan avto-generatsiya.
+  const [slug, setSlug] = useState(product?.slug ?? "");
+  const [origin, setOrigin] = useState(product?.origin ?? "");
+  const [contentState, setContentState] = useState<ProductContentState>(() =>
+    parseProductContent(product?.content),
+  );
+  const [contentLocale, setContentLocale] = useState<ContentLocale>("uz");
+  // Kengaytiriladigan bo'lim — mavjud kontent bo'lsa avtomatik ochiq.
+  const [advancedOpen, setAdvancedOpen] = useState(
+    () => !!(product?.slug || product?.origin || product?.content),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -857,6 +877,11 @@ function ProductFormModal({
         images: images.slice(1),
         featured,
         active,
+        // Public API v1 — slug bo'sh bo'lsa backend name'dan generatsiya qiladi.
+        // Faqat aniq kiritilgan bo'lsa yuboramiz (regex: kichik harf/raqam/tire).
+        slug: slug.trim() || undefined,
+        origin: origin.trim() || null,
+        content: serializeProductContent(contentState) ?? null,
       };
       let savedProductId = product?.id;
       if (product) {
@@ -1201,6 +1226,65 @@ function ProductFormModal({
             </div>
             );
           })()}
+
+          {/* Public API v1 / boy kontent — tashqi saytlar va single-product landing uchun.
+              Kengaytiriladigan bo'lim (ko'pchilik mahsulotlarga kerak emas). */}
+          <div className="rounded-xl border border-cream-300 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((v) => !v)}
+              className="w-full flex items-center gap-2 px-3.5 py-3 bg-cream-50 hover:bg-cream-100 text-left transition-colors"
+            >
+              <Globe className="w-4 h-4 text-forest-700 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-forest-800">{t("productContent.sectionTitle")}</div>
+                <div className="text-[11px] text-slate-500">{t("productContent.sectionHint")}</div>
+              </div>
+              <ChevronDown
+                className={"w-4 h-4 text-slate-400 transition-transform " + (advancedOpen ? "rotate-180" : "")}
+              />
+            </button>
+            {advancedOpen && (
+              <div className="p-3.5 space-y-4 border-t border-cream-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label={t("productContent.slug")}>
+                    <input
+                      type="text"
+                      value={slug}
+                      onChange={(e) =>
+                        setSlug(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]+/g, "-")
+                            .replace(/^-+/, ""),
+                        )
+                      }
+                      placeholder={t("productContent.slugPlaceholder")}
+                      className="input font-mono"
+                      maxLength={80}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">{t("productContent.slugHelp")}</p>
+                  </Field>
+                  <Field label={t("productContent.origin")}>
+                    <input
+                      type="text"
+                      value={origin}
+                      onChange={(e) => setOrigin(e.target.value)}
+                      placeholder={t("productContent.originPlaceholder")}
+                      className="input"
+                      maxLength={60}
+                    />
+                  </Field>
+                </div>
+                <ProductContentEditor
+                  value={contentState}
+                  onChange={setContentState}
+                  activeLocale={contentLocale}
+                  onLocaleChange={setContentLocale}
+                />
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">

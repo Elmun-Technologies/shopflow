@@ -26,8 +26,13 @@ const productSchema = z.object({
 });
 
 // content (ixtiyoriy JSON) ni Prisma input'ga keltirish.
-function toJsonInput(v: unknown): Prisma.InputJsonValue | undefined {
-  return v === undefined ? undefined : (v as Prisma.InputJsonValue);
+// - undefined  → maydonga tegilmaydi (patch'da o'zgarmaydi)
+// - null       → JSON NULL (admin kontentni tozalaganda). Prisma nullable Json
+//                maydoni uchun JS `null` emas, `Prisma.JsonNull` talab qiladi.
+function toJsonInput(v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return Prisma.JsonNull;
+  return v as Prisma.InputJsonValue;
 }
 
 const listQuery = z.object({
