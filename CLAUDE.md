@@ -293,6 +293,10 @@ Har biri uchun ulanish yo'riqnomasi: **`INTEGRATIONS.md`**.
 - ✅ **Single-product sayqal** — WYSIWYG konstruktor preview (real mahsulot ma'lumoti), grip drag-drop, single sahifa polish; ulashilgan **`src/components/storefront/SingleProductSections.tsx`** (konstruktor preview + live storefront bir komponentdan — WYSIWYG kafolati)
 - ✅ **Boy kontent admin UI** — mahsulot formasida "Public API va boy kontent" kengaytiriladigan bo'limi: slug (jonli sanitatsiya), origin, va bilingual (UZ/RU) editor (tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). `src/components/ProductContentEditor.tsx` flat va per-locale `{uz,ru}` kontentni o'qiydi/yozadi, noma'lum kalitlarni (`_extra`) saqlaydi. Backend `toJsonInput` → `Prisma.JsonNull` (tozalash). Endi `content` DB/seed emas, UI orqali. **Public API v1 va single-product landing shu kontentni render qiladi.**
 - ✅ **Mahsulot filtrlari** — ProductsPage: holat (sotuvda/yashirin) + zaxira (kam qolgan <5 / tugagan) filtrlari; filtr-aware bo'sh holat ("Filtrlarni tozalash"). Yashirin mahsulot kartada opacity/grayscale + "Yashirin" belgisi bilan ajratiladi.
+- ✅ **Xavfsizlik/barqarorlik auditi (read-only bug hunt → fix)**:
+  - **Promo perUserLimit** checkout'da tekshirilmasdi — mijoz promo tekshiruvidan oldin aniqlanadigan qilib tuzatildi ("har mijoz uchun 1 marta" endi haqiqatda ishlaydi).
+  - **Order kod race** — storefront + public-api concurrent checkout'da bir xil `ORD-NNNN` → P2002 → 500 edi. Endi `createOrderCodeWithRetry` (admin yo'li kabi).
+  - **Payme CheckTransaction/GetStatement** — ilgari qattiq (state:1 / bo'sh) edi. Endi saqlangan tranzaksiyadan haqiqiy state/vaqt qaytadi (`paymeStateForStatus`, `payment-reconcile.ts`da testlangan).
 
 ---
 
