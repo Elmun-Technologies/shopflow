@@ -648,9 +648,20 @@ function ProductCard({
     }`}>
       <div className="w-full aspect-video bg-cream-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
         {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className={`w-full h-full object-cover ${product.active ? "" : "opacity-50 grayscale"}`}
+          />
         ) : (
           <Package className="w-8 h-8 text-slate-400" />
+        )}
+        {/* Yashirin (sotuvda emas) mahsulot — do'konda ko'rinmaydi */}
+        {!product.active && (
+          <span className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-800/80 backdrop-blur text-white text-[10px] font-medium">
+            <EyeOff className="w-3 h-3" />
+            {t("products.filter.inactive")}
+          </span>
         )}
         {/* Tanlash chexbox — hover'da yoki tanlangan bo'lsa ko'rinadi */}
         <button
