@@ -191,11 +191,13 @@ function StringListEditor({
   onChange,
   placeholder,
   addLabel,
+  removeLabel,
 }: {
   items: string[];
   onChange: (next: string[]) => void;
   placeholder: string;
   addLabel: string;
+  removeLabel: string;
 }) {
   return (
     <div className="space-y-2">
@@ -212,7 +214,7 @@ function StringListEditor({
             type="button"
             onClick={() => onChange(items.filter((_, j) => j !== i))}
             className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-            aria-label={addLabel}
+            aria-label={removeLabel}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -234,12 +236,14 @@ function CardListEditor<T>({
   onChange,
   makeEmpty,
   addLabel,
+  removeLabel,
   renderRow,
 }: {
   items: T[];
   onChange: (next: T[]) => void;
   makeEmpty: () => T;
   addLabel: string;
+  removeLabel: string;
   renderRow: (item: T, update: (patch: Partial<T>) => void) => React.ReactNode;
 }) {
   return (
@@ -251,7 +255,7 @@ function CardListEditor<T>({
             type="button"
             onClick={() => onChange(items.filter((_, j) => j !== i))}
             className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-            aria-label={addLabel}
+            aria-label={removeLabel}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -322,6 +326,7 @@ export default function ProductContentEditor({
           onChange={(highlights) => patchLocale({ highlights })}
           placeholder={t("productContent.highlightPlaceholder")}
           addLabel={t("productContent.addHighlight")}
+          removeLabel={t("common.delete")}
         />
       </div>
 
@@ -332,6 +337,7 @@ export default function ProductContentEditor({
           onChange={(benefits) => patchLocale({ benefits })}
           makeEmpty={() => ({ icon: "", title: "", description: "" })}
           addLabel={t("productContent.addBenefit")}
+          removeLabel={t("common.delete")}
           renderRow={(b, update) => (
             <div className="space-y-2">
               <div className="flex gap-2">
@@ -370,6 +376,7 @@ export default function ProductContentEditor({
           onChange={(ingredients) => patchLocale({ ingredients })}
           makeEmpty={() => ({ name: "", amount: "", dailyValue: "" })}
           addLabel={t("productContent.addIngredient")}
+          removeLabel={t("common.delete")}
           renderRow={(g, update) => (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <input
@@ -417,6 +424,7 @@ export default function ProductContentEditor({
           onChange={(faq) => patchLocale({ faq })}
           makeEmpty={() => ({ question: "", answer: "" })}
           addLabel={t("productContent.addFaq")}
+          removeLabel={t("common.delete")}
           renderRow={(f, update) => (
             <div className="space-y-2">
               <input
