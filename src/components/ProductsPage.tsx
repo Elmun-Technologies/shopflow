@@ -21,6 +21,7 @@ import {
   PackagePlus,
   ChevronDown,
   Globe,
+  Copy,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
 import ProductContentEditor, {
@@ -106,6 +107,22 @@ export default function ProductsPage() {
     if (!confirm(t("products.deleteConfirm", { name: p.name }))) return;
     await productsApi.delete(p.id);
     refetch();
+  };
+
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  const handleDuplicate = async (p: Product) => {
+    setDuplicating(p.id);
+    try {
+      const created = await productsApi.duplicate(p.id);
+      toast.success(t("products.duplicate.success", { name: created.name }));
+      refetch();
+      // Yangi nusxa (qoralama) darhol tahrirlash uchun ochiladi
+      setEditing(created);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setDuplicating(null);
+    }
   };
 
   const toggleSelected = (id: string) => {
@@ -408,6 +425,8 @@ export default function ProductsPage() {
               onEdit={() => setEditing(p)}
               onDelete={() => handleDelete(p)}
               onRestock={() => setRestocking(p)}
+              onDuplicate={() => handleDuplicate(p)}
+              duplicating={duplicating === p.id}
             />
           ))}
         </div>
@@ -627,6 +646,8 @@ function ProductCard({
   onEdit,
   onDelete,
   onRestock,
+  onDuplicate,
+  duplicating,
 }: {
   product: Product;
   currency: string;
@@ -635,6 +656,8 @@ function ProductCard({
   onEdit: () => void;
   onDelete: () => void;
   onRestock: () => void;
+  onDuplicate: () => void;
+  duplicating: boolean;
 }) {
   const { t } = useT();
   const { tenant } = useAuth();
@@ -695,6 +718,14 @@ function ProductCard({
             title={t("products.card.edit")}
           >
             <Edit2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onDuplicate}
+            disabled={duplicating}
+            className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900 disabled:opacity-50"
+            title={t("products.card.duplicate")}
+          >
+            {duplicating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={onDelete}

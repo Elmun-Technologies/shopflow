@@ -506,6 +506,8 @@ export const dictionary: Record<string, Entry> = {
   "products.card.deselect": { uz: "Tanlovni olib tashlash", ru: "Снять выбор" },
   "products.card.edit": { uz: "Tahrirlash", ru: "Редактировать" },
   "products.card.delete": { uz: "O'chirish", ru: "Удалить" },
+  "products.card.duplicate": { uz: "Nusxalash", ru: "Дублировать" },
+  "products.duplicate.success": { uz: "Nusxa yaratildi: {name} (qoralama)", ru: "Создана копия: {name} (черновик)" },
 
   // ─── Admin: ProductFormModal ──────────────────────────
   "productForm.edit": { uz: "Mahsulotni tahrirlash", ru: "Редактировать товар" },

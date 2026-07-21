@@ -128,6 +128,8 @@ export const productsApi = {
       method: "POST",
       body,
     }),
+
+  duplicate: (id: string) => api<Product>(`/products/${id}/duplicate`, { method: "POST" }),
 };
 
 // ===== Customers =====
