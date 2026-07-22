@@ -291,6 +291,10 @@ o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
 - [ ] **JWT query-string orqali** (`tenant-export.ts`, `events.ts`) — `?token=` proxy/Sentry loglariga tushadi. SSE (EventSource) header yubora olmaydi, shuning uchun qisqa muddatli maxsus download/SSE token kerak (auth oqimi o'zgaradi).
 - [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
 
+### 📊 Hisobot aniqligi (audit — qaror kerak, avtomatik qilinmadi)
+- [ ] **Timezone (UTC vs Asia/Tashkent)** — `dashboard.ts` KPI oynasi server-local `setHours`, trend/daily bucketlar esa `date_trunc(... AT TIME ZONE 'UTC')`. UTC serverda O'zbekiston 00:00–05:00 sotuvlari oldingi kunga tushadi. Tuzatish: hamma joyni tenant timezone'iga (Asia/Tashkent) bog'lash — lekin server TZ / per-tenant TZ qarori kerak (barcha raqamlarni ~5s siljitadi).
+- [ ] **returnRate semantikasi** (`dashboard.ts:77`) — "qaytarish darajasi" deb nomlanadi, lekin `CANCELLED / jami` ni hisoblaydi (REFUNDED'ni hisobga olmaydi). Kichik semantik masala — CANCELLED (bajarilmagan) haqiqiy "qaytarish" emas. Nom yoki formula aniqlashtirilishi mumkin.
+
 ### ✅ Yaqinda bajarilgan
 - ✅ **Prisma migrations** — versiyalangan `prisma migrate` + drift-check (`MIGRATIONS.md`)
 - ✅ **API access logs UI** — Settings → API tab real backend (`ApiKeysSection`) + "oxirgi ishlatilgan" audit

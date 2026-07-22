@@ -162,10 +162,19 @@ export const exportRoutes: FastifyPluginAsync = async (app) => {
       orderBy: { name: "asc" },
       include: {
         category: { select: { name: true } },
-        _count: { select: { orderItems: true } },
       },
       take: 50000,
     });
+
+    // "Sotilgan miqdor" — bajarilgan (COMPLETED) buyurtmalardagi qty YIG'INDISI.
+    // Ilgari _count.orderItems edi — bu qator SONI (qty'ni hisobga olmasdi) va
+    // barcha statusni qamrardi (masalan 3 ta qty=10 buyurtma → "3", "30" emas).
+    const soldRows = await app.prisma.orderItem.groupBy({
+      by: ["productId"],
+      where: { order: { tenantId, status: "COMPLETED" } },
+      _sum: { qty: true },
+    });
+    const soldByProduct = new Map(soldRows.map((r) => [r.productId, r._sum.qty ?? 0]));
 
     const headers = [
       "SKU", "Nomi", "Kategoriya", "Narx", "Eski narx", "Zaxira",
@@ -181,7 +190,7 @@ export const exportRoutes: FastifyPluginAsync = async (app) => {
       p.stock != null ? String(p.stock) : "Cheksiz",
       p.active ? "Ha" : "Yo'q",
       p.featured ? "Ha" : "Yo'q",
-      String(p._count.orderItems),
+      String(soldByProduct.get(p.id) ?? 0),
       p.description ?? "",
     ]);
 

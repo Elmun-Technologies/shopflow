@@ -69,27 +69,38 @@ async function buildReport(
 
   const since = new Date(Date.now() - PERIOD_DAYS[freq] * 24 * 60 * 60 * 1000);
 
-  const [orderAgg, customerCount, topProducts] = await Promise.all([
+  const [orderAgg, customerCount, topRows] = await Promise.all([
+    // Daromad ta'rifi Dashboard bilan bir xil: faqat COMPLETED (ilgari
+    // COMPLETED+PROCESSING edi → dashboard bilan mos kelmasdi).
     prisma.order.aggregate({
-      where: { tenantId, createdAt: { gte: since }, status: { in: ["COMPLETED", "PROCESSING"] } },
+      where: { tenantId, createdAt: { gte: since }, status: "COMPLETED" },
       _sum: { total: true },
       _count: { _all: true },
     }),
     prisma.customer.count({ where: { tenantId, createdAt: { gte: since } } }),
-    prisma.orderItem.groupBy({
-      by: ["productId"],
-      where: { order: { tenantId, createdAt: { gte: since } } },
-      _sum: { qty: true },
-      orderBy: { _sum: { qty: "desc" } },
-      take: 5,
-    }),
+    // Eng ko'p sotilgan — faqat COMPLETED, va daromad OrderItem.price SNAPSHOT'idan
+    // (jonli Product.price emas — tarixiy narx o'zgarsa buzilmaydi). groupBy qty*price
+    // ni qo'llab-quvvatlamaydi, shuning uchun raw.
+    prisma.$queryRaw<{ productId: string; sold: bigint; revenue: string }[]>`
+      SELECT oi."productId" AS "productId",
+             SUM(oi."qty") AS sold,
+             SUM(oi."price" * oi."qty") AS revenue
+      FROM "OrderItem" oi
+      JOIN "Order" o ON o."id" = oi."orderId"
+      WHERE o."tenantId" = ${tenantId}
+        AND o."status" = 'COMPLETED'::"OrderStatus"
+        AND o."createdAt" >= ${since}
+      GROUP BY oi."productId"
+      ORDER BY sold DESC
+      LIMIT 5
+    `,
   ]);
 
   const revenue = Number(orderAgg._sum.total ?? 0);
   const orders = orderAgg._count._all;
   const products = await prisma.product.findMany({
-    where: { id: { in: topProducts.map((p) => p.productId) } },
-    select: { id: true, name: true, price: true },
+    where: { id: { in: topRows.map((p) => p.productId) } },
+    select: { id: true, name: true },
   });
   const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -105,13 +116,12 @@ async function buildReport(
       customers: customerCount,
       avgOrder: orders > 0 ? revenue / orders : 0,
     },
-    topProducts: topProducts.map((tp) => {
+    topProducts: topRows.map((tp) => {
       const p = productMap.get(tp.productId);
-      const sold = tp._sum.qty ?? 0;
       return {
         name: p?.name ?? "—",
-        sold,
-        revenue: Number(p?.price ?? 0) * sold,
+        sold: Number(tp.sold),
+        revenue: Number(tp.revenue ?? 0),
       };
     }),
   };

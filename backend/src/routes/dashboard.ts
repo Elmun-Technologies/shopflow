@@ -6,32 +6,30 @@ type Period = "today" | "week" | "month" | "year" | "all";
 
 function getPeriodRange(period: Period): { from: Date | null; prevFrom: Date | null; prevTo: Date | null } {
   const now = new Date();
+  let from: Date | null = null;
+  let prevFrom: Date | null = null;
   if (period === "today") {
-    const from = new Date(now); from.setHours(0, 0, 0, 0);
-    const prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 1);
-    const prevTo = new Date(from);
-    return { from, prevFrom, prevTo };
+    from = new Date(now); from.setHours(0, 0, 0, 0);
+    prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 1);
+  } else if (period === "week") {
+    from = new Date(now); from.setDate(now.getDate() - 7); from.setHours(0, 0, 0, 0);
+    prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 7);
+  } else if (period === "month") {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  } else if (period === "year") {
+    from = new Date(now.getFullYear(), 0, 1);
+    prevFrom = new Date(now.getFullYear() - 1, 0, 1);
+  } else {
+    // "all" — barcha vaqt
+    return { from: null, prevFrom: null, prevTo: null };
   }
-  if (period === "week") {
-    const from = new Date(now); from.setDate(now.getDate() - 7); from.setHours(0, 0, 0, 0);
-    const prevFrom = new Date(from); prevFrom.setDate(prevFrom.getDate() - 7);
-    const prevTo = new Date(from);
-    return { from, prevFrom, prevTo };
-  }
-  if (period === "month") {
-    const from = new Date(now.getFullYear(), now.getMonth(), 1);
-    const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevTo = new Date(from);
-    return { from, prevFrom, prevTo };
-  }
-  if (period === "year") {
-    const from = new Date(now.getFullYear(), 0, 1);
-    const prevFrom = new Date(now.getFullYear() - 1, 0, 1);
-    const prevTo = new Date(from);
-    return { from, prevFrom, prevTo };
-  }
-  // "all" — barcha vaqt
-  return { from: null, prevFrom: null, prevTo: null };
+  // MUHIM: joriy oyna period-to-date (boshdan HOZIRgacha, to'liq emas). Shu sabab
+  // oldingi oynani ham xuddi shu O'TGAN qismga cheklaymiz (prevFrom + elapsed),
+  // aks holda "yarim oy vs to'liq oy" taqqoslanib %-o'zgarish sun'iy tushib ketardi.
+  const elapsed = now.getTime() - from.getTime();
+  const prevTo = new Date(prevFrom.getTime() + elapsed);
+  return { from, prevFrom, prevTo };
 }
 
 export const dashboardRoutes: FastifyPluginAsync = async (app) => {
@@ -52,6 +50,7 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
         app.prisma.order.aggregate({
           where: { tenantId, status: "COMPLETED", ...(baseWhere ? { createdAt: baseWhere } : {}) },
           _sum: { total: true },
+          _count: true, // avgOrder uchun — bajarilgan buyurtmalar soni
         }),
         app.prisma.order.aggregate({
           where: { tenantId, status: "COMPLETED", ...(prevWhere ? { createdAt: prevWhere } : { id: "never" }) },
@@ -75,7 +74,11 @@ export const dashboardRoutes: FastifyPluginAsync = async (app) => {
     const ordersChange = ordersPrev > 0 ? ((ordersThis - ordersPrev) / ordersPrev) * 100 : 0;
     const conversion = leadsTotal > 0 ? (leadsWon / leadsTotal) * 100 : 0;
     const returnRate = ordersThis > 0 ? (cancelledOrders / ordersThis) * 100 : 0;
-    const avgOrder = ordersThis > 0 ? revenue / ordersThis : 0;
+    // O'rtacha chek — bajarilgan (COMPLETED) daromadni bajarilgan buyurtmalar soniga
+    // bo'lamiz. Ilgari maxraj barcha statusdagi buyurtmalar (ordersThis) edi →
+    // AOV sun'iy ravishda pasayardi (pending/cancelled ham hisobga olinardi).
+    const completedCount = revAgg._count;
+    const avgOrder = completedCount > 0 ? revenue / completedCount : 0;
 
     return {
       revenue: { value: revenue, change: revChange },
