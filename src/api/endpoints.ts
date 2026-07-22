@@ -105,8 +105,16 @@ export const ordersApi = {
 // ===== Products =====
 
 export const productsApi = {
-  list: (params: { search?: string; categoryId?: string; page?: number; pageSize?: number } = {}) =>
-    api<PaginatedResponse<Product>>("/products", { query: params }),
+  list: (
+    params: {
+      search?: string;
+      categoryId?: string;
+      status?: "all" | "active" | "inactive";
+      stock?: "all" | "low" | "out";
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ) => api<PaginatedResponse<Product>>("/products", { query: params }),
 
   create: (data: Partial<Product>) => api<Product>("/products", { method: "POST", body: data }),
 
@@ -120,6 +128,8 @@ export const productsApi = {
       method: "POST",
       body,
     }),
+
+  duplicate: (id: string) => api<Product>(`/products/${id}/duplicate`, { method: "POST" }),
 };
 
 // ===== Customers =====

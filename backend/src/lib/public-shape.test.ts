@@ -40,6 +40,20 @@ describe("localizeContent", () => {
     const content = { tagline: "Hi" };
     expect(localizeContent(content, "ru")).toEqual({ tagline: "Hi" });
   });
+  it("umumiy maydonlarni uz bazasidan boshqa tilga ko'chiradi (admin editor kontrakti)", () => {
+    // ProductContentEditor umumiy maydonlarni (servings/bespoke) faqat uz'ga yozadi.
+    // ru so'ralganda ular uz bazasidan merge orqali kelishi shart.
+    const content = {
+      uz: { tagline: "Salom", servings: 30, bespoke: true },
+      ru: { tagline: "Привет" },
+    };
+    expect(localizeContent(content, "ru")).toEqual({ tagline: "Привет", servings: 30, bespoke: true });
+  });
+  it("faqat ru'da mavjud til bo'lsa ham uz bazasi bo'sh bo'lmasa qaytaradi", () => {
+    const content = { uz: { bespoke: true }, ru: { tagline: "Привет" } };
+    expect(localizeContent(content, "ru")).toEqual({ tagline: "Привет", bespoke: true });
+    expect(localizeContent(content, "uz")).toEqual({ bespoke: true });
+  });
 });
 
 function rawProduct(overrides: Partial<RawProductForShape> = {}): RawProductForShape {

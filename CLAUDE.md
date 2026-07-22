@@ -259,7 +259,7 @@ shopflow/
 - ✅ **Order/Customer/Lead create modallari** (admin tugmalari)
 - ✅ **Single-product do'kon rejimi** — Vitrina'da "Do'kon turi: Ko'p mahsulotli / Bitta mahsulot" toggle. Single rejimda bitta mahsulotga qaratilgan landing (galereya/sharhlar/badge/taymer toggle), savatsiz to'g'ridan-to'g'ri "Buyurtma berish". `Storefront.storeMode` + `singleProductId`. Bot `/start` o'zgarmaydi — storefront rejimga qarab render qiladi.
 - ✅ **Public API v1** — tashqi mijoz websaytlari uchun barqaror, API-kalit himoyalangan kontrakt (`/api/v1`). 6 endpoint: `GET /categories`, `/products` (filtr/sort/sahifalash), `/products/{slug}`, `/products/{id}/upsells` (ProductAddon), `/promotions` (free shipping), `POST /orders` (server-side narx, atomik stock, WEBSITE kanali, SSE/webhook). Bearer `sf_...` → tenant (`authenticateApiKey`). `?locale=uz|ru|en`. Pul butun UZS, rasm absolyut HTTPS, GET'lar 300s kesh. Shakl: `lib/public-shape.ts`, kontrakt: **`PUBLIC_API.md`**. Kalit: Sozlamalar → API yoki `npm run create-api-key -- <slug>`.
-  - Schema o'zgarishi: `Product.slug` (tenant ichida unique, URL identifikatori) + `Product.origin` (filtr) + `Product.content` (JSON — tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). Slug create'da avto-generatsiya + `npm run backfill-slugs` (mavjudlar). **Deploy'da `prisma db push` kerak.** Boy kontent admin UI — alohida PR (hozircha DB/seed orqali).
+  - Schema o'zgarishi: `Product.slug` (tenant ichida unique, URL identifikatori) + `Product.origin` (filtr) + `Product.content` (JSON — tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). Slug create'da avto-generatsiya + `npm run backfill-slugs` (mavjudlar). **Deploy'da `prisma db push` kerak.** Boy kontent admin UI — ✅ bajarildi (`ProductContentEditor`, mahsulot formasida).
 - ✅ **Single-product landing konstruktori** — multi rejimdek to'liq seksiya builder. `SingleConfig` endi tartiblangan `sections[]` (eski 5-boolean shaklga backward-compat `normalizeSingleConfig`). Editor: doimiy "skelet" (galereya → narx → CTA, qulflangan) + qo'shimcha bo'limlar (ishonch belgilari / sharhlar / haftalik xaridorlar / tezkor info / aksiya taymeri / tavsif / yetkazib berish / combo) — drag + strelka bilan tartiblanadi, eye toggle bilan yoqiladi. **Storefront'ga to'liq ulangan**: `StorePage` single PDP body bo'limlarni saqlangan tartib + holatga qarab chizadi (multi rejim PDP o'zgarmagan). Yangi `CountdownBanner` (kun oxirigacha jonli ortga hisob).
 
 ### Marketing
@@ -284,6 +284,13 @@ Har biri uchun ulanish yo'riqnomasi: **`INTEGRATIONS.md`**.
 - [ ] **List virtualization** — agar 1000+ qator sekin scroll bo'lsa (hozir pagination 20)
 - [ ] **StorePage to'liq dedup** — reviews/combo ham ulashilgan komponentga (hozir ataylab StorePage'da, chunki async/interaktiv)
 
+### 🔒 Xavfsizlik hardening (audit topdi — product/ops qaror kerak, shuning uchun avtomatik qilinmadi)
+Bular haqiqiy, lekin tuzatish integratsiya/URL kontraktini yoki auth oqimini
+o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
+- [ ] **MoySklad webhook autentifikatsiyasi** (`webhooks.ts` `POST /moysklad/:tenantId`) — hozir imzosiz: tenant UUID'ni bilган har kim `WebhookEvent` yozishi mumkin (storage/DoS, MVP faqat saqlaydi). Tuzatish: URL/header'ga per-tenant sirli token. **Eslatma:** MoySklad'dagi webhook URL'ini qayta ro'yxatdan o'tkazish kerak (kontrakt o'zgaradi).
+- [ ] **JWT query-string orqali** (`tenant-export.ts`, `events.ts`) — `?token=` proxy/Sentry loglariga tushadi. SSE (EventSource) header yubora olmaydi, shuning uchun qisqa muddatli maxsus download/SSE token kerak (auth oqimi o'zgaradi).
+- [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
+
 ### ✅ Yaqinda bajarilgan
 - ✅ **Prisma migrations** — versiyalangan `prisma migrate` + drift-check (`MIGRATIONS.md`)
 - ✅ **API access logs UI** — Settings → API tab real backend (`ApiKeysSection`) + "oxirgi ishlatilgan" audit
@@ -291,6 +298,12 @@ Har biri uchun ulanish yo'riqnomasi: **`INTEGRATIONS.md`**.
 - ✅ **Bundle optimization** — recharts initial bundle'dan chiqarildi (lazy + function-form `manualChunks`); `index` 502→309kb
 - ✅ **To'liq admin audit** — soxta data / o'lik tugma / tarjima tuzatishlari; **double-encode API bug** (bot sekanslar + API kalitlar runtime'da buzilgan edi)
 - ✅ **Single-product sayqal** — WYSIWYG konstruktor preview (real mahsulot ma'lumoti), grip drag-drop, single sahifa polish; ulashilgan **`src/components/storefront/SingleProductSections.tsx`** (konstruktor preview + live storefront bir komponentdan — WYSIWYG kafolati)
+- ✅ **Boy kontent admin UI** — mahsulot formasida "Public API va boy kontent" kengaytiriladigan bo'limi: slug (jonli sanitatsiya), origin, va bilingual (UZ/RU) editor (tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). `src/components/ProductContentEditor.tsx` flat va per-locale `{uz,ru}` kontentni o'qiydi/yozadi, noma'lum kalitlarni (`_extra`) saqlaydi. Backend `toJsonInput` → `Prisma.JsonNull` (tozalash). Endi `content` DB/seed emas, UI orqali. **Public API v1 va single-product landing shu kontentni render qiladi.**
+- ✅ **Mahsulot filtrlari** — ProductsPage: holat (sotuvda/yashirin) + zaxira (kam qolgan <5 / tugagan) filtrlari; filtr-aware bo'sh holat ("Filtrlarni tozalash"). Yashirin mahsulot kartada opacity/grayscale + "Yashirin" belgisi bilan ajratiladi.
+- ✅ **Xavfsizlik/barqarorlik auditi (read-only bug hunt → fix)**:
+  - **Promo perUserLimit** checkout'da tekshirilmasdi — mijoz promo tekshiruvidan oldin aniqlanadigan qilib tuzatildi ("har mijoz uchun 1 marta" endi haqiqatda ishlaydi).
+  - **Order kod race** — storefront + public-api concurrent checkout'da bir xil `ORD-NNNN` → P2002 → 500 edi. Endi `createOrderCodeWithRetry` (admin yo'li kabi).
+  - **Payme CheckTransaction/GetStatement** — ilgari qattiq (state:1 / bo'sh) edi. Endi saqlangan tranzaksiyadan haqiqiy state/vaqt qaytadi (`paymeStateForStatus`, `payment-reconcile.ts`da testlangan).
 
 ---
 

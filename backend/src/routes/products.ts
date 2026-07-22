@@ -26,13 +26,24 @@ const productSchema = z.object({
 });
 
 // content (ixtiyoriy JSON) ni Prisma input'ga keltirish.
-function toJsonInput(v: unknown): Prisma.InputJsonValue | undefined {
-  return v === undefined ? undefined : (v as Prisma.InputJsonValue);
+// - undefined  → maydonga tegilmaydi (patch'da o'zgarmaydi)
+// - null       → JSON NULL (admin kontentni tozalaganda). Prisma nullable Json
+//                maydoni uchun JS `null` emas, `Prisma.JsonNull` talab qiladi.
+function toJsonInput(v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return Prisma.JsonNull;
+  return v as Prisma.InputJsonValue;
 }
+
+const LOW_STOCK_THRESHOLD = 5; // Dashboard LowStockAlert bilan bir xil
 
 const listQuery = z.object({
   search: z.string().optional(),
   categoryId: z.string().optional(),
+  // Ko'rinish holati: barchasi / faol (sotuvda) / yashirin
+  status: z.enum(["all", "active", "inactive"]).default("all"),
+  // Zaxira holati: barchasi / kam qolgan (<5, 0 ni ham) / tugagan (0)
+  stock: z.enum(["all", "low", "out"]).default("all"),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(200).default(50),
 });
@@ -45,6 +56,10 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const where = {
       tenantId: req.session.tenantId,
       ...(q.categoryId && { categoryId: q.categoryId }),
+      ...(q.status === "active" && { active: true }),
+      ...(q.status === "inactive" && { active: false }),
+      ...(q.stock === "low" && { stock: { lt: LOW_STOCK_THRESHOLD } }),
+      ...(q.stock === "out" && { stock: { lte: 0 } }),
       ...(q.search && {
         OR: [
           { name: { contains: q.search, mode: "insensitive" as const } },
@@ -284,6 +299,74 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       });
 
       return { id: updated.id, stock: updated.stock, added: data.quantity };
+    },
+  );
+
+  // Duplicate — mavjud mahsulotdan nusxa (shablon sifatida). Boy kontent/rasm/narx
+  // ko'chiriladi, lekin yangi nusxa QORALAMA bo'ladi: active=false, stock=0, yangi
+  // SKU/slug. Tashqi sync id'lari (moysklad/salesDoctor) ko'chirilmaydi.
+  app.post(
+    "/:id/duplicate",
+    { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
+    async (req, reply) => {
+      const { id } = z.object({ id: z.string() }).parse(req.params);
+      const tenantId = req.session.tenantId;
+      const src = await app.prisma.product.findFirst({ where: { id, tenantId } });
+      if (!src) return reply.code(404).send({ error: "Not found" });
+
+      // Unique SKU: "<sku>-COPY", band bo'lsa -COPY-2, -COPY-3 ...
+      const skuRoot = `${src.sku}-COPY`.slice(0, 60);
+      let newSku = skuRoot;
+      for (let i = 2; ; i++) {
+        const clash = await app.prisma.product.findFirst({
+          where: { tenantId, sku: newSku },
+          select: { id: true },
+        });
+        if (!clash) break;
+        newSku = `${skuRoot}-${i}`.slice(0, 60);
+      }
+      const newName = `${src.name} (nusxa)`.slice(0, 200);
+      const newSlug = await uniqueProductSlug(app.prisma, tenantId, src.slug ? `${src.slug}-copy` : newName);
+
+      const created = await app.prisma.product.create({
+        data: {
+          tenantId,
+          sku: newSku,
+          name: newName,
+          slug: newSlug,
+          description: src.description,
+          price: src.price,
+          oldPrice: src.oldPrice,
+          currency: src.currency,
+          stock: 0,
+          active: false, // qoralama — operator ko'rib chiqib yoqadi
+          featured: false,
+          imageUrl: src.imageUrl,
+          images: src.images,
+          categoryId: src.categoryId,
+          origin: src.origin,
+          content: toJsonInput(src.content ?? undefined),
+          saleCampaignId: src.saleCampaignId,
+          source: "MANUAL",
+        },
+      });
+
+      const actor = await app.prisma.user.findUnique({
+        where: { id: req.session.userId },
+        select: { name: true },
+      });
+      await logAudit({
+        prisma: app.prisma,
+        tenantId,
+        actorId: req.session.userId,
+        actorName: actor?.name ?? null,
+        action: "DUPLICATE",
+        resourceType: "product",
+        resourceId: created.id,
+        summary: `Mahsulot nusxalandi: ${src.name} → ${created.name}`,
+        changes: { sourceId: src.id, newId: created.id },
+      });
+      return created;
     },
   );
 };

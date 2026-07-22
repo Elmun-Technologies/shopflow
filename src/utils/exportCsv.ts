@@ -8,9 +8,15 @@ interface ExportOptions {
   rows: Array<Record<string, unknown>>;
 }
 
-function csvEscape(v: unknown): string {
+export function csvEscape(v: unknown): string {
   if (v == null) return "";
-  const s = String(v);
+  let s = String(v);
+  // CSV formula injection himoyasi: = + - @ (yoki tab/CR) bilan boshlangan kataklarni
+  // ' bilan neytrallashtiramiz — Excel/Sheets =HYPERLINK/=cmd|... bajarmasin
+  // (ism/izoh mijozdan keladigan ishonchsiz matn bo'lishi mumkin).
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
   // Vergul, tirnoq yoki yangi qator bo'lsa — tirnoqlash kerak
   if (/[",\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;

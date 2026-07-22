@@ -19,8 +19,18 @@ import {
   EyeOff,
   Upload,
   PackagePlus,
+  ChevronDown,
+  Globe,
+  Copy,
+  Download,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
+import ProductContentEditor, {
+  parseProductContent,
+  serializeProductContent,
+  type ContentLocale,
+  type ProductContentState,
+} from "./ProductContentEditor";
 import { Skeleton } from "./ui/Skeleton";
 import { useAppToast } from "./ui/Toast";
 
@@ -31,6 +41,7 @@ import { api, ApiError } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import { priceBreakdown } from "../utils/pricing";
+import { exportToCsv } from "../utils/exportCsv";
 import type { Product, Category } from "../types/api";
 import { useT } from "../i18n";
 
@@ -53,6 +64,8 @@ export default function ProductsPage() {
   const currency = tenant?.currency ?? "UZS";
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
   const [page, setPage] = useState(1);
   const pageSize = 24;
   const [editing, setEditing] = useState<Product | null>(null);
@@ -70,8 +83,10 @@ export default function ProductsPage() {
       pageSize,
       search: search || undefined,
       categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+      status: statusFilter,
+      stock: stockFilter,
     }),
-    [page, search, categoryFilter],
+    [page, search, categoryFilter, statusFilter, stockFilter],
   );
   const { data, loading, error, refetch } = useQueryAsync(["products", "list", params], () => productsApi.list(params));
   const { data: categories, refetch: refetchCategories } = useQueryAsync(["categories", "list"], () => categoriesApi.list());
@@ -80,10 +95,81 @@ export default function ProductsPage() {
   const total = data?.total ?? 0;
   const cats = categories ?? [];
 
+  const hasActiveFilters =
+    !!search || categoryFilter !== "all" || statusFilter !== "all" || stockFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setStockFilter("all");
+    setPage(1);
+  };
+
   const handleDelete = async (p: Product) => {
     if (!confirm(t("products.deleteConfirm", { name: p.name }))) return;
     await productsApi.delete(p.id);
     refetch();
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      // Joriy filtr natijasini to'liq yuklaymiz (limit 500 — Excel uchun yetarli)
+      const res = await productsApi.list({
+        page: 1,
+        pageSize: 500,
+        search: search || undefined,
+        categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+        status: statusFilter,
+        stock: stockFilter,
+      });
+      const catName = (id: string | null) => cats.find((c) => c.id === id)?.name ?? "";
+      exportToCsv({
+        filename: `products-${new Date().toISOString().slice(0, 10)}`,
+        columns: [
+          { key: "sku", label: t("productForm.sku") },
+          { key: "name", label: t("productForm.name") },
+          { key: "category", label: t("productForm.category") },
+          { key: "price", label: t("productForm.price", { currency }) },
+          { key: "oldPrice", label: t("productForm.oldPrice") },
+          { key: "stock", label: t("productForm.stock") },
+          { key: "currency", label: t("orders.col.currency") },
+          { key: "status", label: t("products.filter.allStatus") },
+        ],
+        rows: res.items.map((p) => ({
+          sku: p.sku,
+          name: p.name,
+          category: catName(p.categoryId),
+          price: Number(p.price),
+          oldPrice: p.oldPrice != null ? Number(p.oldPrice) : "",
+          stock: p.stock,
+          currency: p.currency || currency,
+          status: p.active ? t("products.filter.active") : t("products.filter.inactive"),
+        })),
+      });
+      toast.success(t("products.export.done", { n: res.items.length }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  const handleDuplicate = async (p: Product) => {
+    setDuplicating(p.id);
+    try {
+      const created = await productsApi.duplicate(p.id);
+      toast.success(t("products.duplicate.success", { name: created.name }));
+      refetch();
+      // Yangi nusxa (qoralama) darhol tahrirlash uchun ochiladi
+      setEditing(created);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setDuplicating(null);
+    }
   };
 
   const toggleSelected = (id: string) => {
@@ -164,6 +250,15 @@ export default function ProductsPage() {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 whitespace-nowrap disabled:opacity-50"
+            title={t("products.export")}
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="hidden sm:inline">{t("products.export")}</span>
+          </button>
+          <button
             onClick={() => setShowImport(true)}
             className="flex items-center justify-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 whitespace-nowrap"
             title={t("products.import")}
@@ -216,6 +311,30 @@ export default function ProductsPage() {
             </option>
           ))}
         </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as typeof statusFilter);
+            setPage(1);
+          }}
+          className="px-3 py-2.5 bg-white border border-cream-300 rounded-lg text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+        >
+          <option value="all">{t("products.filter.allStatus")}</option>
+          <option value="active">{t("products.filter.active")}</option>
+          <option value="inactive">{t("products.filter.inactive")}</option>
+        </select>
+        <select
+          value={stockFilter}
+          onChange={(e) => {
+            setStockFilter(e.target.value as typeof stockFilter);
+            setPage(1);
+          }}
+          className="px-3 py-2.5 bg-white border border-cream-300 rounded-lg text-sm text-forest-800 focus:outline-none focus:border-leaf-500/60"
+        >
+          <option value="all">{t("products.filter.allStock")}</option>
+          <option value="low">{t("products.filter.lowStock")}</option>
+          <option value="out">{t("products.filter.outStock")}</option>
+        </select>
       </div>
 
       {loading ? (
@@ -248,11 +367,19 @@ export default function ProductsPage() {
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white border border-cream-300 rounded-xl">
           <Package className="w-12 h-12 text-cream-300 mb-3" />
           <p className="text-base font-semibold text-forest-800">
-            {search ? t("products.empty.search") : t("products.empty.none")}
+            {hasActiveFilters ? t("products.empty.filtered") : t("products.empty.none")}
           </p>
           <p className="text-sm text-slate-500 mt-1 max-w-md">
-            {t("products.empty.hint")}
+            {hasActiveFilters ? t("products.empty.filteredHint") : t("products.empty.hint")}
           </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="mt-4 px-4 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800"
+            >
+              {t("products.filter.clear")}
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -354,6 +481,8 @@ export default function ProductsPage() {
               onEdit={() => setEditing(p)}
               onDelete={() => handleDelete(p)}
               onRestock={() => setRestocking(p)}
+              onDuplicate={() => handleDuplicate(p)}
+              duplicating={duplicating === p.id}
             />
           ))}
         </div>
@@ -573,6 +702,8 @@ function ProductCard({
   onEdit,
   onDelete,
   onRestock,
+  onDuplicate,
+  duplicating,
 }: {
   product: Product;
   currency: string;
@@ -581,6 +712,8 @@ function ProductCard({
   onEdit: () => void;
   onDelete: () => void;
   onRestock: () => void;
+  onDuplicate: () => void;
+  duplicating: boolean;
 }) {
   const { t } = useT();
   const { tenant } = useAuth();
@@ -594,9 +727,20 @@ function ProductCard({
     }`}>
       <div className="w-full aspect-video bg-cream-100 rounded-lg flex items-center justify-center mb-3 overflow-hidden relative">
         {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className={`w-full h-full object-cover ${product.active ? "" : "opacity-50 grayscale"}`}
+          />
         ) : (
           <Package className="w-8 h-8 text-slate-400" />
+        )}
+        {/* Yashirin (sotuvda emas) mahsulot — do'konda ko'rinmaydi */}
+        {!product.active && (
+          <span className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-800/80 backdrop-blur text-white text-[10px] font-medium">
+            <EyeOff className="w-3 h-3" />
+            {t("products.filter.inactive")}
+          </span>
         )}
         {/* Tanlash chexbox — hover'da yoki tanlangan bo'lsa ko'rinadi */}
         <button
@@ -630,6 +774,14 @@ function ProductCard({
             title={t("products.card.edit")}
           >
             <Edit2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onDuplicate}
+            disabled={duplicating}
+            className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900 disabled:opacity-50"
+            title={t("products.card.duplicate")}
+          >
+            {duplicating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={onDelete}
@@ -758,6 +910,18 @@ function ProductFormModal({
   const [uploading, setUploading] = useState(false);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
+  // Public API v1 maydonlari — slug (barqaror URL identifikatori), origin (kelib chiqishi),
+  // va boy marketing kontenti (per-locale JSON). Bo'sh bo'lsa: slug name'dan avto-generatsiya.
+  const [slug, setSlug] = useState(product?.slug ?? "");
+  const [origin, setOrigin] = useState(product?.origin ?? "");
+  const [contentState, setContentState] = useState<ProductContentState>(() =>
+    parseProductContent(product?.content),
+  );
+  const [contentLocale, setContentLocale] = useState<ContentLocale>("uz");
+  // Kengaytiriladigan bo'lim — mavjud kontent bo'lsa avtomatik ochiq.
+  const [advancedOpen, setAdvancedOpen] = useState(
+    () => !!(product?.slug || product?.origin || product?.content),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -857,6 +1021,11 @@ function ProductFormModal({
         images: images.slice(1),
         featured,
         active,
+        // Public API v1 — slug bo'sh bo'lsa backend name'dan generatsiya qiladi.
+        // Faqat aniq kiritilgan bo'lsa yuboramiz (regex: kichik harf/raqam/tire).
+        slug: slug.trim() || undefined,
+        origin: origin.trim() || null,
+        content: serializeProductContent(contentState) ?? null,
       };
       let savedProductId = product?.id;
       if (product) {
@@ -1201,6 +1370,65 @@ function ProductFormModal({
             </div>
             );
           })()}
+
+          {/* Public API v1 / boy kontent — tashqi saytlar va single-product landing uchun.
+              Kengaytiriladigan bo'lim (ko'pchilik mahsulotlarga kerak emas). */}
+          <div className="rounded-xl border border-cream-300 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((v) => !v)}
+              className="w-full flex items-center gap-2 px-3.5 py-3 bg-cream-50 hover:bg-cream-100 text-left transition-colors"
+            >
+              <Globe className="w-4 h-4 text-forest-700 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-forest-800">{t("productContent.sectionTitle")}</div>
+                <div className="text-[11px] text-slate-500">{t("productContent.sectionHint")}</div>
+              </div>
+              <ChevronDown
+                className={"w-4 h-4 text-slate-400 transition-transform " + (advancedOpen ? "rotate-180" : "")}
+              />
+            </button>
+            {advancedOpen && (
+              <div className="p-3.5 space-y-4 border-t border-cream-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label={t("productContent.slug")}>
+                    <input
+                      type="text"
+                      value={slug}
+                      onChange={(e) =>
+                        setSlug(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]+/g, "-")
+                            .replace(/^-+/, ""),
+                        )
+                      }
+                      placeholder={t("productContent.slugPlaceholder")}
+                      className="input font-mono"
+                      maxLength={80}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">{t("productContent.slugHelp")}</p>
+                  </Field>
+                  <Field label={t("productContent.origin")}>
+                    <input
+                      type="text"
+                      value={origin}
+                      onChange={(e) => setOrigin(e.target.value)}
+                      placeholder={t("productContent.originPlaceholder")}
+                      className="input"
+                      maxLength={60}
+                    />
+                  </Field>
+                </div>
+                <ProductContentEditor
+                  value={contentState}
+                  onChange={setContentState}
+                  activeLocale={contentLocale}
+                  onLocaleChange={setContentLocale}
+                />
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">

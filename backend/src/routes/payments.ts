@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { logAudit } from "../lib/audit.js";
 import { fireWebhookEvent } from "../lib/outbound-webhook.js";
-import { amountsMatch, reconcileOutcome, type ReconOutcome } from "../lib/payment-reconcile.js";
+import { amountsMatch, reconcileOutcome, paymeStateForStatus, type ReconOutcome } from "../lib/payment-reconcile.js";
 
 function getPublicBaseUrl(): string {
   const raw =
@@ -107,7 +107,15 @@ async function recordPaymentResult(
         : `Reconciliation: summa mos emas (webhook=${args.amount}, order=${order?.total})`
       : args.errorMessage ?? null;
 
-  const completedAt = effectiveStatus === "SUCCESS" ? new Date() : null;
+  // Terminal holatlar (muvaffaqiyat yoki bekor/xato) uchun yakuniy vaqtni belgilaymiz.
+  // Bu Payme CheckTransaction'da perform_time / cancel_time uchun kerak, admin UI ham
+  // "tugatilgan vaqt"ni ko'rsatadi. PENDING → null (hali tugamagan).
+  const isTerminal =
+    effectiveStatus === "SUCCESS" ||
+    effectiveStatus === "CANCELLED" ||
+    effectiveStatus === "FAILED" ||
+    effectiveStatus === "REFUNDED";
+  const completedAt = isTerminal ? new Date() : null;
   const baseData = {
     tenantId,
     methodId: method.id,
@@ -687,19 +695,82 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
             },
           });
         } else if (rpcMethod === "CheckTransaction") {
+          // Saqlangan tranzaksiyaning HAQIQIY holatini qaytaramiz (ilgari doim state:1
+          // qattiq qaytarardi — Payme reconciliation'da noto'g'ri holat ko'rsatardi).
+          const tx = pmTxId
+            ? await app.prisma.paymentTransaction.findUnique({
+                where: {
+                  tenantId_methodId_externalId: {
+                    tenantId: method.tenantId,
+                    methodId: method.id,
+                    externalId: pmTxId,
+                  },
+                },
+              })
+            : null;
+          if (!tx) {
+            return reply.code(200).send({
+              id: rpcId,
+              error: { code: -31003, message: { ru: "Транзакция не найдена", en: "Transaction not found", uz: "Tranzaksiya topilmadi" } },
+            });
+          }
+          const state = paymeStateForStatus(tx.status);
+          const completedMs = tx.completedAt ? tx.completedAt.getTime() : 0;
           return reply.code(200).send({
             id: rpcId,
             result: {
-              create_time: 0,
-              perform_time: 0,
-              cancel_time: 0,
-              transaction: params.id,
-              state: 1,
+              create_time: tx.createdAt.getTime(),
+              perform_time: state === 2 ? completedMs : 0,
+              cancel_time: state < 0 ? completedMs : 0,
+              transaction: pmTxId,
+              state,
               reason: null,
             },
           });
         } else if (rpcMethod === "GetStatement") {
-          return reply.code(200).send({ id: rpcId, result: { transactions: [] } });
+          // [from, to] oralig'idagi tranzaksiyalar (ms epoch) — reconciliation uchun.
+          const from = Number(params.from ?? 0);
+          const to = Number(params.to ?? Number.MAX_SAFE_INTEGER);
+          const rows = await app.prisma.paymentTransaction.findMany({
+            where: {
+              tenantId: method.tenantId,
+              methodId: method.id,
+              externalId: { not: null },
+              createdAt: {
+                gte: new Date(Number.isFinite(from) ? from : 0),
+                lte: new Date(Number.isFinite(to) ? to : Date.now()),
+              },
+            },
+            orderBy: { createdAt: "asc" },
+          });
+          // Buyurtma kodlarini bitta so'rovda olamiz (PaymentTransaction'da order relation yo'q).
+          const orderIds = [...new Set(rows.map((r) => r.orderId).filter((id): id is string => !!id))];
+          const orderCodeById = new Map<string, string>();
+          if (orderIds.length > 0) {
+            const orders = await app.prisma.order.findMany({
+              where: { id: { in: orderIds }, tenantId: method.tenantId },
+              select: { id: true, code: true },
+            });
+            for (const o of orders) orderCodeById.set(o.id, o.code);
+          }
+          const transactions = rows.map((tx) => {
+            const state = paymeStateForStatus(tx.status);
+            const completedMs = tx.completedAt ? tx.completedAt.getTime() : 0;
+            const orderCode = tx.orderId ? orderCodeById.get(tx.orderId) : undefined;
+            return {
+              id: tx.externalId,
+              time: tx.createdAt.getTime(),
+              amount: Math.round(Number(tx.amount) * 100), // tiyin
+              account: orderCode ? { order_id: orderCode } : {},
+              create_time: tx.createdAt.getTime(),
+              perform_time: state === 2 ? completedMs : 0,
+              cancel_time: state < 0 ? completedMs : 0,
+              transaction: tx.externalId,
+              state,
+              reason: null,
+            };
+          });
+          return reply.code(200).send({ id: rpcId, result: { transactions } });
         }
 
       // ─── Uzum Bank (HMAC-SHA256) ──────────────────────────────────────────

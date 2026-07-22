@@ -147,6 +147,11 @@ export interface Product {
   images: string[];
   categoryId: string | null;
   category?: { id: string; name: string; slug?: string } | null;
+  // Public API (v1) maydonlari — tenant ichida unique slug, kelib chiqishi (origin),
+  // va boy marketing kontenti (JSON: flat yoki per-locale {uz,ru}).
+  slug?: string | null;
+  origin?: string | null;
+  content?: unknown;
   createdAt: string;
   updatedAt: string;
 }
