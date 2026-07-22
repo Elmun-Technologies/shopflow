@@ -284,6 +284,13 @@ Har biri uchun ulanish yo'riqnomasi: **`INTEGRATIONS.md`**.
 - [ ] **List virtualization** — agar 1000+ qator sekin scroll bo'lsa (hozir pagination 20)
 - [ ] **StorePage to'liq dedup** — reviews/combo ham ulashilgan komponentga (hozir ataylab StorePage'da, chunki async/interaktiv)
 
+### 🔒 Xavfsizlik hardening (audit topdi — product/ops qaror kerak, shuning uchun avtomatik qilinmadi)
+Bular haqiqiy, lekin tuzatish integratsiya/URL kontraktini yoki auth oqimini
+o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
+- [ ] **MoySklad webhook autentifikatsiyasi** (`webhooks.ts` `POST /moysklad/:tenantId`) — hozir imzosiz: tenant UUID'ni bilган har kim `WebhookEvent` yozishi mumkin (storage/DoS, MVP faqat saqlaydi). Tuzatish: URL/header'ga per-tenant sirli token. **Eslatma:** MoySklad'dagi webhook URL'ini qayta ro'yxatdan o'tkazish kerak (kontrakt o'zgaradi).
+- [ ] **JWT query-string orqali** (`tenant-export.ts`, `events.ts`) — `?token=` proxy/Sentry loglariga tushadi. SSE (EventSource) header yubora olmaydi, shuning uchun qisqa muddatli maxsus download/SSE token kerak (auth oqimi o'zgaradi).
+- [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
+
 ### ✅ Yaqinda bajarilgan
 - ✅ **Prisma migrations** — versiyalangan `prisma migrate` + drift-check (`MIGRATIONS.md`)
 - ✅ **API access logs UI** — Settings → API tab real backend (`ApiKeysSection`) + "oxirgi ishlatilgan" audit
