@@ -163,20 +163,23 @@ export default function AnalyticsPage() {
   }, [timeRange, loadData]);
 
   // Backend KPI'larni 6-kartochka shapega adapt qilamiz
-  type AdaptedKpi = { id: string; label: string; value: string; change: number; trend: "up" | "down"; icon: string; color: string };
+  type AdaptedKpi = { id: string; label: string; value: string; change: number; trend: "up" | "down"; invert: boolean; icon: string; color: string };
   const analyticsKPIs = useMemo<AdaptedKpi[]>(() => {
     if (!kpis) return [];
     const fmt = (n: number) => n >= 1e9 ? (n / 1e9).toFixed(1) + " " + t("common.abbr.billion") : n >= 1e6 ? (n / 1e6).toFixed(1) + " " + t("common.abbr.million") : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toLocaleString();
     // API dan avgOrder va returnRate kelsa ularni ishlatamiz, aks holda hisoblaymiz
     const avgOrderVal = kpis.avgOrder?.value ?? (kpis.orders.value > 0 ? kpis.revenue.value / kpis.orders.value : 0);
     const returnRateVal = kpis.returnRate?.value ?? 0;
+    // trend = o'zgarish YO'NALISHI (change belgisi). `invert` — kamayishi yaxshi
+    // bo'lgan ko'rsatkichlar uchun (return rate): trend "down" bo'lsa yashil.
+    const returnChange = Math.round(kpis.returnRate?.change ?? 0);
     return [
-      { id: "revenue", label: t("analytics.kpi.revenue"), value: formatCurrency(kpis.revenue.value), change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", icon: "DollarSign", color: "#10b981" },
-      { id: "orders", label: t("analytics.kpi.orders"), value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", icon: "ShoppingCart", color: "#3b82f6" },
-      { id: "customers", label: t("analytics.kpi.customers"), value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", icon: "Users", color: "#8b5cf6" },
-      { id: "conversion", label: t("analytics.kpi.conversion"), value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", icon: "Target", color: "#f59e0b" },
-      { id: "avg", label: t("analytics.kpi.avgOrder"), value: formatCurrency(avgOrderVal), change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", icon: "Receipt", color: "#06b6d4" },
-      { id: "returns", label: t("analytics.kpi.returns"), value: returnRateVal.toFixed(1) + "%", change: Math.round(kpis.returnRate?.change ?? 0), trend: returnRateVal <= 5 ? "up" : "down", icon: "RotateCcw", color: "#94a3b8" },
+      { id: "revenue", label: t("analytics.kpi.revenue"), value: formatCurrency(kpis.revenue.value), change: Math.round(kpis.revenue.change), trend: kpis.revenue.change >= 0 ? "up" : "down", invert: false, icon: "DollarSign", color: "#10b981" },
+      { id: "orders", label: t("analytics.kpi.orders"), value: fmt(kpis.orders.value), change: Math.round(kpis.orders.change), trend: kpis.orders.change >= 0 ? "up" : "down", invert: false, icon: "ShoppingCart", color: "#3b82f6" },
+      { id: "customers", label: t("analytics.kpi.customers"), value: fmt(kpis.customers.value), change: Math.round(kpis.customers.change), trend: kpis.customers.change >= 0 ? "up" : "down", invert: false, icon: "Users", color: "#8b5cf6" },
+      { id: "conversion", label: t("analytics.kpi.conversion"), value: kpis.conversion.value.toFixed(1) + "%", change: Math.round(kpis.conversion.change), trend: kpis.conversion.change >= 0 ? "up" : "down", invert: false, icon: "Target", color: "#f59e0b" },
+      { id: "avg", label: t("analytics.kpi.avgOrder"), value: formatCurrency(avgOrderVal), change: Math.round(kpis.avgOrder?.change ?? 0), trend: (kpis.avgOrder?.change ?? 0) >= 0 ? "up" : "down", invert: false, icon: "Receipt", color: "#06b6d4" },
+      { id: "returns", label: t("analytics.kpi.returns"), value: returnRateVal.toFixed(1) + "%", change: returnChange, trend: returnChange >= 0 ? "up" : "down", invert: true, icon: "RotateCcw", color: "#94a3b8" },
     ];
   }, [kpis, t]);
 
@@ -290,9 +293,8 @@ export default function AnalyticsPage() {
                 </div>
                 <div
                   className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${
-                    kpi.trend === "up"
-                      ? "text-forest-700 bg-leaf-100"
-                      : kpi.trend === "down" && kpi.id === "returns"
+                    // "yaxshi"mi? Odatda o'sish yaxshi; invert (return rate) uchun kamayish yaxshi.
+                    (kpi.invert ? kpi.trend === "down" : kpi.trend === "up")
                       ? "text-forest-700 bg-leaf-100"
                       : "text-red-600 bg-red-100"
                   }`}

@@ -114,6 +114,11 @@ export default function LeadsPage() {
   const statusCount = (status: LeadStatus): number =>
     stats?.byStatus.find((s) => s.status === status)?.count ?? 0;
 
+  // "Jami" KPI — filtrsiz umumiy son (stats'dan). `total` (data.total) esa joriy
+  // status tab/qidiruvni aks ettiradi, shuning uchun uni KPI'da ishlatib bo'lmaydi
+  // (aks holda "WON" tab tanlansa "Jami" ham won soniga tushardi).
+  const totalLeads = stats ? stats.byStatus.reduce((sum, s) => sum + s.count, 0) : total;
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
@@ -125,7 +130,7 @@ export default function LeadsPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <StatCard label={t("leads.kpi.total")} value={total.toString()} accent="text-forest-800" />
+        <StatCard label={t("leads.kpi.total")} value={totalLeads.toString()} accent="text-forest-800" />
         <StatCard
           label={t("leads.kpi.new")}
           value={statusCount("NEW").toString()}

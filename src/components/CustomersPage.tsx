@@ -66,9 +66,18 @@ export default function CustomersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [segmentFilter, setSegmentFilter] = useState<RfmSegment | "all">("all");
 
+  // Segment filtri faol bo'lsa — server tomonda filtr yo'q (segmentlar RFM
+  // endpoint'da hisoblanadi), shuning uchun to'liq ro'yxatni (limit 500) yuklab
+  // client tomonda filtrlab, client tomonda sahifalaymiz. Aks holda faqat joriy
+  // 30-qatorli sahifa filtrlanardi va total/pagination desync bo'lardi.
+  const segmentActive = segmentFilter !== "all";
   const params = useMemo(
-    () => ({ page, pageSize, search: search || undefined }),
-    [page, search],
+    () => ({
+      page: segmentActive ? 1 : page,
+      pageSize: segmentActive ? 500 : pageSize,
+      search: search || undefined,
+    }),
+    [page, search, segmentActive],
   );
   const { data, loading, error, refetch } = useQueryAsync(["customers", "list", params], () => customersApi.list(params));
   const { data: rfm } = useQueryAsync(["customers", "rfm"], () => customersApi.rfm());
@@ -80,12 +89,24 @@ export default function CustomersPage() {
     return map;
   }, [rfm]);
 
-  const customers = useMemo(() => {
+  // Filtrlangan to'liq ro'yxat (segment faol bo'lganda)
+  const filteredAll = useMemo(() => {
     const all = data?.items ?? [];
-    if (segmentFilter === "all") return all;
+    if (!segmentActive) return all;
     return all.filter((c) => segmentById.get(c.id) === segmentFilter);
-  }, [data, segmentFilter, segmentById]);
-  const total = data?.total ?? 0;
+  }, [data, segmentFilter, segmentById, segmentActive]);
+
+  // Segment faol bo'lsa client tomonda sahifalash; aks holda server sahifasi.
+  const customers = segmentActive
+    ? filteredAll.slice((page - 1) * pageSize, page * pageSize)
+    : filteredAll;
+  const total = segmentActive ? filteredAll.length : (data?.total ?? 0);
+
+  // Segment tanlansa/almashsa sahifani 1 ga qaytaramiz (stale page oldini olish)
+  const selectSegment = (seg: RfmSegment | "all") => {
+    setSegmentFilter(seg);
+    setPage(1);
+  };
   const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
@@ -164,7 +185,7 @@ export default function CustomersPage() {
             {segmentFilter !== "all" && (
               <button
                 type="button"
-                onClick={() => setSegmentFilter("all")}
+                onClick={() => selectSegment("all")}
                 className="text-xs text-slate-500 hover:text-forest-800"
               >
                 {t("customers.rfm.clearFilter")}
@@ -181,7 +202,7 @@ export default function CustomersPage() {
                 <button
                   key={seg}
                   type="button"
-                  onClick={() => setSegmentFilter((prev) => (prev === seg ? "all" : seg))}
+                  onClick={() => selectSegment(segmentFilter === seg ? "all" : seg)}
                   disabled={count === 0}
                   className={`text-left p-3 rounded-xl border transition-all ${
                     isActive

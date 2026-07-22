@@ -185,12 +185,20 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
     api<{ notes: OrderNote[] }>(`/orders/${orderId}/notes`)
       .then((r) => setOrderNotes(r.notes))
       .catch(() => null);
-    if (team.length === 0) {
-      api<TeamMember[]>("/tenant/users")
-        .then((users) => setTeam(users.filter((u) => u.active)))
-        .catch(() => null);
-    }
-  }, [orderId, team.length]);
+    // Eslatma: jamoa (team) alohida effect'da yuklanadi — bu effect'ning deps'ida
+    // team.length BO'LMASLIGI shart. Aks holda team yuklangach (0→N) bu effect
+    // qayta ishga tushib order'ni null qilib, spinner'ni miltillatardi.
+  }, [orderId]);
+
+  // Jamoa ro'yxati — bir marta yuklanadi (assignee tanlash uchun). orderId
+  // o'zgarganda ham faqat bo'sh bo'lsa qayta so'raydi.
+  useEffect(() => {
+    if (!orderId || team.length > 0) return;
+    api<TeamMember[]>("/tenant/users")
+      .then((users) => setTeam(users.filter((u) => u.active)))
+      .catch(() => null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId]);
 
   const refreshTimeline = async () => {
     if (!orderId) return;

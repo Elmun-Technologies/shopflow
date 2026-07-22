@@ -566,7 +566,7 @@ export default function PaymentsPage() {
         <div className="px-5 py-4 border-b border-cream-300 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-forest-800">{t("payments.recentTxns")}</h3>
           <div className="flex items-center gap-2">
-            <select value={txnFilter} onChange={(e) => setTxnFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-lg px-2 py-1 text-xs text-forest-800 focus:outline-none">
+            <select value={txnFilter} onChange={(e) => { setTxnFilter(e.target.value); setCurrentPage(1); }} className="bg-cream-100 border border-cream-300 rounded-lg px-2 py-1 text-xs text-forest-800 focus:outline-none">
               <option value="all">{t("payments.filter.all")}</option>
               <option value="success">{t("payments.txn.success")}</option>
               <option value="pending">{t("payments.txn.pending")}</option>
