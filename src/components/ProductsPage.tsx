@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Globe,
   Copy,
+  Download,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
 import ProductContentEditor, {
@@ -40,6 +41,7 @@ import { api, ApiError } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import { priceBreakdown } from "../utils/pricing";
+import { exportToCsv } from "../utils/exportCsv";
 import type { Product, Category } from "../types/api";
 import { useT } from "../i18n";
 
@@ -107,6 +109,51 @@ export default function ProductsPage() {
     if (!confirm(t("products.deleteConfirm", { name: p.name }))) return;
     await productsApi.delete(p.id);
     refetch();
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      // Joriy filtr natijasini to'liq yuklaymiz (limit 500 — Excel uchun yetarli)
+      const res = await productsApi.list({
+        page: 1,
+        pageSize: 500,
+        search: search || undefined,
+        categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+        status: statusFilter,
+        stock: stockFilter,
+      });
+      const catName = (id: string | null) => cats.find((c) => c.id === id)?.name ?? "";
+      exportToCsv({
+        filename: `products-${new Date().toISOString().slice(0, 10)}`,
+        columns: [
+          { key: "sku", label: t("productForm.sku") },
+          { key: "name", label: t("productForm.name") },
+          { key: "category", label: t("productForm.category") },
+          { key: "price", label: t("productForm.price", { currency }) },
+          { key: "oldPrice", label: t("productForm.oldPrice") },
+          { key: "stock", label: t("productForm.stock") },
+          { key: "currency", label: t("orders.col.currency") },
+          { key: "status", label: t("products.filter.allStatus") },
+        ],
+        rows: res.items.map((p) => ({
+          sku: p.sku,
+          name: p.name,
+          category: catName(p.categoryId),
+          price: Number(p.price),
+          oldPrice: p.oldPrice != null ? Number(p.oldPrice) : "",
+          stock: p.stock,
+          currency: p.currency || currency,
+          status: p.active ? t("products.filter.active") : t("products.filter.inactive"),
+        })),
+      });
+      toast.success(t("products.export.done", { n: res.items.length }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setExporting(false);
+    }
   };
 
   const [duplicating, setDuplicating] = useState<string | null>(null);
@@ -202,6 +249,15 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 whitespace-nowrap disabled:opacity-50"
+            title={t("products.export")}
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="hidden sm:inline">{t("products.export")}</span>
+          </button>
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center justify-center gap-2 px-3 py-2 bg-cream-100 hover:bg-cream-200 border border-cream-300 rounded-lg text-sm text-forest-800 whitespace-nowrap"

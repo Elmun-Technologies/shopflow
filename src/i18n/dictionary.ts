@@ -572,6 +572,8 @@ export const dictionary: Record<string, Entry> = {
 
   // Product bulk import
   "products.import": { uz: "Import", ru: "Импорт" },
+  "products.export": { uz: "Eksport", ru: "Экспорт" },
+  "products.export.done": { uz: "{n} ta mahsulot eksport qilindi", ru: "Экспортировано {n} товаров" },
   "import.title": { uz: "Mahsulotlarni import qilish", ru: "Импорт товаров" },
   "import.subtitle": { uz: "CSV faylni yuklang yoki Excel'dan paste qiling", ru: "Загрузите CSV файл или вставьте данные из Excel" },
   "import.format": { uz: "Format", ru: "Формат" },
