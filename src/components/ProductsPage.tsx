@@ -148,7 +148,12 @@ export default function ProductsPage() {
           status: p.active ? t("products.filter.active") : t("products.filter.inactive"),
         })),
       });
-      toast.success(t("products.export.done", { n: res.items.length }));
+      // Silent truncation'ni ochiq aytamiz: 500 dan ko'p bo'lsa faqat birinchi 500.
+      if (res.total > res.items.length) {
+        toast.info(t("products.export.capped", { n: res.items.length, total: res.total }));
+      } else {
+        toast.success(t("products.export.done", { n: res.items.length }));
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
