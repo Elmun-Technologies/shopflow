@@ -315,10 +315,16 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
 
       const raw = text.toUpperCase();
       const orderCode = raw.startsWith("ORD-") ? raw : `ORD-${raw}`;
-      const order = await app.prisma.order.findFirst({
-        where: { tenantId, code: orderCode },
-        select: { code: true, status: true, total: true, currency: true, items: { select: { id: true } } },
-      });
+      // MUHIM: buyurtmani SO'ROVCHI MIJOZning o'ziga bog'lab qidiramiz. Aks holda
+      // kod ketma-ket (ORD-7001, 7002...) bo'lgani uchun istalgan foydalanuvchi
+      // boshqa mijozlarning buyurtma holati/summasi/mahsulot sonini ko'rardi
+      // (cross-customer sizib chiqish). Faqat o'z buyurtmasi ko'rinadi.
+      const order = tgUserId
+        ? await app.prisma.order.findFirst({
+            where: { tenantId, code: orderCode, customer: { telegramUserId: BigInt(tgUserId) } },
+            select: { code: true, status: true, total: true, currency: true, items: { select: { id: true } } },
+          })
+        : null;
 
       if (!order) {
         if (token) {

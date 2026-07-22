@@ -209,9 +209,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
       let customerId: string | null = null;
-      if (tgUserId) {
+      // tgUserId ishonchsiz (bu endpoint body zod-parse qilinmagan) — faqat musbat
+      // butun raqam bo'lsa qidiramiz. Aks holda BigInt(...) throw qilib 500 berardi.
+      const tgNum = Number(tgUserId);
+      if (Number.isInteger(tgNum) && tgNum > 0) {
         const cust = await app.prisma.customer.findFirst({
-          where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
+          where: { tenantId: tenant.id, telegramUserId: BigInt(tgNum) },
           select: { id: true },
         });
         customerId = cust?.id ?? null;
@@ -248,7 +251,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     // Telegram'dan kelgan ma'lumotlar (auth uchun)
     telegram: z
       .object({
-        userId: z.union([z.number(), z.string()]).optional(),
+        // Ishonchsiz kirish — musbat butun raqamga coerce. Aks holda BigInt("abc")
+        // downstream throw qilib 500 berardi. Endi noto'g'ri qiymat toza 400.
+        userId: z.coerce.number().int().positive().optional(),
         username: z.string().optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
@@ -1332,7 +1337,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
    */
   const cartUpsertSchema = z.object({
     telegram: z.object({
-      userId: z.union([z.number(), z.string()]),
+      userId: z.coerce.number().int().positive(),
       firstName: z.string().optional(),
       lastName: z.string().optional(),
     }),
