@@ -139,7 +139,8 @@ jobs:
             set -euo pipefail
             cd /opt/shopflow
             echo "==> Fetching origin"
-            git fetch --all --prune
+            AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+            git -c http.extraHeader="Authorization: Basic ${AUTH_HEADER}" fetch --all --prune
             echo "==> Checking out ${DEPLOY_BRANCH}"
             git checkout -B "${DEPLOY_BRANCH}" "origin/${DEPLOY_BRANCH}"
             git reset --hard "origin/${DEPLOY_BRANCH}"
@@ -164,9 +165,10 @@ jobs:
             done
             echo "==> Final status"
             docker compose ps
-          envs: DEPLOY_BRANCH
+          envs: DEPLOY_BRANCH,GH_TOKEN
         env:
           DEPLOY_BRANCH: ${{ steps.branch.outputs.name }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Notify success
         if: success()
