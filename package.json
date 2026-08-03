@@ -23,7 +23,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@sentry/react": "^10.53.1",
+    "@sentry/react": "^10.69.0",
     "@tanstack/react-query": "^5.101.1",
     "clsx": "2.1.1",
     "framer-motion": "^12.38.0",
@@ -52,8 +52,11 @@
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.59.3",
-    "vite": "^7.3.3",
+    "vite": "^7.3.5",
     "vite-plugin-singlefile": "2.3.0",
     "vitest": "^4.1.6"
+  },
+  "overrides": {
+    "esbuild": "0.27.2"
   }
 }

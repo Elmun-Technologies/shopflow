@@ -22,6 +22,7 @@ BRANCH="${1:-${BRANCH:-main}}"
 DOMAIN="${2:-${DOMAIN:-}}"
 EMAIL="${3:-${EMAIL:-}}"
 GH_TOKEN="${GH_TOKEN:-}"
+SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-false}"
 
 REPO_URL="https://github.com/Elmun-Technologies/shopflow.git"
 if [ -n "$GH_TOKEN" ]; then
@@ -79,7 +80,10 @@ echo "===== 5. ShopFlow'ni klonlash ====="
 # Agar skript klonlangan repo ichidan ishga tushirilgan bo'lsa, qaytadan klonlamaymiz.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-if [ -d "$REPO_ROOT/.git" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
+if [ "$SKIP_GIT_SYNC" = "true" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
+  echo "   Oldindan yuklangan kod ishlatilmoqda: $REPO_ROOT"
+  cd "$REPO_ROOT"
+elif [ -d "$REPO_ROOT/.git" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
   echo "   Skript repo ichidan ishga tushirildi: $REPO_ROOT"
   cd "$REPO_ROOT"
   git fetch --all --prune

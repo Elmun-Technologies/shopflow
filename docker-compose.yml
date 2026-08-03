@@ -44,6 +44,13 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-https://shop-flow.uz}
       PORT: "4000"
       UPLOADS_DIR: /app/uploads
+      # Dastlabki tenant/admin seed qiymatlari. Ularni konteynerga uzatmasak,
+      # seed skripti xavfsiz bo'lmagan demo credential'larga qaytib qoladi.
+      SEED_TENANT_SLUG: ${SEED_TENANT_SLUG:-demo}
+      SEED_TENANT_NAME: ${SEED_TENANT_NAME:-ShopFlow Demo}
+      SEED_EMAIL: ${SEED_EMAIL:?SEED_EMAIL .env da o'rnating}
+      SEED_PASSWORD: ${SEED_PASSWORD:?SEED_PASSWORD .env da o'rnating}
+      SEED_USER_NAME: ${SEED_USER_NAME:-Admin}
       # AI yordamchi — ixtiyoriy. Sozlansa Telegram'da mijoz xabarlariga AI javob beradi
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Web Push (ixtiyoriy — kalit yo'q bo'lsa push silent skip)
