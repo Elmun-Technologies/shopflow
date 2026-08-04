@@ -54,8 +54,17 @@ services:
       SEED_EMAIL: ${SEED_EMAIL:?SEED_EMAIL .env da o'rnating}
       SEED_PASSWORD: ${SEED_PASSWORD:?SEED_PASSWORD .env da o'rnating}
       SEED_USER_NAME: ${SEED_USER_NAME:-Admin}
-      # AI yordamchi — ixtiyoriy. Sozlansa Telegram'da mijoz xabarlariga AI javob beradi
+      # AI — ixtiyoriy. Bot konstruktori generatori va Telegram'dagi AI javoblar.
+      # Ikkovidan qaysi kalit bo'lsa o'sha ishlatiladi (OpenAI ustun).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Ikkalasi ham bo'lsa majburlash: openai | anthropic
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      # Model — kalitingiz qaysi modelga ruxsat bersa o'shani yozing
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_MODEL_FAST: ${OPENAI_MODEL_FAST:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      ANTHROPIC_MODEL_FAST: ${ANTHROPIC_MODEL_FAST:-}
       # Web Push (ixtiyoriy — kalit yo'q bo'lsa push silent skip)
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}

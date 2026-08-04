@@ -1,18 +1,17 @@
 // AI yordamchi — Telegram bot orqali mijoz xabarlariga aqlli javob qaytaradi.
 //
-// Anthropic Claude API'ni ishlatadi (ANTHROPIC_API_KEY env var). Agar API
-// kaliti yo'q bo'lsa — failsoft, qaytaradi { used: false } va eski lid
-// yaratish oqimi ishlaydi.
+// Provayder (OpenAI yoki Anthropic) va model `ai-provider.ts` da kalitga qarab
+// hal qilinadi. Kalit yo'q bo'lsa — failsoft, qaytaradi { used: false } va eski
+// lid yaratish oqimi ishlaydi.
 //
-// Mijoz xabarini va tenant katalogini Claude'ga uzatadi. Claude javob:
+// Mijoz xabarini va tenant katalogini modelga uzatadi. Model javobi:
 //   - Mahsulot tavsiya qiladi (do'kondagi haqiqiy mahsulotlardan)
 //   - Yoki aniq narsalar haqida savol berib turadi
 //   - Yoki murakkab/yangi savol bo'lsa, operatorga yo'naltirishni so'raydi
 
 import type { PrismaClient } from "@prisma/client";
+import { aiChat, extractJson, isAiConfigured } from "./ai-provider.js";
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 600;
 const TIMEOUT_MS = 15_000;
 
@@ -63,8 +62,7 @@ export async function aiReplyToMessage(
   tenantId: string,
   userMessage: string,
 ): Promise<AIResponse> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { used: false, reason: "ANTHROPIC_API_KEY not set" };
+  if (!isAiConfigured()) return { used: false, reason: "AI kaliti sozlanmagan" };
   if (!userMessage.trim() || userMessage.length < 2) return { used: false, reason: "Empty message" };
 
   const tenant = await prisma.tenant.findUnique({
@@ -92,68 +90,42 @@ export async function aiReplyToMessage(
     stock: p.stock,
   }));
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const res = await aiChat({
+    system: buildSystemPrompt(tenant.name, JSON.stringify(catalog)),
+    user: userMessage.slice(0, 1000),
+    maxTokens: MAX_TOKENS,
+    timeoutMs: TIMEOUT_MS,
+    tier: "fast",
+    json: true,
+  });
+
+  if (!res.ok || !res.text) return { used: false, reason: res.reason ?? "AI javob bermadi" };
+
+  const jsonText = extractJson(res.text);
+  if (!jsonText) {
+    // Ba'zan model oddiy matn qaytaradi — uni ham qabul qilamiz
+    return { used: true, text: res.text.slice(0, 800) };
+  }
+
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(tenant.name, JSON.stringify(catalog)),
-        messages: [{ role: "user", content: userMessage.slice(0, 1000) }],
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.warn("[ai-assistant] Anthropic API error", res.status, body.slice(0, 200));
-      return { used: false, reason: `API ${res.status}` };
+    const parsed = JSON.parse(jsonText) as {
+      text?: string;
+      productIds?: string[];
+      handoffToOperator?: boolean;
+    };
+    if (!parsed.text || parsed.text.trim().length < 2) {
+      return { used: false, reason: "AI returned empty text" };
     }
-
-    const data = (await res.json()) as { content?: Array<{ type: string; text: string }> };
-    const rawText = data.content?.find((c) => c.type === "text")?.text?.trim();
-    if (!rawText) return { used: false, reason: "Empty AI response" };
-
-    // JSON ichidagi javobni ajratish — Claude ba'zan backticks bilan o'rashi mumkin
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      // Ba'zan model plain text qaytaradi — uni ham qabul qilamiz
-      return { used: true, text: rawText.slice(0, 800) };
-    }
-
-    try {
-      const parsed = JSON.parse(jsonMatch[0]) as {
-        text?: string;
-        productIds?: string[];
-        handoffToOperator?: boolean;
-      };
-      if (!parsed.text || parsed.text.trim().length < 2) {
-        return { used: false, reason: "AI returned empty text" };
-      }
-      // Validate productIds against catalog
-      const validIds = new Set(catalog.map((p) => p.id));
-      const productIds = (parsed.productIds ?? []).filter((id) => validIds.has(id));
-      return {
-        used: true,
-        text: parsed.text.slice(0, 800),
-        productIds: productIds.length ? productIds : undefined,
-        handoffToOperator: parsed.handoffToOperator === true,
-      };
-    } catch {
-      // Parse failed — plain text fallback
-      return { used: true, text: rawText.slice(0, 800) };
-    }
-  } catch (err) {
-    clearTimeout(timer);
-    console.warn("[ai-assistant] error", err);
-    return { used: false, reason: err instanceof Error ? err.message : String(err) };
+    // productIds'ni katalogga solishtiramiz — model o'ylab topgan ID o'tmasin
+    const validIds = new Set(catalog.map((p) => p.id));
+    const productIds = (parsed.productIds ?? []).filter((id) => validIds.has(id));
+    return {
+      used: true,
+      text: parsed.text.slice(0, 800),
+      productIds: productIds.length ? productIds : undefined,
+      handoffToOperator: parsed.handoffToOperator === true,
+    };
+  } catch {
+    return { used: true, text: res.text.slice(0, 800) };
   }
 }

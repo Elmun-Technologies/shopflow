@@ -18,6 +18,7 @@ import {
 } from "../lib/bot-flow-schema.js";
 import { TEMPLATE_LIST, getTemplate, type BotTemplateId } from "../lib/bot-flow-templates.js";
 import { generateBotFlow } from "../lib/bot-flow-ai.js";
+import { isAiConfigured, resolveAiConfig } from "../lib/ai-provider.js";
 import { logAuditFor } from "../lib/audit.js";
 
 const EMPTY_DEFINITION = botFlowDefinitionSchema.parse({
@@ -69,7 +70,9 @@ export const botFlowRoutes: FastifyPluginAsync = async (app) => {
         channelId: channel?.id ?? null,
       },
       productCount,
-      aiAvailable: Boolean(process.env.ANTHROPIC_API_KEY),
+      aiAvailable: isAiConfigured(),
+      /** Admin qaysi model ishlayotganini ko'rishi kerak — model env orqali almashadi */
+      aiModel: resolveAiConfig("smart")?.model ?? null,
     };
   });
 

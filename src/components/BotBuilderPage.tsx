@@ -89,6 +89,7 @@ interface FlowResponse {
   bot: { connected: boolean; username: string | null; channelId: string | null };
   productCount: number;
   aiAvailable: boolean;
+  aiModel: string | null;
 }
 
 interface TemplateMeta {
@@ -1180,13 +1181,14 @@ function TelegramPreview({
 // ─── AI generator modali ────────────────────────────────────────────────────
 
 function AIModal({
-  open, onClose, onApply, lastBrief, aiAvailable,
+  open, onClose, onApply, lastBrief, aiAvailable, aiModel,
 }: {
   open: boolean;
   onClose: () => void;
   onApply: (def: BotFlowDefinition, warnings: string[]) => void;
   lastBrief: string | null;
   aiAvailable: boolean;
+  aiModel: string | null;
 }) {
   const { t } = useT();
   const toast = useAppToast();
@@ -1229,7 +1231,9 @@ function AIModal({
             </span>
             <div>
               <h3 className="text-sm font-semibold text-forest-800">{t("botflow.aiTitle")}</h3>
-              <p className="text-[11px] text-slate-400">{t("botflow.aiSubtitle")}</p>
+              <p className="text-[11px] text-slate-400">
+                {aiAvailable && aiModel ? t("botflow.aiModel", { model: aiModel }) : t("botflow.aiSubtitle")}
+              </p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-forest-700">
@@ -1821,6 +1825,7 @@ export default function BotBuilderPage() {
         }}
         lastBrief={meta.lastBrief}
         aiAvailable={meta.aiAvailable}
+        aiModel={meta.aiModel}
       />
 
       <TemplatesModal

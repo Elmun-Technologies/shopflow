@@ -140,16 +140,47 @@ etadi (400) — buzuq oqim DB'ga umuman tushmaydi.
 ## AI generator
 
 **Bot → AI generator** tugmasi. Mijozning texnik topshirig'ini (rus tilida
-bo'lsa ham) qanday yozilgan bo'lsa shundayligicha qo'yasiz — Claude
-(`claude-sonnet-5`) to'liq oqim JSON'ini qaytaradi, zod tekshiradi, admin
-ko'rib chiqib saqlaydi.
+bo'lsa ham) qanday yozilgan bo'lsa shundayligicha qo'yasiz — model to'liq oqim
+JSON'ini qaytaradi, zod tekshiradi, admin ko'rib chiqib saqlaydi.
 
-- `ANTHROPIC_API_KEY` kerak. Bo'lmasa tugma o'chirilgan holatda — shablonlardan
-  foydalaniladi.
+- **Kalit kerak** — `OPENAI_API_KEY` yoki `ANTHROPIC_API_KEY`. Bo'lmasa tugma
+  o'chirilgan holatda va shablonlardan foydalaniladi. Batafsil: quyidagi
+  "Provayder va model" bo'limi.
 - Model faqat **taklif** qaytaradi: avtomatik saqlanmaydi va yoqilmaydi.
 - "Mavjud oqimni asos qilib olish" — joriy oqimni brifga qarab tahrirlaydi,
   ID'larni saqlab qolishga harakat qiladi.
 - Rate limit: 10 so'rov / 10 daqiqa.
+
+### Provayder va model
+
+Kod bitta provayderga bog'lanmagan — `backend/src/lib/ai-provider.ts` kalitga
+qarab tanlaydi:
+
+| Holat | Ishlatiladi |
+|---|---|
+| `OPENAI_API_KEY` bor | OpenAI |
+| Faqat `ANTHROPIC_API_KEY` bor | Anthropic |
+| Ikkalasi bor | OpenAI (`AI_PROVIDER=anthropic` bilan majburlash mumkin) |
+| Hech biri yo'q | AI funksiyalari jim o'chadi |
+
+Model `.env` orqali almashadi — **kalitingiz qaysi modelga ruxsat berishini
+bilmasdan default qo'yilgan**, shuning uchun "modelga ruxsat yo'q" xatosi
+chiqsa shu qatorlarni to'g'rilang:
+
+```bash
+OPENAI_MODEL=gpt-4o            # bot oqimini generatsiya qilish (sifat muhim)
+OPENAI_MODEL_FAST=gpt-4o-mini  # Telegram'dagi AI javoblar (tez/arzon)
+```
+
+Anthropic uchun `ANTHROPIC_MODEL` / `ANTHROPIC_MODEL_FAST`.
+
+Admin panelidagi AI oynasi sarlavhasi ostida **hozir qaysi model ishlayotgani**
+ko'rsatiladi — `.env` to'g'ri qo'llanganini shu yerdan tekshirasiz.
+
+OpenAI tomonida ikkita farq avtomatik qoplanadi, model almashganda kodga
+tegish shart emas: yangi modellar `max_tokens` o'rniga `max_completion_tokens`
+talab qiladi, ba'zilari `response_format: json_object` ni qo'llab-quvvatlamaydi
+— ikkalasida ham bir marta boshqacha shakl bilan qayta uriniladi.
 
 ---
 

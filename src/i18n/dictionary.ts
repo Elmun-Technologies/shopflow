@@ -2463,7 +2463,8 @@ export const dictionary: Record<string, Entry> = {
 
   "botflow.aiTitle": { uz: "AI bilan bot yasash", ru: "Создать бота с AI" },
   "botflow.aiSubtitle": { uz: "Mijoz texnik topshirig'ini qo'ying — tayyor oqim chiqadi", ru: "Вставьте техзадание клиента — получите готовый поток" },
-  "botflow.aiUnavailable": { uz: "AI generator ishlashi uchun serverda ANTHROPIC_API_KEY sozlanishi kerak. Hozircha shablonlardan foydalaning.", ru: "Для работы AI-генератора на сервере нужен ANTHROPIC_API_KEY. Пока используйте шаблоны." },
+  "botflow.aiUnavailable": { uz: "AI generator ishlashi uchun serverda OPENAI_API_KEY (yoki ANTHROPIC_API_KEY) sozlanishi kerak. Hozircha shablonlardan foydalaning.", ru: "Для работы AI-генератора на сервере нужен OPENAI_API_KEY (или ANTHROPIC_API_KEY). Пока используйте шаблоны." },
+  "botflow.aiModel": { uz: "Model: {model}", ru: "Модель: {model}" },
   "botflow.brief": { uz: "Texnik topshiriq", ru: "Техническое задание" },
   "botflow.briefHint": { uz: "Menyular, tugma matnlari, anketa savollari — qanday yozilgan bo'lsa shundayligicha qo'ying", ru: "Меню, тексты кнопок, вопросы анкет — вставьте как есть" },
   "botflow.briefPlaceholder": { uz: "Masalan:\n\nBosh menyu:\n📦 Katalog\n🧪 Namuna so'rash\n💬 Menejer bilan aloqa\n\nNamuna so'rash anketasi:\n1. Kompaniya nomi\n2. Ism va lavozim\n3. Telefon raqami…", ru: "Например:\n\nГлавное меню:\n📦 Каталог\n🧪 Запросить образец\n💬 Связаться с менеджером\n\nАнкета запроса образца:\n1. Название компании\n2. Имя и должность\n3. Номер телефона…" },
