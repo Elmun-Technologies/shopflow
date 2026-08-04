@@ -4,6 +4,8 @@ import { z } from "zod";
 import { nextLeadCode } from "../lib/codes.js";
 import { aiReplyToMessage } from "../lib/ai-assistant.js";
 import { sendTelegramRaw } from "../lib/telegram-notify.js";
+import { handleBotFlowUpdate, type BotEngineCtx } from "../lib/bot-engine.js";
+import { botFlowDefinitionSchema } from "../lib/bot-flow-schema.js";
 
 // ─── Bot menu tugmalari ────────────────────────────────────────────────────
 const BTN_SHOP    = "🛍 Do'kon";
@@ -150,7 +152,64 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     const tenantId = channel.tenant.id;
 
     type TgFrom = { id?: number; first_name?: string; last_name?: string; username?: string };
-    type TgMsg  = { chat?: { id?: number }; from?: TgFrom; text?: string };
+    type TgMsg  = {
+      chat?: { id?: number };
+      from?: TgFrom;
+      text?: string;
+      contact?: { phone_number?: string };
+    };
+
+    // ─── Bot konstruktori (BotFlow) ────────────────────────────────────────
+    // Tenant o'z oqimini yoqgan bo'lsa — barcha update'lar engine orqali
+    // o'tadi. Aks holda quyidagi standart (qattiq kodlangan) bot ishlaydi.
+    const flowRow = await app.prisma.botFlow.findUnique({ where: { tenantId } });
+    if (flowRow?.enabled) {
+      const parsed = botFlowDefinitionSchema.safeParse(flowRow.definition);
+      if (!parsed.success) {
+        // Buzilgan oqim botni o'ldirmasligi kerak — log yozib, standart botga tushamiz.
+        app.log.error({ tenantId, issues: parsed.error.issues.slice(0, 5) }, "BotFlow definition invalid");
+      } else if (parsed.data.screens.length > 0) {
+        const body = req.body as {
+          message?: TgMsg;
+          callback_query?: { id: string; from?: TgFrom; data?: string; message?: TgMsg };
+        };
+        const cb = body.callback_query;
+        const m = body.message;
+        const from = cb?.from ?? m?.from;
+        const flowChatId = cb?.message?.chat?.id ?? m?.chat?.id ?? from?.id;
+
+        if (!from?.id || !flowChatId) return { ok: true, skipped: true };
+
+        const engineCtx: BotEngineCtx = {
+          prisma: app.prisma,
+          tenantId,
+          channelId: channel.id,
+          storeName: channel.tenant.name,
+          storeUrl,
+          botToken: token,
+          chatId: flowChatId,
+          telegramUserId: from.id,
+          displayName:
+            [from.first_name, from.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi",
+          telegramUsername: from.username,
+        };
+
+        try {
+          const result = await handleBotFlowUpdate(engineCtx, parsed.data, {
+            text: m?.text,
+            callbackData: cb?.data,
+            callbackQueryId: cb?.id,
+            contactPhone: m?.contact?.phone_number,
+          });
+          return { ok: true, engine: "botflow", ...result };
+        } catch (err) {
+          // Engine xatosi ham botni to'xtatmasin — Telegram qayta urinmasligi
+          // uchun 200 qaytaramiz, xato Sentry/logga tushadi.
+          app.log.error({ err, tenantId }, "BotFlow engine failed");
+          return { ok: true, engine: "botflow", error: true };
+        }
+      }
+    }
 
     // ─── callback_query (til tanlash inline buttons) ───────────────────────
     const cbQuery = (req.body as {

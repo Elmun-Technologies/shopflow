@@ -52,6 +52,7 @@ const VoronkaPage = lazy(() => import("./components/pages/VoronkaPage"));
 const AnalyticsPage = lazy(() => import("./components/AnalyticsPage"));
 const SettingsPage = lazy(() => import("./components/SettingsPage"));
 const UIBuilderPage = lazy(() => import("./components/UIBuilderPage"));
+const BotBuilderPage = lazy(() => import("./components/BotBuilderPage"));
 const StorePage = lazy(() => import("./components/StorePage"));
 
 // Recharts-og'ir dashboard grafiklar — lazy (recharts initial bundle'dan chiqadi).
@@ -72,6 +73,7 @@ type Page =
   | "payments"
   | "delivery"
   | "uibuilder"
+  | "botbuilder"
   | "marketing"
   | "analytics"
   | "settings";
@@ -191,6 +193,7 @@ const PAGE_PATH: Record<Page, string> = {
   payments: "/payments",
   delivery: "/delivery",
   uibuilder: "/uibuilder",
+  botbuilder: "/botbuilder",
   marketing: "/marketing",
   analytics: "/analytics",
   settings: "/settings",
@@ -341,6 +344,8 @@ function AppShell() {
         }
       case "uibuilder":
         return <UIBuilderPage />;
+      case "botbuilder":
+        return <BotBuilderPage />;
       case "analytics":
         return <AnalyticsPage />;
       case "settings":
