@@ -149,9 +149,10 @@ jobs:
             docker compose up -d --build --remove-orphans
             echo "==> Pruning old images"
             docker image prune -f
-            echo "==> Waiting for healthcheck"
+            echo "==> Waiting for public HTTPS healthcheck"
             for i in 1 2 3 4 5 6 7 8 9 10; do
-              if curl -fsS http://localhost/health >/dev/null; then
+              if curl -fsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/health" >/dev/null && \
+                 curl -fsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/api/health" | grep -q '"db":"ok"'; then
                 echo "✅ Health OK on attempt $i"
                 break
               fi
@@ -165,10 +166,11 @@ jobs:
             done
             echo "==> Final status"
             docker compose ps
-          envs: DEPLOY_BRANCH,GH_TOKEN
+          envs: DEPLOY_BRANCH,GH_TOKEN,DOMAIN
         env:
           DEPLOY_BRANCH: ${{ steps.branch.outputs.name }}
           GH_TOKEN: ${{ github.token }}
+          DOMAIN: shop-flow.uz
 
       - name: Notify success
         if: success()
