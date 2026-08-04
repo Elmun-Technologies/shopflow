@@ -1,21 +1,21 @@
 // Bot generator — erkin matndagi brifni tayyor BotFlow oqimiga aylantiradi.
 //
 // Mijozdan kelgan texnik topshiriq (ko'pincha rus tilida, "menyu / tugmalar /
-// anketa savollari" ro'yxati ko'rinishida) Claude'ga uzatiladi va u
+// anketa savollari" ro'yxati ko'rinishida) modelga uzatiladi va u
 // `bot-flow-schema.ts` kontraktiga mos JSON qaytaradi. Natija zod bilan
 // tekshiriladi — model xato shakl qaytarsa, saqlanmaydi.
 //
-// ANTHROPIC_API_KEY yo'q bo'lsa failsoft: { ok: false } qaytadi va admin UI
-// shablonlardan foydalanishni taklif qiladi.
+// Provayder (OpenAI yoki Anthropic) va model `ai-provider.ts` da hal qilinadi.
+// Kalit yo'q bo'lsa failsoft: { ok: false } qaytadi va admin UI shablonlardan
+// foydalanishni taklif qiladi.
 
 import {
   botFlowDefinitionSchema,
   validateFlowRefs,
   type BotFlowDefinition,
 } from "./bot-flow-schema.js";
+import { aiChat, extractJson } from "./ai-provider.js";
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-5";
 const MAX_TOKENS = 16_000;
 const TIMEOUT_MS = 120_000;
 const MAX_BRIEF_CHARS = 24_000;
@@ -129,9 +129,6 @@ export async function generateBotFlow(
   brief: string,
   context: { storeName: string; hasProducts: boolean; existing?: BotFlowDefinition },
 ): Promise<BotFlowAIResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { ok: false, reason: "ANTHROPIC_API_KEY sozlanmagan" };
-
   const trimmed = brief.trim();
   if (trimmed.length < 20) return { ok: false, reason: "Brif juda qisqa" };
 
@@ -153,105 +150,41 @@ export async function generateBotFlow(
 
   userParts.push("Brief:", trimmed.slice(0, MAX_BRIEF_CHARS));
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const res = await aiChat({
+    system: SYSTEM_PROMPT,
+    user: userParts.join("\n\n"),
+    maxTokens: MAX_TOKENS,
+    timeoutMs: TIMEOUT_MS,
+    tier: "smart",
+    json: true,
+  });
+
+  if (!res.ok || !res.text) return { ok: false, reason: res.reason ?? "Generatsiya muvaffaqiyatsiz" };
+
+  const jsonText = extractJson(res.text);
+  if (!jsonText) return { ok: false, reason: "AI javobida JSON topilmadi" };
+
+  let payload: { summary?: string; definition?: unknown };
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userParts.join("\n\n") }],
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.warn("[bot-flow-ai] Anthropic API error", res.status, body.slice(0, 300));
-      return { ok: false, reason: `Anthropic API ${res.status}` };
-    }
-
-    const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
-    const raw = data.content?.filter((c) => c.type === "text").map((c) => c.text ?? "").join("").trim();
-    if (!raw) return { ok: false, reason: "AI bo'sh javob qaytardi" };
-
-    const jsonText = extractJson(raw);
-    if (!jsonText) return { ok: false, reason: "AI javobida JSON topilmadi" };
-
-    let payload: { summary?: string; definition?: unknown };
-    try {
-      payload = JSON.parse(jsonText) as { summary?: string; definition?: unknown };
-    } catch {
-      return { ok: false, reason: "AI javobini JSON sifatida o'qib bo'lmadi" };
-    }
-
-    const parsed = botFlowDefinitionSchema.safeParse(payload.definition);
-    if (!parsed.success) {
-      const issues = parsed.error.issues
-        .slice(0, 5)
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      return { ok: false, reason: `AI noto'g'ri shakl qaytardi — ${issues}` };
-    }
-
-    const warnings = validateFlowRefs(parsed.data);
-    return {
-      ok: true,
-      definition: parsed.data,
-      summary: typeof payload.summary === "string" ? payload.summary.slice(0, 300) : undefined,
-      warnings: warnings.length ? warnings : undefined,
-    };
-  } catch (err) {
-    clearTimeout(timer);
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn("[bot-flow-ai] error", message);
-    return { ok: false, reason: message === "The operation was aborted." ? "Vaqt tugadi — brifni qisqartiring" : message };
+    payload = JSON.parse(jsonText) as { summary?: string; definition?: unknown };
+  } catch {
+    return { ok: false, reason: "AI javobini JSON sifatida o'qib bo'lmadi" };
   }
-}
 
-/**
- * Javobdagi birinchi to'liq JSON obyektini ajratadi. Model ba'zan matnni
- * ```json bilan o'raydi yoki oldiga izoh yozadi.
- */
-function extractJson(raw: string): string | null {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const source = fenced ? fenced[1].trim() : raw;
-
-  const start = source.indexOf("{");
-  if (start < 0) return null;
-
-  // Qavslarni sanaymiz — string ichidagi qavslarni hisobga olmasdan.
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < source.length; i++) {
-    const ch = source[i];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (ch === "\\") {
-      escaped = true;
-      continue;
-    }
-    if (ch === '"') {
-      inString = !inString;
-      continue;
-    }
-    if (inString) continue;
-    if (ch === "{") depth++;
-    else if (ch === "}") {
-      depth--;
-      if (depth === 0) return source.slice(start, i + 1);
-    }
+  const parsed = botFlowDefinitionSchema.safeParse(payload.definition);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .slice(0, 5)
+      .map((i) => `${i.path.join(".")}: ${i.message}`)
+      .join("; ");
+    return { ok: false, reason: `AI noto'g'ri shakl qaytardi — ${issues}` };
   }
-  return null;
+
+  const warnings = validateFlowRefs(parsed.data);
+  return {
+    ok: true,
+    definition: parsed.data,
+    summary: typeof payload.summary === "string" ? payload.summary.slice(0, 300) : undefined,
+    warnings: warnings.length ? warnings : undefined,
+  };
 }
