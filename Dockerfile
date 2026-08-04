@@ -10,6 +10,25 @@ RUN npm ci --no-audit --no-fund
 
 # Build
 COPY . .
+
+# Telegram Mini App SDK'ni o'z domenimizdan berish uchun build vaqtida yuklab
+# olamiz. Mijoz brauzeri (Telegram WebView) endi telegram.org ga bog'liq emas —
+# ba'zi mobil operatorlar uni bloklaydi/sekinlashtiradi va o'shanda Mini App
+# umuman ochilmasdi. Yuklab bo'lmasa repodagi stub qoladi (u CDN'ga qaytadi),
+# ya'ni build hech qachon shu sabab yiqilmaydi.
+RUN set -eu; \
+    tmp="$(mktemp)"; \
+    if wget -q -T 20 -O "$tmp" https://telegram.org/js/telegram-web-app.js \
+       && [ -s "$tmp" ] \
+       && grep -q 'TelegramWebviewProxy\|window.Telegram' "$tmp"; then \
+      mkdir -p public/vendor; \
+      cp "$tmp" public/vendor/telegram-web-app.js; \
+      echo "telegram-web-app.js vendored ($(wc -c < "$tmp") bytes)"; \
+    else \
+      echo "WARN: telegram-web-app.js yuklab bo'lmadi — CDN stub ishlatiladi"; \
+    fi; \
+    rm -f "$tmp"
+
 ENV VITE_BASE_PATH=/
 # Google OAuth client id — Vite build vaqtida embed qilinadi (bo'sh bo'lsa tugma yashirin)
 ARG VITE_GOOGLE_CLIENT_ID=""

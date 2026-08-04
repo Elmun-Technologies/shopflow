@@ -307,6 +307,30 @@ o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
 - [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
 
 ### ✅ Yaqinda bajarilgan
+- ✅ **Mini App "do'kon ochilmayapti" (iPhone) — barqarorlik tuzatishlari.** Bot ishlab
+  turgani holda `🛍 Do'kon` tugmasi ba'zi qurilmalarda oq ekran berardi. Uchta
+  mustaqil sabab bartaraf qilindi:
+  1. **Telegram SDK endi o'z domenimizdan.** `index.html` `https://telegram.org/js/telegram-web-app.js`
+     ni yuklardi. O'zbekistonda ayrim mobil operatorlar `telegram.org` domenini
+     bloklaydi (Telegram'ning o'zi MTProto orqali ishlayveradi — shuning uchun bot
+     ishlaydi, Mini App esa yo'q). Skript yuklanmasa `window.Telegram` bo'lmaydi,
+     `ready()`/`expand()` chaqirilmaydi va Telegram yuklanish ekranida qotadi.
+     Endi `/vendor/telegram-web-app.js` — Docker build vaqtida yuklab olinadi
+     (`Dockerfile`), repoda CDN'ga qaytadigan stub turadi.
+  2. **Service Worker do'konga aralashmaydi.** Kesh nomi hech qachon o'zgarmasdi
+     (`shopflow-v1`); navigatsiya offline'ga tushsa eski `index.html` beriladi, u
+     esa allaqachon o'chirilgan hash'li asset'larga murojaat qiladi → oq ekran,
+     va mijoz Telegram WebView'ida keshni tozalay olmaydi. Endi `/store/*` SW'dan
+     butunlay chetda, kesh `shopflow-v2`, xato javoblar keshlanmaydi, va do'kon
+     ochilganda eski SW/kesh o'chiriladi (mavjud qurilmalar o'zini davolaydi).
+  3. **Boot watchdog.** Bundle umuman ishga tushmasa (oq ekran) endi o'qiladigan
+     panel chiqadi: sabab + diagnostika (SDK holati, online, SW, yuklanmagan fayl,
+     UA) + "Qayta urinish". Telegram'da devtools yo'q — bu yagona ko'rinadigan iz.
+  - Bonus: `X-Frame-Options: SAMEORIGIN` olib tashlandi (Caddy + nginx).
+    Clickjacking himoyasi CSP `frame-ancestors`da qoladi; XFO esa Telegram Web
+    (`web.telegram.org` iframe) ni bloklardi — WebKit uni `frame-ancestors` bilan
+    birga bo'lganda ham qo'llaydi. `frame-ancestors`/`frame-src` endi
+    `https://*.telegram.org` (webk/webz ham).
 - ✅ **1C integratsiyasi (CommerceML 2 «Обмен с сайтом»)** — 1C: Buxgalteriya/UT dan
   katalog importi. **Yo'nalish teskari**: 1C on-prem va NAT ortida bo'lgani uchun *biz*
   1C'ga ulanmaymiz — 1C o'zi bizga murojaat qiladi (oq IP/VPN/OData publikatsiyasi

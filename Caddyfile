@@ -27,13 +27,19 @@
 	}
 
 	# Qo'shimcha xavfsizlik headerlari (nginx allaqachon qo'shadi, lekin Caddy ham yuborgani yaxshi)
+	#
+	# X-Frame-Options ATAYLAB YO'Q. Clickjacking himoyasi CSP `frame-ancestors`
+	# orqali beriladi — u aniqroq va Telegram Web'ga ruxsat bera oladi.
+	# XFO da "SAMEORIGIN"dan boshqa ishlaydigan variant yo'q, WebKit (Safari/iOS)
+	# esa `frame-ancestors` mavjud bo'lsa ham XFO ni hisobga oladi. Natijada
+	# ikkalasi birga turganda Mini App web.telegram.org ichida bloklanadi.
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
-		X-Frame-Options "SAMEORIGIN"
+		-X-Frame-Options
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
-		Content-Security-Policy "default-src 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org https://accounts.google.com https://www.googletagmanager.com https://mc.yandex.ru; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://telegram.org https://accounts.google.com https://www.google-analytics.com https://mc.yandex.ru; frame-src https://accounts.google.com https://web.telegram.org; frame-ancestors 'self' https://web.telegram.org; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+		Content-Security-Policy "default-src 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org https://accounts.google.com https://www.googletagmanager.com https://mc.yandex.ru; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://telegram.org https://accounts.google.com https://www.google-analytics.com https://mc.yandex.ru; frame-src https://accounts.google.com https://telegram.org https://*.telegram.org; frame-ancestors 'self' https://telegram.org https://*.telegram.org; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 		Cross-Origin-Opener-Policy "same-origin-allow-popups"
 		Cross-Origin-Resource-Policy "same-site"
 		-Server
