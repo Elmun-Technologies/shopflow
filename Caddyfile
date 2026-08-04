@@ -44,3 +44,8 @@
 		format console
 	}
 }
+
+# www manzilini asosiy domenga yo'naltirish va unga ham avtomatik SSL olish.
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
