@@ -38,6 +38,7 @@ import {
   Wallet,
   Link2,
   GitMerge,
+  Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
@@ -78,6 +79,7 @@ type Page =
   | "payments"
   | "delivery"
   | "uibuilder"
+  | "botbuilder"
   | "marketing"
   | "analytics"
   | "settings";
@@ -156,6 +158,7 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: Layers, label: "Platformalar", labelKey: "nav.platforms", page: "platforms" },
       { icon: Paintbrush, label: "Vitrina", labelKey: "nav.uibuilder", page: "uibuilder" },
+      { icon: Bot, label: "Bot", labelKey: "nav.botbuilder", page: "botbuilder" },
     ],
   },
 ];

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 type Page =
   | "dashboard" | "analytics" | "orders" | "products" | "payments" | "delivery"
-  | "leads" | "customers" | "segments" | "chat" | "platforms" | "uibuilder"
+  | "leads" | "customers" | "segments" | "chat" | "platforms" | "uibuilder" | "botbuilder"
   | "marketing" | "settings";
 
 interface Options {
@@ -26,6 +26,7 @@ const GOTO_MAP: Record<string, Page> = {
   a: "analytics",
   s: "settings",
   v: "uibuilder", // Vitrina
+  b: "botbuilder", // Bot konstruktori
 };
 
 function isTextInput(target: EventTarget | null): boolean {
@@ -118,5 +119,6 @@ export const SHORTCUTS_LIST: Array<{ keys: string[]; labelKey: string }> = [
   { keys: ["g", "m"], labelKey: "shortcuts.goMarketing" },
   { keys: ["g", "a"], labelKey: "shortcuts.goAnalytics" },
   { keys: ["g", "v"], labelKey: "shortcuts.goVitrina" },
+  { keys: ["g", "b"], labelKey: "shortcuts.goBot" },
   { keys: ["g", "s"], labelKey: "shortcuts.goSettings" },
 ];

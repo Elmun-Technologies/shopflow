@@ -146,6 +146,7 @@ shopflow/
 │   │   ├── PaymentsPage.tsx       # Payment methods + transactions
 │   │   ├── PlatformsPage.tsx      # Channel CRUD + AddChannelModal
 │   │   ├── UIBuilderPage.tsx      # Vitrina editor (drag/drop blocks + single-product konstruktor)
+│   │   ├── BotBuilderPage.tsx     # Bot konstruktori (ekran/anketa editori + Telegram preview + AI)
 │   │   ├── SettingsPage.tsx       # 7 tab: profile/store/team/notify/integrations/security/api
 │   │   ├── TeamSection.tsx        # Jamoa — invite + rol + deaktiv
 │   │   ├── OnboardingWizard.tsx   # 5 qadamli sehrgar (yangi tenant)
@@ -184,7 +185,8 @@ shopflow/
 │       │                          # dashboard, webhooks, payments, delivery, vitrina,
 │       │                          # moysklad, salesdoctor, ...
 │       └── lib/                   # audit, telegram-notify, secret-cipher,
-│                                  # cart-abandonment, salesdoctor-client/push/worker
+│                                  # cart-abandonment, salesdoctor-client/push/worker,
+│                                  # bot-flow-schema/templates/ai, bot-engine
 ├── docker-compose.yml             # Postgres + Backend + Frontend + Caddy
 ├── Caddyfile
 ├── scripts/bootstrap.sh           # VPS one-shot setup
@@ -260,6 +262,7 @@ shopflow/
 - ✅ **Single-product do'kon rejimi** — Vitrina'da "Do'kon turi: Ko'p mahsulotli / Bitta mahsulot" toggle. Single rejimda bitta mahsulotga qaratilgan landing (galereya/sharhlar/badge/taymer toggle), savatsiz to'g'ridan-to'g'ri "Buyurtma berish". `Storefront.storeMode` + `singleProductId`. Bot `/start` o'zgarmaydi — storefront rejimga qarab render qiladi.
 - ✅ **Public API v1** — tashqi mijoz websaytlari uchun barqaror, API-kalit himoyalangan kontrakt (`/api/v1`). 6 endpoint: `GET /categories`, `/products` (filtr/sort/sahifalash), `/products/{slug}`, `/products/{id}/upsells` (ProductAddon), `/promotions` (free shipping), `POST /orders` (server-side narx, atomik stock, WEBSITE kanali, SSE/webhook). Bearer `sf_...` → tenant (`authenticateApiKey`). `?locale=uz|ru|en`. Pul butun UZS, rasm absolyut HTTPS, GET'lar 300s kesh. Shakl: `lib/public-shape.ts`, kontrakt: **`PUBLIC_API.md`**. Kalit: Sozlamalar → API yoki `npm run create-api-key -- <slug>`.
   - Schema o'zgarishi: `Product.slug` (tenant ichida unique, URL identifikatori) + `Product.origin` (filtr) + `Product.content` (JSON — tagline/highlights/benefits/ingredients/howToUse/faq/servings/bespoke). Slug create'da avto-generatsiya + `npm run backfill-slugs` (mavjudlar). **Deploy'da `prisma db push` kerak.** Boy kontent admin UI — ✅ bajarildi (`ProductContentEditor`, mahsulot formasida).
+- ✅ **Bot konstruktori (BotFlow)** — tenant Telegram botining suhbat oqimini kodsiz quradi. `BotFlow.definition` JSON (ekranlar + tugmalar + anketalar + sozlamalar), `bot-engine.ts` runtime, `BotSession` DB'da holat (ilgari xotiradagi `Map` edi — restartda yo'qolardi va tenantlar orasida chatId bo'yicha to'qnashardi). Tugma amallari: ekran / anketa / matn / Mini App / URL / katalog / buyurtma kuzatish / operator / til. Anketa javoblari `mapTo` orqali Lead ustunlariga tushadi, qolgani izohga. **Opt-in** — `enabled=false` bo'lsa eski standart bot ishlaydi. Shablonlar: `retail` (hozirgi botning ekvivalenti) / `b2b` (ishlab chiqaruvchilar: sohalar, yechim tanlash anketasi, namuna/narx so'rovi) / `blank`. **AI generator**: mijoz brifini qo'yasiz → Claude to'liq oqim qaytaradi (zod tekshiradi, admin tasdiqlaydi). Admin: Kanallar → Bot (`g b`). Hujjat: **`BOT_BUILDER.md`**. **Deploy'da migratsiya kerak** (`20260804120000_add_bot_flow`).
 - ✅ **Single-product landing konstruktori** — multi rejimdek to'liq seksiya builder. `SingleConfig` endi tartiblangan `sections[]` (eski 5-boolean shaklga backward-compat `normalizeSingleConfig`). Editor: doimiy "skelet" (galereya → narx → CTA, qulflangan) + qo'shimcha bo'limlar (ishonch belgilari / sharhlar / haftalik xaridorlar / tezkor info / aksiya taymeri / tavsif / yetkazib berish / combo) — drag + strelka bilan tartiblanadi, eye toggle bilan yoqiladi. **Storefront'ga to'liq ulangan**: `StorePage` single PDP body bo'limlarni saqlangan tartib + holatga qarab chizadi (multi rejim PDP o'zgarmagan). Yangi `CountdownBanner` (kun oxirigacha jonli ortga hisob).
 
 ### Marketing
@@ -387,6 +390,11 @@ Bu loyiha bilan ishlashda:
 6. **Status pills** — pastel `bg-{color}-100 text-{color}-600`, border yo'q.
 7. **PR'ni draft sifatida oching**. User merge qiladi.
 8. **Branch:** `claude/sync-pr-to-server-MaNhk`.
-9. **CLAUDE.md ni yangilang** — yangi feature yoki o'zgarish bo'lsa.
+9. **Bot mantiqi** — `webhooks.ts` dagi qattiq kodlangan botga yangi tugma
+   qo'shmang. Bot xatti-harakati endi **BotFlow** orqali (`bot-flow-schema.ts`
+   kontrakti). Yangi tugma turi kerak bo'lsa: sxemaga action qo'shing →
+   `bot-engine.ts` `runAction` → admin UI `ACTION_TYPES` → i18n
+   `botflow.action.*`. Qarang: `BOT_BUILDER.md`.
+10. **CLAUDE.md ni yangilang** — yangi feature yoki o'zgarish bo'lsa.
 
 Tilim: **Uzbek (lotin)** — user shu tilda. Ba'zan rus aralashma bo'lishi mumkin.

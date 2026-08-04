@@ -57,6 +57,7 @@ import { promoCodeRoutes } from "./routes/promo-codes.js";
 import { deliveryRoutes } from "./routes/delivery.js";
 import { exportRoutes } from "./routes/export.js";
 import { botSequencesRoutes } from "./routes/bot-sequences.js";
+import { botFlowRoutes } from "./routes/bot-flow.js";
 import { startBotSequenceWorker } from "./lib/bot-sequence-worker.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { smsRoutes } from "./routes/sms.js";
@@ -242,6 +243,7 @@ await app.register(popupRoutes, { prefix: "/api/popups" });
 await app.register(saleCampaignRoutes, { prefix: "/api/sale-campaigns" });
 await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });
 await app.register(botSequencesRoutes, { prefix: "/api/bot-sequences" });
+await app.register(botFlowRoutes, { prefix: "/api/bot-flow" });
 // Combo / product addons — mahsulotga qo'shimcha tovarlar (Amazon-style)
 await app.register(productAddonRoutes, { prefix: "/api/products" });
 await app.register(auditRoutes, { prefix: "/api/audit" });
