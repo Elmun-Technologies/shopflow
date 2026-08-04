@@ -48,6 +48,11 @@ if ("serviceWorker" in navigator) {
   }
 }
 
+// index.html dagi boot-watchdog uchun: bundle shu yergacha yetib keldi.
+// (Panel diagnostikasida "bosqich" shu bayroq orqali aniqlanadi.)
+const boot = (window as unknown as { __sfBoot?: { react: boolean } }).__sfBoot;
+if (boot) boot.react = true;
+
 // Render yiqilsa index.html dagi boot-watchdog paneli ko'rsatiladi — mijoz
 // oq ekran o'rniga sababni ko'radi (Telegram'da devtools ochib bo'lmaydi).
 try {

@@ -3,6 +3,141 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      BOOT WATCHDOG — sahifadagi ENG BIRINCHI skript. Boshqa hech narsaga
+      (React, Tailwind, Telegram SDK, hatto <body>) bog'liq emas va panelni
+      o'zi JS bilan yasaydi.
+
+      Nega head'ning eng boshida: agar keyingi biror sinxron <script> osilib
+      qolsa (masalan bloklangan domenga so'rov timeout'gacha kutsa), HTML
+      tahlili shu yerda to'xtaydi — <body> umuman yaratilmaydi va body'dagi
+      skript hech qachon ishlamaydi. Natija: uzoq davom etadigan OQ EKRAN,
+      hech qanday izsiz. Timer shu hangdan OLDIN qo'yilgani uchun baribir
+      ishlaydi va qaysi bosqichda qotganini aytadi.
+    -->
+    <script>
+      (function () {
+        var W = window;
+        var boot = (W.__sfBoot = {
+          t0: Date.now(),
+          sdk: "kutilmoqda",
+          react: false,
+          failed: [],
+        });
+        var shown = false;
+
+        function phase() {
+          if (!document.body) return "head — HTML tahlili to'xtab qolgan";
+          if (!boot.react) return "body — JS bundle ishga tushmadi";
+          var root = document.getElementById("root");
+          if (!root || !root.children.length) return "react — ilova chizilmadi";
+          return "ok";
+        }
+
+        function diagnostics() {
+          var tg = W.Telegram && W.Telegram.WebApp;
+          return [
+            "bosqich: " + phase(),
+            "vaqt: " + Math.round((Date.now() - boot.t0) / 1000) + "s",
+            "sdk: " + (tg ? "ok v" + (tg.version || "?") + " / " + (tg.platform || "?") : boot.sdk),
+            "url: " + location.pathname,
+            "online: " + (navigator.onLine ? "ha" : "yo'q"),
+            "sw: " +
+              ("serviceWorker" in navigator
+                ? navigator.serviceWorker.controller
+                  ? "faol"
+                  : "yo'q"
+                : "yo'q"),
+            boot.failed.length ? "yuklanmadi: " + boot.failed.join(", ") : "",
+            "ua: " + navigator.userAgent,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        }
+
+        function el(tag, css, text) {
+          var n = document.createElement(tag);
+          n.style.cssText = css;
+          if (text) n.textContent = text;
+          return n;
+        }
+
+        function show(reason) {
+          if (shown || phase() === "ok") return;
+          shown = true;
+
+          var overlay = el(
+            "div",
+            "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;" +
+              "justify-content:center;padding:20px;background:#17212b;color:#f5f5f5;" +
+              "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif"
+          );
+          var card = el(
+            "div",
+            "max-width:380px;width:100%;text-align:center;background:#202b36;" +
+              "border:1px solid #2b3844;border-radius:16px;padding:24px"
+          );
+          card.appendChild(el("div", "font-size:32px;line-height:1;margin-bottom:12px", "⚠️"));
+          card.appendChild(
+            el("div", "font-size:17px;font-weight:600;margin-bottom:8px", "Ilova yuklanmadi")
+          );
+          card.appendChild(
+            el("div", "font-size:14px;line-height:1.5;color:#aab8c2;margin-bottom:18px", reason)
+          );
+
+          var btn = el(
+            "button",
+            "appearance:none;border:0;cursor:pointer;background:#5FA340;color:#fff;" +
+              "font-size:15px;font-weight:600;border-radius:10px;padding:11px 22px;width:100%",
+            "Qayta urinish"
+          );
+          btn.onclick = function () {
+            location.reload();
+          };
+          card.appendChild(btn);
+
+          card.appendChild(
+            el(
+              "pre",
+              "margin:16px 0 0;padding:10px;text-align:left;font-size:10px;line-height:1.5;" +
+                "color:#7d8b98;background:#17212b;border-radius:8px;white-space:pre-wrap;" +
+                "word-break:break-all",
+              diagnostics()
+            )
+          );
+
+          overlay.appendChild(card);
+          (document.body || document.documentElement).appendChild(overlay);
+        }
+
+        W.__shopflowBootFailed = show;
+
+        // Yuklanmagan <script>/<link> larni yig'amiz — sababni aniq aytish uchun
+        W.addEventListener(
+          "error",
+          function (e) {
+            var t = e && e.target;
+            if (!t || !t.tagName) return;
+            var src = t.src || t.href;
+            if (!src) return;
+            try {
+              src = new URL(src, location.href).host + new URL(src, location.href).pathname;
+            } catch (_) {
+              /* xom qoldiramiz */
+            }
+            boot.failed.push(src);
+            show("Kerakli fayl yuklanmadi. Internet aloqangizni tekshiring yoki keyinroq urinib ko'ring.");
+          },
+          true
+        );
+
+        setTimeout(function () {
+          show("Ilova 8 soniyada yuklanmadi. Internet sekin yoki fayllarga ruxsat yo'q bo'lishi mumkin.");
+        }, 8000);
+      })();
+    </script>
+
     <meta name="description" content="ShopFlow — zamonaviy e-commerce admin dashboard. Buyurtmalar, mijozlar, mahsulotlar va marketing kampaniyalari boshqaruvi." />
     <meta name="theme-color" content="#5FA340" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -15,121 +150,25 @@
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z'/%3E%3Cline x1='3' y1='6' x2='21' y2='6'/%3E%3Cpath d='M16 10a4 4 0 0 1-8 0'/%3E%3C/svg%3E" />
     <title>ShopFlow — E-commerce Dashboard</title>
+
     <!--
-      Telegram Mini App SDK — O'Z DOMENIMIZDAN beriladi.
-      Ilgari to'g'ridan-to'g'ri https://telegram.org/js/telegram-web-app.js edi. Bu
-      Mini App'ni uchinchi domenga bog'lab qo'yardi: mobil operator telegram.org ni
-      bloklasa yoki sekin bersa, `window.Telegram` umuman paydo bo'lmaydi va
-      `ready()`/`expand()` chaqirilmagani uchun Telegram yuklanish ekranida qotib
-      qoladi ("do'kon ochilmayapti"), bot esa MTProto orqali normal ishlayveradi —
-      shuning uchun muammo faqat ayrim tarmoqlarda/qurilmalarda ko'rinadi.
-      Docker build vaqtida `public/vendor/telegram-web-app.js` haqiqiy nusxa bilan
-      almashtiriladi; repodagi fayl — CDN'ga qaytadigan zaxira stub.
+      Telegram Mini App SDK — FAQAT o'z domenimizdan, sinxron.
+      Uchinchi domen (telegram.org) ataylab ishlatilmaydi: ba'zi operatorlar uni
+      bloklaydi va bloklash "rad etish" emas, "jimgina tashlab yuborish" bo'lsa
+      sinxron <script> TCP timeout'igacha HTML tahlilini to'xtatib turadi —
+      sahifa o'nlab soniya oq bo'lib qoladi. O'z domenimiz esa sayt ochilgan
+      bo'lsa albatta yetib keladi.
+      Fayl Docker build vaqtida yuklab olinadi (Dockerfile); yuklanmagan bo'lsa
+      repodagi stub qoladi va u CDN'ni ASINXRON yuklaydi (hech qachon bloklamaydi).
     -->
     <script src="/vendor/telegram-web-app.js"></script>
+    <script>
+      window.__sfBoot.sdk =
+        window.Telegram && window.Telegram.WebApp ? "ok (lokal)" : "yo'q (stub/kech)";
+    </script>
   </head>
   <body>
     <div id="root"></div>
-
-    <!--
-      Boot watchdog — bundle yuklanmasa/ishga tushmasa oq ekran o'rniga
-      o'qiladigan xabar. Tailwind yoki React'ga bog'liq emas (ular yuklanmagan
-      bo'lishi mumkin), shuning uchun inline CSS va oddiy JS.
-    -->
-    <div id="boot-fallback" hidden>
-      <div class="bf-card">
-        <div class="bf-icon">⚠️</div>
-        <h1>Ilova yuklanmadi</h1>
-        <p id="boot-reason"></p>
-        <button type="button" id="boot-retry">Qayta urinish</button>
-        <pre id="boot-diag"></pre>
-      </div>
-    </div>
-    <style>
-      #boot-fallback[hidden] { display: none; }
-      #boot-fallback {
-        position: fixed; inset: 0; z-index: 9999;
-        display: flex; align-items: center; justify-content: center;
-        padding: 20px; background: #17212b; color: #f5f5f5;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      }
-      #boot-fallback .bf-card {
-        max-width: 380px; width: 100%; text-align: center;
-        background: #202b36; border: 1px solid #2b3844; border-radius: 16px; padding: 24px;
-      }
-      #boot-fallback .bf-icon { font-size: 32px; line-height: 1; margin-bottom: 12px; }
-      #boot-fallback h1 { font-size: 17px; font-weight: 600; margin: 0 0 8px; }
-      #boot-fallback p { font-size: 14px; line-height: 1.5; color: #aab8c2; margin: 0 0 18px; }
-      #boot-fallback button {
-        appearance: none; border: 0; cursor: pointer;
-        background: #5FA340; color: #fff; font-size: 15px; font-weight: 600;
-        border-radius: 10px; padding: 11px 22px; width: 100%;
-      }
-      #boot-fallback pre {
-        margin: 16px 0 0; padding: 10px; text-align: left;
-        font-size: 10px; line-height: 1.5; color: #7d8b98;
-        background: #17212b; border-radius: 8px;
-        white-space: pre-wrap; word-break: break-all;
-      }
-    </style>
-    <script>
-      (function () {
-        var TIMEOUT_MS = 12000;
-        var failedResources = [];
-        var shown = false;
-
-        function diagnostics() {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          return [
-            "sdk: " + (tg ? "ok v" + (tg.version || "?") + " / " + (tg.platform || "?") : "YO'Q"),
-            "url: " + location.pathname,
-            "online: " + (navigator.onLine ? "ha" : "yo'q"),
-            "sw: " + ("serviceWorker" in navigator ? (navigator.serviceWorker.controller ? "faol" : "yo'q") : "qo'llab-quvvatlanmaydi"),
-            failedResources.length ? "yuklanmadi: " + failedResources.join(", ") : "",
-            "ua: " + navigator.userAgent,
-          ].filter(Boolean).join("\n");
-        }
-
-        function show(reason) {
-          if (shown) return;
-          var root = document.getElementById("root");
-          if (root && root.children.length > 0) return; // ilova baribir chizildi
-          var el = document.getElementById("boot-fallback");
-          if (!el) return;
-          shown = true;
-          document.getElementById("boot-reason").textContent = reason;
-          document.getElementById("boot-diag").textContent = diagnostics();
-          el.hidden = false;
-        }
-
-        // main.tsx render'da yiqilsa shu orqali xabar beradi
-        window.__shopflowBootFailed = show;
-
-        // Yuklanmagan <script>/<link> larni yig'amiz — sababni aniq aytish uchun
-        window.addEventListener(
-          "error",
-          function (e) {
-            var el = e && e.target;
-            if (!el || !el.tagName) return;
-            var src = el.src || el.href;
-            if (!src) return;
-            try { src = new URL(src, location.href).pathname; } catch (_) { /* xom qoldiramiz */ }
-            failedResources.push(src);
-            show("Kerakli fayl yuklanmadi. Internet aloqangizni tekshiring yoki keyinroq urinib ko'ring.");
-          },
-          true
-        );
-
-        document.getElementById("boot-retry").addEventListener("click", function () {
-          location.reload();
-        });
-
-        setTimeout(function () {
-          show("Ilova 12 soniyada yuklanmadi. Internet sekin yoki fayllarga ruxsat yo'q bo'lishi mumkin.");
-        }, TIMEOUT_MS);
-      })();
-    </script>
-
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
