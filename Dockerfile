@@ -35,6 +35,14 @@ ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
+# Build natijasini tekshiramiz. `/vendor/telegram-web-app.js` yo'q bo'lsa
+# mijozda 404 bo'ladi va Mini App Telegram SDK'siz qoladi — bu jimgina
+# o'tib ketmasligi kerak, deploy shu yerda qizil bo'lsin.
+RUN test -f dist/vendor/telegram-web-app.js \
+    && test -f dist/index.html \
+    && grep -q '/vendor/telegram-web-app.js' dist/index.html \
+    && echo "dist/vendor/telegram-web-app.js OK ($(wc -c < dist/vendor/telegram-web-app.js) bytes)"
+
 # ─── Runtime stage ────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runtime
 

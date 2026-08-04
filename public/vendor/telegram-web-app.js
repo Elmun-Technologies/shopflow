@@ -1,29 +1,15 @@
-// Telegram Mini App SDK — ZAXIRA STUB.
+// Telegram Mini App SDK — JOY BAND QILUVCHI (placeholder).
 //
 // Production image'da bu fayl Docker build vaqtida telegram.org dan yuklab
 // olingan HAQIQIY `telegram-web-app.js` bilan almashtiriladi (qarang: Dockerfile).
-// Repoda stub turadi, chunki SDK Telegram'ning mulki va muntazam yangilanadi.
+// Repoda esa ataylab BO'SH placeholder turadi — SDK Telegram'ning mulki va
+// muntazam yangilanadi, uni versiyalab saqlash noto'g'ri bo'lardi.
 //
-// Stub ishga tushsa (lokal dev, yoki build vaqtida yuklab olish uddalanmagan
-// holat) — SDK Telegram CDN'idan yuklanadi, lekin ATAYLAB ASINXRON:
-// `document.write` yoki sinxron <script> ishlatilmaydi. Sabab: ayrim mobil
-// operatorlar telegram.org ni "jimgina" bloklaydi (RST emas, paket tashlanadi),
-// va sinxron skript o'shanda TCP timeout'igacha butun HTML tahlilini to'xtatadi
-// — mijoz uzoq vaqt OQ EKRAN ko'radi. Asinxron yuklashda esa sahifa normal
-// chiziladi, SDK kechroq kelsa `sf:telegram-sdk` hodisasi bilan xabar beriladi
-// (src/utils/telegramSdk.ts uni kutadi).
-(function () {
-  if (window.Telegram && window.Telegram.WebApp) return;
-
-  var s = document.createElement("script");
-  s.src = "https://telegram.org/js/telegram-web-app.js";
-  s.async = true;
-  s.onload = function () {
-    if (window.__sfBoot) window.__sfBoot.sdk = "ok (CDN, kech)";
-    window.dispatchEvent(new Event("sf:telegram-sdk"));
-  };
-  s.onerror = function () {
-    if (window.__sfBoot) window.__sfBoot.sdk = "yo'q (CDN bloklangan)";
-  };
-  document.head.appendChild(s);
-})();
+// Zaxira (CDN) mantiqi ATAYLAB bu yerda emas, `index.html` da:
+// ilgari u shu faylning ichida edi va shuning uchun aynan bu fayl yetib
+// kelmagan holatda (404, bloklangan yo'l) zaxira ham ishlamasdi. Endi
+// index.html dagi `<script ... onerror="window.__sfLoadTelegramCdn()">` va
+// undan keyingi tekshiruv ikkala holatni ham qoplaydi.
+//
+// Shu sababli bu yerda hech qanday kod yo'q: `window.Telegram` yaratilmaydi,
+// index.html buni ko'radi va CDN zaxirasini asinxron yuklaydi.
