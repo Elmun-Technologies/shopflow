@@ -27,17 +27,42 @@ function sessionKey(): string {
 }
 
 /**
- * Stateless sessiya tokeni: `base64url(tenantId.exp).hex(hmac)`.
- * Xotirada Map saqlamaymiz — backend qayta ishga tushsa ham almashinuv uzilmaydi.
+ * Credential "versiyasi" — saqlangan shifrlangan paroldan olingan qisqa
+ * barmoq izi. `encryptSecret` har safar yangi IV ishlatadi, shuning uchun
+ * parol almashtirilsa (yoki hisob o'chirilib qayta yaratilsa) bu qiymat
+ * albatta o'zgaradi.
+ *
+ * ATAYLAB `updatedAt` emas: hisob har `checkauth`/`init`/`import` da
+ * `lastExchangeAt` bilan yangilanadi va sozlama tugmasi ham uni o'zgartiradi —
+ * bunday signal almashinuvni o'rtasida uzib qo'yardi.
  */
-export function issueSessionToken(tenantId: string): string {
-  const payload = Buffer.from(`${tenantId}.${Date.now() + SESSION_TTL_MS}`).toString("base64url");
+export function credentialFingerprint(encryptedPassword: string): string {
+  return createHmac("sha256", sessionKey()).update(encryptedPassword).digest("hex").slice(0, 32);
+}
+
+export interface OneCSession {
+  tenantId: string;
+  fingerprint: string;
+}
+
+/**
+ * Stateless sessiya tokeni: `base64url(tenantId.fingerprint.exp).hex(hmac)`.
+ * Xotirada Map saqlamaymiz — backend qayta ishga tushsa ham almashinuv uzilmaydi.
+ * Fingerprint tufayli parol almashtirilishi bilan eski cookie kuchini yo'qotadi.
+ */
+export function issueSessionToken(tenantId: string, encryptedPassword: string): string {
+  const fp = credentialFingerprint(encryptedPassword);
+  const payload = Buffer.from(`${tenantId}.${fp}.${Date.now() + SESSION_TTL_MS}`).toString("base64url");
   const sig = createHmac("sha256", sessionKey()).update(payload).digest("hex");
   return `${payload}.${sig}`;
 }
 
-/** Token to'g'ri va muddati o'tmagan bo'lsa tenantId qaytaradi. */
-export function verifySessionToken(token: string | undefined | null): string | null {
+/**
+ * Imzo va muddatni tekshiradi. Chaqiruvchi qaytgan `fingerprint`ni hisobning
+ * JORIY `credentialFingerprint` qiymati bilan solishtirishi SHART — aks holda
+ * bekor qilingan parol bilan berilgan cookie ishlab turaveradi.
+ */
+export function verifySessionToken(token: string | undefined | null): OneCSession | null {
   if (!token) return null;
   const dot = token.lastIndexOf(".");
   if (dot <= 0) return null;
@@ -49,12 +74,13 @@ export function verifySessionToken(token: string | undefined | null): string | n
   if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
 
   const decoded = Buffer.from(payload, "base64url").toString("utf8");
-  const sep = decoded.lastIndexOf(".");
-  if (sep <= 0) return null;
-  const tenantId = decoded.slice(0, sep);
-  const exp = Number(decoded.slice(sep + 1));
+  const parts = decoded.split(".");
+  if (parts.length !== 3) return null;
+  const [tenantId, fingerprint, expRaw] = parts;
+  const exp = Number(expRaw);
+  if (!tenantId || !fingerprint) return null;
   if (!Number.isFinite(exp) || exp < Date.now()) return null;
-  return tenantId || null;
+  return { tenantId, fingerprint };
 }
 
 /** `Cookie:` sarlavhasidan 1C sessiya qiymatini ajratadi. */

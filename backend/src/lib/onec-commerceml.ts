@@ -167,12 +167,14 @@ function parseProduct(tovar: XmlNode): OneCProduct | null {
   // Rasmlar: <Картинка> (ba'zi konfiguratsiyalarda <Изображение>)
   const images = [...textsOf(tovar["Картинка"]), ...textsOf(tovar["Изображение"])];
 
-  const manufacturer = asArray(tovar["Изготовитель"])[0];
+  // FAQAT haqiqiy davlat maydonlari. <Изготовитель> ATAYLAB ishlatilmaydi —
+  // u ishlab chiqaruvchi (kompaniya/brend) nomi, davlat emas. Uni bu yerga
+  // qo'shsak `Product.origin` ga brend nomi tushib, public API'ning `origin`
+  // filtri buzilardi.
   const country =
     textOf(tovar["Страна"]) ??
     reqs["страна"] ??
     reqs["страна происхождения"] ??
-    (manufacturer ? textOf(manufacturer["Наименование"]) : null) ??
     null;
 
   return {

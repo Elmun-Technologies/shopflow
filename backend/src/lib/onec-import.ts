@@ -217,15 +217,24 @@ async function syncProduct(
 ): Promise<void> {
   const sku = item.sku?.trim() || item.id;
 
-  // 1C GUID birlamchi kalit; eski (qo'lda kiritilgan) mahsulotni SKU orqali
-  // topib, birinchi importda unga oneCId bog'laymiz.
+  // 1C GUID birlamchi kalit. Undan keyingina SKU bo'yicha qidiramiz — bu
+  // faqat BIRINCHI import uchun: qo'lda kiritilgan mahsulotni 1C kartochkasiga
+  // bog'lash.
+  //
+  // SKU zaxira yo'li ATAYLAB tor: faqat hech qaysi integratsiyaga bog'lanmagan
+  // qator. Aks holda ikkita muammo chiqadi —
+  //   1) bir xil Артикул'li ikki 1C tovari bir qatorni navbat bilan tortib
+  //      olib, oneCId'ni doim qayta yozardi (import har safar "yangilandi"
+  //      deb ko'rsatib, aslida ma'lumot almashinib turardi);
+  //   2) MoySklad/Sales Doctor'ga bog'langan mahsulot 1C tomonidan
+  //      egallanib, o'sha integratsiyaning nomi/kategoriyasi/rasmi buzilardi.
   const existing =
     (await prisma.product.findFirst({
       where: { tenantId, oneCId: item.id },
       select: { id: true, imageUrl: true, oneCId: true },
     })) ??
     (await prisma.product.findFirst({
-      where: { tenantId, sku },
+      where: { tenantId, sku, oneCId: null, moyskladId: null, salesDoctorId: null },
       select: { id: true, imageUrl: true, oneCId: true },
     }));
 
@@ -277,6 +286,20 @@ async function syncProduct(
 
   // 1C'da allaqachon o'chirilgan mahsulotni yangidan yaratmaymiz
   if (item.deleted) return;
+
+  // SKU boshqa (bog'langan) mahsulotda band bo'lsa create P2002 bilan yiqiladi.
+  // Xom Prisma xatosi o'rniga operatorga tushunarli sabab yozamiz.
+  const skuTaken = await prisma.product.findFirst({
+    where: { tenantId, sku },
+    select: { id: true },
+  });
+  if (skuTaken) {
+    entry.warnings.push(
+      `Mahsulot "${item.name}" o'tkazib yuborildi: "${sku}" artikuli boshqa mahsulotda band ` +
+        "(u boshqa integratsiyaga yoki boshqa 1C kartochkasiga bog'langan).",
+    );
+    return;
+  }
 
   const categoryId = await resolveCategoryId(prisma, tenantId, entry, item.groupIds);
   const slug = await uniqueProductSlug(prisma, tenantId, item.name);

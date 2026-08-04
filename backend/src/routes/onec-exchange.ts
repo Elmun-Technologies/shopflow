@@ -20,6 +20,7 @@ import { decryptSecret } from "../lib/secret-cipher.js";
 import {
   ONEC_COOKIE_NAME,
   appendStagedChunk,
+  credentialFingerprint,
   issueSessionToken,
   parseBasicAuth,
   readSessionCookie,
@@ -83,16 +84,18 @@ export const oneCExchangeRoutes: FastifyPluginAsync = async (app) => {
    */
   const authenticate = async (
     headers: Record<string, unknown>,
-  ): Promise<{ tenantId: string } | { error: string }> => {
-    const cookieTenant = verifySessionToken(
-      readSessionCookie(headers.cookie as string | undefined),
-    );
-    if (cookieTenant) {
-      const exists = await app.prisma.oneCAccount.findUnique({
-        where: { tenantId: cookieTenant },
-        select: { tenantId: true },
+  ): Promise<{ tenantId: string; encryptedPassword: string } | { error: string }> => {
+    const session = verifySessionToken(readSessionCookie(headers.cookie as string | undefined));
+    if (session) {
+      const acc = await app.prisma.oneCAccount.findUnique({
+        where: { tenantId: session.tenantId },
+        select: { tenantId: true, encryptedPassword: true },
       });
-      if (exists) return { tenantId: cookieTenant };
+      // Cookie credential "versiyasi"ga bog'langan: parol almashtirilsa yoki
+      // hisob o'chirilib qayta yaratilsa, eski cookie darhol kuchini yo'qotadi.
+      if (acc && safeEqual(session.fingerprint, credentialFingerprint(acc.encryptedPassword))) {
+        return { tenantId: acc.tenantId, encryptedPassword: acc.encryptedPassword };
+      }
     }
 
     const basic = parseBasicAuth(headers.authorization as string | undefined);
@@ -111,7 +114,7 @@ export const oneCExchangeRoutes: FastifyPluginAsync = async (app) => {
       return { error: "Stored credential is unreadable, please reconnect in admin panel" };
     }
     if (!safeEqual(basic.password, expected)) return { error: "Invalid login or password" };
-    return { tenantId: acc.tenantId };
+    return { tenantId: acc.tenantId, encryptedPassword: acc.encryptedPassword };
   };
 
   const handler = async (
@@ -132,7 +135,7 @@ export const oneCExchangeRoutes: FastifyPluginAsync = async (app) => {
     // ── checkauth: sessiya cookie'sini beramiz ──────────────────────────
     if (mode === "checkauth") {
       await touch(tenantId);
-      const token = issueSessionToken(tenantId);
+      const token = issueSessionToken(tenantId, auth.encryptedPassword);
       return textReply(reply, `success\n${ONEC_COOKIE_NAME}\n${token}`);
     }
 

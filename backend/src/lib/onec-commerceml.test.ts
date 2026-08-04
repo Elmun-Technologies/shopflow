@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { decodeXml, isCatalogFilename, parseCommerceML } from "./onec-commerceml.js";
-import { safeRelPath, issueSessionToken, verifySessionToken, parseBasicAuth, readSessionCookie } from "./onec-exchange.js";
+import {
+  safeRelPath, issueSessionToken, verifySessionToken, parseBasicAuth,
+  readSessionCookie, credentialFingerprint,
+} from "./onec-exchange.js";
 
 const SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <КоммерческаяИнформация ВерсияСхемы="2.05" ДатаФормирования="2026-08-04">
@@ -126,6 +129,31 @@ describe("parseCommerceML", () => {
   it("CommerceML bo'lmagan XML'ni rad etadi", () => {
     expect(() => parseCommerceML("<html><body>404</body></html>")).toThrow();
   });
+
+  it("Изготовитель nomini davlat deb qabul qilmaydi", () => {
+    // <Изготовитель> — kompaniya/brend nomi. Uni `origin` ga yozsak public
+    // API'ning davlat filtri brend nomlari bilan ifloslanardi.
+    const doc = parseCommerceML(`<?xml version="1.0" encoding="UTF-8"?>
+      <КоммерческаяИнформация><Каталог><Товары>
+        <Товар>
+          <Ид>m-1</Ид><Наименование>Telefon</Наименование>
+          <Изготовитель><Ид>brand-1</Ид><Наименование>Samsung Electronics</Наименование></Изготовитель>
+        </Товар>
+      </Товары></Каталог></КоммерческаяИнформация>`);
+    expect(doc.products[0].country).toBeNull();
+  });
+
+  it("haqiqiy davlat maydonini o'qiydi", () => {
+    const doc = parseCommerceML(`<?xml version="1.0" encoding="UTF-8"?>
+      <КоммерческаяИнформация><Каталог><Товары>
+        <Товар>
+          <Ид>m-2</Ид><Наименование>Telefon</Наименование>
+          <Страна>Korea</Страна>
+          <Изготовитель><Наименование>Samsung Electronics</Наименование></Изготовитель>
+        </Товар>
+      </Товары></Каталог></КоммерческаяИнформация>`);
+    expect(doc.products[0].country).toBe("Korea");
+  });
 });
 
 describe("decodeXml", () => {
@@ -179,17 +207,35 @@ describe("1C exchange sessiyasi", () => {
   const prevJwt = process.env.JWT_SECRET;
   process.env.JWT_SECRET = "test-secret-for-1c-exchange-sessions-0123456789";
 
+  const ENC = "iv:tag:ciphertext-v1";
+
   it("imzolangan tokenni o'zi tekshira oladi", () => {
-    const token = issueSessionToken("tenant-abc");
-    expect(verifySessionToken(token)).toBe("tenant-abc");
+    const token = issueSessionToken("tenant-abc", ENC);
+    const session = verifySessionToken(token);
+    expect(session?.tenantId).toBe("tenant-abc");
+    expect(session?.fingerprint).toBe(credentialFingerprint(ENC));
   });
 
   it("buzilgan yoki soxta tokenni rad etadi", () => {
-    const token = issueSessionToken("tenant-abc");
+    const token = issueSessionToken("tenant-abc", ENC);
     expect(verifySessionToken(token.slice(0, -2) + "ff")).toBeNull();
     expect(verifySessionToken("qalbaki.token")).toBeNull();
     expect(verifySessionToken(undefined)).toBeNull();
     expect(verifySessionToken("")).toBeNull();
+  });
+
+  it("parol almashtirilsa eski cookie barmoq izi mos kelmaydi", () => {
+    // Route aynan shu solishtiruvni qiladi: token ichidagi fingerprint
+    // hisobning JORIY encryptedPassword'idan hisoblangani bilan teng bo'lishi shart.
+    const oldToken = issueSessionToken("tenant-abc", ENC);
+    const rotated = "iv2:tag2:ciphertext-v2";
+    const session = verifySessionToken(oldToken);
+    expect(session).not.toBeNull();
+    expect(session!.fingerprint).not.toBe(credentialFingerprint(rotated));
+  });
+
+  it("bir xil credential uchun barmoq izi barqaror", () => {
+    expect(credentialFingerprint(ENC)).toBe(credentialFingerprint(ENC));
   });
 
   it("cookie sarlavhasidan qiymatni ajratadi", () => {
