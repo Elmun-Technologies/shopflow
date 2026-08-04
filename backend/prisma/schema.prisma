@@ -63,6 +63,8 @@ model Tenant {
   loyaltyAccounts LoyaltyAccount[]
   loyaltyRules    LoyaltyRule[]
   botSequences    BotSequence[]
+  botFlow         BotFlow?
+  botSessions     BotSession[]
 }
 
 enum UserRole {
@@ -1612,4 +1614,63 @@ model RefreshToken {
 
   @@index([userId])
   @@index([tokenHash])
+}
+
+// ============== BOT KONSTRUKTORI (BOT FLOW) ==============
+//
+// Har bir tenant o'z Telegram botining suhbat oqimini (ekranlar, tugmalar,
+// anketalar) JSON ko'rinishida saqlaydi — Vitrina `blocks` bilan bir xil
+// pattern. `enabled = false` bo'lsa bot eski qattiq kodlangan oqimda ishlaydi,
+// ya'ni bu funksiya **opt-in** (faqat kerak bo'lgan mijozlar uchun).
+//
+// Shakl kontrakti: backend/src/lib/bot-flow-schema.ts (zod bilan validatsiya).
+model BotFlow {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Yoqilganda webhook engine'ni ishlatadi, aks holda default bot
+  enabled Boolean @default(false)
+
+  // Konstruktor natijasi: { version, settings, screens[], forms[] }
+  definition Json @default("{}")
+
+  // Qaysi shablondan boshlangan ("retail" | "b2b" | "ai" | "blank") — analitika uchun
+  template String?
+
+  // Oxirgi AI generatsiya brifi (qayta generatsiya qilishda ko'rsatiladi)
+  lastBrief String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Bot suhbat holati — ilgari xotiradagi Map edi (server restartda yo'qolardi
+// va tenantlar orasida chatId bo'yicha to'qnashardi). Ko'p qadamli anketa
+// uchun holat majburiy davomiy bo'lishi kerak.
+model BotSession {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  chatId   BigInt
+
+  lang String @default("uz")
+
+  // "idle" | "form" | "awaiting_order"
+  state String @default("idle")
+
+  // Joriy ekran (orqaga qaytish uchun stack bilan)
+  screenId  String?
+  screenPath String[] @default([])
+
+  // Aktiv anketa
+  formId     String?
+  fieldIndex Int    @default(0)
+  answers    Json   @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, chatId])
+  @@index([updatedAt])
 }

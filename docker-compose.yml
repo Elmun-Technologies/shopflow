@@ -27,6 +27,8 @@ services:
       - shopflow-net
     mem_limit: 1g
     mem_reservation: 256m
+    cpus: 2.0
+    pids_limit: 200
 
   backend:
     build:
@@ -44,6 +46,7 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-https://shop-flow.uz}
       PORT: "4000"
       UPLOADS_DIR: /app/uploads
+      ONEC_EXCHANGE_DIR: /app/1c-exchange
       # Dastlabki tenant/admin seed qiymatlari. Ularni konteynerga uzatmasak,
       # seed skripti xavfsiz bo'lmagan demo credential'larga qaytib qoladi.
       SEED_TENANT_SLUG: ${SEED_TENANT_SLUG:-demo}
@@ -62,6 +65,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # Sentry (ixtiyoriy)
       SENTRY_DSN: ${SENTRY_DSN:-}
+      # Prometheus endpoint uchun maxfiy Bearer token.
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       # Sezgir 3rd-party tokenlar shifrlash kaliti (alohida, JWT'dan farqli)
       SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
       # Email (ixtiyoriy — avtomatik hisobotlar uchun)
@@ -75,8 +80,6 @@ services:
       ESKIZ_LOGIN: ${ESKIZ_LOGIN:-}
       ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
       ESKIZ_FROM: ${ESKIZ_FROM:-4546}
-      # 1C «Обмен с сайтом» staging katalogi (import.xml + rasm fayllari)
-      ONEC_EXCHANGE_DIR: /app/1c-exchange
     volumes:
       - uploads_data:/app/uploads
       # 1C almashinuv staging'i — ATAYLAB uploads'dan alohida: uploads nginx
@@ -93,6 +96,15 @@ services:
     # to'liq egallanmaydi. VPS RAM/CPU'ga qarab moslash mumkin.
     mem_limit: 1g
     mem_reservation: 256m
+    cpus: 2.0
+    pids_limit: 200
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,uid=1000,gid=1000
 
   shopflow:
     build:
@@ -116,6 +128,10 @@ services:
       start_period: 5s
     networks:
       - shopflow-net
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 1.0
+    pids_limit: 100
 
   caddy:
     image: caddy:2-alpine
@@ -139,6 +155,10 @@ services:
         condition: service_started
     networks:
       - shopflow-net
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 1.0
+    pids_limit: 100
 
   # Avtomatik kunlik DB backup. Postgres image'da pg_dump bor — engil shell loop
   # cron o'rniga (cron docker'da murakkab). 24 soat kutadi, keyin dump, gzip,
@@ -167,6 +187,9 @@ services:
     networks:
       - shopflow-net
     mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 0.5
+    pids_limit: 100
     entrypoint: ["sh", "-c"]
     command:
       - |

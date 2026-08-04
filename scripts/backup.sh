@@ -32,6 +32,12 @@ if ! pg_dump "$DB_URL" | gzip > "$FILEPATH"; then
   exit 1
 fi
 
+# Buzilgan/qisman arxivni backup deb qabul qilmaymiz.
+gzip -t "$FILEPATH"
+chmod 600 "$FILEPATH"
+sha256sum "$FILEPATH" > "${FILEPATH}.sha256"
+chmod 600 "${FILEPATH}.sha256"
+
 SIZE=$(du -sh "$FILEPATH" | cut -f1)
 echo "[$(date)] Backup yaratildi: $FILENAME ($SIZE)"
 
@@ -43,6 +49,9 @@ if [ -n "${BACKUP_S3_BUCKET:-}" ]; then
     [ -n "${BACKUP_S3_ENDPOINT:-}" ] && ep="--endpoint-url ${BACKUP_S3_ENDPOINT}"
     # shellcheck disable=SC2086
     if aws s3 cp "$FILEPATH" "s3://${BACKUP_S3_BUCKET}/${FILENAME}" $ep; then
+      # shellcheck disable=SC2086
+      aws s3 cp "${FILEPATH}.sha256" "s3://${BACKUP_S3_BUCKET}/${FILENAME}.sha256" $ep || \
+        echo "[$(date)] WARNING: offsite checksum yuklanmadi" >&2
       echo "[$(date)] Offsite yuklandi: s3://${BACKUP_S3_BUCKET}/${FILENAME}"
     else
       echo "[$(date)] WARNING: offsite yuklash muvaffaqiyatsiz (local backup saqlandi)" >&2
@@ -54,6 +63,7 @@ fi
 
 # Eski local backuplarni o'chirish (offsite retention — bucket lifecycle rule bilan).
 find "$BACKUP_DIR" -name "shopflow_backup_*.sql.gz" -mtime "+${RETENTION_DAYS}" -delete
+find "$BACKUP_DIR" -name "shopflow_backup_*.sql.gz.sha256" -mtime "+${RETENTION_DAYS}" -delete
 echo "[$(date)] ${RETENTION_DAYS} kundan eski local backuplar o'chirildi"
 
 TOTAL=$(find "$BACKUP_DIR" -name "shopflow_backup_*.sql.gz" | wc -l)
