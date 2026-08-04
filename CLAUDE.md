@@ -132,6 +132,7 @@ shopflow/
 │   │   ├── IntegrationsHub.tsx    # 29 ta integration markaz (+ CRM kategoriya)
 │   │   ├── MoyskladIntegrationCard.tsx # Real OAuth flow
 │   │   ├── SalesDoctorIntegrationCard.tsx # SD CRM — connect/defaults/pull/retry
+│   │   ├── OneCIntegrationCard.tsx # 1C CommerceML — URL/login/parol + import tarixi
 │   │   ├── OrdersPage.tsx         # Desktop table + mobile card + bulk status
 │   │   ├── OrderDetailDrawer.tsx  # + print invoice + status timeline stepper
 │   │   ├── ProductsPage.tsx       # Bulk actions + import + restock modal
@@ -183,9 +184,10 @@ shopflow/
 │   └── src/
 │       ├── routes/                # auth, leads, orders, products, customers, channels,
 │       │                          # dashboard, webhooks, payments, delivery, vitrina,
-│       │                          # moysklad, salesdoctor, ...
+│       │                          # moysklad, salesdoctor, onec, onec-exchange, ...
 │       └── lib/                   # audit, telegram-notify, secret-cipher,
 │                                  # cart-abandonment, salesdoctor-client/push/worker,
+│                                  # onec-commerceml/onec-import/onec-exchange,
 │                                  # bot-flow-schema/templates/ai, bot-engine
 ├── docker-compose.yml             # Postgres + Backend + Frontend + Caddy
 ├── Caddyfile
@@ -242,6 +244,7 @@ shopflow/
 - ✅ **Integratsiyalar markazi** — 29 ta (Click/Payme/Uzum/Yandex Go/Eskiz/...)
 - ✅ **MoySklad** real OAuth integration
 - ✅ **Sales Doctor CRM** — two-way sync (push order/status, pull catalog, retry worker)
+- ✅ **1C: Buxgalteriya** — CommerceML 2 «Обмен с сайтом» katalog importi (pastda batafsil)
 - ✅ **Low Stock Alert** — Dashboard widget
 - ✅ **Click/Payme/Uzum** webhook handlers (backend)
 - ✅ Promo codes, loyalty, SMS admin pages
@@ -283,6 +286,15 @@ Har biri uchun ulanish yo'riqnomasi: **`INTEGRATIONS.md`**.
 - [ ] **Eskiz SMS** — kod to'liq (token auth + bulk + UI). `.env`'ga login/parol kerak. Avto-trigger yo'q; per-tenant credential rejalashtirilgan.
 - [ ] **Yandex Go delivery** — **faqat STUB**: umumiy delivery CRUD bor, lekin Yandex API kodi YO'Q. Provayder klient + webhook + Yandex Pro hisob kerak (qurilishi lozim).
 
+### 1C — keyingi bosqichlar (kod bazasi tayyor, qamrov ataylab cheklangan)
+- [ ] **`offers.xml` — narx va qoldiq.** Hozir fayl qabul qilinadi, lekin qo'llanmaydi.
+      Qo'shilsa `createInactive` default'ini `false` ga o'zgartirish mantiqiy bo'ladi.
+      Parser `onec-commerceml.ts` ga `<ПредложениеТовара>` (Цены/Количество) qo'shiladi.
+- [ ] **Buyurtmalarni 1C'ga eksport** (`type=sale&mode=query`). Hozir bo'sh, lekin
+      yaroqli CommerceML qaytadi. `Заказ` hujjatini generatsiya qilish kerak.
+- [ ] **Xarakteristikali tovarlar** — `Ид` "guid#guid" bo'lsa hozir alohida mahsulot
+      bo'lib tushadi. Variant/modifikatsiya modeli kerak bo'lsa qayta ko'rib chiqiladi.
+
 ### Ixtiyoriy
 - [ ] **List virtualization** — agar 1000+ qator sekin scroll bo'lsa (hozir pagination 20)
 - [ ] **StorePage to'liq dedup** — reviews/combo ham ulashilgan komponentga (hozir ataylab StorePage'da, chunki async/interaktiv)
@@ -295,6 +307,34 @@ o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
 - [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
 
 ### ✅ Yaqinda bajarilgan
+- ✅ **1C integratsiyasi (CommerceML 2 «Обмен с сайтом»)** — 1C: Buxgalteriya/UT dan
+  katalog importi. **Yo'nalish teskari**: 1C on-prem va NAT ortida bo'lgani uchun *biz*
+  1C'ga ulanmaymiz — 1C o'zi bizga murojaat qiladi (oq IP/VPN/OData publikatsiyasi
+  kerak emas). Endpoint: `POST|GET /api/1c/exchange`, HTTP Basic auth (per-tenant
+  login/parol; login global unique → tenant shu orqali topiladi, URL'da tenant ID
+  ochilmaydi). Protokol: `checkauth` → `init` → `file` (bo'laklab) → `import`.
+  Katta katalog **`progress` protokoli** bilan 300 tadan bo'lib import qilinadi —
+  1C bir so'rovda timeout bo'lmaydi (oraliq holat xotirada, `onec-import.ts`).
+  - **Qamrov: faqat katalog** — kategoriya daraxti + mahsulot kartochkasi (nom,
+    artikul, tavsif, guruh, rasm, davlat). **Narx/qoldiq (`offers.xml`) qo'llanmaydi** —
+    fayl qabul qilinadi va jurnalga yoziladi, xolos. Shu sababli yangi mahsulot
+    default **yashirin** (`createInactive`) yaratiladi — narxsiz holda vitrinada
+    0 so'mga chiqmasligi uchun.
+  - **Xavfsizlik:** staging katalogi `ONEC_EXCHANGE_DIR` (default `/app/1c-exchange`),
+    **ataylab** `/app/uploads` dan tashqarida — uploads nginx orqali ochiq beriladi,
+    `import.xml` esa butun katalogni oshkor qilardi. `safeRelPath` path traversal'ni
+    to'sadi; sessiya cookie'si HMAC bilan imzolangan (stateless, restart'ga chidamli);
+    exchange route'da rate limit o'chirilgan (almashinuv yuzlab so'rov yuboradi).
+  - **Ataylab qilinmagan:** mahsulot hech qachon o'chirilmaydi (faqat `active=false`);
+    `mode=deactivate` bajarilmaydi (qisman yuklamada butun katalogni yashirib qo'yardi);
+    buyurtma eksporti yo'q (`type=sale` ga bo'sh, lekin yaroqli CommerceML qaytadi —
+    1C tomonida almashinuv xatosiz yakunlanadi).
+  - Fayllar: `routes/onec.ts` (admin API), `routes/onec-exchange.ts` (protokol),
+    `lib/onec-commerceml.ts` (parser + 19 test), `lib/onec-import.ts`, `lib/onec-exchange.ts`,
+    `components/OneCIntegrationCard.tsx`. Operator yo'riqnomasi: **`INTEGRATIONS.md` §5**.
+  - Schema: `OneCAccount`, `OneCImportLog`, `Product.oneCId/oneCUpdated`,
+    `Category.oneCId`, `ProductSource.ONEC`. **Deploy'da migratsiya kerak**
+    (`20260804090000_add_1c_commerceml_integration`).
 - ✅ **Prisma migrations** — versiyalangan `prisma migrate` + drift-check (`MIGRATIONS.md`)
 - ✅ **API access logs UI** — Settings → API tab real backend (`ApiKeysSection`) + "oxirgi ishlatilgan" audit
 - ✅ **Tenant data export** — Settings → Do'kon → JSON eksport
@@ -340,7 +380,7 @@ cd /opt/shopflow && git fetch origin && git reset --hard origin/main && docker c
 ## ⚙️ Convention / qoidalar
 
 ### Branch
-Hozirgi ish branch: `claude/sync-pr-to-server-MaNhk`.
+Hozirgi ish branch: `claude/1c-integration-h5fcnb`.
 Har PR shu branch'ga commit qiladi, user merge qiladi, branch reset bo'ladi.
 
 ### Commit message
@@ -389,7 +429,7 @@ Bu loyiha bilan ishlashda:
 5. **Empty state ikonkasi** — `text-cream-300`, qora dot emas.
 6. **Status pills** — pastel `bg-{color}-100 text-{color}-600`, border yo'q.
 7. **PR'ni draft sifatida oching**. User merge qiladi.
-8. **Branch:** `claude/sync-pr-to-server-MaNhk`.
+8. **Branch:** `claude/1c-integration-h5fcnb`.
 9. **Bot mantiqi** — `webhooks.ts` dagi qattiq kodlangan botga yangi tugma
    qo'shmang. Bot xatti-harakati endi **BotFlow** orqali (`bot-flow-schema.ts`
    kontrakti). Yangi tugma turi kerak bo'lsa: sxemaga action qo'shing →

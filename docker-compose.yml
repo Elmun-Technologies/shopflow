@@ -82,6 +82,8 @@ services:
       ESKIZ_FROM: ${ESKIZ_FROM:-4546}
     volumes:
       - uploads_data:/app/uploads
+      # 1C almashinuv staging'i — ATAYLAB uploads'dan alohida: uploads nginx
+      # orqali ochiq beriladi, import.xml esa butun katalogni oshkor qilardi.
       - onec_exchange_data:/app/1c-exchange
     expose:
       - "4000"

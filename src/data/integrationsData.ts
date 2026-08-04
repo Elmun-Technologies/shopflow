@@ -292,12 +292,14 @@ export const integrations: IntegrationItem[] = [
   {
     id: "1c",
     name: "1C: Buxgalteriya",
-    description: "Buxgalteriya hisoboti va sinxron",
+    description: "Katalog 1C'dan avtomatik — CommerceML almashinuvi",
     category: "erp",
     color: "#FFEB3B",
     initials: "1C",
-    status: "soon",
+    status: "available",
+    recommended: true,
     region: "UZ",
+    setupHint: "1C «Обмен с сайтом» moduli orqali — oq IP kerak emas.",
   },
   {
     id: "bitrix24",

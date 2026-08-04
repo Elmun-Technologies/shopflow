@@ -399,3 +399,64 @@ export const salesDoctorApi = {
       }>;
     }>("/salesdoctor/retries"),
 };
+
+// ===== 1C (CommerceML «Обмен с сайтом») =====
+
+export interface OneCImportLog {
+  id: string;
+  filename: string;
+  ok: boolean;
+  message: string | null;
+  categoriesCreated: number;
+  categoriesUpdated: number;
+  productsCreated: number;
+  productsUpdated: number;
+  productsHidden: number;
+  imagesImported: number;
+  durationMs: number;
+  createdAt: string;
+}
+
+export interface OneCSettings {
+  createInactive: boolean;
+  importImages: boolean;
+  overwriteNames: boolean;
+}
+
+export interface OneCStatus {
+  status: "DISCONNECTED" | "CONNECTED" | "ERROR";
+  /** 1C «Обмен с сайтом» sozlamasiga kiritiladigan URL */
+  exchangeUrl: string;
+  login?: string;
+  settings?: OneCSettings;
+  lastExchangeAt?: string | null;
+  lastImportAt?: string | null;
+  lastError?: string | null;
+  importedProducts?: number;
+  importedCategories?: number;
+  lastLog?: OneCImportLog | null;
+}
+
+export const onecApi = {
+  status: () => api<OneCStatus>("/1c/status"),
+
+  /** Login/parol yaratadi yoki almashtiradi. Parol faqat shu javobda to'liq keladi. */
+  connect: (data?: { login?: string; password?: string }) =>
+    api<{ ok: boolean; status: string; login: string; password: string; exchangeUrl: string }>(
+      "/1c/connect",
+      { method: "POST", body: data ?? {} },
+    ),
+
+  /** Parolni qayta ko'rsatish (audit qilinadi). */
+  credentials: () =>
+    api<{ login: string; password: string; exchangeUrl: string }>("/1c/credentials", {
+      method: "POST",
+    }),
+
+  saveSettings: (data: OneCSettings) =>
+    api<{ ok: boolean }>("/1c/settings", { method: "POST", body: data }),
+
+  disconnect: () => api<{ ok: boolean }>("/1c/disconnect", { method: "POST" }),
+
+  logs: () => api<{ logs: OneCImportLog[] }>("/1c/logs"),
+};
