@@ -113,7 +113,35 @@
 
         W.__shopflowBootFailed = show;
 
-        // Yuklanmagan <script>/<link> larni yig'amiz — sababni aniq aytish uchun
+        /**
+         * Telegram SDK'ning CDN zaxirasi. ATAYLAB shu yerda, index.html da:
+         * ilgari zaxira mantiq `/vendor/telegram-web-app.js` faylning O'ZIDA
+         * edi — ya'ni aynan o'sha fayl yetib kelmasa zaxira ham ishlamasdi.
+         * Asinxron: sahifani hech qachon bloklamaydi.
+         */
+        W.__sfLoadTelegramCdn = function () {
+          if (W.Telegram && W.Telegram.WebApp) return;
+          var s = document.createElement("script");
+          s.src = "https://telegram.org/js/telegram-web-app.js";
+          s.async = true;
+          s.onload = function () {
+            boot.sdk = "ok (CDN zaxira)";
+            W.dispatchEvent(new Event("sf:telegram-sdk"));
+          };
+          s.onerror = function () {
+            boot.sdk = "yo'q (lokal ham, CDN ham)";
+          };
+          document.head.appendChild(s);
+        };
+
+        // Yuklanmagan <script>/<link> larni FAQAT yozib boramiz.
+        //
+        // Panelni bu yerda ko'rsatmaymiz: ikkinchi darajali bitta fayl (masalan
+        // Telegram SDK) yetib kelmasligi do'konni o'ldirmaydi — sahifa normal
+        // chiziladi. Ilgari shu yerda darhol show() chaqirilardi va u ishlab
+        // turgan sahifa ustiga xato paneli chiqarib qo'yardi (macOS Telegram'da
+        // aynan shu regressiya bo'ldi). Panel endi faqat timeout orqali, ya'ni
+        // ilova haqiqatan chizilmagan bo'lsa chiqadi.
         W.addEventListener(
           "error",
           function (e) {
@@ -122,12 +150,12 @@
             var src = t.src || t.href;
             if (!src) return;
             try {
-              src = new URL(src, location.href).host + new URL(src, location.href).pathname;
+              var u = new URL(src, location.href);
+              src = u.host + u.pathname;
             } catch (_) {
               /* xom qoldiramiz */
             }
             boot.failed.push(src);
-            show("Kerakli fayl yuklanmadi. Internet aloqangizni tekshiring yoki keyinroq urinib ko'ring.");
           },
           true
         );
@@ -161,10 +189,15 @@
       Fayl Docker build vaqtida yuklab olinadi (Dockerfile); yuklanmagan bo'lsa
       repodagi stub qoladi va u CDN'ni ASINXRON yuklaydi (hech qachon bloklamaydi).
     -->
-    <script src="/vendor/telegram-web-app.js"></script>
+    <script src="/vendor/telegram-web-app.js" onerror="window.__sfLoadTelegramCdn()"></script>
     <script>
-      window.__sfBoot.sdk =
-        window.Telegram && window.Telegram.WebApp ? "ok (lokal)" : "yo'q (stub/kech)";
+      if (window.Telegram && window.Telegram.WebApp) {
+        window.__sfBoot.sdk = "ok (lokal)";
+      } else {
+        // Lokal nusxa bo'lmasa yoki stub bo'lsa — CDN zaxirasini asinxron uramiz.
+        window.__sfBoot.sdk = "kutilmoqda (zaxira)";
+        window.__sfLoadTelegramCdn();
+      }
     </script>
   </head>
   <body>
