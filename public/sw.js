@@ -3,8 +3,13 @@
 //  - HTML navigation: network-first, fallback cache
 //  - Static assets (JS/CSS/SVG): cache-first
 //  - API: hech qachon cache (har doim tarmoq)
+//  - /store/* (Telegram Mini App): SW umuman aralashmaydi — pastdagi izohga qarang
 
-const CACHE = "shopflow-v1";
+// DIQQAT: yangi deploy keshni butunlay yangilashi uchun bu nomni oshiring.
+// v1 da nom hech qachon o'zgarmagan edi: navigatsiya offline'ga tushib eski
+// index.html ni bersa, u allaqachon o'chirilgan hash'li asset'larga murojaat
+// qilardi → mijozda OQ EKRAN (bir qurilmada ishlaydi, boshqasida yo'q).
+const CACHE = "shopflow-v2";
 const CORE = ["/", "/manifest.webmanifest", "/icon-192.svg", "/icon-512.svg"];
 
 self.addEventListener("install", (event) => {
@@ -63,6 +68,12 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   // API hech qachon cache qilinmaydi
   if (url.pathname.startsWith("/api/")) return;
+  // Telegram Mini App — SW butunlay chetda turadi.
+  // Mini App Telegram'ning WebView'ida ochiladi; u yerda eskirgan kesh
+  // "do'kon ochilmayapti" (oq ekran) sifatida namoyon bo'ladi va mijoz uni
+  // brauzerdagidek "hard reload" bilan tuzata olmaydi. Do'kon har doim
+  // to'g'ridan-to'g'ri tarmoqdan yuklansin.
+  if (url.pathname === "/store" || url.pathname.startsWith("/store/")) return;
   // SSE stream'ni ham cache qilmaslik
   if (url.pathname.includes("/events/stream")) return;
   // POST/PATCH/DELETE — service worker tegmaydi
@@ -73,8 +84,12 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => null);
+          // Faqat sog'lom javobni saqlaymiz — deploy paytidagi 502/503 ni
+          // keshlab qo'ysak, mijoz uzoq vaqt buzilgan sahifani ko'rardi.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => null);
+          }
           return res;
         })
         .catch(() => caches.match(req).then((cached) => cached ?? caches.match("/")) as Promise<Response>),
