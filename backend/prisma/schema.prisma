@@ -39,6 +39,8 @@ model Tenant {
   moyskladAccount MoyskladAccount?
   salesDoctorAccount SalesDoctorAccount?
   salesDoctorRetries SalesDoctorRetry[]
+  oneCAccount     OneCAccount?
+  oneCImportLogs  OneCImportLog[]
   syncJobs        SyncJob[]
   webhookEvents   WebhookEvent[]
   outboundWebhooks OutboundWebhook[]
@@ -246,11 +248,15 @@ model Category {
   // Sales Doctor sync uchun (productCategory)
   salesDoctorId String?
 
+  // 1C CommerceML sync uchun — Классификатор/Группы/Группа/Ид (GUID)
+  oneCId String?
+
   products Product[]
 
   @@unique([tenantId, slug])
   @@unique([tenantId, moyskladId])
   @@unique([tenantId, salesDoctorId])
+  @@unique([tenantId, oneCId])
   @@index([tenantId])
 }
 
@@ -297,6 +303,10 @@ model Product {
   // Sales Doctor sync uchun
   salesDoctorId String?
 
+  // 1C CommerceML sync uchun — Товар/Ид (GUID, xarakteristikali bo'lsa "guid#guid")
+  oneCId      String?
+  oneCUpdated DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -315,6 +325,7 @@ model Product {
   @@unique([tenantId, slug])
   @@unique([tenantId, moyskladId])
   @@unique([tenantId, salesDoctorId])
+  @@unique([tenantId, oneCId])
   @@index([tenantId, active])
   @@index([tenantId, featured])
   @@index([tenantId, saleCampaignId])
@@ -324,6 +335,7 @@ model Product {
 enum ProductSource {
   MANUAL
   MOYSKLAD
+  ONEC
 }
 
 // ============== STOREFRONT (Vitrina) ==============
@@ -965,6 +977,76 @@ model SalesDoctorRetry {
 
   @@index([tenantId, status, nextAttemptAt])
   @@index([resourceType, resourceId])
+}
+
+// ============== 1C Integration (CommerceML 2 «Обмен с сайтом») ==============
+//
+// 1C on-prem ishlaydi va odatda NAT ortida — shuning uchun *biz* 1C'ga emas,
+// 1C bizga ulanadi. 1C'ning standart "Обмен с сайтом" moduli belgilangan
+// HTTP protokol bo'yicha ishlaydi:
+//   GET  ?type=catalog&mode=checkauth   → cookie
+//   GET  ?type=catalog&mode=init        → zip=no + file_limit
+//   POST ?type=catalog&mode=file&filename=import.xml  → fayl (bo'laklab)
+//   GET  ?type=catalog&mode=import&filename=import.xml → import (progress/success)
+// Autentifikatsiya — HTTP Basic (login + parol), har tenant uchun alohida.
+
+enum OneCStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
+model OneCAccount {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // 1C "Обмен с сайтом" sozlamasiga kiritiladigan Basic auth login.
+  // Global unique — exchange endpoint tenant'ni aynan shu login orqali topadi
+  // (URL'da tenant ID ochilmaydi).
+  login             String @unique
+  encryptedPassword String // AES-256-GCM: "iv:authTag:ciphertext"
+
+  status OneCStatus @default(DISCONNECTED)
+
+  // Yangi mahsulot yashirin (active=false) holatda yaratiladimi.
+  // Narx/qoldiq sinxroni hozircha yo'q — narxsiz mahsulot vitrinada
+  // 0 so'mga chiqib qolmasligi uchun default true.
+  createInactive Boolean @default(true)
+  // <Картинка> fayllarini import qilish (1C import_files/ jo'natadi)
+  importImages   Boolean @default(true)
+  // 1C nomini/tavsifini mavjud mahsulot ustiga yozish (1C = manba haqiqat)
+  overwriteNames Boolean @default(true)
+
+  lastExchangeAt DateTime? // oxirgi har qanday so'rov (checkauth ham)
+  lastImportAt   DateTime? // oxirgi muvaffaqiyatli katalog importi
+  lastError      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Har bir `mode=import` yakuni — admin kartochkasidagi "oxirgi importlar" ro'yxati.
+model OneCImportLog {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  filename String // "import.xml" | "offers.xml" | ...
+  ok       Boolean @default(true)
+  message  String? // xato matni yoki e'tibor talab qiladigan izoh
+
+  categoriesCreated Int @default(0)
+  categoriesUpdated Int @default(0)
+  productsCreated   Int @default(0)
+  productsUpdated   Int @default(0)
+  productsHidden    Int @default(0) // 1C'da "Удален" belgilangan → active=false
+  imagesImported    Int @default(0)
+
+  durationMs Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
 }
 
 // MoySklad webhook'lardan keladigan event'lar idempotentlik uchun

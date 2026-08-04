@@ -75,8 +75,13 @@ services:
       ESKIZ_LOGIN: ${ESKIZ_LOGIN:-}
       ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
       ESKIZ_FROM: ${ESKIZ_FROM:-4546}
+      # 1C «Обмен с сайтом» staging katalogi (import.xml + rasm fayllari)
+      ONEC_EXCHANGE_DIR: /app/1c-exchange
     volumes:
       - uploads_data:/app/uploads
+      # 1C almashinuv staging'i — ATAYLAB uploads'dan alohida: uploads nginx
+      # orqali ochiq beriladi, import.xml esa butun katalogni oshkor qilardi.
+      - onec_exchange_data:/app/1c-exchange
     expose:
       - "4000"
     depends_on:
@@ -184,4 +189,5 @@ volumes:
   caddy_config:
   postgres_data:
   uploads_data:
+  onec_exchange_data:
   backup_data:

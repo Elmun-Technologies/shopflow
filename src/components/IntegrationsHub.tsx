@@ -13,6 +13,7 @@ import {
 import { integrations, integrationCategories, type IntegrationItem, type IntegrationCategory } from "../data/integrationsData";
 import { MoyskladIntegrationCard } from "./MoyskladIntegrationCard";
 import { SalesDoctorIntegrationCard } from "./SalesDoctorIntegrationCard";
+import { OneCIntegrationCard } from "./OneCIntegrationCard";
 import { WebhookIntegrationCard } from "./WebhookIntegrationCard";
 import { useAppToast } from "./ui/Toast";
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -38,8 +39,8 @@ export function IntegrationsHub() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return integrations.filter((i) => {
-      // MoySklad va Sales Doctor uchun maxsus hero kartochkalar bor — duplicate render qilmaslik
-      if (i.id === "moysklad" || i.id === "salesdoctor") return false;
+      // MoySklad, Sales Doctor va 1C uchun maxsus hero kartochkalar bor — duplicate render qilmaslik
+      if (i.id === "moysklad" || i.id === "salesdoctor" || i.id === "1c") return false;
       if (activeCategory !== "all" && i.category !== activeCategory) return false;
       if (!q) return true;
       return i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q);
@@ -153,7 +154,10 @@ export function IntegrationsHub() {
       {(activeCategory === "all" || activeCategory === "erp") && search === "" && (
         <div>
           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t("integrations.activeSection")}</h4>
-          <MoyskladIntegrationCard />
+          <div className="space-y-3">
+            <MoyskladIntegrationCard />
+            <OneCIntegrationCard />
+          </div>
         </div>
       )}
       {(activeCategory === "all" || activeCategory === "crm") && search === "" && (

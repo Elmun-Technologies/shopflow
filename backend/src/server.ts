@@ -36,6 +36,8 @@ import { categoryRoutes } from "./routes/categories.js";
 import { uploadRoutes } from "./routes/upload.js";
 import { moyskladRoutes } from "./routes/moysklad.js";
 import { salesDoctorRoutes } from "./routes/salesdoctor.js";
+import { oneCRoutes } from "./routes/onec.js";
+import { oneCExchangeRoutes } from "./routes/onec-exchange.js";
 import { popupRoutes } from "./routes/popups.js";
 import { saleCampaignRoutes } from "./routes/sale-campaigns.js";
 import { abandonedCartsRoutes } from "./routes/abandoned-carts.js";
@@ -135,6 +137,11 @@ if (isProd) {
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR ?? "/app/uploads";
 await mkdir(UPLOADS_DIR, { recursive: true });
+
+// 1C almashinuvi uchun vaqtinchalik staging — ATAYLAB uploads'dan tashqarida:
+// `/app/uploads` nginx orqali ochiq beriladi, import.xml esa butun katalog.
+const ONEC_EXCHANGE_DIR = process.env.ONEC_EXCHANGE_DIR ?? "/app/1c-exchange";
+await mkdir(ONEC_EXCHANGE_DIR, { recursive: true });
 
 await app.register(multipart);
 
@@ -238,6 +245,10 @@ await app.register(storefrontRoutes, { prefix: "/api/storefront" });
 await app.register(uploadRoutes, { prefix: "/api/upload" });
 await app.register(moyskladRoutes, { prefix: "/api/moysklad" });
 await app.register(salesDoctorRoutes, { prefix: "/api/salesdoctor" });
+// 1C: admin API (JWT) va almashinuv endpointi (Basic auth) alohida plaginlar —
+// autentifikatsiya hook'lari bir-biriga o'tmasligi uchun.
+await app.register(oneCRoutes, { prefix: "/api/1c" });
+await app.register(oneCExchangeRoutes, { prefix: "/api/1c/exchange" });
 await app.register(popupRoutes, { prefix: "/api/popups" });
 await app.register(saleCampaignRoutes, { prefix: "/api/sale-campaigns" });
 await app.register(abandonedCartsRoutes, { prefix: "/api/abandoned-carts" });

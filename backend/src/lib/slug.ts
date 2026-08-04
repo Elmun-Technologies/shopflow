@@ -49,3 +49,29 @@ export async function uniqueProductSlug(
     candidate = `${root}-${i}`;
   }
 }
+
+/**
+ * Tenant ichida unique kategoriya slug'i. Product bilan bir xil mantiq —
+ * import (1C/MoySklad) kategoriya nomlarini takrorlab yuborishi mumkin.
+ */
+export async function uniqueCategorySlug(
+  prisma: Pick<PrismaClient, "category">,
+  tenantId: string,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  const root = slugify(base) || "kategoriya";
+  let candidate = root;
+  for (let i = 2; ; i++) {
+    const existing = await prisma.category.findFirst({
+      where: {
+        tenantId,
+        slug: candidate,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+    candidate = `${root}-${i}`;
+  }
+}

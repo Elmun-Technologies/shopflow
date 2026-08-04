@@ -102,6 +102,68 @@ Bu alohida ish (faqat `.env` yetarli emas).
 
 ---
 
+## 5. 1C — ✅ ishlaydi (`.env` kerak emas)
+
+1C: Buxgalteriya / UT bilan katalog almashinuvi — **CommerceML 2 «Обмен с сайтом»**
+protokoli orqali. Boshqa integratsiyalardan farqi: bu yerda **1C bizga ulanadi**,
+biz 1C'ga emas. Sabab — 1C mijoz kompyuterida/serverida turadi va odatda NAT ortida
+bo'ladi; oq IP, VPN yoki 1C web-server publikatsiyasi **kerak emas**.
+
+**Qamrov (hozircha):** kategoriya + mahsulot kartochkasi (nom, artikul, tavsif,
+guruh, rasm, ishlab chiqarilgan davlat). **Narx va qoldiq sinxronlanmaydi** —
+`offers.xml` qabul qilinadi, lekin qo'llanmaydi. Shu sababli 1C'dan kelgan yangi
+mahsulot default holatda **yashirin** yaratiladi (vitrinada 0 so'mga chiqmasligi
+uchun) — operator narx qo'yib, ko'rinadigan qiladi.
+
+### Ulash (admin panel)
+
+1. Sozlamalar → Integratsiyalar → **1C: Buxgalteriya** → «Ulash».
+2. Panel uchta qiymat beradi: **almashinuv URL**, **login**, **parol**.
+   Parolni darhol nusxalang (keyinroq «ko'z» tugmasi orqali ham ko'rish mumkin).
+
+### Sozlash (1C tomonida)
+
+1. `Администрирование → Обмен с сайтом` (yoki `Синхронизация с сайтом`).
+2. Yangi **«Узел обмена»** qo'shing, **URL** maydoniga panel bergan manzilni kiriting:
+   `https://shop-flow.uz/api/1c/exchange`
+3. Foydalanuvchi/parol maydonlariga panel bergan **login/parol**ni kiriting.
+4. **«Выгружать товары»** (katalog) bandini yoqing. Buyurtma yuklash hozircha shart emas.
+5. **«Обменяться»** — bir necha daqiqadan so'ng mahsulotlar admin panelning
+   «Mahsulotlar» bo'limida paydo bo'ladi (yashirin holatda).
+
+### Import sozlamalari (kartochkadagi belgilar)
+
+| Sozlama | Default | Ma'nosi |
+|---|---|---|
+| Yangi mahsulotlar yashirin | ✅ | Narx belgilangunicha vitrinada ko'rinmaydi |
+| Rasmlar yuklab olinsin | ✅ | `<Картинка>` fayllari `/uploads/<tenant>/1c/` ga ko'chiriladi |
+| Nom/tavsif ustiga yozilsin | ✅ | 1C = manba haqiqat. O'chirilsa operator tahriri saqlanadi |
+
+### Nima *qilinmaydi* (ataylab)
+
+- **Mahsulot hech qachon o'chirilmaydi.** 1C'da «Удален» belgilangan tovar faqat
+  `active=false` qilinadi.
+- **`mode=deactivate` bajarilmaydi.** 1C qisman yuklama (`СодержитТолькоИзменения`)
+  yuborganda bu butun katalogni yashirib qo'yardi.
+- **Buyurtmalar 1C'ga yuborilmaydi.** `type=sale` so'roviga bo'sh, lekin yaroqli
+  CommerceML hujjati qaytadi — shunda 1C tomonida almashinuv xatosiz yakunlanadi.
+
+### Diagnostika
+
+- Kartochkadagi **«Importlar tarixi»** — har bir fayl bo'yicha nechta mahsulot/
+  kategoriya/rasm qayta ishlangani, xato bo'lsa matni.
+- Katta katalog `progress` protokoli bilan bo'lakma-bo'lak (300 tadan) import
+  qilinadi — 1C bir so'rovda timeout bo'lib qolmaydi.
+- Server logi: `docker compose logs -f backend | grep 1C`.
+
+**Texnik tafsilotlar:** `backend/src/routes/onec-exchange.ts` (protokol),
+`backend/src/lib/onec-commerceml.ts` (XML parser), `backend/src/lib/onec-import.ts`
+(bazaga yozish). Staging katalogi — `ONEC_EXCHANGE_DIR` (default `/app/1c-exchange`),
+**ataylab** `/app/uploads` dan tashqarida: uploads nginx orqali ochiq beriladi,
+`import.xml` esa butun katalogni oshkor qilardi.
+
+---
+
 ## Xulosa
 
 | Integratsiya | Holat | Kerak |
@@ -109,6 +171,7 @@ Bu alohida ish (faqat `.env` yetarli emas).
 | Push (VAPID) | ✅ kod tayyor | VAPID kalitlar (`.env`) |
 | Email (SMTP) | ✅ kod tayyor | SMTP login (`.env`) |
 | Eskiz SMS | ✅ kod tayyor | Eskiz login/parol (`.env`) |
+| 1C (CommerceML) | ✅ ishlaydi | Admin panelda «Ulash» + 1C'da sozlash |
 | Yandex Go | ⚠️ stub | Yandex hisob + **kod qurish** |
 
 Batafsil `.env` namunasi: `.env.example`. Deploy: `OPS.md`.

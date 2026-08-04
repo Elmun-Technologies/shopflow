@@ -1888,6 +1888,96 @@ export const dictionary: Record<string, Entry> = {
   "moysklad.syncDone": { uz: "Sinxronizatsiya tugadi", ru: "Синхронизация завершена" },
   "moysklad.syncing": { uz: "Sinxronlash...", ru: "Синхронизация…" },
   "moysklad.tokenPlaceholder": { uz: "MoySklad access token", ru: "Access token МойСклад" },
+
+  // ─── 1C (CommerceML «Обмен с сайтом») ─────────────────
+  "onec.title": { uz: "1C: Buxgalteriya", ru: "1С: Бухгалтерия" },
+  "onec.subtitle": {
+    uz: "Katalog 1C'dan avtomatik yuklanadi — 1C o'zi ulanadi",
+    ru: "Каталог загружается из 1С автоматически — 1С подключается сама",
+  },
+  "onec.status.CONNECTED": { uz: "Ulangan", ru: "Подключено" },
+  "onec.status.ERROR": { uz: "Xato", ru: "Ошибка" },
+  "onec.status.DISCONNECTED": { uz: "Ulanmagan", ru: "Не подключено" },
+  "onec.intro": {
+    uz: "Ulash tugmasini bosing — biz login va parol yaratamiz. Ularni 1C'dagi «Обмен с сайтом» sozlamasiga kiritasiz, keyin 1C katalogni o'zi yuboradi. Oq IP yoki VPN kerak emas.",
+    ru: "Нажмите «Подключить» — мы создадим логин и пароль. Введите их в настройке «Обмен с сайтом» в 1С, и 1С сама начнёт отправлять каталог. Белый IP или VPN не нужны.",
+  },
+  "onec.connect": { uz: "Ulash", ru: "Подключить" },
+  "onec.connected": { uz: "1C almashinuv hisobi yaratildi", ru: "Учётная запись обмена 1С создана" },
+  "onec.connectFailed": { uz: "Ulanmadi", ru: "Не удалось подключить" },
+  "onec.exchangeUrl": { uz: "Almashinuv manzili (URL)", ru: "Адрес обмена (URL)" },
+  "onec.login": { uz: "Login", ru: "Логин" },
+  "onec.password": { uz: "Parol", ru: "Пароль" },
+  "onec.passwordNotice": {
+    uz: "Parolni hozir nusxalab, 1C'ga kiriting. Keyinroq ham «ko'z» tugmasi orqali ko'rish mumkin.",
+    ru: "Скопируйте пароль сейчас и введите в 1С. Позже его можно посмотреть кнопкой «глаз».",
+  },
+  "onec.reveal": { uz: "Parolni ko'rsatish", ru: "Показать пароль" },
+  "onec.copy": { uz: "Nusxalash", ru: "Копировать" },
+  "onec.copyFailed": { uz: "Nusxalanmadi", ru: "Не удалось скопировать" },
+  "onec.rotate": { uz: "Parolni yangilash", ru: "Обновить пароль" },
+  "onec.rotated": { uz: "Yangi parol yaratildi", ru: "Создан новый пароль" },
+  "onec.rotateConfirmTitle": { uz: "Parolni yangilash?", ru: "Обновить пароль?" },
+  "onec.rotateConfirmDesc": {
+    uz: "Eski parol darhol ishlamay qoladi. Yangi parolni 1C sozlamasiga qayta kiritishingiz kerak.",
+    ru: "Старый пароль сразу перестанет работать. Новый пароль нужно будет заново ввести в настройках 1С.",
+  },
+  "onec.disconnect": { uz: "Uzish", ru: "Отключить" },
+  "onec.disconnected": { uz: "1C almashinuvi uzildi", ru: "Обмен с 1С отключён" },
+  "onec.disconnectConfirmTitle": { uz: "1C almashinuvini uzish?", ru: "Отключить обмен с 1С?" },
+  "onec.disconnectConfirmDesc": {
+    uz: "1C endi katalog yubora olmaydi. Import qilingan mahsulotlar o'chmaydi.",
+    ru: "1С больше не сможет отправлять каталог. Импортированные товары не удаляются.",
+  },
+  "onec.priceNotice": {
+    uz: "Hozircha faqat katalog (kategoriya va mahsulot kartochkasi) sinxronlanadi. Narx va qoldiq 1C'dan olinmaydi — ularni admin panelda o'zingiz belgilaysiz.",
+    ru: "Пока синхронизируется только каталог (категории и карточки товаров). Цена и остаток из 1С не берутся — задайте их в админ-панели.",
+  },
+  "onec.importedProducts": { uz: "1C mahsulotlari", ru: "Товаров из 1С" },
+  "onec.importedCategories": { uz: "1C kategoriyalari", ru: "Категорий из 1С" },
+  "onec.lastExchange": { uz: "Oxirgi murojaat", ru: "Последний запрос" },
+  "onec.lastImport": { uz: "Oxirgi import", ru: "Последний импорт" },
+  "onec.setting.createInactive": {
+    uz: "Yangi mahsulotlar yashirin yaratilsin (narx belgilangunicha vitrinada ko'rinmaydi)",
+    ru: "Создавать новые товары скрытыми (не показывать в витрине, пока не задана цена)",
+  },
+  "onec.setting.importImages": {
+    uz: "1C'dagi rasmlar yuklab olinsin",
+    ru: "Загружать изображения из 1С",
+  },
+  "onec.setting.overwriteNames": {
+    uz: "1C nomi va tavsifi mavjud mahsulot ustiga yozilsin",
+    ru: "Перезаписывать название и описание существующих товаров данными из 1С",
+  },
+  "onec.history": { uz: "Importlar tarixi", ru: "История импортов" },
+  "onec.noHistory": { uz: "Hali import bo'lmagan", ru: "Импортов ещё не было" },
+  "onec.logSummary": {
+    uz: "{products} ta mahsulot ({created} yangi) · {categories} ta kategoriya · {images} ta rasm",
+    ru: "{products} товаров ({created} новых) · {categories} категорий · {images} изображений",
+  },
+  "onec.logHidden": { uz: "{count} ta yashirildi", ru: "{count} скрыто" },
+  "onec.guide": { uz: "1C'da qanday sozlanadi?", ru: "Как настроить в 1С?" },
+  "onec.guide1": {
+    uz: "1C'da: Администрирование → Обмен с сайтом (yoki Синхронизация с сайтом) bo'limini oching.",
+    ru: "В 1С откройте: Администрирование → Обмен с сайтом (или Синхронизация с сайтом).",
+  },
+  "onec.guide2": {
+    uz: "Yangi «Узел обмена» qo'shing va yuqoridagi almashinuv manzilini (URL) kiriting.",
+    ru: "Добавьте новый «Узел обмена» и укажите адрес обмена (URL), показанный выше.",
+  },
+  "onec.guide3": {
+    uz: "Foydalanuvchi va parol maydonlariga yuqoridagi login/parolni joylang.",
+    ru: "В поля пользователя и пароля вставьте логин и пароль, показанные выше.",
+  },
+  "onec.guide4": {
+    uz: "«Выгружать товары» (katalog) bandini yoqing. Buyurtma yuklash hozircha kerak emas.",
+    ru: "Включите «Выгружать товары» (каталог). Загрузка заказов пока не требуется.",
+  },
+  "onec.guide5": {
+    uz: "«Обменяться» tugmasini bosing — bir necha daqiqadan so'ng mahsulotlar Mahsulotlar bo'limida paydo bo'ladi.",
+    ru: "Нажмите «Обменяться» — через несколько минут товары появятся в разделе «Товары».",
+  },
+
   "notif.newLead": { uz: "Yangi lid: {name}", ru: "Новый лид: {name}" },
   "notif.newOrder": { uz: "Yangi buyurtma #{code}", ru: "Новый заказ #{code}" },
   "orderDetail.accept": { uz: "Qabul qilish", ru: "Принять" },
