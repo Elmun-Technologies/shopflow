@@ -147,6 +147,9 @@ jobs:
             echo "==> HEAD is $(git rev-parse --short HEAD) ($(git log -1 --pretty=%s))"
             echo "==> Building & starting containers"
             docker compose up -d --build --remove-orphans
+            # Caddyfile is bind-mounted as a single file. Git checkout may replace
+            # its inode, so a container recreate is required to see config changes.
+            docker compose up -d --force-recreate --no-deps caddy
             echo "==> Pruning old images"
             docker image prune -f
             echo "==> Waiting for public HTTPS healthcheck"
