@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
+import { onTelegramReady } from "../utils/telegramSdk";
 import { useT } from "../i18n";
 import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
@@ -557,12 +558,17 @@ function StoreInner({ slug }: { slug: string }) {
   const twa = window.Telegram?.WebApp;
   const { t } = useT();
   useEffect(() => {
-    try {
-      twa?.ready();
-      twa?.expand();
-    } catch {
-      // Telegram WebApp mavjud bo'lmagan muhitda xatolikni e'tiborsiz qoldiramiz
-    }
+    // SDK kech kelishi mumkin (zaxira CDN yo'li asinxron) — o'shanda ham
+    // ready()/expand() chaqirilishi shart, aks holda Telegram yuklanish
+    // ekranini olib tashlamaydi ("do'kon ochilmayapti").
+    const stopWaiting = onTelegramReady((sdk) => {
+      try {
+        sdk.ready();
+        sdk.expand();
+      } catch {
+        // Telegram WebApp mavjud bo'lmagan muhitda xatolikni e'tiborsiz qoldiramiz
+      }
+    });
 
     // Pre-fill name from Profile (saqlangan ma'lumotlar) → fallback Telegram
     const savedProfile = loadStoredProfile(slug);
@@ -612,6 +618,8 @@ function StoreInner({ slug }: { slug: string }) {
         })
         .catch(() => { /* offline — localStorage'da turgan favoritlar saqlanadi */ });
     }
+
+    return stopWaiting;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
