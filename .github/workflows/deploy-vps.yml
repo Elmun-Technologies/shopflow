@@ -175,6 +175,53 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DOMAIN: shop-flow.uz
 
+      # Deploy o'zi yashil bo'lsa ham sayt TASHQARIDAN yetib bormasligi mumkin:
+      # yuqoridagi healthcheck `--resolve ...:127.0.0.1` bilan, ya'ni serverning
+      # ichidan tekshiradi va DNS/firewall/provayder muammosini ko'rmaydi.
+      # Bu qadam faqat O'QIYDI va har doim ishlaydi — nosozlikda log'da tayyor
+      # tashxis qoladi (aks holda har safar SSH ochish kerak bo'ladi).
+      - name: VPS diagnostics (read-only)
+        if: always()
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 5m
+          script: |
+            cd /opt/shopflow || exit 0
+            echo "===== docker compose ps ====="
+            docker compose ps || true
+            echo "===== disk ====="
+            df -h / || true
+            echo "===== xotira ====="
+            free -m || true
+            echo "===== DNS (server ko'zi bilan) ====="
+            getent hosts shop-flow.uz || echo "DNS: yechilmadi"
+            echo "===== HTTPS ichkaridan (loopback) ====="
+            curl -sS -o /dev/null -w "loopback: %{http_code}\n" \
+              --resolve "shop-flow.uz:443:127.0.0.1" https://shop-flow.uz/ || true
+            curl -sS -o /dev/null -w "loopback /store: %{http_code}\n" \
+              --resolve "shop-flow.uz:443:127.0.0.1" https://shop-flow.uz/store/gulf || true
+            curl -sS -o /dev/null -w "loopback /vendor: %{http_code}\n" \
+              --resolve "shop-flow.uz:443:127.0.0.1" https://shop-flow.uz/vendor/telegram-web-app.js || true
+            echo "===== HTTPS haqiqiy DNS orqali (tashqi yo'l) ====="
+            curl -sS -o /dev/null -w "public: %{http_code} (dns->%{remote_ip})\n" \
+              --max-time 15 https://shop-flow.uz/ || echo "public: YETIB BORMADI"
+            echo "===== sertifikat ====="
+            echo | openssl s_client -connect 127.0.0.1:443 -servername shop-flow.uz 2>/dev/null \
+              | openssl x509 -noout -subject -dates 2>/dev/null || echo "sertifikat o'qilmadi"
+            echo "===== 80/443 tinglanyaptimi ====="
+            (ss -lntp 2>/dev/null || netstat -lntp 2>/dev/null) | grep -E ':(80|443)\b' || echo "port topilmadi"
+            echo "===== firewall ====="
+            ufw status 2>/dev/null || echo "ufw yo'q/ruxsat yo'q"
+            echo "===== caddy log ====="
+            docker compose logs --tail=40 caddy || true
+            echo "===== nginx (shopflow) log ====="
+            docker compose logs --tail=20 shopflow || true
+
       - name: Notify success
         if: success()
         run: echo "✅ Deployed ${{ steps.branch.outputs.name }}@${{ github.sha }} to VPS"

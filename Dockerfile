@@ -22,7 +22,7 @@ RUN set -eu; \
        && [ -s "$tmp" ] \
        && grep -q 'TelegramWebviewProxy\|window.Telegram' "$tmp"; then \
       mkdir -p public/vendor; \
-      cp "$tmp" public/vendor/telegram-web-app.js; \
+      install -m 0644 "$tmp" public/vendor/telegram-web-app.js; \
       echo "telegram-web-app.js vendored ($(wc -c < "$tmp") bytes)"; \
     else \
       echo "WARN: telegram-web-app.js yuklab bo'lmadi — CDN stub ishlatiladi"; \
@@ -35,13 +35,24 @@ ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
-# Build natijasini tekshiramiz. `/vendor/telegram-web-app.js` yo'q bo'lsa
-# mijozda 404 bo'ladi va Mini App Telegram SDK'siz qoladi — bu jimgina
-# o'tib ketmasligi kerak, deploy shu yerda qizil bo'lsin.
+# nginx worker'lari `nginx` foydalanuvchisi ostida ishlaydi, root emas. Build
+# bosqichida yaratilgan fayl tor huquq bilan qolsa (masalan `mktemp` → 0600),
+# nginx uni o'qiy olmaydi va mijozga 403 qaytaradi — fayl mavjud bo'lsa ham.
+# Aynan shu `/vendor/telegram-web-app.js` da yuz berdi. Butun dist'ni
+# o'qiladigan qilamiz (kataloglarga faqat kerakli x biti — `a+rX`).
+RUN chmod -R a+rX dist
+
+# Build natijasini tekshiramiz: fayl bor, index.html unga havola qiladi VA u
+# boshqalar uchun o'qiladigan. Aks holda deploy shu yerda qizil bo'lsin —
+# jimgina 403/404 bo'lib mijozda chiqmasin.
 RUN test -f dist/vendor/telegram-web-app.js \
     && test -f dist/index.html \
     && grep -q '/vendor/telegram-web-app.js' dist/index.html \
-    && echo "dist/vendor/telegram-web-app.js OK ($(wc -c < dist/vendor/telegram-web-app.js) bytes)"
+    && case "$(stat -c '%a' dist/vendor/telegram-web-app.js)" in \
+         *[4567]) : ;; \
+         *) echo "XATO: fayl 'other' uchun o'qilmaydi — nginx 403 qaytaradi"; exit 1 ;; \
+       esac \
+    && echo "dist/vendor/telegram-web-app.js OK ($(wc -c < dist/vendor/telegram-web-app.js) bytes, mode $(stat -c '%a' dist/vendor/telegram-web-app.js))"
 
 # ─── Runtime stage ────────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runtime
