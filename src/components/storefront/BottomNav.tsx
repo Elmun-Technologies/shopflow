@@ -16,11 +16,14 @@ export function BottomNav({
   active,
   cartCount,
   primaryColor,
+  hideCart,
   onChange,
 }: {
   active: StoreTab;
   cartCount: number;
   primaryColor?: string;
+  /** B2B rejimida savat yo'q — tab ham ko'rsatilmaydi. */
+  hideCart?: boolean;
   onChange: (tab: StoreTab) => void;
 }) {
   const accent = primaryColor || "#10b981";
@@ -51,7 +54,7 @@ export function BottomNav({
             WebkitBackdropFilter: "blur(20px)",
           }}
         >
-          {TABS.map(({ id, labelKey, Icon }) => {
+          {TABS.filter((tab) => !(hideCart && tab.id === "cart")).map(({ id, labelKey, Icon }) => {
             const isActive = active === id;
             const showBadge = id === "cart" && cartCount > 0;
             const label = t(labelKey);

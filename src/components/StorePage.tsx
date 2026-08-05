@@ -11,6 +11,8 @@ import {
 import { BottomNav, type StoreTab } from "./storefront/BottomNav";
 import { applyTelegramTheme, haptic } from "./storefront/storefront-theme";
 import { onTelegramReady } from "../utils/telegramSdk";
+import { B2bInquiryModal, type B2bInquiryTarget } from "./storefront/B2bInquiryModal";
+import { normalizeB2bConfig } from "../data/uiBuilderData";
 import { useT } from "../i18n";
 import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
@@ -387,7 +389,7 @@ type StorefrontData = {
   products: StoreProduct[];
   categories: StoreCategory[];
   // Do'kon turi — "single" bo'lsa bitta mahsulotli landing ko'rsatiladi
-  storeMode?: "multi" | "single";
+  storeMode?: "multi" | "single" | "b2b";
   singleProductId?: string | null;
 };
 
@@ -722,6 +724,12 @@ function StoreInner({ slug }: { slug: string }) {
 
   // Single-product rejim — bitta mahsulotga qaratilgan landing + direct order.
   const isSingle = data?.storeMode === "single";
+  // B2B — savatsiz ulgurji rejim: narx ixtiyoriy, harakat "so'rov yuborish".
+  const isB2b = data?.storeMode === "b2b";
+  const b2bCfg = normalizeB2bConfig(
+    (data?.brand as { b2bConfig?: unknown } | undefined)?.b2bConfig,
+  );
+  const [inquiry, setInquiry] = useState<B2bInquiryTarget | null>(null);
   const singleProduct = isSingle && data
     ? (data.products.find((p) => p.id === data.singleProductId) ?? null)
     : null;
@@ -1888,21 +1896,26 @@ function StoreInner({ slug }: { slug: string }) {
           />
 
           <div className="p-5">
-            {/* Price block — WB style */}
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl font-bold text-white">
-                {price.toLocaleString("uz-UZ")}
-                <span className="text-base font-normal text-slate-400 ml-1">
-                  {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+            {/* Price block — WB style. B2B'da narx yashirilgan bo'lsa
+                "so'rov bo'yicha" (karta bilan bir xil qoida). */}
+            {isB2b && !b2bCfg.showPrices ? (
+              <p className="text-lg font-semibold text-slate-300 mb-2">{t("b2b.priceOnRequest")}</p>
+            ) : (
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-bold text-white">
+                  {price.toLocaleString("uz-UZ")}
+                  <span className="text-base font-normal text-slate-400 ml-1">
+                    {data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}
+                  </span>
                 </span>
-              </span>
-              {oldPrice != null && oldPrice > price && (
-                <span className="text-base text-slate-500 line-through">
-                  {oldPrice.toLocaleString("uz-UZ")}
-                </span>
-              )}
-            </div>
-            {savings > 0 && (
+                {oldPrice != null && oldPrice > price && (
+                  <span className="text-base text-slate-500 line-through">
+                    {oldPrice.toLocaleString("uz-UZ")}
+                  </span>
+                )}
+              </div>
+            )}
+            {!isB2b && savings > 0 && (
               <div className="inline-block bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-1 rounded-md mb-3">
                 {t("pdp.savings", { value: `${savings.toLocaleString("uz-UZ")} ${currencyStr}` })}
               </div>
@@ -2043,6 +2056,41 @@ function StoreInner({ slug }: { slug: string }) {
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           {(() => {
+            // B2B: savat yo'q — kartadagi kabi so'rov tugmalari ko'rsatiladi.
+            // Aks holda mijoz mavjud bo'lmagan savatga qo'shib, checkout'da
+            // tiqilib qolardi.
+            if (isB2b) {
+              return (
+                <div className="space-y-2">
+                  {b2bCfg.inquiries.map((kind, i) => (
+                    <button
+                      key={kind}
+                      onClick={() => {
+                        haptic.light();
+                        setInquiry({
+                          kind,
+                          productId: selectedProduct.id,
+                          productName: variant
+                            ? `${selectedProduct.name} — ${variant.name}`
+                            : selectedProduct.name,
+                        });
+                      }}
+                      className="w-full py-3.5 rounded-2xl font-semibold text-white text-base active:scale-[0.98] transition-all"
+                      style={i === 0 ? { backgroundColor: primaryColor } : { backgroundColor: "rgba(255,255,255,0.08)" }}
+                    >
+                      {t(
+                        kind === "price"
+                          ? "b2b.inq.price"
+                          : kind === "sample"
+                            ? "b2b.inq.sample"
+                            : "b2b.inq.consult",
+                      )}
+                    </button>
+                  ))}
+                </div>
+              );
+            }
+
             // Combo total = main + selected addons (discount qo'llanadi)
             let comboTotal = price;
             const selectedComboItems: Array<{ product: StoreProduct; finalPrice: number }> = [];
@@ -2303,6 +2351,22 @@ function StoreInner({ slug }: { slug: string }) {
   };
 
   // ---- HOME ----
+  // B2B katalog sarlavhasi: ulgurji shartlar + minimal partiya.
+  // Tenant to'ldirmagan bo'lsa umuman chizilmaydi (bo'sh blok qolmasin).
+  const b2bBanner =
+    isB2b && (b2bCfg.intro.trim() || b2bCfg.moqNote.trim()) ? (
+      <div className="mb-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+        {b2bCfg.intro.trim() && (
+          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">{b2bCfg.intro}</p>
+        )}
+        {b2bCfg.moqNote.trim() && (
+          <p className="text-[11px] text-slate-400 mt-1.5">
+            <span className="text-slate-500">{t("b2b.moqLabel")}:</span> {b2bCfg.moqNote}
+          </p>
+        )}
+      </div>
+    ) : null;
+
   const renderProductCard = (product: StoreProduct) => {
     const qty = cartQty(product.id);
     // Variantli mahsulotda kartada eng arzon variant narxi va umumiy zaxira
@@ -2380,27 +2444,62 @@ function StoreInner({ slug }: { slug: string }) {
             </p>
           )}
 
-          {/* Price line — katta qalin + kichik o'chirilgan */}
-          <div className="flex items-baseline gap-1.5 mb-2.5">
-            <span className="text-sm font-bold text-white">
-              {/* Variantlar narxi turlicha bo'lsa "… dan" — marketplace uslubi */}
-              {priceFrom && <span className="text-[10px] font-normal text-slate-400 mr-0.5">dan</span>}
-              {price.toLocaleString("uz-UZ")}
-              <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
-            </span>
-            {oldPrice != null && oldPrice > price && (
-              <span className="text-[10px] text-slate-500 line-through">
-                {oldPrice.toLocaleString("uz-UZ")}
+          {/* Price line — katta qalin + kichik o'chirilgan.
+              B2B da narx yashirilgan bo'lsa uning o'rniga "so'rov bo'yicha"
+              (server ham narxni yubormaydi — faqat UI yashirishi yetarli emas).
+              Aks holda variantli mahsulotda "… dan" + variantlar soni. */}
+          {isB2b && !b2bCfg.showPrices ? (
+            <p className="text-xs font-semibold text-slate-300 mb-2.5">{t("b2b.priceOnRequest")}</p>
+          ) : (
+            <div className="flex items-baseline gap-1.5 mb-2.5">
+              <span className="text-sm font-bold text-white">
+                {/* Variantlar narxi turlicha bo'lsa "… dan" — marketplace uslubi */}
+                {priceFrom && <span className="text-[10px] font-normal text-slate-400 mr-0.5">dan</span>}
+                {price.toLocaleString("uz-UZ")}
+                <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
               </span>
-            )}
-            {hasCardVariants && (
-              <span className="text-[10px] text-slate-500 ml-auto">
-                {(product.variants ?? []).filter((v) => v.active).length} variant
-              </span>
-            )}
-          </div>
+              {oldPrice != null && oldPrice > price && (
+                <span className="text-[10px] text-slate-500 line-through">
+                  {oldPrice.toLocaleString("uz-UZ")}
+                </span>
+              )}
+              {hasCardVariants && (
+                <span className="text-[10px] text-slate-500 ml-auto">
+                  {(product.variants ?? []).filter((v) => v.active).length} variant
+                </span>
+              )}
+            </div>
+          )}
 
-          {/* Add to cart */}
+          {/* B2B: savat yo'q — har bir tugma so'rovga (lidga) olib boradi */}
+          {isB2b ? (
+            <div className="space-y-1.5">
+              {b2bCfg.inquiries.map((kind) => (
+                <button
+                  key={kind}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    haptic.light();
+                    setInquiry({ kind, productId: product.id, productName: product.name });
+                  }}
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-all"
+                  style={
+                    kind === b2bCfg.inquiries[0]
+                      ? { backgroundColor: primaryColor }
+                      : { backgroundColor: "rgba(255,255,255,0.08)" }
+                  }
+                >
+                  {t(
+                    kind === "price"
+                      ? "b2b.inq.price"
+                      : kind === "sample"
+                        ? "b2b.inq.sample"
+                        : "b2b.inq.consult",
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -2426,6 +2525,7 @@ function StoreInner({ slug }: { slug: string }) {
               </>
             )}
           </button>
+          )}
         </div>
       </div>
     );
@@ -2454,7 +2554,7 @@ function StoreInner({ slug }: { slug: string }) {
             />
           </Suspense>
         </div>
-        <BottomNav active="profile" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
+        <BottomNav hideCart={isB2b} active="profile" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
       </div>
     );
   }
@@ -2481,7 +2581,7 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
           )}
         </div>
-        <BottomNav active="promotions" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
+        <BottomNav hideCart={isB2b} active="promotions" cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />
         {selectedProduct && renderProductDetail()}
       </div>
     );
@@ -2619,13 +2719,16 @@ function StoreInner({ slug }: { slug: string }) {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
+                <>
+                  {b2bBanner}
+                  <div className="grid grid-cols-2 gap-3">{filteredProducts.map(renderProductCard)}</div>
+                </>
               )}
             </div>
           </>
         )}
 
-        <BottomNav
+        <BottomNav hideCart={isB2b}
           active="catalog"
           cartCount={cartCount}
           primaryColor={primaryColor}
@@ -3028,6 +3131,7 @@ function StoreInner({ slug }: { slug: string }) {
                 ? categories.find((c) => c.id === selectedCategoryId)?.name || "Mahsulotlar"
                 : `"${searchQuery}" qidiruv natijalari`}
             </h3>
+            {b2bBanner}
             <div className="grid grid-cols-2 gap-3">
               {filteredProducts.map(renderProductCard)}
             </div>
@@ -3172,7 +3276,20 @@ function StoreInner({ slug }: { slug: string }) {
       )}
 
       {/* Bottom navigation — Home, Katalog, Savat, Takliflar, Profile */}
-      {currentTab && <BottomNav active={currentTab} cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />}
+      {currentTab && <BottomNav hideCart={isB2b} active={currentTab} cartCount={cartCount} primaryColor={primaryColor} onChange={(t) => setView(TAB_VIEWS[t])} />}
+
+      {/* B2B so'rovi — buyurtma emas, lid yaratadi */}
+      {inquiry && (
+        <B2bInquiryModal
+          slug={slug}
+          target={inquiry}
+          requireCompany={b2bCfg.requireCompany}
+          primaryColor={primaryColor}
+          apiBase={API_BASE}
+          prefill={{ name: form.name, phone: form.phone }}
+          onClose={() => setInquiry(null)}
+        />
+      )}
 
       {/* Marketing popups — admin paneldan boshqariladi */}
       <PopupHost

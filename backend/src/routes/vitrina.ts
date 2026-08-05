@@ -17,7 +17,8 @@ const layoutSchema = z.object({
   blocks: z.array(blockSchema),
   brand: z.record(z.unknown()).optional(),
   published: z.boolean().optional(),
-  storeMode: z.enum(["multi", "single"]).optional(),
+  // "b2b" — savatsiz, lidga yo'naltiruvchi ulgurji rejim (bot `b2b` shabloniga juft).
+  storeMode: z.enum(["multi", "single", "b2b"]).optional(),
   singleProductId: z.string().nullable().optional(),
 });
 

@@ -69,6 +69,8 @@ export interface BrandSettings {
   yandexMetrikaId?: string; // Yandex Metrika raqami — "12345678"
   // Single-product rejim landing bo'limlari (storeMode === "single")
   singleConfig?: SingleConfig;
+  /** B2B (ulgurji) rejim sozlamalari — `storeMode: "b2b"` bo'lganda ishlatiladi. */
+  b2bConfig?: B2bConfig;
 }
 
 // Single-product landing konstruktori.
@@ -429,3 +431,78 @@ export const categoryColors: Record<string, string> = {
   Parvarish: "#d946ef",
   Badiiy: "#6366f1",
 };
+
+// ─── B2B rejimi ─────────────────────────────────────────────────────────────
+//
+// Uchinchi do'kon turi (`storeMode: "b2b"`). Chakana vitrinadan farqi: savat
+// yo'q, narx ixtiyoriy, har bir yo'l BUYURTMA emas — LIDga olib boradi
+// (narxni menejer tasdiqlaydi). Bu bot konstruktoridagi `b2b` shablonining
+// mantig'i bilan bir xil: "savat yo'q — har bir yo'l lidga olib boradi".
+//
+// Sozlamalar `Storefront.brand.b2bConfig` ichida saqlanadi — `singleConfig`
+// kabi, ya'ni Prisma migratsiyasi kerak emas.
+
+/** B2B so'rov turlari — mijoz mahsulot kartochkasidan qaysi so'rovni yubora oladi. */
+export type B2bInquiryKind = "price" | "sample" | "consult";
+
+export interface B2bConfig {
+  /** Narxni mijozga ko'rsatish. false — "Narx so'rov bo'yicha". */
+  showPrices: boolean;
+  /** Yoqilgan so'rov turlari (kamida bittasi bo'lishi shart). */
+  inquiries: B2bInquiryKind[];
+  /** So'rov formasida kompaniya nomi majburiymi. */
+  requireCompany: boolean;
+  /** Minimal partiya (MOQ) matni, masalan "20 kg dan". Bo'sh — ko'rsatilmaydi. */
+  moqNote: string;
+  /** Katalog tepasidagi qisqa izoh (ulgurji shartlar, yetkazib berish geografiyasi). */
+  intro: string;
+}
+
+export const defaultB2bConfig: B2bConfig = {
+  showPrices: false,
+  inquiries: ["price", "sample", "consult"],
+  requireCompany: true,
+  moqNote: "",
+  intro: "",
+};
+
+const KNOWN_INQUIRY_KINDS: B2bInquiryKind[] = ["price", "sample", "consult"];
+
+/** So'rov turi metama'lumoti — admin editori va storefront tugmalari uchun. */
+export const b2bInquiryMeta: Array<{
+  kind: B2bInquiryKind;
+  icon: string; // lucide ikonka nomi
+  labelKey: string;
+  descKey: string;
+}> = [
+  { kind: "price", icon: "Tag", labelKey: "b2b.inq.price", descKey: "b2b.inq.price.d" },
+  { kind: "sample", icon: "FlaskConical", labelKey: "b2b.inq.sample", descKey: "b2b.inq.sample.d" },
+  { kind: "consult", icon: "MessageCircle", labelKey: "b2b.inq.consult", descKey: "b2b.inq.consult.d" },
+];
+
+/**
+ * Saqlangan b2bConfig'ni normalizatsiya qiladi — noto'g'ri/eskirgan qiymatlar
+ * vitrinani buzmasin. `normalizeSingleConfig` bilan bir xil qoidalar:
+ * noma'lum kalitlar tashlanadi, yetishmagani standartdan to'ldiriladi.
+ */
+export function normalizeB2bConfig(raw: unknown): B2bConfig {
+  const src = (raw ?? {}) as Partial<Record<keyof B2bConfig, unknown>>;
+
+  const inquiriesRaw = Array.isArray(src.inquiries) ? src.inquiries : null;
+  const inquiries = inquiriesRaw
+    ? (inquiriesRaw.filter(
+        (k): k is B2bInquiryKind =>
+          typeof k === "string" && (KNOWN_INQUIRY_KINDS as string[]).includes(k),
+      ).filter((k, i, arr) => arr.indexOf(k) === i))
+    : [...defaultB2bConfig.inquiries];
+
+  return {
+    showPrices: typeof src.showPrices === "boolean" ? src.showPrices : defaultB2bConfig.showPrices,
+    // Hammasi o'chirilgan bo'lsa mijozda harakatsiz kartochka qolardi — standartga qaytamiz.
+    inquiries: inquiries.length ? inquiries : [...defaultB2bConfig.inquiries],
+    requireCompany:
+      typeof src.requireCompany === "boolean" ? src.requireCompany : defaultB2bConfig.requireCompany,
+    moqNote: typeof src.moqNote === "string" ? src.moqNote.slice(0, 120) : defaultB2bConfig.moqNote,
+    intro: typeof src.intro === "string" ? src.intro.slice(0, 400) : defaultB2bConfig.intro,
+  };
+}

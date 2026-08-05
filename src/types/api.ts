@@ -229,13 +229,19 @@ export interface VitrinaBlock {
   settings: Record<string, unknown>;
 }
 
+// Do'kon turi:
+//   multi  — ko'p mahsulotli chakana katalog (default)
+//   single — bitta mahsulotga qaratilgan landing
+//   b2b    — savatsiz ulgurji rejim: har bir yo'l buyurtma emas, LIDga olib boradi
+export type StoreMode = "multi" | "single" | "b2b";
+
 export interface VitrinaLayout {
   id: string;
   tenantId: string;
   blocks: VitrinaBlock[];
   brand: Record<string, unknown>;
   published: boolean;
-  storeMode: "multi" | "single";
+  storeMode: StoreMode;
   singleProductId: string | null;
   createdAt: string;
   updatedAt: string;
