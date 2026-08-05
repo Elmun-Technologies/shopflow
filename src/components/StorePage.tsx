@@ -952,8 +952,10 @@ function StoreInner({ slug }: { slug: string }) {
 
   // Single rejim "Buyurtma berish" — mahsulot(lar)ni savatga qo'shib
   // to'g'ridan-to'g'ri checkout'ga o'tadi (savat bosqichisiz).
-  const buyNow = useCallback((items: StoreProduct[]) => {
-    for (const it of items) addToCart(it);
+  const buyNow = useCallback((items: StoreProduct[], variant?: StoreVariant | null) => {
+    // Birinchi mahsulot — PDP'da tanlangani; qolganlari combo qo'shimchalari.
+    // Variant berilmasa addToCart eng arzonini oladi.
+    items.forEach((it, i) => addToCart(it, i === 0 ? variant : null));
     setView("checkout");
   }, [addToCart]);
 
@@ -975,10 +977,12 @@ function StoreInner({ slug }: { slug: string }) {
     }
     switch (sortBy) {
       case "price_asc":
-        prods.sort((a, b) => Number(a.price) - Number(b.price));
+        // Variantli mahsulotda kartadagi (eng arzon variant) narxi bo'yicha —
+        // Product.price odatda 0 bo'ladi va ular ro'yxat boshiga chiqib ketardi
+        prods.sort((a, b) => cardPrice(a).price - cardPrice(b).price);
         break;
       case "price_desc":
-        prods.sort((a, b) => Number(b.price) - Number(a.price));
+        prods.sort((a, b) => cardPrice(b).price - cardPrice(a).price);
         break;
       case "newest":
         // Backend already orders by featured desc then createdAt desc — keep that
@@ -2086,7 +2090,7 @@ function StoreInner({ slug }: { slug: string }) {
                 <button
                   onClick={() => {
                     if (isSingle) {
-                      buyNow([selectedProduct, ...selectedComboItems.map((i) => i.product)]);
+                      buyNow([selectedProduct, ...selectedComboItems.map((i) => i.product)], variant);
                     } else {
                       addToCart(selectedProduct, variant);
                       for (const item of selectedComboItems) addToCart(item.product);
@@ -2108,7 +2112,7 @@ function StoreInner({ slug }: { slug: string }) {
             if (qty === 0) {
               return (
                 <button
-                  onClick={() => { if (isSingle) { buyNow([selectedProduct]); } else { addToCart(selectedProduct, variant); setSelectedProduct(null); } }}
+                  onClick={() => { if (isSingle) { buyNow([selectedProduct], variant); } else { addToCart(selectedProduct, variant); setSelectedProduct(null); } }}
                   className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                   style={{ backgroundColor: primaryColor }}
                 >

@@ -258,10 +258,26 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
     // O'qlar berilmasa mavjudi qoladi — variantlar ularga solishtiriladi
     const parsedOptions = options !== undefined ? parseOptions(options) : parseOptions(product.options);
-    if (variants !== undefined) {
-      const variantErrors = validateVariants(parsedOptions, variants.map((v) => ({
-        sku: v.sku, name: v.name ?? "", optionValues: v.optionValues,
-      })));
+
+    // Tekshiriladigan variantlar: yuborilganlari, yoki (faqat o'qlar
+    // o'zgartirilayotgan bo'lsa) DB'dagi mavjudlari. Aks holda o'qdan qiymat
+    // olib tashlansa, unga tayangan variantlar jimgina yaroqsiz bo'lib qolardi
+    // va PDP tanlagichi ishlamay qo'yardi.
+    const variantsToCheck = variants !== undefined
+      ? variants.map((v) => ({ sku: v.sku, name: v.name ?? "", optionValues: v.optionValues }))
+      : options !== undefined
+        ? (await app.prisma.productVariant.findMany({
+            where: { productId: id },
+            select: { sku: true, name: true, optionValues: true },
+          })).map((v) => ({
+            sku: v.sku,
+            name: v.name,
+            optionValues: (v.optionValues ?? {}) as Record<string, string>,
+          }))
+        : [];
+
+    if (variantsToCheck.length > 0) {
+      const variantErrors = validateVariants(parsedOptions, variantsToCheck);
       if (variantErrors.length) {
         return reply.code(400).send({ error: "Variantlarda xato", issues: variantErrors });
       }

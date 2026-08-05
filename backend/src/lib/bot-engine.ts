@@ -17,6 +17,7 @@ import { nextLeadCode } from "./codes.js";
 import { sendTelegramRaw, notifyAdmin } from "./telegram-notify.js";
 import { publishToTenant } from "./sse-bus.js";
 import { aiReplyToMessage } from "./ai-assistant.js";
+import { productPricing, toVariantLike, visibleVariants } from "./variant-shape.js";
 import {
   pick,
   type BotFlowDefinition,
@@ -174,6 +175,8 @@ const T = {
     outOfStock: "Mavjud emas",
     inStock: "Mavjud",
     priceOnRequest: "Narx so'rov bo'yicha",
+    priceFrom: "dan",
+    variantsTitle: "Mavjud o'lchamlar:",
     somethingWrong: "Xatolik yuz berdi. /start bosib qaytadan urinib ko'ring.",
   },
   ru: {
@@ -200,6 +203,8 @@ const T = {
     outOfStock: "Нет в наличии",
     inStock: "В наличии",
     priceOnRequest: "Цена по запросу",
+    priceFrom: "от",
+    variantsTitle: "Доступные варианты:",
     somethingWrong: "Произошла ошибка. Нажмите /start и попробуйте снова.",
   },
 } as const;
@@ -541,7 +546,12 @@ async function showCatalog(
     ctx.prisma.product.count({ where }),
     ctx.prisma.product.findMany({
       where,
-      select: { id: true, name: true, price: true, currency: true },
+      // Variantli mahsulotda narx variantlardan hisoblanadi — aks holda bot
+      // Product.price (odatda 0) ni ko'rsatib, "0 so'm" deb yozardi.
+      select: {
+        id: true, name: true, price: true, oldPrice: true, currency: true, stock: true,
+        variants: { where: { active: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip: page * CATALOG_PAGE_SIZE,
       take: CATALOG_PAGE_SIZE,
@@ -554,9 +564,17 @@ async function showCatalog(
     });
   }
 
-  const rows: InlineButton[][] = products.map((p) => [
-    { text: `${p.name} — ${formatMoney(Number(p.price), p.currency)}`.slice(0, 60), callback_data: `p:${p.id}` },
-  ]);
+  const rows: InlineButton[][] = products.map((p) => {
+    const pricing = productPricing(
+      { price: Number(p.price), oldPrice: p.oldPrice === null ? null : Number(p.oldPrice), stock: p.stock },
+      p.variants.map(toVariantLike),
+    );
+    // Narxlar turlicha bo'lsa "dan" — marketplace uslubi (storefront bilan bir xil)
+    const priceLabel = pricing.price > 0
+      ? `${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency)}`
+      : T[lang].priceOnRequest;
+    return [{ text: `${p.name} — ${priceLabel}`.slice(0, 60), callback_data: `p:${p.id}` }];
+  });
 
   const nav: InlineButton[] = [];
   const catKey = categoryId ?? "-";
@@ -576,17 +594,50 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
   const lang = session.lang;
   const p = await ctx.prisma.product.findFirst({
     where: { id: productId, tenantId: ctx.tenantId, active: true },
-    select: { id: true, name: true, description: true, price: true, currency: true, stock: true, sku: true, images: true },
+    select: {
+      id: true, name: true, description: true, price: true, oldPrice: true,
+      currency: true, stock: true, sku: true, images: true,
+      variants: { where: { active: true }, orderBy: { sortOrder: "asc" } },
+    },
   });
   if (!p) return send(ctx, T[lang].somethingWrong);
 
-  const price = Number(p.price);
+  const variants = visibleVariants(p.variants.map(toVariantLike));
+  const pricing = productPricing(
+    {
+      price: Number(p.price),
+      oldPrice: p.oldPrice === null ? null : Number(p.oldPrice),
+      stock: p.stock,
+      imageUrl: null,
+      images: p.images,
+    },
+    variants,
+  );
+
+  // Variantlar ro'yxati — botda savat yo'q, shuning uchun ular ma'lumot
+  // sifatida ko'rsatiladi va mijoz Mini App'da yoki menejer orqali tanlaydi.
+  const variantLines = variants.length
+    ? [
+        "",
+        `<b>${T[lang].variantsTitle}</b>`,
+        ...variants.slice(0, 12).map((v) => {
+          const stockMark = v.stock > 0 ? "" : ` — ${T[lang].outOfStock}`;
+          return `• ${v.name} — ${formatMoney(v.price, p.currency)}${stockMark}`;
+        }),
+      ]
+    : [];
+
+  const priceLine = pricing.price > 0
+    ? `💰 ${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency)}`
+    : `💰 ${T[lang].priceOnRequest}`;
+
   const parts = [
     `<b>${p.name}</b>`,
     p.sku ? `<code>${p.sku}</code>` : "",
     "",
-    price > 0 ? `💰 ${formatMoney(price, p.currency)}` : `💰 ${T[lang].priceOnRequest}`,
-    p.stock > 0 ? `📦 ${T[lang].inStock}` : `📦 ${T[lang].outOfStock}`,
+    priceLine,
+    pricing.stock > 0 ? `📦 ${T[lang].inStock}` : `📦 ${T[lang].outOfStock}`,
+    ...variantLines,
     "",
     (p.description ?? "").slice(0, 1500),
   ];
