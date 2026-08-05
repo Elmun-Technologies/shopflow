@@ -1,4 +1,5 @@
 // Public API (v1) javob shakllantiruvchilari.
+import { parsePriceTiers } from "./price-tier.js";
 // Tashqi mijoz websaytlari uchun BARQAROR kontrakt — bu yerdagi shakl
 // docs/PUBLIC_API.md bilan mos kelishi shart.
 //
@@ -102,6 +103,12 @@ export interface ShapedProduct {
    * `price` esa har doim **eng arzon sotib olinadigan** variantdan olinadi.
    */
   variants: ShapedVariant[];
+  /** B2B/ulgurji narx pog'onalari (hajm bo'yicha). Bo'sh — flat narx. */
+  priceTiers: { minQty: number; price: number }[];
+  /** Minimal buyurtma miqdori (MOQ). Yo'q bo'lsa null. */
+  moq: number | null;
+  /** O'lchov birligi ("kg" / "l" / "dona"). Yo'q bo'lsa null. */
+  unit: string | null;
 }
 
 // Prisma'dan keladigan xom mahsulot (kerakli maydonlar bilan).
@@ -131,6 +138,10 @@ export interface RawProductForShape {
   }>;
   /** Xom `Product.options` JSON */
   options?: unknown;
+  /** Xom `Product.priceTiers` JSON */
+  priceTiers?: unknown;
+  moq?: number | null;
+  unit?: string | null;
 }
 
 export interface ShapeProductOpts {
@@ -298,6 +309,9 @@ export function shapeProduct(p: RawProductForShape, opts: ShapeProductOpts): Sha
     bespoke: asBool(lc.bespoke),
     options,
     variants,
+    priceTiers: parsePriceTiers(p.priceTiers),
+    moq: p.moq ?? null,
+    unit: p.unit ?? null,
   };
 }
 

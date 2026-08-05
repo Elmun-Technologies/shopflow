@@ -18,6 +18,7 @@ import { sendTelegramRaw, notifyAdmin } from "./telegram-notify.js";
 import { publishToTenant } from "./sse-bus.js";
 import { aiReplyToMessage } from "./ai-assistant.js";
 import { productPricing, toVariantLike, visibleVariants } from "./variant-shape.js";
+import { parsePriceTiers } from "./price-tier.js";
 import {
   pick,
   type BotFlowDefinition,
@@ -189,6 +190,10 @@ const T = {
     priceOnRequest: "Narx so'rov bo'yicha",
     priceFrom: "dan",
     variantsTitle: "Mavjud o'lchamlar:",
+    tiersTitle: "Hajm bo'yicha narx:",
+    pcs: "dona",
+    fromN: (n: number, unit: string) => `${n.toLocaleString("uz-UZ")} ${unit} dan`,
+    moqLine: (n: number, unit: string) => `Minimal buyurtma: ${n.toLocaleString("uz-UZ")} ${unit}`,
     somethingWrong: "Xatolik yuz berdi. /start bosib qaytadan urinib ko'ring.",
   },
   ru: {
@@ -217,6 +222,10 @@ const T = {
     priceOnRequest: "Цена по запросу",
     priceFrom: "от",
     variantsTitle: "Доступные варианты:",
+    tiersTitle: "Цена по объёму:",
+    pcs: "шт.",
+    fromN: (n: number, unit: string) => `от ${n.toLocaleString("ru-RU")} ${unit}`,
+    moqLine: (n: number, unit: string) => `Минимальный заказ: ${n.toLocaleString("ru-RU")} ${unit}`,
     somethingWrong: "Произошла ошибка. Нажмите /start и попробуйте снова.",
   },
 } as const;
@@ -609,6 +618,7 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     select: {
       id: true, name: true, description: true, price: true, oldPrice: true,
       currency: true, stock: true, sku: true, images: true,
+      priceTiers: true, moq: true, unit: true,
       variants: { where: { active: true }, orderBy: { sortOrder: "asc" } },
     },
   });
@@ -639,6 +649,18 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
       ]
     : [];
 
+  // B2B narx pog'onalari — hajm bo'yicha (maʼlumot; yakuniy narxni menejer tasdiqlaydi)
+  const tiers = parsePriceTiers(p.priceTiers);
+  const unitLabel = p.unit || T[lang].pcs;
+  const tierLines = tiers.length
+    ? [
+        "",
+        `<b>${T[lang].tiersTitle}</b>`,
+        ...tiers.map((tr) => `• ${T[lang].fromN(tr.minQty, unitLabel)} — ${formatMoney(tr.price, p.currency)}`),
+      ]
+    : [];
+  const moqLine = p.moq && p.moq > 0 ? [`📦 ${T[lang].moqLine(p.moq, unitLabel)}`] : [];
+
   const priceLine = pricing.price > 0
     ? `💰 ${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency)}`
     : `💰 ${T[lang].priceOnRequest}`;
@@ -650,6 +672,8 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     priceLine,
     pricing.stock > 0 ? `📦 ${T[lang].inStock}` : `📦 ${T[lang].outOfStock}`,
     ...variantLines,
+    ...tierLines,
+    ...moqLine,
     "",
     (p.description ?? "").slice(0, 1500),
   ];

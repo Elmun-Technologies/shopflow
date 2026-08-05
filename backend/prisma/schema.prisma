@@ -289,6 +289,16 @@ model Product {
   // Bo'sh massiv = variantsiz oddiy mahsulot (mavjud mahsulotlarning barchasi shunday).
   options Json @default("[]")
 
+  // B2B/ulgurji narx pog'onalari — hajm oshgani sari arzonlashadi.
+  // Shakl: [{ minQty, price }] (butun UZS), o'sish tartibida. Bo'sh — flat narx.
+  // MAʼLUMOT xarakterida: mijozga ko'rsatiladi; B2B'da buyurtma so'rov→lid orqali
+  // ketadi va yakuniy narxni menejer tasdiqlaydi.
+  priceTiers Json @default("[]")
+  // Minimal buyurtma miqdori (MOQ) — null bo'lsa cheklov yo'q.
+  moq Int?
+  // O'lchov birligi ("kg", "l", "dona") — MOQ va pog'onalarni ko'rsatishda.
+  unit String?
+
   // Boy marketing kontenti (public API Product detali uchun). Ixtiyoriy.
   // Shakl: { tagline, highlights[], benefits[], ingredients[], howToUse,
   //          faq[], servings, bespoke, ... } yoki per-locale: { uz:{...}, ru:{...} }.

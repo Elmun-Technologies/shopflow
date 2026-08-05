@@ -13,6 +13,7 @@ import {
   validateVariants,
   variantAttributesSchema,
 } from "../lib/variant-shape.js";
+import { parsePriceTiers, priceTiersSchema, validatePriceTiers } from "../lib/price-tier.js";
 
 const variantInSchema = z.object({
   /** Mavjud variantni yangilash uchun. Bo'sh — yangi variant. */
@@ -53,6 +54,10 @@ const productSchema = z.object({
   // Variantlar. `id` berilgan bo'lsa mavjudi yangilanadi, aks holda yangisi
   // yaratiladi. Ro'yxatda yo'q variantlar o'chiriladi.
   variants: z.array(variantInSchema).max(100).optional(),
+  // B2B narx pog'onalari (hajm bo'yicha) + MOQ + o'lchov birligi.
+  priceTiers: priceTiersSchema.optional(),
+  moq: z.number().int().positive().max(10_000_000).nullable().optional(),
+  unit: z.string().max(16).nullable().optional(),
 });
 
 // content (ixtiyoriy JSON) ni Prisma input'ga keltirish.
@@ -194,7 +199,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = productSchema.parse(req.body);
-    const { content, options, variants, ...rest } = data;
+    const { content, options, variants, priceTiers, ...rest } = data;
     const tenantId = req.session.tenantId;
 
     const parsedOptions = parseOptions(options ?? []);
@@ -203,6 +208,10 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     })));
     if (variantErrors.length) {
       return reply.code(400).send({ error: "Variantlarda xato", issues: variantErrors });
+    }
+    if (priceTiers) {
+      const tierErrors = validatePriceTiers(priceTiers);
+      if (tierErrors.length) return reply.code(400).send({ error: "Narx pog'onalarida xato", issues: tierErrors });
     }
 
     const slug = await uniqueProductSlug(app.prisma, tenantId, data.slug || data.name);
@@ -217,6 +226,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
           origin: data.origin || null,
           content: toJsonInput(content),
           options: parsedOptions as unknown as Prisma.InputJsonValue,
+          // Pog'onalarni saralab saqlaymiz — narx hisoblash tartibga tayanadi
+          ...(priceTiers !== undefined && { priceTiers: parsePriceTiers(priceTiers) as unknown as Prisma.InputJsonValue }),
           tenantId,
         },
       });
@@ -254,7 +265,12 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
 
-    const { content, options, variants, ...rest } = data;
+    const { content, options, variants, priceTiers, ...rest } = data;
+
+    if (priceTiers) {
+      const tierErrors = validatePriceTiers(priceTiers);
+      if (tierErrors.length) return reply.code(400).send({ error: "Narx pog'onalarida xato", issues: tierErrors });
+    }
 
     // O'qlar berilmasa mavjudi qoladi — variantlar ularga solishtiriladi
     const parsedOptions = options !== undefined ? parseOptions(options) : parseOptions(product.options);
@@ -303,6 +319,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
           ...(data.origin !== undefined && { origin: data.origin || null }),
           ...(content !== undefined && { content: toJsonInput(content) }),
           ...(options !== undefined && { options: parsedOptions as unknown as Prisma.InputJsonValue }),
+          ...(priceTiers !== undefined && { priceTiers: parsePriceTiers(priceTiers) as unknown as Prisma.InputJsonValue }),
         },
       });
       if (variants !== undefined) {
@@ -565,6 +582,9 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
             origin: src.origin,
             content: toJsonInput(src.content ?? undefined),
             options: (src.options ?? []) as Prisma.InputJsonValue,
+            priceTiers: (src.priceTiers ?? []) as Prisma.InputJsonValue,
+            moq: src.moq,
+            unit: src.unit,
             saleCampaignId: src.saleCampaignId,
             source: "MANUAL",
           },

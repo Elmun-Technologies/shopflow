@@ -2597,4 +2597,23 @@ export const dictionary: Record<string, Entry> = {
   "variants.errDupCombo": { uz: "«{name}» — bir xil kombinatsiyali ikkinchi variant", ru: "«{name}» — второй вариант с той же комбинацией" },
 
   "onec.logVariants": { uz: "{count} variant", ru: "{count} вариантов" },
+
+  // ── B2B narx pog'onalari (hajm bo'yicha) + MOQ ──
+  "tiers.section": { uz: "Ulgurji narx (hajm bo'yicha)", ru: "Оптовая цена (по объёму)" },
+  "tiers.intro": {
+    uz: "Hajm oshgani sari narx arzonlashadi. Mijozga ko'rsatiladi; B2B rejimda yakuniy narxni menejer tasdiqlaydi. Bo'sh qoldirsangiz oddiy narx ishlaydi.",
+    ru: "Чем больше объём, тем ниже цена. Показывается клиенту; в B2B-режиме итоговую цену подтверждает менеджер. Оставьте пустым — работает обычная цена.",
+  },
+  "tiers.moq": { uz: "Minimal buyurtma (MOQ)", ru: "Мин. заказ (MOQ)" },
+  "tiers.unit": { uz: "O'lchov birligi", ru: "Единица измерения" },
+  "tiers.unitPlaceholder": { uz: "kg / l / dona", ru: "кг / л / шт" },
+  "tiers.tiers": { uz: "Pog'onalar", ru: "Ступени" },
+  "tiers.empty": { uz: "Pog'ona yo'q — oddiy narx ishlaydi", ru: "Ступеней нет — работает обычная цена" },
+  "tiers.fromQty": { uz: "…dan (miqdor)", ru: "от (кол-во)" },
+  "tiers.unitPrice": { uz: "Birlik narxi, {currency}", ru: "Цена за единицу, {currency}" },
+  "tiers.hint": { uz: "Miqdor pog'onaga yetganda o'sha narx qo'llanadi. Masalan: 1 dan — 100 000, 10 dan — 90 000.", ru: "Когда количество достигает ступени, применяется её цена. Например: от 1 — 100 000, от 10 — 90 000." },
+  "tiers.pdpTitle": { uz: "Hajm bo'yicha narx", ru: "Цена по объёму" },
+  "tiers.fromN": { uz: "{n} {unit} dan", ru: "от {n} {unit}" },
+  "tiers.moqLine": { uz: "Minimal buyurtma: {n} {unit}", ru: "Минимальный заказ: {n} {unit}" },
+  "tiers.pcs": { uz: "dona", ru: "шт" },
 };
