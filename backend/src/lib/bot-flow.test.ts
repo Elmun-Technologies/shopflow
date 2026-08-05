@@ -194,6 +194,24 @@ describe("shablonlar", () => {
     expect(validateFlowRefs(def)).toEqual([]);
   });
 
+  it("retail shablonida katalog Mini App'ni ochadi (openInApp), b2b'da bot ro'yxati", () => {
+    const retail = getTemplate("retail");
+    const catBtn = retail.screens
+      .flatMap((s) => s.buttons)
+      .find((b) => b.action.type === "catalog");
+    expect(catBtn?.action.type).toBe("catalog");
+    expect((catBtn?.action as { openInApp?: boolean }).openInApp).toBe(true);
+
+    const b2b = getTemplate("b2b");
+    const b2bCat = b2b.screens
+      .flatMap((s) => s.buttons)
+      .filter((b) => b.action.type === "catalog");
+    expect(b2bCat.length).toBeGreaterThan(0);
+    for (const b of b2bCat) {
+      expect((b.action as { openInApp?: boolean }).openInApp).toBe(false);
+    }
+  });
+
   it.each(TEMPLATE_LIST.map((t) => t.id))("%s shablonida erishilmaydigan ekran yo'q", (id) => {
     expect(findOrphanScreens(getTemplate(id))).toEqual([]);
   });

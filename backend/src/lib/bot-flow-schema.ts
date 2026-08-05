@@ -44,10 +44,16 @@ export const buttonActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("webapp") }),
   /** Tashqi havola */
   z.object({ type: z.literal("url"), url: z.string().url().max(500) }),
-  /** Haqiqiy katalogdan mahsulotlar ro'yxati (DB'dan) */
+  /** Haqiqiy katalogdan mahsulotlar ro'yxati (DB'dan) yoki Mini App'ni ochish */
   z.object({
     type: z.literal("catalog"),
     categoryId: z.string().max(40).nullable().default(null),
+    /**
+     * true bo'lsa: bot ichida matn ro'yxati o'rniga Mini App do'koni ochiladi
+     * (kategoriya tanlangan bo'lsa o'sha kategoriyaga deep-link bilan). Chakana
+     * do'konda mantiqiy — Mini App'da rasm/variant/savat allaqachon batafsil.
+     */
+    openInApp: z.boolean().default(false),
   }),
   /** Buyurtma kuzatish (kod so'raydi) */
   z.object({ type: z.literal("track_order") }),

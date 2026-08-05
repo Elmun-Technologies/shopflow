@@ -54,7 +54,7 @@ const retail: BotFlowDefinition = {
       showBack: false,
       buttons: [
         { id: "shop", label: { uz: "🛍 Do'konni ochish", ru: "🛍 Открыть магазин" }, action: { type: "webapp" }, fullWidth: true },
-        { id: "catalog", label: { uz: "📦 Katalog", ru: "📦 Каталог" }, action: { type: "catalog", categoryId: null }, fullWidth: true },
+        { id: "catalog", label: { uz: "📦 Katalog", ru: "📦 Каталог" }, action: { type: "catalog", categoryId: null, openInApp: true }, fullWidth: true },
         { id: "track", label: { uz: "🚚 Buyurtmani kuzatish", ru: "🚚 Отследить заказ" }, action: { type: "screen", screenId: "track" }, fullWidth: false },
         { id: "support", label: { uz: "🆘 Yordam", ru: "🆘 Поддержка" }, action: { type: "screen", screenId: "support" }, fullWidth: false },
         { id: "lang", label: { uz: "🌐 Til", ru: "🌐 Язык" }, action: { type: "language" }, fullWidth: true },
@@ -167,9 +167,9 @@ const b2b: BotFlowDefinition = {
       imageUrl: null,
       showBack: true,
       buttons: [
-        { id: "all", label: { uz: "📋 Butun katalog", ru: "📋 Весь каталог" }, action: { type: "catalog", categoryId: null }, fullWidth: true },
-        { id: "new", label: { uz: "🔥 Yangiliklar", ru: "🔥 Новинки" }, action: { type: "catalog", categoryId: null }, fullWidth: false },
-        { id: "popular", label: { uz: "⭐ Ommabop yechimlar", ru: "⭐ Популярные решения" }, action: { type: "catalog", categoryId: null }, fullWidth: false },
+        { id: "all", label: { uz: "📋 Butun katalog", ru: "📋 Весь каталог" }, action: { type: "catalog", categoryId: null, openInApp: false }, fullWidth: true },
+        { id: "new", label: { uz: "🔥 Yangiliklar", ru: "🔥 Новинки" }, action: { type: "catalog", categoryId: null, openInApp: false }, fullWidth: false },
+        { id: "popular", label: { uz: "⭐ Ommabop yechimlar", ru: "⭐ Популярные решения" }, action: { type: "catalog", categoryId: null, openInApp: false }, fullWidth: false },
         { id: "docs", label: { uz: "📄 Hujjatlar va sertifikatlar", ru: "📄 Документы и сертификаты" }, action: { type: "screen", screenId: "docs" }, fullWidth: true },
       ],
     },

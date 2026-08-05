@@ -32,7 +32,7 @@ type ButtonAction =
   | { type: "text"; text: Localized }
   | { type: "webapp" }
   | { type: "url"; url: string }
-  | { type: "catalog"; categoryId: string | null }
+  | { type: "catalog"; categoryId: string | null; openInApp?: boolean }
   | { type: "track_order" }
   | { type: "operator" }
   | { type: "language" }
@@ -270,7 +270,7 @@ function ButtonRow({
       case "form": action = { type, formId: forms[0]?.id ?? "" }; break;
       case "text": action = { type, text: emptyLocalized() }; break;
       case "url": action = { type, url: "https://" }; break;
-      case "catalog": action = { type, categoryId: null }; break;
+      case "catalog": action = { type, categoryId: null, openInApp: false }; break;
       default: action = { type } as ButtonAction;
     }
     onChange({ ...button, action });
@@ -384,6 +384,19 @@ function ButtonRow({
                     onChange={(e) => onChange({ ...button, action: { type: "url", url: e.target.value } })}
                   />
                 </Field>
+              )}
+
+              {button.action.type === "catalog" && (
+                <Toggle
+                  checked={button.action.openInApp === true}
+                  onChange={(v) =>
+                    onChange({
+                      ...button,
+                      action: { type: "catalog", categoryId: (button.action as { categoryId: string | null }).categoryId ?? null, openInApp: v },
+                    })
+                  }
+                  label={t("botflow.catalogOpenInApp")}
+                />
               )}
 
               <Toggle

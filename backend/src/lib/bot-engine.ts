@@ -107,6 +107,13 @@ function layoutRows(items: Array<{ button: InlineButton; fullWidth: boolean }>):
   return rows;
 }
 
+/** Mini App katalog deep-link URL'i (ixtiyoriy kategoriya bilan). */
+function catalogDeepLink(storeUrl: string, categoryId: string | null): string {
+  const sep = storeUrl.includes("?") ? "&" : "?";
+  const cat = categoryId ? `&category=${encodeURIComponent(categoryId)}` : "";
+  return `${storeUrl}${sep}view=catalog${cat}`;
+}
+
 function screenKeyboard(screen: BotScreen, lang: BotLang, ctx: BotEngineCtx, hasParent: boolean) {
   const items: Array<{ button: InlineButton; fullWidth: boolean }> = [];
 
@@ -115,6 +122,11 @@ function screenKeyboard(screen: BotScreen, lang: BotLang, ctx: BotEngineCtx, has
     let button: InlineButton;
     if (b.action.type === "webapp") {
       button = { text: label, web_app: { url: ctx.storeUrl } };
+    } else if (b.action.type === "catalog" && b.action.openInApp) {
+      // Bot ichida ro'yxat emas — Mini App'ni ochamiz. Kategoriya tanlangan
+      // bo'lsa deep-link bilan (storefront ?view=catalog&category=… ni o'qiydi).
+      const url = catalogDeepLink(ctx.storeUrl, b.action.categoryId);
+      button = { text: label, web_app: { url } };
     } else if (b.action.type === "url") {
       button = { text: label, url: b.action.url };
     } else {

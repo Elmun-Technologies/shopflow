@@ -745,6 +745,22 @@ function StoreInner({ slug }: { slug: string }) {
         setData(d);
         // GA4 / Yandex Metrika — tenant sozlagan bo'lsa inject qilamiz
         injectAnalytics((d.brand ?? {}) as StoreBrand);
+        // Bot katalog tugmasidan deep-link: ?view=catalog[&category=<id>].
+        // Bot ichida ro'yxat o'rniga Mini App katalogini shu joyda ochamiz.
+        try {
+          const q = new URLSearchParams(window.location.search);
+          if (q.get("view") === "catalog") {
+            const catId = q.get("category");
+            const catExists = catId && d.categories?.some((c) => c.id === catId);
+            if (catExists) {
+              setSelectedCategoryId(catId);
+              setCatalogMode("products");
+            } else {
+              setCatalogMode("categories");
+            }
+            setView("catalog");
+          }
+        } catch { /* URL o'qib bo'lmasa — oddiy bosh sahifa */ }
         // Single rejim — landing darhol tanlangan mahsulotni ko'rsatadi.
         // Eski multi-savatni tozalaymiz (direct-order toza boshlanishi uchun).
         if (d.storeMode === "single") {

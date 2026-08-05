@@ -2404,6 +2404,7 @@ export const dictionary: Record<string, Entry> = {
   "botflow.action.webapp": { uz: "Do'konni ochish (Mini App)", ru: "Открыть магазин (Mini App)" },
   "botflow.action.url": { uz: "Tashqi havola", ru: "Внешняя ссылка" },
   "botflow.action.catalog": { uz: "Katalogni ko'rsatish", ru: "Показать каталог" },
+  "botflow.catalogOpenInApp": { uz: "Mini App do'konida ochish (bot ichida ro'yxat o'rniga)", ru: "Открывать в Mini App (вместо списка в боте)" },
   "botflow.action.track_order": { uz: "Buyurtmani kuzatish", ru: "Отследить заказ" },
   "botflow.action.operator": { uz: "Operatorga ulash", ru: "Соединить с оператором" },
   "botflow.action.language": { uz: "Tilni tanlash", ru: "Выбрать язык" },
