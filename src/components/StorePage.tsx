@@ -117,6 +117,27 @@ type StoreAddon = {
   };
 };
 
+/** Mahsulot varianti — 50 gr / 1 kg / rang va h.k. */
+type StoreVariant = {
+  id: string;
+  sku: string;
+  name: string;
+  optionValues: Record<string, string>;
+  price: number;
+  oldPrice: number | null;
+  stock: number;
+  active: boolean;
+  images: string[];
+  attributes: Array<{ label: { uz: string; ru: string }; value: { uz: string; ru: string } }>;
+  sortOrder: number;
+};
+
+type StoreOption = {
+  id: string;
+  name: { uz: string; ru: string };
+  values: Array<{ id: string; label: { uz: string; ru: string } }>;
+};
+
 type StoreProduct = {
   id: string;
   sku: string;
@@ -136,6 +157,19 @@ type StoreProduct = {
   weeklyBuyers?: number;
   avgRating?: number;
   reviewCount?: number;
+  /** Variant o'qlari (Hajm / Rang). Bo'sh — variantsiz mahsulot. */
+  options?: StoreOption[];
+  /** Aktiv variantlar — narx o'sish tartibida */
+  variants?: StoreVariant[];
+  /** Backend hisoblagan karta narxi/zaxirasi (variantlarni hisobga olgan) */
+  pricing?: {
+    price: number;
+    oldPrice: number | null;
+    stock: number;
+    priceVaries: boolean;
+    maxPrice: number;
+    variantCount: number;
+  };
 };
 
 interface StoreReview {
@@ -211,7 +245,14 @@ function loadStoredCart(slug: string): CartItem[] {
     const raw = localStorage.getItem(CART_KEY(slug));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as StoredCart;
-    return Array.isArray(parsed.items) ? parsed.items : [];
+    if (!Array.isArray(parsed.items)) return [];
+    // Eski savatlarda variant maydonlari yo'q — normallashtiramiz, aks holda
+    // `undefined` bilan solishtirishlar kutilmaganda ishlamay qoladi.
+    return parsed.items.map((i) => ({
+      ...i,
+      variantId: i.variantId ?? null,
+      variantLabel: i.variantLabel ?? null,
+    }));
   } catch {
     return [];
   }
@@ -352,11 +393,62 @@ type StorefrontData = {
 
 type CartItem = {
   productId: string;
+  /** Variantli mahsulotda — qaysi variant. Variantsizda null. */
+  variantId: string | null;
+  /** "1 kg" — savat va buyurtmada ko'rinadi */
+  variantLabel: string | null;
   qty: number;
   name: string;
   price: number;
   imageUrl: string | null;
 };
+
+/** Savat qatori kaliti — bir mahsulotning turli variantlari alohida qator. */
+function cartLineKey(productId: string, variantId: string | null | undefined): string {
+  return `${productId}::${variantId ?? ""}`;
+}
+
+/**
+ * PDP ochilganda tanlanadigan variant: **eng arzon, zaxirada bor**.
+ * Backend `lib/variant-shape.ts` dagi `defaultVariant` bilan bir xil qoida —
+ * kartadagi narx va PDP'dagi narx mos kelishi shart.
+ */
+function pickDefaultVariant(variants: StoreVariant[] | undefined): StoreVariant | null {
+  const visible = (variants ?? []).filter((v) => v.active);
+  if (visible.length === 0) return null;
+  const inStock = visible.filter((v) => v.stock > 0);
+  const pool = inStock.length > 0 ? inStock : visible;
+  return pool.reduce((cheapest, v) => (v.price < cheapest.price ? v : cheapest), pool[0]);
+}
+
+/** Kartada ko'rsatiladigan narx — backend `pricing` bersa o'sha, aks holda hisoblaymiz. */
+function cardPrice(p: StoreProduct): { price: number; oldPrice: number | null; stock: number; varies: boolean } {
+  if (p.pricing) {
+    return {
+      price: p.pricing.price,
+      oldPrice: p.pricing.oldPrice,
+      stock: p.pricing.stock,
+      varies: p.pricing.priceVaries,
+    };
+  }
+  const anchor = pickDefaultVariant(p.variants);
+  if (anchor) {
+    const active = (p.variants ?? []).filter((v) => v.active);
+    const prices = active.map((v) => v.price);
+    return {
+      price: anchor.price,
+      oldPrice: anchor.oldPrice,
+      stock: active.reduce((s, v) => s + Math.max(0, v.stock), 0),
+      varies: Math.min(...prices) !== Math.max(...prices),
+    };
+  }
+  return {
+    price: Number(p.price),
+    oldPrice: p.oldPrice != null ? Number(p.oldPrice) : null,
+    stock: p.stock,
+    varies: false,
+  };
+}
 
 type CheckoutForm = {
   name: string;
@@ -491,6 +583,9 @@ function StoreInner({ slug }: { slug: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart(slug));
+  // PDP'da tanlangan variant. Mahsulot almashsa tozalanadi — keyingi mahsulotda
+  // yana eng arzon variant tanlangan bo'lib ochiladi.
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [cartRemindShown, setCartRemindShown] = useState(false);
   const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "newest">("popular");
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
@@ -754,40 +849,62 @@ function StoreInner({ slug }: { slug: string }) {
     }
   }, [view, twa, isSingle]);
 
+  // Mahsulot almashganda variant tanlovi tozalanadi — yangi mahsulot o'z
+  // eng arzon varianti bilan ochiladi.
+  useEffect(() => {
+    setSelectedVariantId(null);
+  }, [selectedProduct?.id]);
+
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
 
-  const addToCart = useCallback((product: StoreProduct) => {
+  const addToCart = useCallback((product: StoreProduct, variant?: StoreVariant | null) => {
     haptic.light();
+    // Variantli mahsulotda variant berilmasa — eng arzon sotib olinadigani
+    const chosen = variant ?? pickDefaultVariant(product.variants);
+    const key = cartLineKey(product.id, chosen?.id ?? null);
+
     setCart((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
+      const existing = prev.find((i) => cartLineKey(i.productId, i.variantId) === key);
       if (existing) {
-        return prev.map((i) => i.productId === product.id ? { ...i, qty: i.qty + 1 } : i);
+        return prev.map((i) =>
+          cartLineKey(i.productId, i.variantId) === key ? { ...i, qty: i.qty + 1 } : i,
+        );
       }
-      toast.show(`${product.name} savatga qo'shildi`, "success");
+      const label = chosen ? `${product.name} · ${chosen.name}` : product.name;
+      toast.show(`${label} savatga qo'shildi`, "success");
       return [...prev, {
         productId: product.id,
+        variantId: chosen?.id ?? null,
+        variantLabel: chosen?.name ?? null,
         qty: 1,
         name: product.name,
-        price: Number(product.price),
-        imageUrl: product.imageUrl,
+        price: chosen ? chosen.price : Number(product.price),
+        imageUrl: chosen?.images[0] ?? product.imageUrl,
       }];
     });
   }, [toast]);
 
-  const updateQty = useCallback((productId: string, delta: number) => {
+  const updateQty = useCallback((productId: string, delta: number, variantId?: string | null) => {
     haptic.soft();
     setCart((prev) => {
-      const item = prev.find((i) => i.productId === productId);
-      if (!item) return prev;
-      const newQty = item.qty + delta;
-      if (newQty <= 0) return prev.filter((i) => i.productId !== productId);
-      return prev.map((i) => i.productId === productId ? { ...i, qty: newQty } : i);
+      // variantId berilmasa — shu mahsulotning birinchi qatori (variantsiz holat)
+      const idx = variantId === undefined
+        ? prev.findIndex((i) => i.productId === productId)
+        : prev.findIndex((i) => i.productId === productId && i.variantId === (variantId ?? null));
+      if (idx < 0) return prev;
+      const newQty = prev[idx].qty + delta;
+      if (newQty <= 0) return prev.filter((_, k) => k !== idx);
+      return prev.map((i, k) => (k === idx ? { ...i, qty: newQty } : i));
     });
   }, []);
 
-  const cartQty = useCallback((productId: string) => {
-    return cart.find((i) => i.productId === productId)?.qty ?? 0;
+  /** variantId berilmasa — mahsulotning barcha variantlari yig'indisi. */
+  const cartQty = useCallback((productId: string, variantId?: string | null) => {
+    if (variantId === undefined) {
+      return cart.filter((i) => i.productId === productId).reduce((s, i) => s + i.qty, 0);
+    }
+    return cart.find((i) => i.productId === productId && i.variantId === (variantId ?? null))?.qty ?? 0;
   }, [cart]);
 
   const handleCheckout = useCallback(async () => {
@@ -802,7 +919,11 @@ function StoreInner({ slug }: { slug: string }) {
       const tgUser = twa?.initDataUnsafe?.user;
       const result = await submitCheckout(slug, {
         customer: { ...form, lat: form.lat ?? undefined, lng: form.lng ?? undefined },
-        items: cart.map((i) => ({ productId: i.productId, qty: i.qty })),
+        items: cart.map((i) => ({
+          productId: i.productId,
+          ...(i.variantId ? { variantId: i.variantId } : {}),
+          qty: i.qty,
+        })),
         telegram: tgUser ? {
           userId: tgUser.id,
           username: tgUser.username,
@@ -1065,8 +1186,12 @@ function StoreInner({ slug }: { slug: string }) {
           <div className="bg-slate-900 rounded-2xl p-4">
             <h3 className="text-xs font-medium text-slate-400 mb-3">{t("checkout.orderSummary")}</h3>
             {cart.map((item) => (
-              <div key={item.productId} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
-                <span className="text-sm text-white">{item.name} <span className="text-slate-500">×{item.qty}</span></span>
+              <div key={cartLineKey(item.productId, item.variantId)} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                <span className="text-sm text-white">
+                  {item.name}
+                  {item.variantLabel && <span className="text-slate-400"> · {item.variantLabel}</span>}
+                  <span className="text-slate-500"> ×{item.qty}</span>
+                </span>
                 <span className="text-sm font-medium" style={{ color: primaryColor }}>
                   {formatPrice(item.price * item.qty, data.tenant.currency)}
                 </span>
@@ -1302,7 +1427,7 @@ function StoreInner({ slug }: { slug: string }) {
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.map((item) => (
-                <div key={item.productId} className="bg-slate-900 rounded-2xl p-3 flex items-center gap-3">
+                <div key={cartLineKey(item.productId, item.variantId)} className="bg-slate-900 rounded-2xl p-3 flex items-center gap-3">
                   <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
@@ -1312,20 +1437,23 @@ function StoreInner({ slug }: { slug: string }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                    {item.variantLabel && (
+                      <p className="text-[11px] text-slate-400 truncate">{item.variantLabel}</p>
+                    )}
                     <p className="text-sm font-semibold mt-0.5" style={{ color: primaryColor }}>
                       {formatPrice(item.price, data.tenant.currency)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
-                      onClick={() => updateQty(item.productId, -1)}
+                      onClick={() => updateQty(item.productId, -1, item.variantId)}
                       className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 active:scale-90 transition-transform"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
                     <span className="text-sm font-semibold text-white w-5 text-center">{item.qty}</span>
                     <button
-                      onClick={() => updateQty(item.productId, 1)}
+                      onClick={() => updateQty(item.productId, 1, item.variantId)}
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
                       style={{ backgroundColor: primaryColor }}
                     >
@@ -1358,9 +1486,22 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- PRODUCT DETAIL ----
   const renderProductDetail = () => {
     if (!selectedProduct) return null;
-    const qty = cartQty(selectedProduct.id);
-    const price = Number(selectedProduct.price);
-    const oldPrice = selectedProduct.oldPrice != null ? Number(selectedProduct.oldPrice) : null;
+
+    // Variantli mahsulotda narx, zaxira, rasm va xarakteristika tanlangan
+    // variantdan olinadi. Boshlang'ich tanlov — eng arzon, zaxirada bori.
+    const activeVariants = (selectedProduct.variants ?? []).filter((v) => v.active);
+    const hasVariants = activeVariants.length > 0;
+    const variant = hasVariants
+      ? activeVariants.find((v) => v.id === selectedVariantId) ?? pickDefaultVariant(activeVariants)
+      : null;
+
+    const qty = cartQty(selectedProduct.id, hasVariants ? variant?.id ?? null : undefined);
+    const price = variant ? variant.price : Number(selectedProduct.price);
+    const oldPrice = variant
+      ? variant.oldPrice
+      : selectedProduct.oldPrice != null ? Number(selectedProduct.oldPrice) : null;
+    const availableStock = variant ? variant.stock : selectedProduct.stock;
+    const pdpImages = variant && variant.images.length > 0 ? variant.images : selectedProduct.images;
     const discountPct = calcDiscountPct(price, oldPrice);
     const savings = oldPrice && oldPrice > price ? oldPrice - price : 0;
     const liveCampaign = isCampaignLive(selectedProduct.saleCampaign);
@@ -1724,7 +1865,7 @@ function StoreInner({ slug }: { slug: string }) {
           {/* Image carousel + badges */}
           <ProductImageCarousel
             imageUrl={selectedProduct.imageUrl}
-            images={selectedProduct.images}
+            images={pdpImages}
             alt={selectedProduct.name}
             badges={
               <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
@@ -1769,6 +1910,96 @@ function StoreInner({ slug }: { slug: string }) {
 
             {/* Title */}
             <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
+
+            {/* Variant tanlagichi — har o'q (Hajm, Rang) uchun alohida qator.
+                Eng arzon, zaxirada bor variant boshidan tanlangan bo'ladi. */}
+            {hasVariants && (
+              <div className="mb-4 space-y-3">
+                {(selectedProduct.options ?? []).map((opt) => {
+                  const axisLabel = opt.name.uz?.trim() || opt.name.ru?.trim() || "";
+                  return (
+                    <div key={opt.id}>
+                      <p className="text-[11px] text-slate-400 mb-1.5">
+                        {axisLabel}
+                        {variant?.optionValues[opt.id] && (
+                          <span className="text-white ml-1">
+                            {opt.values.find((v) => v.id === variant.optionValues[opt.id])?.label.uz ?? ""}
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {opt.values.map((value) => {
+                          // Shu qiymatga mos variant (boshqa o'qlar joriy tanlovda qoladi)
+                          const target = activeVariants.find((v) => {
+                            if (v.optionValues[opt.id] !== value.id) return false;
+                            return (selectedProduct.options ?? []).every(
+                              (o) => o.id === opt.id || v.optionValues[o.id] === variant?.optionValues[o.id],
+                            );
+                          }) ?? activeVariants.find((v) => v.optionValues[opt.id] === value.id);
+
+                          if (!target) return null;
+                          const selected = variant?.optionValues[opt.id] === value.id;
+                          const soldOut = target.stock <= 0;
+
+                          return (
+                            <button
+                              key={value.id}
+                              onClick={() => {
+                                haptic.light();
+                                setSelectedVariantId(target.id);
+                              }}
+                              className={`px-3 py-2 rounded-xl text-sm transition-all active:scale-95 border ${
+                                selected
+                                  ? "border-white bg-slate-800 text-white font-medium"
+                                  : "border-slate-700 bg-slate-900 text-slate-300"
+                              } ${soldOut ? "opacity-40" : ""}`}
+                            >
+                              {value.label.uz?.trim() || value.label.ru?.trim() || value.id}
+                              {soldOut && <span className="ml-1 text-[10px] text-slate-500">·</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* O'q ta'riflanmagan bo'lsa (masalan 1C importi) — variantlar ro'yxati */}
+                {(selectedProduct.options ?? []).length === 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {activeVariants.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => { haptic.light(); setSelectedVariantId(v.id); }}
+                        className={`px-3 py-2 rounded-xl text-sm transition-all active:scale-95 border ${
+                          variant?.id === v.id
+                            ? "border-white bg-slate-800 text-white font-medium"
+                            : "border-slate-700 bg-slate-900 text-slate-300"
+                        } ${v.stock <= 0 ? "opacity-40" : ""}`}
+                      >
+                        {v.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tanlangan variantning o'z xarakteristikasi */}
+                {variant && variant.attributes.length > 0 && (
+                  <div className="rounded-xl bg-slate-900 border border-slate-800 divide-y divide-slate-800">
+                    {variant.attributes.map((attr, i) => (
+                      <div key={i} className="flex items-start justify-between gap-3 px-3 py-2">
+                        <span className="text-xs text-slate-400">
+                          {attr.label.uz?.trim() || attr.label.ru?.trim() || ""}
+                        </span>
+                        <span className="text-xs text-white text-right">
+                          {attr.value.uz?.trim() || attr.value.ru?.trim() || ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Rating chip — sarlavha ostida (single rejimda "reviews" bo'limiga bog'liq) */}
             {ratingChipEl}
@@ -1842,7 +2073,7 @@ function StoreInner({ slug }: { slug: string }) {
             }
             const hasCombo = selectedComboItems.length > 0;
 
-            if (selectedProduct.stock <= 0) {
+            if (availableStock <= 0) {
               return (
                 <button disabled className="w-full py-4 rounded-2xl font-semibold text-slate-400 text-base bg-slate-800 cursor-not-allowed">
                   Hozircha tugagan
@@ -1857,7 +2088,7 @@ function StoreInner({ slug }: { slug: string }) {
                     if (isSingle) {
                       buyNow([selectedProduct, ...selectedComboItems.map((i) => i.product)]);
                     } else {
-                      addToCart(selectedProduct);
+                      addToCart(selectedProduct, variant);
                       for (const item of selectedComboItems) addToCart(item.product);
                       setSelectedProduct(null);
                     }
@@ -1877,7 +2108,7 @@ function StoreInner({ slug }: { slug: string }) {
             if (qty === 0) {
               return (
                 <button
-                  onClick={() => { if (isSingle) { buyNow([selectedProduct]); } else { addToCart(selectedProduct); setSelectedProduct(null); } }}
+                  onClick={() => { if (isSingle) { buyNow([selectedProduct]); } else { addToCart(selectedProduct, variant); setSelectedProduct(null); } }}
                   className="w-full py-3.5 rounded-2xl font-semibold text-white text-base transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                   style={{ backgroundColor: primaryColor }}
                 >
@@ -1893,18 +2124,18 @@ function StoreInner({ slug }: { slug: string }) {
             return null;
           })()}
 
-          {qty > 0 && selectedAddons.size === 0 && selectedProduct.stock > 0 && (
+          {qty > 0 && selectedAddons.size === 0 && availableStock > 0 && (
             <div className="flex items-center gap-3">
               <div className="flex items-center bg-slate-800 rounded-2xl">
                 <button
-                  onClick={() => updateQty(selectedProduct.id, -1)}
+                  onClick={() => updateQty(selectedProduct.id, -1, hasVariants ? variant?.id ?? null : undefined)}
                   className="w-12 h-12 flex items-center justify-center text-white active:scale-90 transition-transform"
                 >
                   <Minus className="w-5 h-5" />
                 </button>
                 <span className="text-base font-bold text-white px-3 min-w-[36px] text-center">{qty}</span>
                 <button
-                  onClick={() => updateQty(selectedProduct.id, 1)}
+                  onClick={() => updateQty(selectedProduct.id, 1, hasVariants ? variant?.id ?? null : undefined)}
                   className="w-12 h-12 flex items-center justify-center text-white active:scale-90 transition-transform"
                 >
                   <Plus className="w-5 h-5" />
@@ -2070,13 +2301,18 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- HOME ----
   const renderProductCard = (product: StoreProduct) => {
     const qty = cartQty(product.id);
-    const price = Number(product.price);
-    const oldPrice = product.oldPrice != null ? Number(product.oldPrice) : null;
+    // Variantli mahsulotda kartada eng arzon variant narxi va umumiy zaxira
+    const card = cardPrice(product);
+    const price = card.price;
+    const oldPrice = card.oldPrice;
     const discountPct = calcDiscountPct(price, oldPrice);
     const liveCampaign = isCampaignLive(product.saleCampaign);
     const isFav = favorites.has(product.id);
-    const outOfStock = product.stock <= 0;
-    const lowStock = !outOfStock && product.stock > 0 && product.stock <= 5;
+    const outOfStock = card.stock <= 0;
+    const lowStock = !outOfStock && card.stock > 0 && card.stock <= 5;
+    // Variantlar narxi turlicha bo'lsa "… dan" ko'rsatamiz (marketplace uslubi)
+    const priceFrom = card.varies;
+    const hasCardVariants = (product.variants ?? []).some((v) => v.active);
 
     return (
       <div
@@ -2143,12 +2379,19 @@ function StoreInner({ slug }: { slug: string }) {
           {/* Price line — katta qalin + kichik o'chirilgan */}
           <div className="flex items-baseline gap-1.5 mb-2.5">
             <span className="text-sm font-bold text-white">
+              {/* Variantlar narxi turlicha bo'lsa "… dan" — marketplace uslubi */}
+              {priceFrom && <span className="text-[10px] font-normal text-slate-400 mr-0.5">dan</span>}
               {price.toLocaleString("uz-UZ")}
               <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? "so'm" : data.tenant.currency}</span>
             </span>
             {oldPrice != null && oldPrice > price && (
               <span className="text-[10px] text-slate-500 line-through">
                 {oldPrice.toLocaleString("uz-UZ")}
+              </span>
+            )}
+            {hasCardVariants && (
+              <span className="text-[10px] text-slate-500 ml-auto">
+                {(product.variants ?? []).filter((v) => v.active).length} variant
               </span>
             )}
           </div>

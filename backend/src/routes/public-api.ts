@@ -35,6 +35,10 @@ import { createOrderCodeWithRetry } from "../lib/codes.js";
 const PRODUCT_INCLUDE = {
   category: { select: { id: true, slug: true } },
   saleCampaign: { select: { label: true, active: true, startsAt: true, endsAt: true } },
+  // Variantlar — public kontraktdagi `variants[]` uchun. Faqat aktivlari.
+  // Yakuniy tartib `shapeVariants` da (sortOrder → narx), shuning uchun bu
+  // yerda bitta kalit yetarli.
+  variants: { where: { active: true }, orderBy: { sortOrder: "asc" as const } },
 } as const;
 
 const localeQuery = z.object({
@@ -299,6 +303,8 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
         z.object({
           productId: z.string().optional(),
           slug: z.string().optional(),
+          /** Variantli mahsulotda majburiy — qaysi o'lcham/rang sotib olinyapti */
+          variantId: z.string().optional(),
           name: z.string().optional(),
           quantity: z.number().int().positive(),
           unitPrice: z.number().nonnegative().optional(),
@@ -338,7 +344,12 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
     // Har bir item uchun mahsulotni topish — productId (afzal) yoki slug bo'yicha.
-    const resolved: { product: { id: string; name: string; price: unknown; stock: number }; quantity: number }[] = [];
+    const resolved: {
+      product: { id: string; name: string; price: unknown; stock: number };
+      variant: { id: string; name: string; price: unknown; stock: number } | null;
+      quantity: number;
+    }[] = [];
+
     for (const item of data.items) {
       if (!item.productId && !item.slug) {
         return reply.code(400).send({ ok: false, message: "Har bir item'da productId yoki slug bo'lishi shart" });
@@ -349,18 +360,49 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
           active: true,
           ...(item.productId ? { id: item.productId } : { slug: item.slug }),
         },
-        select: { id: true, name: true, price: true, stock: true },
+        select: {
+          id: true, name: true, price: true, stock: true,
+          variants: {
+            where: { active: true },
+            select: { id: true, name: true, price: true, stock: true },
+          },
+        },
       });
       if (!product) {
         return reply.code(400).send({ ok: false, message: `Mahsulot topilmadi: ${item.productId ?? item.slug}` });
       }
-      resolved.push({ product, quantity: item.quantity });
+
+      const { variants, ...bare } = product;
+
+      // Variantli mahsulotda variant majburiy — aks holda qaysi narx/zaxira
+      // ishlatilishi noaniq bo'lib qoladi.
+      if (variants.length > 0) {
+        if (!item.variantId) {
+          return reply.code(400).send({
+            ok: false,
+            message: `"${product.name}" variantli mahsulot — item'da variantId bo'lishi shart`,
+            variants: variants.map((v) => ({ id: v.id, name: v.name })),
+          });
+        }
+        const variant = variants.find((v) => v.id === item.variantId);
+        if (!variant) {
+          return reply.code(400).send({ ok: false, message: `Variant topilmadi: ${item.variantId}` });
+        }
+        resolved.push({ product: bare, variant, quantity: item.quantity });
+        continue;
+      }
+
+      resolved.push({ product: bare, variant: null, quantity: item.quantity });
     }
 
     // Stock tekshiruvi (atomic decrement transaction ichida ham qayta tekshiriladi).
     const stockErrors = resolved
-      .filter((r) => r.product.stock < r.quantity)
-      .map((r) => `"${r.product.name}" — yetarli emas (mavjud: ${r.product.stock})`);
+      .filter((r) => (r.variant ? r.variant.stock : r.product.stock) < r.quantity)
+      .map((r) =>
+        r.variant
+          ? `"${r.product.name} — ${r.variant.name}" — yetarli emas (mavjud: ${r.variant.stock})`
+          : `"${r.product.name}" — yetarli emas (mavjud: ${r.product.stock})`,
+      );
     if (stockErrors.length) {
       return reply.code(409).send({ ok: false, message: stockErrors.join("; ") });
     }
@@ -380,10 +422,17 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
 
     // Server-side narx hisobi — client totals'ga ishonmaymiz.
     const lineItems = resolved.map((r) => {
-      const base = Math.round(Number(r.product.price));
+      const base = Math.round(Number(r.variant ? r.variant.price : r.product.price));
       const pct = discountMap.get(r.product.id) ?? 0;
       const unit = pct > 0 ? Math.round(base * (1 - pct / 100)) : base;
-      return { productId: r.product.id, qty: r.quantity, price: unit, stock: r.product.stock };
+      return {
+        productId: r.product.id,
+        variantId: r.variant?.id ?? null,
+        variantLabel: r.variant?.name ?? null,
+        qty: r.quantity,
+        price: unit,
+        stock: r.variant ? r.variant.stock : r.product.stock,
+      };
     });
     const subtotal = lineItems.reduce((s, i) => s + i.qty * i.price, 0);
 
@@ -448,6 +497,15 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
       order = await createOrderCodeWithRetry(app.prisma, tenantId, (code) =>
         app.prisma.$transaction(async (tx) => {
           for (const i of lineItems) {
+            // Variantli mahsulotda zaxira variantda turadi
+            if (i.variantId) {
+              const res = await tx.productVariant.updateMany({
+                where: { id: i.variantId, tenantId, stock: { gte: i.qty } },
+                data: { stock: { decrement: i.qty } },
+              });
+              if (res.count === 0) throw new Error(`OUT_OF_STOCK:${i.productId}`);
+              continue;
+            }
             const res = await tx.product.updateMany({
               where: { id: i.productId, tenantId, stock: { gte: i.qty } },
               data: { stock: { decrement: i.qty } },
@@ -466,7 +524,15 @@ export const publicApiRoutes: FastifyPluginAsync = async (app) => {
               customerId: customer!.id,
               channelId: websiteChannel?.id,
               shippingAddress,
-              items: { create: lineItems.map((i) => ({ productId: i.productId, qty: i.qty, price: i.price })) },
+              items: {
+                create: lineItems.map((i) => ({
+                  productId: i.productId,
+                  variantId: i.variantId,
+                  variantLabel: i.variantLabel,
+                  qty: i.qty,
+                  price: i.price,
+                })),
+              },
             },
             select: { id: true, code: true },
           });

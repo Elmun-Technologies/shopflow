@@ -236,6 +236,8 @@ export const oneCExchangeRoutes: FastifyPluginAsync = async (app) => {
               productsUpdated: s.productsUpdated,
               productsHidden: s.productsHidden,
               imagesImported: s.imagesImported,
+              variantsCreated: s.variantsCreated,
+              variantsUpdated: s.variantsUpdated,
               durationMs: step.durationMs,
             },
           }).catch(() => {});

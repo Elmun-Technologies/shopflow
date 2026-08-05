@@ -4,6 +4,31 @@ import { z } from "zod";
 import { logAudit } from "../lib/audit.js";
 import { pushProductToSD } from "../lib/salesdoctor-push.js";
 import { uniqueProductSlug } from "../lib/slug.js";
+import {
+  buildVariantLabel,
+  parseOptions,
+  productOptionsSchema,
+  productPricing,
+  toVariantLike,
+  validateVariants,
+  variantAttributesSchema,
+} from "../lib/variant-shape.js";
+
+const variantInSchema = z.object({
+  /** Mavjud variantni yangilash uchun. Bo'sh — yangi variant. */
+  id: z.string().optional(),
+  sku: z.string().min(1).max(60),
+  /** Bo'sh bo'lsa o'q qiymatlaridan yig'iladi ("1 kg", "Qora / XL") */
+  name: z.string().max(120).optional(),
+  optionValues: z.record(z.string().max(40)).default({}),
+  price: z.number().nonnegative(),
+  oldPrice: z.number().nonnegative().nullable().optional(),
+  stock: z.number().int().default(0),
+  active: z.boolean().default(true),
+  images: z.array(z.string().max(500)).max(12).default([]),
+  attributes: variantAttributesSchema.optional(),
+  sortOrder: z.number().int().default(0),
+});
 
 const productSchema = z.object({
   sku: z.string().min(1).max(60),
@@ -23,6 +48,11 @@ const productSchema = z.object({
   slug: z.string().max(80).regex(/^[a-z0-9-]+$/).optional(),
   origin: z.string().max(60).optional().nullable(),
   content: z.unknown().optional(),
+  // Variant o'qlari (Hajm / Rang / …). Bo'sh massiv — variantsiz mahsulot.
+  options: productOptionsSchema.optional(),
+  // Variantlar. `id` berilgan bo'lsa mavjudi yangilanadi, aks holda yangisi
+  // yaratiladi. Ro'yxatda yo'q variantlar o'chiriladi.
+  variants: z.array(variantInSchema).max(100).optional(),
 });
 
 // content (ixtiyoriy JSON) ni Prisma input'ga keltirish.
@@ -36,6 +66,82 @@ function toJsonInput(v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull
 }
 
 const LOW_STOCK_THRESHOLD = 5; // Dashboard LowStockAlert bilan bir xil
+
+type VariantInput = z.infer<typeof variantInSchema>;
+
+const VARIANT_SELECT = {
+  id: true, sku: true, name: true, optionValues: true, price: true, oldPrice: true,
+  stock: true, active: true, images: true, attributes: true, sortOrder: true,
+} as const;
+
+/**
+ * Variantlarni mahsulotga moslashtiradi: berilganini yaratadi/yangilaydi,
+ * ro'yxatda yo'qini o'chiradi.
+ *
+ * **O'chirish o'rniga yangilash** muhim: `OrderItem.variantId` variantga ishora
+ * qiladi, delete-then-create qilinsa buyurtma tarixi variantdan uziladi.
+ * Shuning uchun `id` bo'yicha upsert qilinadi.
+ */
+async function syncVariants(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  productId: string,
+  options: ReturnType<typeof parseOptions>,
+  variants: VariantInput[],
+): Promise<void> {
+  const existing = await tx.productVariant.findMany({
+    where: { productId },
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((v) => v.id));
+  const keepIds = new Set(variants.map((v) => v.id).filter((id): id is string => Boolean(id)));
+
+  const staleIds = [...existingIds].filter((id) => !keepIds.has(id));
+  if (staleIds.length) {
+    await tx.productVariant.deleteMany({ where: { id: { in: staleIds }, productId } });
+  }
+
+  for (const [index, v] of variants.entries()) {
+    const label = v.name?.trim() || buildVariantLabel(options, v.optionValues) || v.sku;
+    const data = {
+      sku: v.sku.trim(),
+      name: label.slice(0, 120),
+      optionValues: v.optionValues as Prisma.InputJsonValue,
+      price: v.price,
+      oldPrice: v.oldPrice ?? null,
+      stock: v.stock,
+      active: v.active,
+      images: v.images,
+      attributes: (v.attributes ?? []) as unknown as Prisma.InputJsonValue,
+      sortOrder: v.sortOrder || index,
+    };
+
+    if (v.id && existingIds.has(v.id)) {
+      await tx.productVariant.update({ where: { id: v.id }, data });
+    } else {
+      await tx.productVariant.create({ data: { ...data, productId, tenantId } });
+    }
+  }
+}
+
+/** Ro'yxat/detal javobiga hisoblangan narx va zaxirani qo'shadi. */
+function withPricing<T extends { price: unknown; oldPrice: unknown; stock: number; imageUrl?: string | null; images?: string[] }>(
+  product: T,
+  variantRows: Array<Parameters<typeof toVariantLike>[0]>,
+) {
+  const variants = variantRows.map(toVariantLike);
+  const pricing = productPricing(
+    {
+      price: Number(product.price ?? 0),
+      oldPrice: product.oldPrice === null || product.oldPrice === undefined ? null : Number(product.oldPrice),
+      stock: product.stock,
+      imageUrl: product.imageUrl ?? null,
+      images: product.images ?? [],
+    },
+    variants,
+  );
+  return { ...product, variants, pricing };
+}
 
 const listQuery = z.object({
   search: z.string().optional(),
@@ -71,45 +177,73 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       app.prisma.product.count({ where }),
       app.prisma.product.findMany({
         where,
-        include: { category: { select: { id: true, name: true } } },
+        include: {
+          category: { select: { id: true, name: true } },
+          variants: { select: VARIANT_SELECT, orderBy: { sortOrder: "asc" } },
+        },
         orderBy: { createdAt: "desc" },
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
       }),
     ]);
-    return { total, page: q.page, pageSize: q.pageSize, items };
+    // Kartadagi narx/zaxira variantlardan hisoblanadi — ro'yxat va PDP bir xil
+    // qiymatni ko'rsatishi uchun (variantsiz mahsulotda hech nima o'zgarmaydi).
+    const withDerived = items.map(({ variants, ...p }) => withPricing(p, variants));
+    return { total, page: q.page, pageSize: q.pageSize, items: withDerived };
   });
 
-  app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
+  app.post("/", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const data = productSchema.parse(req.body);
-    const { content, ...rest } = data;
-    const slug = await uniqueProductSlug(app.prisma, req.session.tenantId, data.slug || data.name);
-    const created = await app.prisma.product.create({
-      data: {
-        ...rest,
-        slug,
-        imageUrl: data.imageUrl || null,
-        oldPrice: data.oldPrice ?? null,
-        categoryId: data.categoryId || null,
-        origin: data.origin || null,
-        content: toJsonInput(content),
-        tenantId: req.session.tenantId,
-      },
+    const { content, options, variants, ...rest } = data;
+    const tenantId = req.session.tenantId;
+
+    const parsedOptions = parseOptions(options ?? []);
+    const variantErrors = validateVariants(parsedOptions, (variants ?? []).map((v) => ({
+      sku: v.sku, name: v.name ?? "", optionValues: v.optionValues,
+    })));
+    if (variantErrors.length) {
+      return reply.code(400).send({ error: "Variantlarda xato", issues: variantErrors });
+    }
+
+    const slug = await uniqueProductSlug(app.prisma, tenantId, data.slug || data.name);
+    const created = await app.prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          ...rest,
+          slug,
+          imageUrl: data.imageUrl || null,
+          oldPrice: data.oldPrice ?? null,
+          categoryId: data.categoryId || null,
+          origin: data.origin || null,
+          content: toJsonInput(content),
+          options: parsedOptions as unknown as Prisma.InputJsonValue,
+          tenantId,
+        },
+      });
+      if (variants?.length) {
+        await syncVariants(tx, tenantId, product.id, parsedOptions, variants);
+      }
+      return product;
     });
     const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
     await logAudit({
       prisma: app.prisma,
-      tenantId: req.session.tenantId,
+      tenantId,
       actorId: req.session.userId,
       actorName: actor?.name ?? null,
       action: "CREATE",
       resourceType: "product",
       resourceId: created.id,
-      summary: `Mahsulot yaratildi: ${created.name}`,
+      summary: `Mahsulot yaratildi: ${created.name}${variants?.length ? ` (${variants.length} variant)` : ""}`,
     });
-    pushProductToSD(app.prisma, req.session.tenantId, created.id)
+    pushProductToSD(app.prisma, tenantId, created.id)
       .catch((err) => app.log.warn({ err, productId: created.id }, "SD push failed"));
-    return created;
+    const full = await app.prisma.product.findFirstOrThrow({
+      where: { id: created.id },
+      include: { variants: { select: VARIANT_SELECT, orderBy: { sortOrder: "asc" } } },
+    });
+    const { variants: createdVariants, ...createdRest } = full;
+    return withPricing(createdRest, createdVariants);
   });
 
   app.patch("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
@@ -120,7 +254,19 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
 
-    const { content, ...rest } = data;
+    const { content, options, variants, ...rest } = data;
+
+    // O'qlar berilmasa mavjudi qoladi — variantlar ularga solishtiriladi
+    const parsedOptions = options !== undefined ? parseOptions(options) : parseOptions(product.options);
+    if (variants !== undefined) {
+      const variantErrors = validateVariants(parsedOptions, variants.map((v) => ({
+        sku: v.sku, name: v.name ?? "", optionValues: v.optionValues,
+      })));
+      if (variantErrors.length) {
+        return reply.code(400).send({ error: "Variantlarda xato", issues: variantErrors });
+      }
+    }
+
     // Slug barqaror — rename'da o'zgartirmaymiz. Faqat aniq berilsa yoki
     // mahsulotda hali slug bo'lmasa (legacy) generatsiya qilamiz.
     let slug: string | undefined;
@@ -130,19 +276,26 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       slug = await uniqueProductSlug(app.prisma, req.session.tenantId, data.name ?? product.name, id);
     }
 
-    await app.prisma.product.updateMany({
-      where: { id, tenantId: req.session.tenantId },
-      data: {
-        ...rest,
-        ...(slug !== undefined && { slug }),
-        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
-        ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
-        ...(data.origin !== undefined && { origin: data.origin || null }),
-        ...(content !== undefined && { content: toJsonInput(content) }),
-      },
+    await app.prisma.$transaction(async (tx) => {
+      await tx.product.updateMany({
+        where: { id, tenantId: req.session.tenantId },
+        data: {
+          ...rest,
+          ...(slug !== undefined && { slug }),
+          ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl || null }),
+          ...(data.categoryId !== undefined && { categoryId: data.categoryId || null }),
+          ...(data.origin !== undefined && { origin: data.origin || null }),
+          ...(content !== undefined && { content: toJsonInput(content) }),
+          ...(options !== undefined && { options: parsedOptions as unknown as Prisma.InputJsonValue }),
+        },
+      });
+      if (variants !== undefined) {
+        await syncVariants(tx, req.session.tenantId, id, parsedOptions, variants);
+      }
     });
     const updated = await app.prisma.product.findFirstOrThrow({
       where: { id, tenantId: req.session.tenantId },
+      include: { variants: { select: VARIANT_SELECT, orderBy: { sortOrder: "asc" } } },
     });
     const actor = await app.prisma.user.findUnique({ where: { id: req.session.userId }, select: { name: true } });
     const changedKeys = (Object.keys(data) as Array<keyof typeof data>).filter((k) => data[k] !== undefined);
@@ -158,7 +311,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
     pushProductToSD(app.prisma, req.session.tenantId, id)
       .catch((err) => app.log.warn({ err, productId: id }, "SD push failed"));
-    return updated;
+    const { variants: updatedVariants, ...updatedRest } = updated;
+    return withPricing(updatedRest, updatedVariants);
   });
 
   // Bulk operations — admin tomondan ko'p mahsulotni bir vaqtda boshqarish
@@ -265,6 +419,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   const restockSchema = z.object({
     quantity: z.number().int().positive().max(100_000),
     note: z.string().max(500).optional(),
+    /** Variantli mahsulotda aynan qaysi variantga qo'shiladi */
+    variantId: z.string().optional(),
   });
   app.post(
     "/:id/restock",
@@ -276,6 +432,48 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
         where: { id, tenantId: req.session.tenantId },
       });
       if (!product) return reply.code(404).send({ error: "Not found" });
+
+      // Variantli mahsulotda zaxira variantda turadi — mahsulot ustunini
+      // oshirish mijozga ko'rinmaydi va noto'g'ri ma'lumot beradi.
+      if (data.variantId) {
+        const variant = await app.prisma.productVariant.findFirst({
+          where: { id: data.variantId, productId: id, tenantId: req.session.tenantId },
+        });
+        if (!variant) return reply.code(404).send({ error: "Variant topilmadi" });
+
+        const updatedVariant = await app.prisma.productVariant.update({
+          where: { id: variant.id },
+          data: { stock: { increment: data.quantity } },
+        });
+
+        const variantActor = await app.prisma.user.findUnique({
+          where: { id: req.session.userId },
+          select: { name: true },
+        });
+        await logAudit({
+          prisma: app.prisma,
+          tenantId: req.session.tenantId,
+          actorId: req.session.userId,
+          actorName: variantActor?.name ?? null,
+          action: "RESTOCK",
+          resourceType: "product",
+          resourceId: id,
+          summary: `Stok qo'shildi (${variant.name}): +${data.quantity} (${variant.stock} → ${updatedVariant.stock})${data.note ? ` — ${data.note}` : ""}`,
+          changes: {
+            variantId: variant.id, variantName: variant.name,
+            from: variant.stock, to: updatedVariant.stock, added: data.quantity, note: data.note ?? null,
+          },
+        });
+
+        return { id, variantId: updatedVariant.id, stock: updatedVariant.stock, added: data.quantity };
+      }
+
+      const variantCount = await app.prisma.productVariant.count({ where: { productId: id } });
+      if (variantCount > 0) {
+        return reply.code(400).send({
+          error: "Bu mahsulotda variantlar bor — qaysi variantga qo'shilishini tanlang",
+        });
+      }
 
       const updated = await app.prisma.product.update({
         where: { id },
@@ -311,7 +509,10 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     async (req, reply) => {
       const { id } = z.object({ id: z.string() }).parse(req.params);
       const tenantId = req.session.tenantId;
-      const src = await app.prisma.product.findFirst({ where: { id, tenantId } });
+      const src = await app.prisma.product.findFirst({
+        where: { id, tenantId },
+        include: { variants: { orderBy: { sortOrder: "asc" } } },
+      });
       if (!src) return reply.code(404).send({ error: "Not found" });
 
       // Unique SKU: "<sku>-COPY", band bo'lsa -COPY-2, -COPY-3 ...
@@ -328,27 +529,52 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       const newName = `${src.name} (nusxa)`.slice(0, 200);
       const newSlug = await uniqueProductSlug(app.prisma, tenantId, src.slug ? `${src.slug}-copy` : newName);
 
-      const created = await app.prisma.product.create({
-        data: {
-          tenantId,
-          sku: newSku,
-          name: newName,
-          slug: newSlug,
-          description: src.description,
-          price: src.price,
-          oldPrice: src.oldPrice,
-          currency: src.currency,
-          stock: 0,
-          active: false, // qoralama — operator ko'rib chiqib yoqadi
-          featured: false,
-          imageUrl: src.imageUrl,
-          images: src.images,
-          categoryId: src.categoryId,
-          origin: src.origin,
-          content: toJsonInput(src.content ?? undefined),
-          saleCampaignId: src.saleCampaignId,
-          source: "MANUAL",
-        },
+      const created = await app.prisma.$transaction(async (tx) => {
+        const product = await tx.product.create({
+          data: {
+            tenantId,
+            sku: newSku,
+            name: newName,
+            slug: newSlug,
+            description: src.description,
+            price: src.price,
+            oldPrice: src.oldPrice,
+            currency: src.currency,
+            stock: 0,
+            active: false, // qoralama — operator ko'rib chiqib yoqadi
+            featured: false,
+            imageUrl: src.imageUrl,
+            images: src.images,
+            categoryId: src.categoryId,
+            origin: src.origin,
+            content: toJsonInput(src.content ?? undefined),
+            options: (src.options ?? []) as Prisma.InputJsonValue,
+            saleCampaignId: src.saleCampaignId,
+            source: "MANUAL",
+          },
+        });
+
+        // Variantlar ham ko'chiriladi — nusxa shablon sifatida ishlatiladi.
+        // Zaxira 0 (qoralama), tashqi sync id'lari ko'chirilmaydi.
+        for (const [i, v] of src.variants.entries()) {
+          await tx.productVariant.create({
+            data: {
+              productId: product.id,
+              tenantId,
+              sku: `${v.sku}-COPY${i === 0 ? "" : `-${i + 1}`}`.slice(0, 60),
+              name: v.name,
+              optionValues: v.optionValues as Prisma.InputJsonValue,
+              price: v.price,
+              oldPrice: v.oldPrice,
+              stock: 0,
+              active: v.active,
+              images: v.images,
+              attributes: v.attributes as Prisma.InputJsonValue,
+              sortOrder: v.sortOrder,
+            },
+          });
+        }
+        return product;
       });
 
       const actor = await app.prisma.user.findUnique({
@@ -363,8 +589,8 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
         action: "DUPLICATE",
         resourceType: "product",
         resourceId: created.id,
-        summary: `Mahsulot nusxalandi: ${src.name} → ${created.name}`,
-        changes: { sourceId: src.id, newId: created.id },
+        summary: `Mahsulot nusxalandi: ${src.name} → ${created.name}${src.variants.length ? ` (${src.variants.length} variant)` : ""}`,
+        changes: { sourceId: src.id, newId: created.id, variants: src.variants.length },
       });
       return created;
     },

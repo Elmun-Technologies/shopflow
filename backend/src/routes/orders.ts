@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { createOrderCodeWithRetry } from "../lib/codes.js";
 import { notifyOrderStatusChange, notifyAdminNewOrder } from "../lib/telegram-notify.js";
@@ -19,8 +20,35 @@ const STATUS_LABEL: Record<string, string> = {
 
 const statusEnum = z.enum(["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "REFUNDED"]);
 
+/**
+ * Buyurtma bekor qilinganda (yoki bekordan qaytarilganda) zaxirani to'g'ri
+ * joyga qaytaradi: variantli qator variantga, variantsizi mahsulotga.
+ * Variant keyinchalik o'chirilgan bo'lsa (variantId null) — no-op, chunki
+ * zaxirani qayerga qaytarishni bilib bo'lmaydi.
+ */
+function restoreStock(
+  prisma: PrismaClient,
+  tenantId: string,
+  item: { productId: string; variantId: string | null; qty: number },
+  restore: boolean,
+) {
+  const delta = restore ? item.qty : -item.qty;
+  if (item.variantId) {
+    return prisma.productVariant.updateMany({
+      where: { id: item.variantId, tenantId },
+      data: { stock: { increment: delta } },
+    });
+  }
+  return prisma.product.updateMany({
+    where: { id: item.productId, tenantId },
+    data: { stock: { increment: delta } },
+  });
+}
+
 const itemSchema = z.object({
   productId: z.string(),
+  /** Variantli mahsulotda aynan qaysi variant sotildi */
+  variantId: z.string().optional(),
   qty: z.number().int().positive(),
   price: z.number().nonnegative(),
 });
@@ -100,11 +128,32 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       const order = await createOrderCodeWithRetry(app.prisma, tenantId, (code) =>
         app.prisma.$transaction(async (tx) => {
           for (const item of data.items) {
+            // Variantli mahsulotda zaxira variantda turadi
+            if (item.variantId) {
+              const dec = await tx.productVariant.updateMany({
+                where: { id: item.variantId, tenantId, stock: { gte: item.qty } },
+                data: { stock: { decrement: item.qty } },
+              });
+              if (dec.count === 0) throw new Error(`OUT_OF_STOCK:${item.productId}`);
+              continue;
+            }
             const dec = await tx.product.updateMany({
               where: { id: item.productId, tenantId, stock: { gte: item.qty } },
               data: { stock: { decrement: item.qty } },
             });
             if (dec.count === 0) throw new Error(`OUT_OF_STOCK:${item.productId}`);
+          }
+
+          // Variant nomini snapshot qilamiz — variant keyin o'chirilsa ham
+          // chek va hisobotda "1 kg" ko'rinib turadi
+          const variantIds = data.items.map((i) => i.variantId).filter((v): v is string => Boolean(v));
+          const variantNames = new Map<string, string>();
+          if (variantIds.length) {
+            const rows = await tx.productVariant.findMany({
+              where: { id: { in: variantIds }, tenantId },
+              select: { id: true, name: true },
+            });
+            for (const r of rows) variantNames.set(r.id, r.name);
           }
           return tx.order.create({
             data: {
@@ -119,6 +168,8 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
               items: {
                 create: data.items.map((i) => ({
                   productId: i.productId,
+                  variantId: i.variantId ?? null,
+                  variantLabel: i.variantId ? variantNames.get(i.variantId) ?? null : null,
                   qty: i.qty,
                   price: i.price,
                 })),
@@ -213,16 +264,11 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         const restore = isTerminal(data.status);
         const items = await app.prisma.orderItem.findMany({
           where: { orderId: id },
-          select: { productId: true, qty: true },
+          select: { productId: true, variantId: true, qty: true },
         });
         if (items.length > 0) {
           await app.prisma.$transaction(
-            items.map((it) =>
-              app.prisma.product.updateMany({
-                where: { id: it.productId, tenantId },
-                data: { stock: { increment: restore ? it.qty : -it.qty } },
-              }),
-            ),
+            items.map((it) => restoreStock(app.prisma, tenantId, it, restore)),
           );
         }
       }
@@ -419,16 +465,11 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
           const restore = isTerminal(toStatus);
           const items = await app.prisma.orderItem.findMany({
             where: { orderId: { in: crossing.map((t) => t.id) } },
-            select: { productId: true, qty: true },
+            select: { productId: true, variantId: true, qty: true },
           });
           if (items.length > 0) {
             await app.prisma.$transaction(
-              items.map((it) =>
-                app.prisma.product.updateMany({
-                  where: { id: it.productId, tenantId },
-                  data: { stock: { increment: restore ? it.qty : -it.qty } },
-                }),
-              ),
+              items.map((it) => restoreStock(app.prisma, tenantId, it, restore)),
             );
           }
         }
