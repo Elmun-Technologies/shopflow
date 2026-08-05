@@ -48,6 +48,27 @@ export function localizeContent(content: unknown, locale: Locale): Dict {
 // ── Tiplar (kontrakt) ──
 export interface ShapedImage { url: string; alt: string; }
 export interface ShapedReview { author: string; rating: number; date: string; text: string; }
+
+/** Mahsulot varianti (o'lcham / rang / …). Variantsiz mahsulotda bo'sh massiv. */
+export interface ShapedVariant {
+  id: string;
+  sku: string;
+  name: string;
+  /** O'q qiymatlari: { "hajm": "1kg" } — `options` bilan mos */
+  options: Record<string, string>;
+  price: number;
+  oldPrice?: number;
+  inStock: boolean;
+  images: ShapedImage[];
+  attributes: { label: string; value: string }[];
+}
+
+/** Variant o'qi — tanlagich qurish uchun. */
+export interface ShapedOption {
+  id: string;
+  name: string;
+  values: { id: string; label: string }[];
+}
 export interface ShapedProduct {
   id: string;
   slug: string;
@@ -73,6 +94,14 @@ export interface ShapedProduct {
   servings?: number;
   origin?: string;
   bespoke: boolean;
+  /** Variant o'qlari (Hajm, Rang). Variantsiz mahsulotda bo'sh. */
+  options: ShapedOption[];
+  /**
+   * Variantlar — narx o'sish tartibida. Bo'sh bo'lsa mahsulot variantsiz va
+   * yuqoridagi `price` / `inStock` ishlatiladi.
+   * `price` esa har doim **eng arzon sotib olinadigan** variantdan olinadi.
+   */
+  variants: ShapedVariant[];
 }
 
 // Prisma'dan keladigan xom mahsulot (kerakli maydonlar bilan).
@@ -94,6 +123,14 @@ export interface RawProductForShape {
   saleCampaign?: {
     label: string; active: boolean; startsAt: Date | null; endsAt: Date | null;
   } | null;
+  /** Xom variant qatorlari (ixtiyoriy — variantsiz mahsulotda yo'q) */
+  variants?: Array<{
+    id: string; sku: string; name: string; optionValues: unknown;
+    price: unknown; oldPrice: unknown | null; stock: number; active: boolean;
+    images: string[]; attributes: unknown; sortOrder: number;
+  }>;
+  /** Xom `Product.options` JSON */
+  options?: unknown;
 }
 
 export interface ShapeProductOpts {
@@ -123,6 +160,63 @@ function campaignActive(c: RawProductForShape["saleCampaign"]): boolean {
   if (c.startsAt && c.startsAt.getTime() > now) return false;
   if (c.endsAt && c.endsAt.getTime() < now) return false;
   return true;
+}
+
+function pickLocalized(v: unknown, locale: Locale): string {
+  if (typeof v === "string") return v;
+  if (!isObj(v)) return "";
+  // Public API'da "en" bo'lmasa uz'ga tushamiz (variant matnlari uz/ru da)
+  const order: string[] = locale === "en" ? ["uz", "ru"] : [locale, locale === "uz" ? "ru" : "uz"];
+  for (const key of order) {
+    const val = v[key];
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  return "";
+}
+
+function shapeVariants(p: RawProductForShape, locale: Locale, altName: string): ShapedVariant[] {
+  const rows = (p.variants ?? []).filter((v) => v.active);
+  return [...rows]
+    .sort((a, b) => a.sortOrder - b.sortOrder || Number(a.price) - Number(b.price))
+    .map((v) => {
+      const oldPrice = v.oldPrice != null ? Math.round(Number(v.oldPrice)) : undefined;
+      const images = v.images.length
+        ? v.images
+            .map((u) => absoluteUrl(u))
+            .filter((u): u is string => Boolean(u))
+            .map((url) => ({ url, alt: `${altName} — ${v.name}` }))
+        : [];
+      const attributes = asArray(v.attributes)
+        .filter(isObj)
+        .map((a) => ({ label: pickLocalized(a.label, locale), value: pickLocalized(a.value, locale) }))
+        .filter((a) => a.label || a.value);
+
+      return {
+        id: v.id,
+        sku: v.sku,
+        name: v.name,
+        options: isObj(v.optionValues) ? (v.optionValues as Record<string, string>) : {},
+        price: Math.round(Number(v.price)),
+        ...(oldPrice != null ? { oldPrice } : {}),
+        inStock: v.stock > 0,
+        images,
+        attributes,
+      };
+    });
+}
+
+function shapeOptions(raw: unknown, locale: Locale): ShapedOption[] {
+  return asArray(raw)
+    .filter(isObj)
+    .map((o) => ({
+      id: asString(o.id),
+      name: pickLocalized(o.name, locale),
+      values: asArray(o.values)
+        .filter(isObj)
+        .map((v) => ({ id: asString(v.id), label: pickLocalized(v.label, locale) }))
+        .filter((v) => v.id),
+    }))
+    .filter((o) => o.id && o.values.length > 0);
 }
 
 /** Mahsulotni public Product shakliga keltiradi (list ham, detail ham). */
@@ -157,9 +251,25 @@ export function shapeProduct(p: RawProductForShape, opts: ShapeProductOpts): Sha
 
   const highlights = asArray(lc.highlights).filter((h): h is string => typeof h === "string");
 
-  const oldPrice = p.oldPrice != null ? Number(p.oldPrice) : undefined;
   const servings = asNumOrUndef(lc.servings);
   const origin = p.origin ?? (asString(lc.origin) || undefined);
+
+  const variants = shapeVariants(p, opts.locale, name);
+  const options = shapeOptions(p.options, opts.locale);
+
+  // Variantli mahsulotda karta narxi eng arzon **sotib olinadigan** variantdan,
+  // zaxira esa istalgan variantda tovar borligidan kelib chiqadi. Shu qoida
+  // storefront va admin bilan bir xil (`lib/variant-shape.ts`).
+  const purchasable = variants.filter((v) => v.inStock);
+  const anchor = (purchasable.length ? purchasable : variants).reduce<ShapedVariant | null>(
+    (cheapest, v) => (cheapest === null || v.price < cheapest.price ? v : cheapest),
+    null,
+  );
+
+  const price = anchor ? anchor.price : Math.round(Number(p.price));
+  const rawOldPrice = anchor ? anchor.oldPrice : p.oldPrice != null ? Number(p.oldPrice) : undefined;
+  const oldPrice = rawOldPrice != null ? Math.round(rawOldPrice) : undefined;
+  const inStock = variants.length > 0 ? variants.some((v) => v.inStock) : p.stock > 0;
 
   return {
     id: p.id,
@@ -169,12 +279,12 @@ export function shapeProduct(p: RawProductForShape, opts: ShapeProductOpts): Sha
     description: asString(lc.description) || p.description || "",
     categoryId: p.categoryId,
     categorySlug: p.category?.slug ?? null,
-    price: Math.round(Number(p.price)),
-    ...(oldPrice != null ? { oldPrice: Math.round(oldPrice) } : {}),
+    price,
+    ...(oldPrice != null ? { oldPrice } : {}),
     currency: p.currency,
     rating: Math.round(opts.rating * 10) / 10,
     reviewCount: opts.reviewCount,
-    inStock: p.stock > 0,
+    inStock,
     images: buildImages(p, name),
     highlights,
     benefits,
@@ -186,6 +296,8 @@ export function shapeProduct(p: RawProductForShape, opts: ShapeProductOpts): Sha
     ...(servings != null ? { servings } : {}),
     ...(origin ? { origin } : {}),
     bespoke: asBool(lc.bespoke),
+    options,
+    variants,
   };
 }
 

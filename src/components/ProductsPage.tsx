@@ -23,8 +23,14 @@ import {
   Globe,
   Copy,
   Download,
+  Layers,
+  ChevronUp,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
+import ProductVariantsEditor, {
+  type ProductOption as VariantOption,
+  type VariantDraft,
+} from "./ProductVariantsEditor";
 import ProductContentEditor, {
   parseProductContent,
   serializeProductContent,
@@ -866,6 +872,28 @@ function ProductFormModal({
   });
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  // Variantlar — mahsulotda bo'lsa narx/zaxira maydonlari o'rniga ular ishlaydi
+  const [variantOptions, setVariantOptions] = useState<VariantOption[]>(
+    () => (product?.options as VariantOption[] | undefined) ?? [],
+  );
+  const [variants, setVariants] = useState<VariantDraft[]>(() =>
+    (product?.variants ?? []).map((v, i) => ({
+      id: v.id,
+      sku: v.sku,
+      name: v.name,
+      optionValues: v.optionValues ?? {},
+      price: Number(v.price) || 0,
+      oldPrice: v.oldPrice == null ? null : Number(v.oldPrice),
+      stock: v.stock,
+      active: v.active,
+      images: v.images ?? [],
+      attributes: v.attributes ?? [],
+      sortOrder: v.sortOrder ?? i,
+    })),
+  );
+  const [variantsOpen, setVariantsOpen] = useState(() => (product?.variants?.length ?? 0) > 0);
+  const hasVariants = variants.length > 0;
+
   const [comboAddons, setComboAddons] = useState<Array<{ addonProductId: string; discountPct: number; defaultSelected: boolean; position: number; productName?: string; productImage?: string | null; productPrice?: string | number }>>([]);
   const [comboPickerOpen, setComboPickerOpen] = useState(false);
   const [productsCatalog, setProductsCatalog] = useState<Array<{ id: string; name: string; sku: string; price: string | number; imageUrl: string | null }>>([]);
@@ -1026,6 +1054,22 @@ function ProductFormModal({
         slug: slug.trim() || undefined,
         origin: origin.trim() || null,
         content: serializeProductContent(contentState) ?? null,
+        // Variantlar — o'q qiymatlari bilan birga. Bo'sh massiv variantlarni
+        // o'chiradi (mahsulot oddiy holatga qaytadi).
+        options: variantOptions,
+        variants: variants.map((v, i) => ({
+          ...(v.id ? { id: v.id } : {}),
+          sku: v.sku.trim(),
+          name: v.name.trim() || undefined,
+          optionValues: v.optionValues,
+          price: v.price,
+          oldPrice: v.oldPrice,
+          stock: v.stock,
+          active: v.active,
+          images: v.images,
+          attributes: v.attributes,
+          sortOrder: i,
+        })),
       };
       let savedProductId = product?.id;
       if (product) {
@@ -1142,12 +1186,18 @@ function ProductFormModal({
             />
           </Field>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {hasVariants && (
+            <div className="rounded-xl bg-cream-100/70 border border-cream-300 px-3 py-2.5">
+              <p className="text-[11px] text-slate-600 leading-relaxed">{t("variants.priceManagedByVariants")}</p>
+            </div>
+          )}
+
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${hasVariants ? "opacity-50" : ""}`}>
             <Field label={`${t("productForm.price", { currency })} *`}>
               <input
                 type="text"
                 inputMode="numeric"
-                required
+                required={!hasVariants}
                 value={price}
                 onChange={(e) => setPrice(formatGrouped(e.target.value))}
                 placeholder="14,500,000"
@@ -1207,6 +1257,42 @@ function ProductFormModal({
               </div>
             );
           })()}
+
+          {/* Variantlar — o'lcham/rang. Bo'lsa narx va zaxira shulardan olinadi. */}
+          <div className="rounded-2xl border border-cream-300 bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setVariantsOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-cream-50"
+            >
+              <span className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-forest-700" />
+                <span className="text-sm font-medium text-forest-800">{t("variants.section")}</span>
+                {hasVariants && (
+                  <span className="px-2 py-0.5 rounded-full bg-leaf-100 text-forest-700 text-[10px] font-medium">
+                    {variants.length}
+                  </span>
+                )}
+              </span>
+              {variantsOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+            {variantsOpen && (
+              <div className="px-4 pb-4 border-t border-cream-200 pt-4">
+                <ProductVariantsEditor
+                  options={variantOptions}
+                  variants={variants}
+                  currency={currency}
+                  onOptionsChange={setVariantOptions}
+                  onVariantsChange={setVariants}
+                  uploadImage={uploadSingle}
+                />
+              </div>
+            )}
+          </div>
 
           <ImageGallery
             images={images}

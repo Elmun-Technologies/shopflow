@@ -284,6 +284,11 @@ model Product {
   slug   String?
   // Ishlab chiqarilgan davlat — public /products filtri (origin) uchun.
   origin String?
+  // Variant o'qlari (o'lcham/rang/…) — marketplace uslubidagi mahsulot kartasi.
+  // Shakl: [{ id, name: {uz,ru}, values: [{ id, label: {uz,ru} }] }], max 3 o'q.
+  // Bo'sh massiv = variantsiz oddiy mahsulot (mavjud mahsulotlarning barchasi shunday).
+  options Json @default("[]")
+
   // Boy marketing kontenti (public API Product detali uchun). Ixtiyoriy.
   // Shakl: { tagline, highlights[], benefits[], ingredients[], howToUse,
   //          faq[], servings, bespoke, ... } yoki per-locale: { uz:{...}, ru:{...} }.
@@ -313,6 +318,7 @@ model Product {
   updatedAt DateTime @updatedAt
 
   orderItems OrderItem[]
+  variants   ProductVariant[]
 
   // Combo / qo'shimcha mahsulotlar (Amazon-style "Frequently bought together")
   comboAddons     ProductAddon[] @relation("ComboMain")
@@ -332,6 +338,61 @@ model Product {
   @@index([tenantId, featured])
   @@index([tenantId, saleCampaignId])
   @@index([tenantId, origin])
+}
+
+// ============== MAHSULOT VARIANTLARI ==============
+//
+// Marketplace mantiqi: bitta mahsulot kartasi, ichida bir nechta variant
+// (50 gr / 1 kg / 5 kg, rang, va h.k.). Har birida o'z narxi, zaxirasi,
+// rasmlari va xarakteristikasi bor.
+//
+// **Ixtiyoriy** — varianti yo'q mahsulot avvalgidek Product.price/stock bilan
+// ishlaydi. Variant bo'lsa, karta narxi eng arzon variantdan, zaxira esa
+// variantlar yig'indisidan olinadi (`lib/variant-shape.ts`).
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Denormalizatsiya — tenant bo'yicha filtrlash va noyoblikni tekshirish uchun
+  tenantId  String
+
+  /// Ombor artikuli — tenant ichida noyob (mahsulot SKU'sidan alohida)
+  sku String
+
+  /// Mijozga ko'rinadigan nom: "1 kg", "Qora / XL". Bo'sh bo'lsa optionValues'dan yig'iladi.
+  name String
+
+  /// O'q qiymatlari: { "hajm": "1 kg", "rang": "Qora" } — Product.options bilan mos
+  optionValues Json @default("{}")
+
+  price    Decimal  @default(0) @db.Decimal(14, 2)
+  oldPrice Decimal? @db.Decimal(14, 2)
+  stock    Int      @default(0)
+  active   Boolean  @default(true)
+
+  /// Variantning o'z rasmlari. Bo'sh bo'lsa mahsulot rasmlari ko'rsatiladi.
+  images String[] @default([])
+
+  /// Variantga xos xarakteristika: [{ label: {uz,ru}, value: {uz,ru} }]
+  attributes Json @default("[]")
+
+  /// Ro'yxatdagi tartib — odatda kichikdan kattaga
+  sortOrder Int @default(0)
+
+  /// Tashqi tizim identifikatorlari (1C «Характеристика» = guid#guid)
+  oneCId        String?
+  moyskladId    String?
+  salesDoctorId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@unique([tenantId, sku])
+  @@unique([tenantId, oneCId])
+  @@index([productId, sortOrder])
+  @@index([tenantId, active])
 }
 
 enum ProductSource {
@@ -547,11 +608,21 @@ model OrderItem {
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
+
+  // Aynan qaysi variant sotildi (50 gr / 1 kg / qora …). Variantsiz mahsulotda null.
+  // SetNull emas — variant o'chirilsa ham buyurtma tarixi buzilmasligi uchun
+  // nom va optionValues snapshot sifatida saqlanadi.
+  variantId    String?
+  variant      ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  /// Sotilgan paytdagi variant nomi ("1 kg") — variant o'chirilsa ham chek/hisobotda qoladi.
+  variantLabel String?
+
   qty       Int
   price     Decimal @db.Decimal(14, 2)
 
   @@index([orderId])
   @@index([productId])
+  @@index([variantId])
 }
 
 // Buyurtmaga ichki izoh / kommentariya (admin team'i o'rtasida)
@@ -1044,6 +1115,9 @@ model OneCImportLog {
   productsUpdated   Int @default(0)
   productsHidden    Int @default(0) // 1C'da "Удален" belgilangan → active=false
   imagesImported    Int @default(0)
+  // «Характеристика» (guid#guid) → ProductVariant
+  variantsCreated   Int @default(0)
+  variantsUpdated   Int @default(0)
 
   durationMs Int      @default(0)
   createdAt  DateTime @default(now())

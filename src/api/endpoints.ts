@@ -16,6 +16,7 @@ import type {
   VitrinaLayout,
   StoreMode,
   VitrinaBlock,
+  ProductVariantInput,
 } from "../types/api";
 
 // ===== Auth =====
@@ -105,6 +106,11 @@ export const ordersApi = {
 
 // ===== Products =====
 
+/** Mahsulot yozish shakli — variantlarda `id` ixtiyoriy (yangisi hali yo'q). */
+export type ProductWriteInput = Omit<Partial<Product>, "variants"> & {
+  variants?: ProductVariantInput[];
+};
+
 export const productsApi = {
   list: (
     params: {
@@ -117,9 +123,9 @@ export const productsApi = {
     } = {},
   ) => api<PaginatedResponse<Product>>("/products", { query: params }),
 
-  create: (data: Partial<Product>) => api<Product>("/products", { method: "POST", body: data }),
+  create: (data: ProductWriteInput) => api<Product>("/products", { method: "POST", body: data }),
 
-  update: (id: string, data: Partial<Product>) =>
+  update: (id: string, data: ProductWriteInput) =>
     api<Product>(`/products/${id}`, { method: "PATCH", body: data }),
 
   delete: (id: string) => api<{ ok: true }>(`/products/${id}`, { method: "DELETE" }),
@@ -414,6 +420,9 @@ export interface OneCImportLog {
   productsUpdated: number;
   productsHidden: number;
   imagesImported: number;
+  /** «Характеристика» → variant. Eski jurnal yozuvlarida bo'lmasligi mumkin. */
+  variantsCreated?: number;
+  variantsUpdated?: number;
   durationMs: number;
   createdAt: string;
 }

@@ -152,8 +152,64 @@ export interface Product {
   slug?: string | null;
   origin?: string | null;
   content?: unknown;
+  /**
+   * Variant o'qlari (Hajm / Rang / …). Bo'sh — variantsiz oddiy mahsulot.
+   * Shakl: [{ id, name: {uz,ru}, values: [{ id, label: {uz,ru} }] }]
+   */
+  options?: ProductOptionDto[];
+  /** Variantlar — bo'lsa karta narxi/zaxirasi shulardan hisoblanadi */
+  variants?: ProductVariantDto[];
+  /** Backend hisoblagan karta narxi va zaxirasi (variantlarni hisobga olgan) */
+  pricing?: {
+    price: number;
+    oldPrice: number | null;
+    stock: number;
+    priceVaries: boolean;
+    maxPrice: number;
+    variantCount: number;
+  };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LocalizedTextDto { uz: string; ru: string }
+
+export interface ProductOptionDto {
+  id: string;
+  name: LocalizedTextDto;
+  values: Array<{ id: string; label: LocalizedTextDto }>;
+}
+
+/**
+ * Variant yozish uchun shakl (o'qish shaklidan farqi: `id` yangi variantda
+ * yo'q, `name` bo'sh bo'lsa backend o'q qiymatlaridan yig'adi).
+ */
+export interface ProductVariantInput {
+  id?: string;
+  sku: string;
+  name?: string;
+  optionValues: Record<string, string>;
+  price: number;
+  oldPrice: number | null;
+  stock: number;
+  active: boolean;
+  images: string[];
+  attributes: Array<{ label: LocalizedTextDto; value: LocalizedTextDto }>;
+  sortOrder: number;
+}
+
+export interface ProductVariantDto {
+  id: string;
+  sku: string;
+  name: string;
+  optionValues: Record<string, string>;
+  price: string | number;
+  oldPrice: string | number | null;
+  stock: number;
+  active: boolean;
+  images: string[];
+  attributes: Array<{ label: LocalizedTextDto; value: LocalizedTextDto }>;
+  sortOrder: number;
 }
 
 export interface Category {
