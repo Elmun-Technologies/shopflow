@@ -96,7 +96,7 @@ bot-engine.ts (runtime)  ◀──holat──▶  BotSession (DB)
 | `text` | Statik matn sahifasi (Kompaniya haqida, Kontaktlar) |
 | `webapp` | Mini App do'konini ochadi |
 | `url` | Tashqi havola |
-| `catalog` | DB'dagi haqiqiy mahsulotlar ro'yxati (sahifalash + kartochka) |
+| `catalog` | DB'dagi mahsulotlar ro'yxati (sahifalash + kartochka). `openInApp: true` bo'lsa bot ichida ro'yxat o'rniga **Mini App do'konini** ochadi (chakana uchun — ilovada rasm/variant/savat batafsil; kategoriya tanlansa deep-link bilan). Storefront `?view=catalog&category=…` ni o'qiydi. |
 | `track_order` | Buyurtma raqamini so'raydi va topib beradi |
 | `operator` | Suhbat ochadi + adminni xabardor qiladi |
 | `language` | Til almashtirish |

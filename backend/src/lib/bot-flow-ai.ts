@@ -92,7 +92,7 @@ Return ONLY a JSON object (no markdown fences, no prose) with this exact shape:
 - { "type": "text", "text": { "uz": "...", "ru": "..." } } — show a static info page
 - { "type": "webapp" }                          — open the Mini App store
 - { "type": "url", "url": "https://..." }       — external link
-- { "type": "catalog", "categoryId": null }     — list real products from the database
+- { "type": "catalog", "categoryId": null, "openInApp": false } — list products in the bot; set openInApp:true to open the Mini App store instead (better for retail — the Mini App has images, variants and cart). For B2B (no cart) keep openInApp:false.
 - { "type": "track_order" }                     — ask for an order number and look it up
 - { "type": "operator" }                        — hand off to a human operator
 - { "type": "language" }                        — language switcher
