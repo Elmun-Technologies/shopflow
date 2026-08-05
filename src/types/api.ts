@@ -168,6 +168,10 @@ export interface Product {
     maxPrice: number;
     variantCount: number;
   };
+  /** B2B narx pog'onalari (hajm bo'yicha), MOQ va o'lchov birligi */
+  priceTiers?: { minQty: number; price: number }[];
+  moq?: number | null;
+  unit?: string | null;
   createdAt: string;
   updatedAt: string;
 }

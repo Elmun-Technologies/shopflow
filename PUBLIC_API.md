@@ -123,8 +123,19 @@ interface Product {
     images: { url: string; alt: string }[];       // bo'sh → mahsulot rasmlari
     attributes: { label: string; value: string }[];
   }[];
+
+  // ── B2B/ulgurji narx (hajm bo'yicha). Bo'sh — flat narx ──
+  priceTiers: { minQty: number; price: number }[]; // minQty o'sish tartibida
+  moq: number | null;                              // minimal buyurtma miqdori
+  unit: string | null;                             // "kg" / "l" / "dona"
 }
 ```
+
+> **Narx pog'onalari maʼlumot xarakterida.** `priceTiers` — hajm oshgani sari
+> arzonlashuvchi narxlar (masalan `[{minQty:1,price:100000},{minQty:10,price:90000}]`).
+> Miqdorga mos narx = miqdor ≥ `minQty` bo'lgan **eng yuqori** pog'ona.
+> Buyurtma narxini server hisoblaydi; B2B rejimda yakuniy narx menejer
+> tomonidan tasdiqlanadi. Pog'onasiz mahsulotda `priceTiers: []`.
 
 ```bash
 curl -H "Authorization: Bearer $SHOPFLOW_API_KEY" \

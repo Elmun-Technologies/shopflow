@@ -894,6 +894,19 @@ function ProductFormModal({
   const [variantsOpen, setVariantsOpen] = useState(() => (product?.variants?.length ?? 0) > 0);
   const hasVariants = variants.length > 0;
 
+  // B2B/ulgurji narx pog'onalari + MOQ + o'lchov birligi
+  const [priceTiers, setPriceTiers] = useState<Array<{ minQty: string; price: string }>>(() =>
+    (product?.priceTiers ?? []).map((t) => ({
+      minQty: formatGrouped(String(t.minQty)),
+      price: formatGrouped(String(t.price)),
+    })),
+  );
+  const [moq, setMoq] = useState(product?.moq != null ? formatGrouped(String(product.moq)) : "");
+  const [unit, setUnit] = useState(product?.unit ?? "");
+  const [b2bOpen, setB2bOpen] = useState(
+    () => (product?.priceTiers?.length ?? 0) > 0 || product?.moq != null,
+  );
+
   const [comboAddons, setComboAddons] = useState<Array<{ addonProductId: string; discountPct: number; defaultSelected: boolean; position: number; productName?: string; productImage?: string | null; productPrice?: string | number }>>([]);
   const [comboPickerOpen, setComboPickerOpen] = useState(false);
   const [productsCatalog, setProductsCatalog] = useState<Array<{ id: string; name: string; sku: string; price: string | number; imageUrl: string | null }>>([]);
@@ -1070,6 +1083,15 @@ function ProductFormModal({
           attributes: v.attributes,
           sortOrder: i,
         })),
+        // B2B narx pog'onalari — bo'sh/noto'g'ri qatorlar tashlanadi
+        priceTiers: priceTiers
+          .map((t) => ({
+            minQty: Number(unformatGrouped(t.minQty)) || 0,
+            price: Number(unformatGrouped(t.price)) || 0,
+          }))
+          .filter((t) => t.minQty > 0),
+        moq: moq.trim() ? Number(unformatGrouped(moq)) : null,
+        unit: unit.trim() || null,
       };
       let savedProductId = product?.id;
       if (product) {
@@ -1290,6 +1312,115 @@ function ProductFormModal({
                   onVariantsChange={setVariants}
                   uploadImage={uploadSingle}
                 />
+              </div>
+            )}
+          </div>
+
+          {/* B2B narx pog'onalari (hajm bo'yicha) + minimal buyurtma. Ulgurji
+              savdo uchun — mijozga ko'rsatiladi, yakuniy narxni menejer tasdiqlaydi. */}
+          <div className="rounded-2xl border border-cream-300 bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setB2bOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-cream-50"
+            >
+              <span className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-forest-700" />
+                <span className="text-sm font-medium text-forest-800">{t("tiers.section")}</span>
+                {priceTiers.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-leaf-100 text-forest-700 text-[10px] font-medium">
+                    {priceTiers.length}
+                  </span>
+                )}
+              </span>
+              {b2bOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+            {b2bOpen && (
+              <div className="px-4 pb-4 border-t border-cream-200 pt-4 space-y-4">
+                <p className="text-[11px] text-slate-500 leading-relaxed">{t("tiers.intro")}</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label={t("tiers.moq")}>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={moq}
+                      onChange={(e) => setMoq(formatGrouped(e.target.value))}
+                      placeholder="25"
+                      className="input"
+                    />
+                  </Field>
+                  <Field label={t("tiers.unit")}>
+                    <input
+                      type="text"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value.slice(0, 16))}
+                      placeholder={t("tiers.unitPlaceholder")}
+                      className="input"
+                    />
+                  </Field>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-500">{t("tiers.tiers")}</span>
+                    <button
+                      type="button"
+                      onClick={() => setPriceTiers((prev) => [...prev, { minQty: "", price: "" }])}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-leaf-100 text-forest-700 text-xs font-medium hover:bg-leaf-200"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> {t("common.add")}
+                    </button>
+                  </div>
+
+                  {priceTiers.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 py-1">{t("tiers.empty")}</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-1">
+                        <span className="text-[10px] text-slate-400">{t("tiers.fromQty")}{unit ? ` (${unit})` : ""}</span>
+                        <span className="text-[10px] text-slate-400">{t("tiers.unitPrice", { currency })}</span>
+                        <span className="w-8" />
+                      </div>
+                      {priceTiers.map((tier, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={tier.minQty}
+                            onChange={(e) =>
+                              setPriceTiers((prev) => prev.map((x, k) => (k === i ? { ...x, minQty: formatGrouped(e.target.value) } : x)))
+                            }
+                            placeholder="10"
+                            className="input"
+                          />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={tier.price}
+                            onChange={(e) =>
+                              setPriceTiers((prev) => prev.map((x, k) => (k === i ? { ...x, price: formatGrouped(e.target.value) } : x)))
+                            }
+                            placeholder="90,000"
+                            className="input"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPriceTiers((prev) => prev.filter((_, k) => k !== i))}
+                            className="w-8 h-8 grid place-items-center text-slate-300 hover:text-rose-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-[11px] text-slate-400 pt-1">{t("tiers.hint")}</p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>

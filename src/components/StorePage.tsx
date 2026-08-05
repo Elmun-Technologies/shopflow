@@ -172,6 +172,10 @@ type StoreProduct = {
     maxPrice: number;
     variantCount: number;
   };
+  /** B2B/ulgurji narx pog'onalari (hajm bo'yicha), MOQ va o'lchov birligi */
+  priceTiers?: { minQty: number; price: number }[];
+  moq?: number | null;
+  unit?: string | null;
 };
 
 interface StoreReview {
@@ -1934,6 +1938,45 @@ function StoreInner({ slug }: { slug: string }) {
             {!isB2b && savings > 0 && (
               <div className="inline-block bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-1 rounded-md mb-3">
                 {t("pdp.savings", { value: `${savings.toLocaleString("uz-UZ")} ${currencyStr}` })}
+              </div>
+            )}
+
+            {/* B2B/ulgurji narx pog'onalari — hajm oshsa narx arzonlashadi.
+                Narx yashirilgan (B2B) bo'lsa ko'rsatmaymiz. */}
+            {(!isB2b || b2bCfg.showPrices) &&
+              (selectedProduct.priceTiers?.length ?? 0) > 0 && (
+                <div className="mb-3 rounded-2xl border border-slate-800 overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-900 text-[11px] text-slate-400">
+                    {t("tiers.pdpTitle")}
+                  </div>
+                  <div className="divide-y divide-slate-800">
+                    {[...(selectedProduct.priceTiers ?? [])]
+                      .sort((a, b) => a.minQty - b.minQty)
+                      .map((tier, i) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2">
+                          <span className="text-[13px] text-slate-300">
+                            {t("tiers.fromN", {
+                              n: tier.minQty.toLocaleString("uz-UZ"),
+                              unit: selectedProduct.unit || t("tiers.pcs"),
+                            })}
+                          </span>
+                          <span className="text-[13px] font-semibold text-white">
+                            {tier.price.toLocaleString("uz-UZ")} {currencyStr}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+            {/* Minimal buyurtma miqdori (MOQ) */}
+            {(selectedProduct.moq ?? 0) > 0 && (
+              <div className="mb-3 inline-flex items-center gap-1.5 bg-slate-800/60 text-slate-300 text-xs px-2.5 py-1 rounded-lg">
+                <Package className="w-3.5 h-3.5 text-slate-400" />
+                {t("tiers.moqLine", {
+                  n: (selectedProduct.moq ?? 0).toLocaleString("uz-UZ"),
+                  unit: selectedProduct.unit || t("tiers.pcs"),
+                })}
               </div>
             )}
 
