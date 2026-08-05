@@ -4,6 +4,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { parseOptions, productPricing, toVariantLike } from "../lib/variant-shape.js";
 import { notifyCustomer } from "../lib/telegram-notify.js";
 import { authStorefrontCustomer } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
@@ -95,6 +96,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           },
         },
       },
+      // Variantlar — PDP tanlagichi va karta narxi uchun. Faqat aktivlari:
+      // o'chirilgan variant mijozga ko'rinmasligi kerak.
+      variants: {
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" as const }, { price: "asc" as const }],
+      },
     };
 
     const [storefront, products, productTotal, categories, weeklyOrderItems, ratingAggregates] = await Promise.all([
@@ -151,12 +158,30 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     }
 
     type RawProduct = (typeof products)[number];
-    const enrich = (p: RawProduct) => ({
-      ...p,
-      weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0,
-      avgRating: ratingMap.get(p.id)?.avg ?? 0,
-      reviewCount: ratingMap.get(p.id)?.count ?? 0,
-    });
+    const enrich = (p: RawProduct) => {
+      // Variantli mahsulotda kartadagi narx/zaxira variantlardan hisoblanadi —
+      // PDP ochilganda tanlanadigan variant bilan bir xil bo'lishi shart.
+      const variants = p.variants.map(toVariantLike);
+      const pricing = productPricing(
+        {
+          price: Number(p.price),
+          oldPrice: p.oldPrice === null ? null : Number(p.oldPrice),
+          stock: p.stock,
+          imageUrl: p.imageUrl,
+          images: p.images,
+        },
+        variants,
+      );
+      return {
+        ...p,
+        options: parseOptions(p.options),
+        variants,
+        pricing,
+        weeklyBuyers: weeklyBuyersMap.get(p.id) ?? 0,
+        avgRating: ratingMap.get(p.id)?.avg ?? 0,
+        reviewCount: ratingMap.get(p.id)?.count ?? 0,
+      };
+    };
 
     const enrichedProducts = products.map(enrich);
 
@@ -239,6 +264,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       .array(
         z.object({
           productId: z.string(),
+          /** Variantli mahsulotda aynan qaysi variant sotib olinyapti */
+          variantId: z.string().optional(),
           qty: z.number().int().positive(),
         }),
       )
@@ -270,36 +297,77 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
 
-    // Mahsulotlarni topish va narxlarni snapshot qilish
+    // Mahsulotlarni topish va narxlarni snapshot qilish.
+    // Narx **har doim serverdan** olinadi — mijoz yuborgan narxga ishonilmaydi.
     const productIds = data.items.map((i) => i.productId);
     const products = await app.prisma.product.findMany({
       where: { id: { in: productIds }, tenantId: tenant.id, active: true },
+      include: { variants: true },
     });
-    if (products.length !== productIds.length) {
+    if (new Set(productIds).size !== new Set(products.map((p) => p.id)).size) {
       return reply.code(400).send({ error: "Ba'zi mahsulotlar topilmadi yoki sotuvda emas" });
     }
 
-    // Stock tekshiruvi — null yoki undefined stock cheksiz deb hisoblanadi
+    // Variantli mahsulotda narx va zaxira variantdan olinadi.
     const stockErrors: string[] = [];
+    const items: Array<{
+      productId: string;
+      variantId: string | null;
+      variantLabel: string | null;
+      qty: number;
+      price: number;
+      stock: number | null;
+    }> = [];
+
     for (const item of data.items) {
       const p = products.find((pp) => pp.id === item.productId)!;
+      const hasVariants = p.variants.some((v) => v.active);
+
+      if (hasVariants) {
+        if (!item.variantId) {
+          stockErrors.push(`"${p.name}" uchun variant tanlanmagan`);
+          continue;
+        }
+        const variant = p.variants.find((v) => v.id === item.variantId && v.active);
+        if (!variant) {
+          stockErrors.push(`"${p.name}" uchun tanlangan variant topilmadi`);
+          continue;
+        }
+        if (variant.stock < item.qty) {
+          stockErrors.push(
+            `"${p.name} — ${variant.name}" uchun yetarli tovar yo'q (mavjud: ${variant.stock}, so'ralgan: ${item.qty})`,
+          );
+          continue;
+        }
+        items.push({
+          productId: p.id,
+          variantId: variant.id,
+          variantLabel: variant.name,
+          qty: item.qty,
+          price: Number(variant.price),
+          stock: variant.stock,
+        });
+        continue;
+      }
+
+      // Variantsiz mahsulot — avvalgi mantiq o'zgarishsiz
       if (p.stock !== null && p.stock !== undefined && p.stock < item.qty) {
         stockErrors.push(`"${p.name}" uchun yetarli tovar yo'q (mavjud: ${p.stock}, so'ralgan: ${item.qty})`);
+        continue;
       }
+      items.push({
+        productId: p.id,
+        variantId: null,
+        variantLabel: null,
+        qty: item.qty,
+        price: Number(p.price),
+        stock: p.stock,
+      });
     }
+
     if (stockErrors.length > 0) {
       return reply.code(400).send({ error: "Yetarli tovar yo'q", details: stockErrors });
     }
-
-    const items = data.items.map((i) => {
-      const p = products.find((pp) => pp.id === i.productId)!;
-      return {
-        productId: i.productId,
-        qty: i.qty,
-        price: Number(p.price),
-        stock: p.stock,
-      };
-    });
     const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
 
     // Mijozni topish yoki yaratish — avval Telegram userId bo'yicha, keyin telefon bo'yicha.
@@ -386,6 +454,17 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           // muvaffaqiyatli o'tadi. Concurrent checkout'larda oversell oldini oladi
           // (updateMany count=0 → transaction qaytariladi).
           for (const item of items) {
+            if (item.variantId) {
+              // Variantli mahsulotda zaxira variantda — mahsulot ustuni tegilmaydi
+              const res = await tx.productVariant.updateMany({
+                where: { id: item.variantId, tenantId: tenant.id, stock: { gte: item.qty } },
+                data: { stock: { decrement: item.qty } },
+              });
+              if (res.count === 0) {
+                throw new Error(`OUT_OF_STOCK:${item.productId}:${item.variantId}`);
+              }
+              continue;
+            }
             if (item.stock !== null && item.stock !== undefined) {
               const res = await tx.product.updateMany({
                 where: { id: item.productId, tenantId: tenant.id, stock: { gte: item.qty } },
@@ -416,6 +495,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
               items: {
                 create: items.map((i) => ({
                   productId: i.productId,
+                  variantId: i.variantId,
+                  variantLabel: i.variantLabel,
                   qty: i.qty,
                   price: i.price,
                 })),
@@ -446,15 +527,24 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.startsWith("OUT_OF_STOCK:")) {
-        const productId = msg.slice("OUT_OF_STOCK:".length);
+        const [productId, variantId] = msg.slice("OUT_OF_STOCK:".length).split(":");
         const product = await app.prisma.product.findFirst({
           where: { id: productId, tenantId: tenant.id },
           select: { name: true, stock: true },
         });
+        const variant = variantId
+          ? await app.prisma.productVariant.findFirst({
+              where: { id: variantId, tenantId: tenant.id },
+              select: { id: true, name: true, stock: true },
+            })
+          : null;
         return reply.code(409).send({
           error: "Mahsulot zaxiradan tugadi",
           code: "OUT_OF_STOCK",
-          product: product ? { id: productId, name: product.name, stock: product.stock } : { id: productId },
+          product: product
+            ? { id: productId, name: product.name, stock: variant ? variant.stock : product.stock }
+            : { id: productId },
+          ...(variant && { variant: { id: variant.id, name: variant.name, stock: variant.stock } }),
         });
       }
       throw err;

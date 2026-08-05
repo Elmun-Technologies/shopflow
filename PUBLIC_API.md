@@ -105,6 +105,24 @@ interface Product {
   servings?: number;
   origin?: string;
   bespoke: boolean;
+
+  // ── Variantlar (o'lcham / rang / …). Variantsiz mahsulotda ikkalasi ham bo'sh ──
+  options: {
+    id: string;                                   // "hajm"
+    name: string;                                 // "Hajm" (locale bo'yicha)
+    values: { id: string; label: string }[];      // [{ id: "1kg", label: "1 kg" }]
+  }[];
+  variants: {
+    id: string;
+    sku: string;
+    name: string;                                 // "1 kg"
+    options: Record<string, string>;              // { "hajm": "1kg" }
+    price: number;
+    oldPrice?: number;
+    inStock: boolean;
+    images: { url: string; alt: string }[];       // bo'sh → mahsulot rasmlari
+    attributes: { label: string; value: string }[];
+  }[];
 }
 ```
 
@@ -117,6 +135,13 @@ curl -H "Authorization: Bearer $SHOPFLOW_API_KEY" \
 > `faq`, `servings`, `bespoke`) ShopFlow'da har mahsulotning `content` (JSON) maydonida
 > saqlanadi. To'ldirilmagan bo'lsa — bo'sh array / `""` / `false` qaytadi. `rating`,
 > `reviewCount`, `inStock`, `images`, `badges` — mavjud ma'lumotdan hisoblanadi.
+
+> **Variantlar.** `variants` bo'sh bo'lmasa mahsulot bir nechta o'lchamda sotiladi.
+> Bunday holda yuqoridagi `price` — **eng arzon sotib olinadigan** variant narxi
+> (marketplace'lardagi "… dan" mantiqi), `inStock` esa istalgan variantda tovar
+> borligini bildiradi. Mahsulot sahifasida odatda shu variant tanlangan holda
+> ko'rsatiladi. `variants` narx o'sish tartibida keladi.
+> Variantsiz mahsulotlar uchun kontrakt **o'zgarmagan** — `variants: []` qaytadi.
 
 ---
 
@@ -171,7 +196,14 @@ interface OrderRequest {
     note?: string;
     method: "courier" | "pickup"; // pickup → yetkazish bepul
   };
-  items: { productId?: string; slug?: string; name?: string; quantity: number; unitPrice?: number }[];
+  items: {
+    productId?: string;
+    slug?: string;
+    variantId?: string;   // variantli mahsulotda MAJBURIY (Product.variants[].id)
+    name?: string;
+    quantity: number;
+    unitPrice?: number;
+  }[];
   appliedUpsells?: string[];     // productId'lar — combo chegirmasi qo'llanadi
   appliedPromotions?: string[];  // promotion id'lar (masalan "free-shipping")
   totals?: { subtotal?: number; discount?: number; shipping?: number; total?: number };
@@ -196,6 +228,16 @@ curl -X POST -H "Authorization: Bearer $SHOPFLOW_API_KEY" -H "Content-Type: appl
 Buyurtma `PENDING` holatda yaratiladi, admin panelda real-time ko'rinadi (SSE + web push),
 WEBSITE kanaliga bog'lanadi, stock atomik kamayadi, `order.created` outbound webhook
 otiladi. Javob: `{ "ok": true, "orderId": "...", "message": "Buyurtma #ORD-7524 qabul qilindi" }`.
+
+**Variantli mahsulot.** `variants` bo'sh bo'lmagan mahsulotda `variantId` yuborilishi
+shart — narx va qoldiq variantdan olinadi. Yuborilmasa `400` qaytadi va javobda
+tanlash mumkin bo'lgan variantlar keladi:
+
+```json
+{ "ok": false,
+  "message": "\"Aromatizator\" variantli mahsulot — item'da variantId bo'lishi shart",
+  "variants": [{ "id": "ckv1...", "name": "50 gr" }, { "id": "ckv2...", "name": "1 kg" }] }
+```
 
 ---
 

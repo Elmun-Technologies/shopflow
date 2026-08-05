@@ -10,7 +10,7 @@
 // mahsulot default holatda YASHIRIN yaratiladi (vitrinada 0 so'mga chiqmasligi
 // uchun) — `OneCAccount.createInactive`.
 
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient, Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -33,6 +33,9 @@ export interface OneCImportStats {
   productsUpdated: number;
   productsHidden: number;
   imagesImported: number;
+  /** «Характеристика» (guid#guid) → ProductVariant */
+  variantsCreated: number;
+  variantsUpdated: number;
 }
 
 export interface OneCImportOptions {
@@ -72,6 +75,8 @@ function emptyStats(): OneCImportStats {
     productsUpdated: 0,
     productsHidden: 0,
     imagesImported: 0,
+    variantsCreated: 0,
+    variantsUpdated: 0,
   };
 }
 
@@ -208,6 +213,214 @@ function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * 1C «Характеристика» bo'lgan tovarning Ид'i "guid#guid" ko'rinishida keladi:
+ * chapdagi — asosiy tovar, o'ngdagi — xarakteristika (o'lcham/rang/…).
+ */
+export function splitOneCId(id: string): { baseId: string; charId: string | null } {
+  const hash = id.indexOf("#");
+  if (hash < 0) return { baseId: id, charId: null };
+  const baseId = id.slice(0, hash);
+  const charId = id.slice(hash + 1);
+  // Buzuq ("#abc" yoki "abc#") — variant sifatida qaramaymiz
+  if (!baseId || !charId) return { baseId: id, charId: null };
+  return { baseId, charId };
+}
+
+/**
+ * Xarakteristika nomini ajratadi: 1C odatda "Tovar (1 kg)" yoki "Tovar 1 kg"
+ * ko'rinishida yuboradi. Asosiy nom prefiksini olib tashlaymiz, aks holda
+ * tanlagichda "Tovar (1 kg)" bo'lib turadi.
+ */
+export function extractCharacteristicLabel(fullName: string, baseName: string | null): string {
+  let label = fullName.trim();
+  if (baseName && label.toLowerCase().startsWith(baseName.trim().toLowerCase())) {
+    label = label.slice(baseName.trim().length).trim();
+  }
+  // Qavs va ajratgichlarni tozalaymiz
+  label = label.replace(/^[\s,;:\-–—/|]+/, "").trim();
+  if (label.startsWith("(") && label.endsWith(")")) label = label.slice(1, -1).trim();
+  return label || fullName.trim();
+}
+
+/** Variantli mahsulotda bitta umumiy o'q — 1C strukturalangan o'q yubormaydi. */
+const ONEC_OPTION_ID = "harakteristika";
+
+function onecOptionAxis(values: Array<{ id: string; label: string }>) {
+  return [
+    {
+      id: ONEC_OPTION_ID,
+      name: { uz: "Xarakteristika", ru: "Характеристика" },
+      values: values.map((v) => ({ id: v.id, label: { uz: v.label, ru: v.label } })),
+    },
+  ];
+}
+
+/**
+ * Xarakteristikani ProductVariant sifatida import qiladi.
+ *
+ * Asosiy tovar hali kelmagan bo'lishi mumkin (1C tartibi kafolatlanmaydi va
+ * import 300 tadan bo'laklanadi) — bunday holda asosiy mahsulot shu yerda
+ * yaratiladi va keyin haqiqiy kartochka kelganda `oneCId` bo'yicha topilib
+ * yangilanadi.
+ */
+async function syncVariant(
+  prisma: PrismaClient,
+  tenantId: string,
+  entry: CacheEntry,
+  item: OneCProduct,
+  opts: OneCImportOptions,
+  baseId: string,
+  charId: string,
+): Promise<void> {
+  let base = await prisma.product.findFirst({
+    where: { tenantId, oneCId: baseId },
+    select: { id: true, name: true, options: true },
+  });
+
+  if (!base) {
+    if (item.deleted) return; // o'chirilgan xarakteristika uchun mahsulot yaratmaymiz
+    const categoryId = await resolveCategoryId(prisma, tenantId, entry, item.groupIds);
+    const baseName = item.name.trim();
+    const slug = await uniqueProductSlug(prisma, tenantId, baseName);
+    // Asosiy mahsulot SKU'si band bo'lmasligi uchun 1C GUID'iga tayanamiz
+    const baseSku = `1C-${baseId.slice(0, 20)}`;
+    try {
+      const created = await prisma.product.create({
+        data: {
+          tenantId,
+          sku: baseSku,
+          slug,
+          name: baseName,
+          description: item.description,
+          categoryId,
+          origin: item.country,
+          price: 0,
+          stock: 0,
+          active: !opts.createInactive,
+          source: "ONEC",
+          oneCId: baseId,
+          oneCUpdated: new Date(),
+        },
+        select: { id: true, name: true, options: true },
+      });
+      base = created;
+      entry.stats.productsCreated++;
+    } catch (err) {
+      entry.warnings.push(`Variantli mahsulot "${item.name}" yaratilmadi: ${errText(err)}`);
+      return;
+    }
+  }
+
+  const label = extractCharacteristicLabel(item.name, base.name);
+
+  // Rasmlar — variantning o'ziga tegishli
+  let imageUrls: string[] = [];
+  if (opts.importImages && item.images.length) {
+    for (const rel of item.images.slice(0, 10)) {
+      const res = await importImage(tenantId, rel);
+      if ("url" in res) {
+        imageUrls.push(res.url);
+        entry.stats.imagesImported++;
+      } else if (entry.warnings.length < 50) {
+        entry.warnings.push(res.error);
+      }
+    }
+    imageUrls = [...new Set(imageUrls)];
+  }
+
+  const existing = await prisma.productVariant.findFirst({
+    where: { tenantId, oneCId: item.id },
+    select: { id: true },
+  });
+
+  if (existing) {
+    try {
+      await prisma.productVariant.update({
+        where: { id: existing.id },
+        data: {
+          ...(opts.overwriteNames && { name: label }),
+          ...(imageUrls.length && { images: imageUrls }),
+          ...(item.deleted && { active: false }),
+        },
+      });
+      if (item.deleted) entry.stats.productsHidden++;
+      else entry.stats.variantsUpdated++;
+    } catch (err) {
+      entry.warnings.push(`Variant "${item.name}" yangilanmadi: ${errText(err)}`);
+    }
+    await ensureOptionValue(prisma, base.id, base.options, charId, label);
+    return;
+  }
+
+  if (item.deleted) return;
+
+  // Variant SKU'si tenant ichida noyob bo'lishi shart — band bo'lsa GUID qo'shamiz
+  const rawSku = item.sku?.trim() || `${baseId.slice(0, 12)}-${charId.slice(0, 8)}`;
+  let sku = rawSku.slice(0, 60);
+  const taken = await prisma.productVariant.findFirst({
+    where: { tenantId, sku },
+    select: { id: true },
+  });
+  if (taken) sku = `${rawSku.slice(0, 48)}-${charId.slice(0, 8)}`.slice(0, 60);
+
+  try {
+    await prisma.productVariant.create({
+      data: {
+        productId: base.id,
+        tenantId,
+        sku,
+        name: label,
+        optionValues: { [ONEC_OPTION_ID]: charId },
+        // Narx/qoldiq 1C katalogidan kelmaydi (offers.xml qo'llanmaydi) —
+        // operator belgilaydi, shu sababli variant ham 0 dan boshlanadi.
+        price: 0,
+        stock: 0,
+        active: true,
+        images: imageUrls,
+        sortOrder: 0,
+      },
+    });
+    entry.stats.variantsCreated++;
+  } catch (err) {
+    entry.warnings.push(`Variant "${item.name}" yaratilmadi: ${errText(err)}`);
+    return;
+  }
+
+  await ensureOptionValue(prisma, base.id, base.options, charId, label);
+}
+
+/** Mahsulot o'qiga yangi xarakteristika qiymatini qo'shadi (bor bo'lsa tegilmaydi). */
+async function ensureOptionValue(
+  prisma: PrismaClient,
+  productId: string,
+  rawOptions: unknown,
+  valueId: string,
+  label: string,
+): Promise<void> {
+  const options = Array.isArray(rawOptions) ? (rawOptions as Array<Record<string, unknown>>) : [];
+  const axis = options.find((o) => o.id === ONEC_OPTION_ID);
+  const values = Array.isArray(axis?.values) ? (axis!.values as Array<Record<string, unknown>>) : [];
+
+  if (values.some((v) => v.id === valueId)) return;
+
+  const next = onecOptionAxis([
+    ...values.map((v) => ({
+      id: String(v.id),
+      label:
+        typeof v.label === "object" && v.label !== null
+          ? String((v.label as Record<string, unknown>).uz ?? (v.label as Record<string, unknown>).ru ?? v.id)
+          : String(v.label ?? v.id),
+    })),
+    { id: valueId, label },
+  ]);
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { options: next as unknown as Prisma.InputJsonValue },
+  });
+}
+
 async function syncProduct(
   prisma: PrismaClient,
   tenantId: string,
@@ -215,6 +428,12 @@ async function syncProduct(
   item: OneCProduct,
   opts: OneCImportOptions,
 ): Promise<void> {
+  // «Характеристика» — alohida mahsulot emas, asosiy tovarning varianti
+  const { baseId, charId } = splitOneCId(item.id);
+  if (charId) {
+    return syncVariant(prisma, tenantId, entry, item, opts, baseId, charId);
+  }
+
   const sku = item.sku?.trim() || item.id;
 
   // 1C GUID birlamchi kalit. Undan keyingina SKU bo'yicha qidiramiz — bu

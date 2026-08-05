@@ -110,6 +110,8 @@ function LogRow({ log }: { log: OneCImportLog }) {
             categories: s.categoriesCreated + s.categoriesUpdated,
             images: s.imagesImported,
           })}
+          {(s.variantsCreated ?? 0) + (s.variantsUpdated ?? 0) > 0 &&
+            ` · ${t("onec.logVariants", { count: (s.variantsCreated ?? 0) + (s.variantsUpdated ?? 0) })}`}
           {s.productsHidden > 0 && ` · ${t("onec.logHidden", { count: s.productsHidden })}`}
         </div>
       ) : (
