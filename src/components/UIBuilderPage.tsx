@@ -8,14 +8,19 @@ import {
   Play, Megaphone, X, Type, Phone, Mail, MapPin, ShoppingBag,
   Clock, Package, CheckCircle2, ArrowUp, ArrowDown, Loader2, Globe,
   ShieldCheck, Star, Info, Truck, Tag, Lock, AlertTriangle,
+  Building2, FlaskConical, MessageCircle,
 } from "lucide-react";
 import {
   blockDefinitions, templates, defaultBrandSettings, categoryColors,
   normalizeSingleConfig, singleSectionMeta,
+  normalizeB2bConfig, b2bInquiryMeta,
 } from "../data/uiBuilderData";
-import type { UIBlock, BrandSettings, SingleSection, SingleSectionKey } from "../data/uiBuilderData";
+import type {
+  UIBlock, BrandSettings, SingleSection, SingleSectionKey,
+  B2bConfig, B2bInquiryKind,
+} from "../data/uiBuilderData";
 import { vitrinaApi, productsApi, categoriesApi } from "../api/endpoints";
-import type { Product, Category } from "../types/api";
+import type { Product, Category, StoreMode } from "../types/api";
 import { useT } from "../i18n";
 import {
   GalleryPreview, PricePreview, CtaPreview,
@@ -60,7 +65,7 @@ export default function UIBuilderPage() {
   const [blocks, setBlocks] = useState<UIBlock[]>([]);
   const [brand, setBrand] = useState<BrandSettings>(JSON.parse(JSON.stringify(defaultBrandSettings)));
   const [published, setPublished] = useState(true);
-  const [storeMode, setStoreMode] = useState<"multi" | "single">("multi");
+  const [storeMode, setStoreMode] = useState<StoreMode>("multi");
   const [singleProductId, setSingleProductId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -121,6 +126,10 @@ export default function UIBuilderPage() {
 
   // Single-product rejim uchun yordamchilar
   const isSingle = storeMode === "single";
+  const isB2b = storeMode === "b2b";
+  const b2bConfig: B2bConfig = normalizeB2bConfig(brand.b2bConfig);
+  const setB2b = (patch: Partial<B2bConfig>) =>
+    setBrand((prev) => ({ ...prev, b2bConfig: { ...normalizeB2bConfig(prev.b2bConfig), ...patch } }));
   const singleSections: SingleSection[] = normalizeSingleConfig(brand.singleConfig).sections;
   const setSingleSections = (next: SingleSection[]) =>
     setBrand((prev) => ({ ...prev, singleConfig: { sections: next } }));
@@ -728,6 +737,110 @@ export default function UIBuilderPage() {
 
             {activePanel === "brand" && (
               <motion.div key="brand" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                {isB2b && (
+                  <div className="rounded-xl border border-cream-300/80 bg-white p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-forest-700" />
+                      <p className="text-xs font-semibold text-forest-800">{t("b2b.settings")}</p>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">{t("b2b.settings.desc")}</p>
+
+                    {/* Narx ko'rsatish */}
+                    <button
+                      type="button"
+                      onClick={() => setB2b({ showPrices: !b2bConfig.showPrices })}
+                      className="w-full flex items-center justify-between gap-2 rounded-lg bg-cream-50 border border-cream-300 px-3 py-2 text-left"
+                    >
+                      <span>
+                        <span className="block text-xs text-forest-800">{t("b2b.showPrices")}</span>
+                        <span className="block text-[10px] text-slate-500">{t("b2b.showPrices.d")}</span>
+                      </span>
+                      <span
+                        className={`shrink-0 w-9 h-5 rounded-full transition-colors relative ${
+                          b2bConfig.showPrices ? "bg-leaf-400" : "bg-cream-300"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
+                            b2bConfig.showPrices ? "left-4.5" : "left-0.5"
+                          }`}
+                        />
+                      </span>
+                    </button>
+
+                    {/* So'rov turlari */}
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1.5 block">{t("b2b.inquiries")}</label>
+                      <div className="space-y-1.5">
+                        {b2bInquiryMeta.map((m) => {
+                          const on = b2bConfig.inquiries.includes(m.kind);
+                          const Icon =
+                            m.icon === "Tag" ? Tag : m.icon === "FlaskConical" ? FlaskConical : MessageCircle;
+                          return (
+                            <button
+                              key={m.kind}
+                              type="button"
+                              onClick={() => {
+                                const next = on
+                                  ? b2bConfig.inquiries.filter((k) => k !== m.kind)
+                                  : ([...b2bConfig.inquiries, m.kind] as B2bInquiryKind[]);
+                                // Hammasini o'chirib bo'lmaydi — mijozda harakatsiz
+                                // kartochka qolardi (normalizeB2bConfig ham shuni tiklaydi).
+                                if (next.length === 0) return;
+                                setB2b({ inquiries: next });
+                              }}
+                              className={`w-full flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                                on
+                                  ? "bg-leaf-100 border-leaf-300/60 text-forest-700"
+                                  : "bg-cream-50 border-cream-300 text-slate-500 hover:text-forest-900"
+                              }`}
+                            >
+                              <Icon className="w-3.5 h-3.5 shrink-0" />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium">{t(m.labelKey)}</span>
+                                <span className="block text-[10px] opacity-80">{t(m.descKey)}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Kompaniya majburiy */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={b2bConfig.requireCompany}
+                        onChange={(e) => setB2b({ requireCompany: e.target.checked })}
+                        className="accent-leaf-500"
+                      />
+                      <span className="text-xs text-forest-800">{t("b2b.requireCompany")}</span>
+                    </label>
+
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1.5 block">{t("b2b.moq")}</label>
+                      <input
+                        value={b2bConfig.moqNote}
+                        onChange={(e) => setB2b({ moqNote: e.target.value })}
+                        maxLength={120}
+                        placeholder={t("b2b.moq.ph")}
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1.5 block">{t("b2b.intro")}</label>
+                      <textarea
+                        value={b2bConfig.intro}
+                        onChange={(e) => setB2b({ intro: e.target.value })}
+                        maxLength={400}
+                        rows={3}
+                        placeholder={t("b2b.intro.ph")}
+                        className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60 resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs text-slate-500 mb-1.5 block">{t("ui.brand.storeName")}</label>
                   <input value={brand.name} onChange={(e) => setBrand({ ...brand, name: e.target.value })} className="w-full bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 text-xs text-forest-800 focus:outline-none focus:border-leaf-500/60" />
@@ -822,8 +935,10 @@ export default function UIBuilderPage() {
         <div className="h-12 border-b border-cream-300 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-forest-800">{t("ui.editor")}</span>
-            {isSingle ? (
-              <span className="text-xs text-slate-500">{t("ui.storeMode.single")}</span>
+            {isSingle || isB2b ? (
+              <span className="text-xs text-slate-500">
+                {t(isB2b ? "ui.storeMode.b2b" : "ui.storeMode.single")}
+              </span>
             ) : (
               <span className="text-xs text-slate-500">{t("ui.blockCount", { n: blocks.length, active: blocks.filter((b) => b.enabled).length })}</span>
             )}
@@ -859,6 +974,15 @@ export default function UIBuilderPage() {
               >
                 <Package className="w-3.5 h-3.5" />
                 {t("ui.storeMode.single")}
+              </button>
+              <button
+                onClick={() => { setStoreMode("b2b"); setActivePanel("brand"); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  storeMode === "b2b" ? "bg-cream-200 text-forest-800" : "text-slate-500 hover:text-forest-900"
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                {t("ui.storeMode.b2b")}
               </button>
             </div>
             {/* Published toggle — yashirin holatni aniq ko'rinarli qiladi */}

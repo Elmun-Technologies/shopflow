@@ -13,7 +13,8 @@ import { publishToTenant } from "../lib/sse-bus.js";
 import { pushToTenantAdmins } from "../lib/web-push.js";
 import { buildClickPaymentUrl } from "../lib/click-client.js";
 import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
-import { createOrderCodeWithRetry } from "../lib/codes.js";
+import { createOrderCodeWithRetry, nextLeadCode } from "../lib/codes.js";
+import { notifyAdmin } from "../lib/telegram-notify.js";
 import type { PrismaClient } from "@prisma/client";
 
 // Promo kodni inline tekshirish (import tsikli oldini olish)
@@ -163,7 +164,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     // Single rejim: tanlangan mahsulot katalog sahifasiga/filtriga tushmagan
     // bo'lishi mumkin (pagination, featured tartibi). Uni alohida olib,
     // ro'yxat boshiga qo'shamiz — client landing'ni doim ko'rsata olsin.
-    const storeMode = storefront?.storeMode === "single" ? "single" : "multi";
+    const rawMode = storefront?.storeMode;
+    const storeMode = rawMode === "single" ? "single" : rawMode === "b2b" ? "b2b" : "multi";
     const singleProductId = storefront?.singleProductId ?? null;
     if (storeMode === "single" && singleProductId && !enrichedProducts.some((p) => p.id === singleProductId)) {
       const single = await app.prisma.product.findFirst({
@@ -177,13 +179,31 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     // 30 soniya client-side + 60 soniya stale-while-revalidate Caddy/CDN uchun.
     reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
 
+    // B2B: narx yashirilgan bo'lsa uni javobdan BUTUNLAY olib tashlaymiz.
+    // Faqat UI'da yashirish yetarli emas — narx tarmoq javobida qolar va
+    // raqobatchi uni DevTools'siz ham ko'rardi. Ulgurji narx esa odatda
+    // shartnomaviy ma'lumot, shuning uchun server tomonida kesiladi.
+    const b2bHidesPrices =
+      storeMode === "b2b" &&
+      ((storefront?.brand ?? {}) as { b2bConfig?: { showPrices?: unknown } }).b2bConfig
+        ?.showPrices !== true;
+
+    const publicProducts = b2bHidesPrices
+      ? enrichedProducts.map((p) => ({
+          ...p,
+          price: "0",
+          oldPrice: null,
+          comboAddons: [],
+        }))
+      : enrichedProducts;
+
     return {
       tenant,
       layout: storefront?.blocks ?? [],
       brand: storefront?.brand ?? {},
       storeMode,
       singleProductId,
-      products: enrichedProducts,
+      products: publicProducts,
       categories,
       pagination: {
         page: query.page,
@@ -555,6 +575,134 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       paymentUrl,
       paymentMethodLabel,
     });
+  });
+
+  // ─── B2B so'rovi (narx / namuna / maslahat) ──────────────────────────────
+  //
+  // Ulgurji rejimda mijoz BUYURTMA bermaydi — so'rov yuboradi va narxni
+  // menejer tasdiqlaydi. Shuning uchun bu yerda Order emas, LEAD yaratiladi:
+  // bot `b2b` shabloni ham xuddi shunday ishlaydi va ikkalasi bitta
+  // quvurga (Lidlar sahifasi) tushadi.
+  const inquirySchema = z.object({
+    kind: z.enum(["price", "sample", "consult"]),
+    name: z.string().trim().min(1).max(120),
+    phone: z.string().trim().min(4).max(40),
+    company: z.string().trim().max(160).optional(),
+    position: z.string().trim().max(120).optional(),
+    email: z.string().trim().email().max(160).optional().or(z.literal("")),
+    productId: z.string().max(60).optional(),
+    quantity: z.string().trim().max(60).optional(),
+    comment: z.string().trim().max(2000).optional(),
+    tgUserId: z.number().int().optional(),
+  });
+
+  app.post("/:tenantSlug/inquiry", async (req, reply) => {
+    const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
+    const body = inquirySchema.parse(req.body);
+
+    const tenant = await app.prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true, name: true },
+    });
+    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+
+    const storefront = await app.prisma.storefront.findUnique({
+      where: { tenantId: tenant.id },
+      select: { storeMode: true, published: true },
+    });
+    if (storefront && !storefront.published) {
+      return reply.code(403).send({ error: "Do'kon yopiq" });
+    }
+    // So'rov faqat B2B rejimda qabul qilinadi — chakana do'konda bu endpoint
+    // orqali lid yasab, Lidlar ro'yxatini axlatga to'ldirib bo'lmasin.
+    if (storefront?.storeMode !== "b2b") {
+      return reply.code(400).send({ error: "Bu do'kon B2B rejimida emas" });
+    }
+
+    // Mahsulot nomini so'rovga qo'shamiz (menejer nima haqida so'ralganini ko'rsin).
+    let productName: string | null = null;
+    if (body.productId) {
+      const p = await app.prisma.product.findFirst({
+        where: { id: body.productId, tenantId: tenant.id, active: true },
+        select: { name: true, sku: true },
+      });
+      if (p) productName = p.sku ? `${p.name} (${p.sku})` : p.name;
+    }
+
+    const kindLabel: Record<typeof body.kind, string> = {
+      price: "Narx so'rovi",
+      sample: "Namuna so'rovi",
+      consult: "Maslahat so'rovi",
+    };
+
+    const notes = [
+      `[${kindLabel[body.kind]}] — vitrina (B2B)`,
+      productName ? `Mahsulot: ${productName}` : null,
+      body.quantity ? `Hajm: ${body.quantity}` : null,
+      body.position ? `Lavozim: ${body.position}` : null,
+      body.comment ? `Izoh: ${body.comment}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, 4000);
+
+    // Telegram kanali — lidni to'g'ri manbaga bog'lash uchun (bot lidlari bilan bir xil).
+    const channel = await app.prisma.channel.findFirst({
+      where: { tenantId: tenant.id, type: "TELEGRAM", active: true },
+      select: { id: true },
+    });
+
+    const code = await nextLeadCode(app.prisma, tenant.id);
+    const lead = await app.prisma.lead.create({
+      data: {
+        tenantId: tenant.id,
+        channelId: channel?.id ?? null,
+        code,
+        name: body.name,
+        phone: body.phone,
+        email: body.email || null,
+        company: body.company || null,
+        position: body.position || null,
+        status: "NEW",
+        // Namuna/narx so'rovi sovuq lidga qaraganda issiqroq — menejer
+        // navbatni shunga qarab tuzsin.
+        priority: body.kind === "consult" ? "MEDIUM" : "HIGH",
+        notes,
+        tags: ["b2b", body.kind],
+        utmSource: "storefront-b2b",
+        utmCampaign: body.kind,
+        interactions: {
+          create: {
+            tenantId: tenant.id,
+            type: "TELEGRAM",
+            direction: "INBOUND",
+            content: notes,
+            createdBy: body.name,
+          },
+        },
+      },
+      select: { id: true, code: true, name: true },
+    });
+
+    publishToTenant(tenant.id, { type: "lead.created", leadId: lead.id, name: lead.name });
+
+    const adminText =
+      `📥 <b>B2B so'rov: ${kindLabel[body.kind]}</b>\n\n` +
+      `#${lead.code}\n${body.name}${body.company ? ` — ${body.company}` : ""}\n` +
+      `${body.phone}` +
+      (productName ? `\n\nMahsulot: ${productName}` : "") +
+      (body.quantity ? `\nHajm: ${body.quantity}` : "");
+    notifyAdmin(app.prisma, tenant.id, adminText).catch(() => null);
+
+    fireWebhookEvent(app.prisma, tenant.id, "lead.created", {
+      id: lead.id,
+      code: lead.code,
+      name: lead.name,
+      source: "storefront-b2b",
+      kind: body.kind,
+    }).catch(() => null);
+
+    return reply.code(201).send({ ok: true, code: lead.code });
   });
 
   // Public payment methods — Mini App checkout'da mijozga ko'rsatish uchun.

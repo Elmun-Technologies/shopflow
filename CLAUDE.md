@@ -307,6 +307,26 @@ o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
 - [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
 
 ### ✅ Yaqinda bajarilgan
+- ✅ **B2B (ulgurji) vitrina rejimi** — uchinchi `storeMode`. Bot konstruktorida `b2b`
+  shabloni bor edi, lekin uning "🛍 Katalog (ilova)" tugmasi mijozni **chakana,
+  savatli** vitrinaga olib borardi — shablonning o'z mantig'iga zid
+  ("savat yo'q — har bir yo'l lidga olib boradi"). Endi vitrina ham B2B biladi:
+  - **Savat yo'q.** Mahsulot kartochkasida savat o'rniga so'rov tugmalari:
+    narx / namuna / maslahat (tenant yoqadi-o'chiradi). BottomNav'da savat tabi yashirin.
+  - **Narx ixtiyoriy.** O'chirilgan bo'lsa "Narx so'rov bo'yicha" chiqadi va narx
+    **serverdan ham yuborilmaydi** (`price: "0"`, `oldPrice: null`, combo'lar
+    kesiladi) — faqat UI'da yashirish ulgurji narxni tarmoq javobida qoldirardi.
+  - **So'rov → LID.** `POST /api/storefront/:slug/inquiry` Order emas, `Lead`
+    yaratadi (`company`/`position` ustunlariga tushadi, `tags: ["b2b", kind]`,
+    `utmSource: "storefront-b2b"`), Interaction + `notifyAdmin` + SSE
+    `lead.created` + outbound webhook. Bot lidlari bilan bitta quvurda.
+    Endpoint faqat `storeMode === "b2b"` da ishlaydi — chakana do'konda
+    Lidlar ro'yxatini axlatga to'ldirib bo'lmaydi.
+  - Sozlamalar `Storefront.brand.b2bConfig` da (`singleConfig` kabi) →
+    **migratsiya kerak emas**; `normalizeB2bConfig` + 8 test.
+  - Fayllar: `data/uiBuilderData.ts` (config), `storefront/B2bInquiryModal.tsx`,
+    `StorePage.tsx`, `UIBuilderPage.tsx` (Vitrina → B2B paneli),
+    `routes/storefront.ts`, `routes/vitrina.ts`.
 - ✅ **Mini App "do'kon ochilmayapti" (iPhone) — barqarorlik tuzatishlari.** Bot ishlab
   turgani holda `🛍 Do'kon` tugmasi ba'zi qurilmalarda oq ekran berardi. Uchta
   mustaqil sabab bartaraf qilindi:

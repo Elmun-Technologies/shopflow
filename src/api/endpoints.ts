@@ -14,6 +14,7 @@ import type {
   LeadStatus,
   OrderStatus,
   VitrinaLayout,
+  StoreMode,
   VitrinaBlock,
 } from "../types/api";
 
@@ -194,7 +195,7 @@ export const vitrinaApi = {
     blocks: VitrinaBlock[];
     brand?: Record<string, unknown>;
     published?: boolean;
-    storeMode?: "multi" | "single";
+    storeMode?: StoreMode;
     singleProductId?: string | null;
   }) =>
     api<VitrinaLayout>("/vitrina/layout", { method: "PUT", body: data }),
