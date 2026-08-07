@@ -14,7 +14,7 @@
 
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { nextLeadCode } from "./codes.js";
-import { sendTelegramRaw, notifyAdmin } from "./telegram-notify.js";
+import { sendTelegramRaw, sendTelegramPhoto, notifyAdmin } from "./telegram-notify.js";
 import { publishToTenant } from "./sse-bus.js";
 import { aiReplyToMessage } from "./ai-assistant.js";
 import { productPricing, toVariantLike, visibleVariants } from "./variant-shape.js";
@@ -29,6 +29,7 @@ import {
 } from "./bot-flow-schema.js";
 
 const TG_TEXT_LIMIT = 4000;
+const TG_CAPTION_LIMIT = 1024; // Telegram sendPhoto caption chegarasi
 const CATALOG_PAGE_SIZE = 8;
 
 // ─── Kontekst ───────────────────────────────────────────────────────────────
@@ -314,6 +315,35 @@ async function send(ctx: BotEngineCtx, text: string, options?: Record<string, un
   return res.ok ? 1 : 0;
 }
 
+/**
+ * Rasmli karta yuboradi (marketplace uslubi). Matn caption'ga (1024) sig'sa —
+ * rasm + matn + tugmalar BITTA xabarda; sig'masa yoki rasm yaroqsiz bo'lsa —
+ * rasm alohida, so'ng to'liq matn tugmalar bilan (yoki faqat matn). Rasmsiz —
+ * oddiy matnli xabar. Hech qanday holatda avvalgi xatti-harakatdan yomon emas.
+ */
+async function sendCard(
+  ctx: BotEngineCtx,
+  image: string | undefined,
+  text: string,
+  options?: Record<string, unknown>,
+): Promise<number> {
+  if (!ctx.botToken) return 0;
+  const body = interpolate(text, ctx);
+  if (image) {
+    // Butun karta caption'ga sig'sa — bitta rasm+caption+tugma xabari.
+    // (HTML teglar buzilmasligi uchun faqat to'liq sig'ganda birlashtiramiz.)
+    if (body.length <= TG_CAPTION_LIMIT) {
+      const res = await sendTelegramPhoto(ctx.botToken, ctx.chatId, image, body, options);
+      if (res.ok) return 1;
+      // Rasm yuborilmadi (yaroqsiz URL) — matnga qaytamiz.
+    } else {
+      // Karta uzun — rasmni caption'siz alohida, matnni pastda tugmalar bilan.
+      await sendTelegramPhoto(ctx.botToken, ctx.chatId, image).catch(() => null);
+    }
+  }
+  return send(ctx, body, options);
+}
+
 async function answerCallback(ctx: BotEngineCtx, queryId: string | undefined): Promise<void> {
   if (!ctx.botToken || !queryId) return;
   // Spinner'ni darhol o'chiramiz — Telegram 10s ichida javob kutadi.
@@ -356,15 +386,12 @@ async function showScreen(
   const body = [opts.prefix, pick(screen.text, session.lang)].filter((x) => x && x.trim()).join("\n\n");
   const keyboard = screenKeyboard(screen, session.lang, ctx, session.screenPath.length > 0);
 
-  if (screen.imageUrl && ctx.botToken) {
-    await fetch(`https://api.telegram.org/bot${ctx.botToken}/sendPhoto`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: ctx.chatId, photo: screen.imageUrl }),
-    }).catch(() => null);
-  }
-
-  return send(ctx, body || screen.name, keyboard ? { reply_markup: keyboard } : undefined);
+  return sendCard(
+    ctx,
+    screen.imageUrl || undefined,
+    body || screen.name,
+    keyboard ? { reply_markup: keyboard } : undefined,
+  );
 }
 
 // ─── Anketa ─────────────────────────────────────────────────────────────────
@@ -665,7 +692,10 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     ? `💰 ${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency)}`
     : `💰 ${T[lang].priceOnRequest}`;
 
-  const parts = [
+  const image = Array.isArray(p.images) ? (p.images as string[])[0] : undefined;
+
+  // Karta "boshi" — nom/narx/zaxira/variant/pog'ona (asosiy ma'lumot).
+  const head = [
     `<b>${p.name}</b>`,
     p.sku ? `<code>${p.sku}</code>` : "",
     "",
@@ -674,9 +704,14 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     ...variantLines,
     ...tierLines,
     ...moqLine,
-    "",
-    (p.description ?? "").slice(0, 1500),
-  ];
+  ].filter((x) => x !== "").join("\n");
+
+  // Tavsif. Rasm bo'lsa kartani bitta xabar (rasm + caption) qilish uchun
+  // tavsifni caption byudjetiga sig'diramiz; rasmsiz — kengroq matn.
+  const rawDesc = (p.description ?? "").trim();
+  const descBudget = image ? Math.max(0, TG_CAPTION_LIMIT - head.length - 8) : 1500;
+  const desc = rawDesc.length > descBudget ? rawDesc.slice(0, Math.max(0, descBudget - 1)).trimEnd() + "…" : rawDesc;
+  const cardText = desc ? `${head}\n\n${desc}` : head;
 
   // Mahsulot kartochkasidagi harakatlar — oqimdagi birinchi anketa (mavjud bo'lsa)
   const rows: InlineButton[][] = [];
@@ -689,16 +724,9 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
   }
   rows.push([{ text: T[lang].home, callback_data: "nav:home" }]);
 
-  const image = Array.isArray(p.images) ? (p.images as string[])[0] : undefined;
-  if (image && ctx.botToken) {
-    await fetch(`https://api.telegram.org/bot${ctx.botToken}/sendPhoto`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: ctx.chatId, photo: image }),
-    }).catch(() => null);
-  }
-
-  return send(ctx, parts.filter((x) => x !== "").join("\n"), { reply_markup: { inline_keyboard: rows } });
+  return sendCard(ctx, image, cardText, {
+    reply_markup: { inline_keyboard: rows },
+  });
 }
 
 // ─── Buyurtma kuzatish ──────────────────────────────────────────────────────

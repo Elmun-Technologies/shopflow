@@ -87,6 +87,49 @@ export async function sendTelegramRaw(
   return sendTelegramMessage(token, chatId, text, options);
 }
 
+// Rasmni (ixtiyoriy caption + tugmalar bilan) yuboradi. Caption HTML sifatida
+// render qilinadi — bu bot kartochkasini bitta xabarga (rasm + matn + tugma)
+// birlashtirish uchun ishlatiladi (marketplace uslubi).
+export async function sendTelegramPhoto(
+  token: string,
+  chatId: number | string,
+  photo: string,
+  caption?: string,
+  options?: Record<string, unknown>,
+): Promise<TelegramSendResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo,
+        ...(caption ? { caption, parse_mode: "HTML" } : {}),
+        ...options,
+      }),
+      signal: controller.signal,
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error_code?: number;
+      description?: string;
+    };
+    if (!res.ok || body.ok === false) {
+      console.warn("[tg-notify] sendPhoto failed", res.status, body.description?.slice(0, 200));
+      return { ok: false, errorCode: body.error_code ?? res.status, description: body.description };
+    }
+    return { ok: true };
+  } catch (err) {
+    const description = err instanceof Error ? err.message : String(err);
+    console.warn("[tg-notify] sendPhoto network error", err);
+    return { ok: false, description };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface NotifyResult {
   sent: boolean;
   reason?: string;

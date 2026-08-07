@@ -311,6 +311,15 @@ o'zgartiradi (buzilish xavfi bor) — user qaroriga qoldirildi:
 - [ ] **SSRF DNS-rebind (TOCTOU)** (`outbound-webhook.ts`, `salesdoctor-client.ts`) — `isUrlSafe` DNS'ni bir marta hal qiladi, `fetch` yana hal qiladi (qisqa TTL bilan private IP'ga rebind mumkin). Tuzatish: hal qilingan IP'ni pin qilish (custom lookup/agent) — legitimate load-balanced host'larni buzmaslik uchun ehtiyotkorlik kerak.
 
 ### ✅ Yaqinda bajarilgan
+- ✅ **Telegram bot UI optimizatsiyasi — bitta karta xabari.** Ilgari rasmli
+  mahsulot/ekran **ikkita** xabar bo'lardi: avval yalang'och rasm (`sendPhoto`
+  caption'siz, tugmasiz), keyin alohida matn+tugmalar. Endi `sendCard` yordamchisi
+  matn caption'ga (1024) sig'sa **rasm + matn + tugmalarni BITTA** marketplace
+  uslubidagi kartaga birlashtiradi (Uzum kabi). Sig'masa yoki rasm yaroqsiz bo'lsa —
+  xavfsiz fallback (rasm alohida + matn tugmalar bilan, yoki faqat matn) → hech
+  qachon avvalgidan yomon emas. Mahsulot tavsifi rasm bo'lsa caption byudjetiga
+  moslab qisqartiriladi (HTML teglar buzilmaydi). Fayllar: `lib/telegram-notify.ts`
+  (`sendTelegramPhoto`), `lib/bot-engine.ts` (`sendCard`, `showScreen`, `showProduct`).
 - ✅ **B2B (ulgurji) vitrina rejimi** — uchinchi `storeMode`. Bot konstruktorida `b2b`
   shabloni bor edi, lekin uning "🛍 Katalog (ilova)" tugmasi mijozni **chakana,
   savatli** vitrinaga olib borardi — shablonning o'z mantig'iga zid
