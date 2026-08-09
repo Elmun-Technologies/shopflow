@@ -196,8 +196,12 @@ const T = {
     fromN: (n: number, unit: string) => `${n.toLocaleString("uz-UZ")} ${unit} dan`,
     moqLine: (n: number, unit: string) => `Minimal buyurtma: ${n.toLocaleString("uz-UZ")} ${unit}`,
     somethingWrong: "Xatolik yuz berdi. /start bosib qaytadan urinib ko'ring.",
+    view: "👁 Ko'rish",
+    catalogNav: "📄 Sahifalash",
+    upsellTitle: "🎁 Ko'pincha birga olishadi:",
   },
   ru: {
+
     back: "⬅️ Назад",
     home: "🏠 Главное меню",
     menuButton: "🏠 Меню",
@@ -228,8 +232,12 @@ const T = {
     fromN: (n: number, unit: string) => `от ${n.toLocaleString("ru-RU")} ${unit}`,
     moqLine: (n: number, unit: string) => `Минимальный заказ: ${n.toLocaleString("ru-RU")} ${unit}`,
     somethingWrong: "Произошла ошибка. Нажмите /start и попробуйте снова.",
+    view: "👁 Смотреть",
+    catalogNav: "📄 Страницы",
+    upsellTitle: "🎁 Часто покупают вместе:",
   },
 } as const;
+
 
 // ─── Yordamchilar ───────────────────────────────────────────────────────────
 
@@ -598,6 +606,7 @@ async function showCatalog(
       // Product.price (odatda 0) ni ko'rsatib, "0 so'm" deb yozardi.
       select: {
         id: true, name: true, price: true, oldPrice: true, currency: true, stock: true,
+        images: true,
         variants: { where: { active: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -635,8 +644,15 @@ async function showCatalog(
     ? `\n\n<i>${page * CATALOG_PAGE_SIZE + 1}–${Math.min((page + 1) * CATALOG_PAGE_SIZE, total)} / ${total}</i>`
     : "";
 
-  return send(ctx, T[lang].catalogTitle + pageInfo, { reply_markup: { inline_keyboard: rows } });
+  // Birinchi mahsulot rasmini "banner" sifatida ishlatamiz — ro'yxat rasmsiz,
+  // quruq matn bo'lib ko'rinmasligi uchun (marketplace uslubi).
+  const bannerImage = products.find((p) => Array.isArray(p.images) && (p.images as string[])[0])
+    ?.images as string[] | undefined;
+  const banner = bannerImage?.[0];
+
+  return sendCard(ctx, banner, T[lang].catalogTitle + pageInfo, { reply_markup: { inline_keyboard: rows } });
 }
+
 
 async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: Session, productId: string): Promise<number> {
   const lang = session.lang;
@@ -667,13 +683,13 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
   // sifatida ko'rsatiladi va mijoz Mini App'da yoki menejer orqali tanlaydi.
   const variantLines = variants.length
     ? [
-        "",
-        `<b>${T[lang].variantsTitle}</b>`,
-        ...variants.slice(0, 12).map((v) => {
-          const stockMark = v.stock > 0 ? "" : ` — ${T[lang].outOfStock}`;
-          return `• ${v.name} — ${formatMoney(v.price, p.currency)}${stockMark}`;
-        }),
-      ]
+      "",
+      `<b>${T[lang].variantsTitle}</b>`,
+      ...variants.slice(0, 12).map((v) => {
+        const stockMark = v.stock > 0 ? "" : ` — ${T[lang].outOfStock}`;
+        return `• ${v.name} — ${formatMoney(v.price, p.currency)}${stockMark}`;
+      }),
+    ]
     : [];
 
   // B2B narx pog'onalari — hajm bo'yicha (maʼlumot; yakuniy narxni menejer tasdiqlaydi)
@@ -681,10 +697,10 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
   const unitLabel = p.unit || T[lang].pcs;
   const tierLines = tiers.length
     ? [
-        "",
-        `<b>${T[lang].tiersTitle}</b>`,
-        ...tiers.map((tr) => `• ${T[lang].fromN(tr.minQty, unitLabel)} — ${formatMoney(tr.price, p.currency)}`),
-      ]
+      "",
+      `<b>${T[lang].tiersTitle}</b>`,
+      ...tiers.map((tr) => `• ${T[lang].fromN(tr.minQty, unitLabel)} — ${formatMoney(tr.price, p.currency)}`),
+    ]
     : [];
   const moqLine = p.moq && p.moq > 0 ? [`📦 ${T[lang].moqLine(p.moq, unitLabel)}`] : [];
 
@@ -713,21 +729,53 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
   const desc = rawDesc.length > descBudget ? rawDesc.slice(0, Math.max(0, descBudget - 1)).trimEnd() + "…" : rawDesc;
   const cardText = desc ? `${head}\n\n${desc}` : head;
 
+  // Upsell / combo — shu mahsulot bilan birga tez-tez olinadigan qo'shimchalar
+  // (admin panelda "Mahsulotlar → Combo" bo'limida sozlanadi). Bot'da savat
+  // yo'q, shuning uchun taklif "Mini App'da ko'rish" tugmasi bilan ko'rsatiladi.
+  const addons = await ctx.prisma.productAddon.findMany({
+    where: { tenantId: ctx.tenantId, mainProductId: p.id, addonProduct: { active: true } },
+    orderBy: { position: "asc" },
+    take: 3,
+    select: {
+      discountPct: true,
+      addonProduct: { select: { id: true, name: true, price: true, currency: true } },
+    },
+  });
+
+  const upsellLines = addons.length
+    ? [
+      "",
+      `<b>${T[lang].upsellTitle}</b>`,
+      ...addons.map((a) => {
+        const orig = Number(a.addonProduct.price);
+        const discounted = a.discountPct > 0 ? Math.round(orig * (1 - a.discountPct / 100)) : orig;
+        const pctMark = a.discountPct > 0 ? ` (−${a.discountPct}%)` : "";
+        return `• ${a.addonProduct.name} — ${formatMoney(discounted, a.addonProduct.currency)}${pctMark}`;
+      }),
+    ]
+    : [];
+
+  const cardTextWithUpsell = upsellLines.length ? `${cardText}\n${upsellLines.join("\n")}` : cardText;
+
   // Mahsulot kartochkasidagi harakatlar — oqimdagi birinchi anketa (mavjud bo'lsa)
   const rows: InlineButton[][] = [];
   const firstForm = def.forms[0];
   if (firstForm) {
     rows.push([{ text: firstForm.name, callback_data: `f:${firstForm.id}` }]);
   }
+  for (const a of addons) {
+    rows.push([{ text: `🎁 ${a.addonProduct.name}`.slice(0, 60), callback_data: `p:${a.addonProduct.id}` }]);
+  }
   if (def.settings.showStoreButton) {
     rows.push([{ text: pick(def.settings.storeButtonLabel, lang) || "🛍", web_app: { url: ctx.storeUrl } }]);
   }
   rows.push([{ text: T[lang].home, callback_data: "nav:home" }]);
 
-  return sendCard(ctx, image, cardText, {
+  return sendCard(ctx, image, cardTextWithUpsell, {
     reply_markup: { inline_keyboard: rows },
   });
 }
+
 
 // ─── Buyurtma kuzatish ──────────────────────────────────────────────────────
 

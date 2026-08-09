@@ -25,8 +25,10 @@ import {
   Download,
   Layers,
   ChevronUp,
+  Printer,
 } from "lucide-react";
 import ProductImportModal from "./ProductImportModal";
+import PriceListModal from "./PriceListModal";
 import ProductVariantsEditor, {
   type ProductOption as VariantOption,
   type VariantDraft,
@@ -82,6 +84,7 @@ export default function ProductsPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
   const [restocking, setRestocking] = useState<Product | null>(null);
+  const [showPriceList, setShowPriceList] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -271,6 +274,14 @@ export default function ProductsPage() {
           >
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{t("products.import")}</span>
+          </button>
+          <button
+            onClick={() => setShowPriceList(true)}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-leaf-100 hover:bg-leaf-200 border border-leaf-300 rounded-lg text-sm font-semibold text-forest-800 whitespace-nowrap"
+            title="Прайс-лист генератори va печать"
+          >
+            <Printer className="w-4 h-4 text-forest-700" />
+            <span className="hidden sm:inline">Прайс-лист</span>
           </button>
           <button
             onClick={() => setShowCategories(true)}
@@ -563,6 +574,13 @@ export default function ProductsPage() {
             setRestocking(null);
             refetch();
           }}
+        />
+      {showPriceList && (
+        <PriceListModal
+          isOpen={showPriceList}
+          onClose={() => setShowPriceList(false)}
+          products={products}
+          currency={currency}
         />
       )}
     </>

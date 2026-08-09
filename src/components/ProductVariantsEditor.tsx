@@ -167,6 +167,12 @@ export default function ProductVariantsEditor({
   const [uploadingFor, setUploadingFor] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // ─── 1 kg Narx kalkulyatori state'lari ─────────────────────────────────────
+  const [kgBaseUsd, setKgBaseUsd] = useState<string>("20");
+  const [usdExchangeRate, setUsdExchangeRate] = useState<string>("12800");
+  const [markupUsd, setMarkupUsd] = useState<string>("0");
+  const [markupPercent, setMarkupPercent] = useState<string>("0");
+
   // ─── Tekshiruv (backend validateVariants bilan bir xil qoidalar) ──────────
   const problems = useMemo(() => {
     const out: string[] = [];
@@ -379,6 +385,102 @@ export default function ProductVariantsEditor({
             />
           ))
         )}
+      </div>
+
+      {/* ─── Kg kalkulyator bar ────────────────────────────────────────── */}
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-emerald-900 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            1 kg bazaviy narxidan modifikatsiya hisoblash ($ / so'm)
+          </span>
+        </div>
+        <p className="text-[11px] text-emerald-700">
+          Masalan: 1 kg = 20$, USD kursi va USD/so'm ustamani kiriting. "Hisoblash" bosilganda variantlar hajmi (5kg, 10kg, 20kg...) bo'yicha narxlar avto tiklanadi.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">1 kg narxi ($ USD)</label>
+            <input
+              type="number"
+              className={inputCls}
+              placeholder="Masalan: 20"
+              value={kgBaseUsd}
+              onChange={(e) => setKgBaseUsd(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">USD kursi (so'm)</label>
+            <input
+              type="number"
+              className={inputCls}
+              placeholder="Masalan: 12800"
+              value={usdExchangeRate}
+              onChange={(e) => setUsdExchangeRate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">Kg ga ustama ($)</label>
+            <input
+              type="number"
+              className={inputCls}
+              placeholder="Masalan: 2"
+              value={markupUsd}
+              onChange={(e) => setMarkupUsd(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">Variantga ustama (%)</label>
+            <input
+              type="number"
+              className={inputCls}
+              placeholder="Masalan: 0"
+              value={markupPercent}
+              onChange={(e) => setMarkupPercent(e.target.value)}
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const baseUsd = parseFloat(kgBaseUsd) || 0;
+            const rate = parseFloat(usdExchangeRate) || 1;
+            const mUsd = parseFloat(markupUsd) || 0;
+            const mPct = parseFloat(markupPercent) || 0;
+
+            if (baseUsd <= 0 && variants.length === 0) return;
+
+            const updated = variants.map((v) => {
+              // Variant nomidan yoki valuelardan kg miqdorini topamiz (e.g., "5 kg", "10kg", "500 gr")
+              const nameLower = (v.name + " " + Object.values(v.optionValues).join(" ")).toLowerCase();
+              let weightInKg = 1;
+              const kgMatch = nameLower.match(/(\d+(?:[\.,]\d+)?)\s*kg/);
+              const grMatch = nameLower.match(/(\d+(?:[\.,]\d+)?)\s*gr/);
+
+              if (kgMatch) {
+                weightInKg = parseFloat(kgMatch[1].replace(",", "."));
+              } else if (grMatch) {
+                weightInKg = parseFloat(grMatch[1].replace(",", ".")) / 1000;
+              }
+
+              if (baseUsd > 0) {
+                // (1kg narxi + kg ustamasi) * og'irlik ($ da)
+                let itemPriceUsd = (baseUsd + mUsd) * weightInKg;
+                if (mPct > 0) {
+                  itemPriceUsd += itemPriceUsd * (mPct / 100);
+                }
+                const calculatedPriceSum = Math.round(itemPriceUsd * rate);
+                return { ...v, price: calculatedPriceSum };
+              }
+              return v;
+            });
+
+            onVariantsChange(updated);
+          }}
+          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+        >
+          Modifikatsiya narxlarini avto-hisoblash
+        </button>
       </div>
 
       {/* ─── Generatsiya ───────────────────────────────────────────────── */}

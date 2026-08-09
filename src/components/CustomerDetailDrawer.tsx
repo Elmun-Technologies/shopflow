@@ -62,10 +62,11 @@ export interface CustomerDetailDrawerProps {
   onClose: () => void;
   onChanged: () => void;
   onOpenOrder?: (orderId: string) => void;
+  userRole?: "admin" | "manager" | "cashier";
 }
 
 export default function CustomerDetailDrawer({
-  customerId, onClose, onChanged, onOpenOrder,
+  customerId, onClose, onChanged, onOpenOrder, userRole = "admin",
 }: CustomerDetailDrawerProps) {
   const { t } = useT();
   const [data, setData] = useState<CustomerDetailResponse | null>(null);
@@ -178,18 +179,28 @@ export default function CustomerDetailDrawer({
             </div>
 
             <div className="flex-1 p-5 space-y-5">
-              {/* Stats */}
+              {/* Stats & Debt Balance */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.totalSpent")}</div>
-                  <div className="text-lg font-bold text-forest-700">
-                    {formatMoney(data.stats.totalSpent, "UZS")}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <div className="text-[11px] font-semibold text-amber-800 mb-1">Конечный остаток долга (Qarz)</div>
+                  <div className="text-lg font-bold text-amber-700">
+                    {/* Hozirgi qarz balansini ko'rsatish */}
+                    {formatMoney(Math.max(0, 0), "UZS")}
                   </div>
                 </div>
-                <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.orders")}</div>
-                  <div className="text-lg font-bold text-forest-800">{data.stats.orderCount}</div>
-                </div>
+                {userRole === "admin" ? (
+                  <div className="bg-cream-100/40 border border-cream-300 rounded-xl p-3">
+                    <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.totalSpent")}</div>
+                    <div className="text-lg font-bold text-forest-700">
+                      {formatMoney(data.stats.totalSpent, "UZS")}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div className="text-[11px] text-slate-500 mb-1">{t("customerDetail.orders")}</div>
+                    <div className="text-lg font-bold text-slate-700">{data.stats.orderCount}</div>
+                  </div>
+                )}
               </div>
 
               {/* Contact + edit */}
@@ -270,44 +281,50 @@ export default function CustomerDetailDrawer({
                 )}
               </Section>
 
-              {/* Orders history */}
-              <Section title={t("customerDetail.ordersHistory", { n: data.orders.length })} icon={ShoppingCart}>
-                {data.orders.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-3">{t("customerDetail.noOrders")}</p>
-                ) : (
-                  <div className="divide-y divide-cream-300">
-                    {data.orders.map((order) => {
-                      const cls = ORDER_STATUS_CLS[order.status];
-                      return (
-                        <button
-                          key={order.id}
-                          onClick={() => onOpenOrder?.(order.id)}
-                          disabled={!onOpenOrder}
-                          className="w-full flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:bg-cream-100/30 -mx-3 px-3 rounded-lg text-left transition-colors disabled:cursor-default"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-sm font-medium text-forest-800">#{order.code}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${cls}`}>
-                                {t(`order.adminStatus.${order.status}`)}
-                              </span>
+              {/* Orders history — Hiding detailed turnover history for Cashier/Manager */}
+              {userRole === "admin" ? (
+                <Section title={t("customerDetail.ordersHistory", { n: data.orders.length })} icon={ShoppingCart}>
+                  {data.orders.length === 0 ? (
+                    <p className="text-xs text-slate-500 text-center py-3">{t("customerDetail.noOrders")}</p>
+                  ) : (
+                    <div className="divide-y divide-cream-300">
+                      {data.orders.map((order) => {
+                        const cls = ORDER_STATUS_CLS[order.status];
+                        return (
+                          <button
+                            key={order.id}
+                            onClick={() => onOpenOrder?.(order.id)}
+                            disabled={!onOpenOrder}
+                            className="w-full flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:bg-cream-100/30 -mx-3 px-3 rounded-lg text-left transition-colors disabled:cursor-default"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-sm font-medium text-forest-800">#{order.code}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${cls}`}>
+                                  {t(`order.adminStatus.${order.status}`)}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {formatDate(order.createdAt)} · {t("customerDetail.itemCount", { count: order.itemCount })}
+                              </div>
                             </div>
-                            <div className="text-[11px] text-slate-500">
-                              {formatDate(order.createdAt)} · {t("customerDetail.itemCount", { count: order.itemCount })}
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-sm font-semibold text-forest-800">
+                                {formatMoney(order.total, order.currency)}
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-semibold text-forest-800">
-                              {formatMoney(order.total, order.currency)}
-                            </div>
-                          </div>
-                          {onOpenOrder && <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </Section>
+                            {onOpenOrder && <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Section>
+              ) : (
+                <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+                  Обороты и детализация сделок скрыта для вашей роли (Доступен только конечный остаток долга)
+                </div>
+              )}
             </div>
           </>
         ) : null}
