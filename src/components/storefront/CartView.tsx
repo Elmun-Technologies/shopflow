@@ -50,7 +50,7 @@ function CartViewInner({
   storeSlug, tgUserId,
   onBack, onCheckout, onUpdateQty,
 }: CartViewProps) {
-  useT();
+  const { t } = useT();
 
   // Tanlangan mahsulotlar (checkbox)
   const [selected, setSelected] = useState<Set<string>>(
@@ -122,7 +122,7 @@ function CartViewInner({
       });
       const body = await res.json().catch(() => ({})) as { discount?: number; promoCodeId?: string; error?: string };
       if (!res.ok || !body.discount) {
-        setPromoError(body.error ?? "Noto'g'ri promo kod");
+        setPromoError(body.error ?? t("cart.promoInvalid"));
         haptic.error();
       } else {
         setPromoApplied({ code, discount: body.discount, promoCodeId: body.promoCodeId! });
@@ -132,7 +132,7 @@ function CartViewInner({
         haptic.success();
       }
     } catch {
-      setPromoError("Tarmoq xatosi — qaytadan urinib ko'ring");
+      setPromoError(t("cart.networkError"));
       haptic.error();
     } finally {
       setPromoLoading(false);
@@ -154,7 +154,7 @@ function CartViewInner({
           >
             <ArrowLeft className="w-4.5 h-4.5" />
           </button>
-          <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>Savat</h2>
+          <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("cart.title")}</h2>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-16">
@@ -164,16 +164,16 @@ function CartViewInner({
           >
             <ShoppingCart className="w-9 h-9" style={{ color: "#3a3a50" }} />
           </div>
-          <p className="text-lg font-bold mb-2" style={{ color: "#f4f4f8" }}>Savat bo'sh</p>
+          <p className="text-lg font-bold mb-2" style={{ color: "#f4f4f8" }}>{t("cart.empty.title")}</p>
           <p className="text-sm text-center mb-8 leading-relaxed" style={{ color: "#52526a" }}>
-            Mahsulotlarni savatga qo'shing va buyurtma bering
+            {t("cart.empty.description")}
           </p>
           <button
             onClick={onBack}
             className="px-8 py-3.5 rounded-2xl text-sm font-bold active:scale-[0.97] transition-transform"
             style={{ backgroundColor: primaryColor, color: "#fff" }}
           >
-            Xarid qilishni boshlash
+            {t("cart.startShopping")}
           </button>
         </div>
       </div>
@@ -204,10 +204,10 @@ function CartViewInner({
             </button>
             <div>
               <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>
-                Savat
+                {t("cart.title")}
               </h2>
               <p className="text-[11px]" style={{ color: "#52526a" }}>
-                {cartCount} ta mahsulot
+                {t("cart.itemsCount", { count: cartCount })}
               </p>
             </div>
           </div>
@@ -229,7 +229,7 @@ function CartViewInner({
               {allSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
             </div>
             <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>
-              {allSelected ? "Bekor qilish" : "Hammasini tanlash"}
+              {allSelected ? t("cart.deselectAll") : t("cart.selectAll")}
             </span>
           </button>
         </div>
@@ -247,11 +247,7 @@ function CartViewInner({
               <div className="flex items-center gap-2 mb-2">
                 <Truck className="w-4 h-4" style={{ color: "#38bdf8" }} />
                 <span className="text-xs font-medium" style={{ color: "#94a3b8" }}>
-                  Bepul yetkazish uchun yana{" "}
-                  <span className="font-bold" style={{ color: "#f4f4f8" }}>
-                    {fmt(FREE_DELIVERY_THRESHOLD - selectedSubtotal, currency)}
-                  </span>
-                  {" "}kerak
+                  {t("cart.freeDeliveryProgress", { amount: fmt(FREE_DELIVERY_THRESHOLD - selectedSubtotal, currency) })}
                 </span>
               </div>
               <div className="relative h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#2a2a38" }}>
@@ -272,7 +268,7 @@ function CartViewInner({
             >
               <Truck className="w-4 h-4" style={{ color: "#38bdf8" }} />
               <span className="text-xs font-semibold" style={{ color: "#7dd3fc" }}>
-                Tabriklaymiz! Bepul yetkazish faollashdi
+                {t("cart.freeDeliveryActive")}
               </span>
             </div>
           </div>
@@ -304,7 +300,7 @@ function CartViewInner({
                     <button
                       onClick={() => toggleItem(item.productId)}
                       className="flex-shrink-0 mt-1 active:scale-90 transition-transform"
-                      aria-label={isSelected ? "Tanlovdan olib tashlash" : "Tanlash"}
+                      aria-label={isSelected ? t("cart.deselect") : t("cart.select")}
                     >
                       <div
                         className="flex items-center justify-center"
@@ -360,7 +356,7 @@ function CartViewInner({
 
                       {/* Unit price */}
                       <p className="text-[11px] mt-0.5" style={{ color: "#52526a" }}>
-                        {fmt(item.price, currency)} / dona
+                        {t("cart.perPiece", { price: fmt(item.price, currency) })}
                       </p>
 
                       {/* Discount badge */}
@@ -369,7 +365,7 @@ function CartViewInner({
                           className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1"
                           style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#f87171" }}
                         >
-                          -{savedPerItem}% chegirma
+                          {t("cart.discountBadge", { pct: savedPerItem })}
                         </span>
                       )}
                     </div>
@@ -390,7 +386,7 @@ function CartViewInner({
                           backgroundColor: item.qty === 1 ? "rgba(239,68,68,0.12)" : "#1e1e2a",
                           color: item.qty === 1 ? "#f87171" : "#94a3b8",
                         }}
-                        aria-label="Kamaytirish"
+                        aria-label={t("cart.decrease")}
                       >
                         {item.qty === 1
                           ? <Trash2 className="w-3.5 h-3.5" />
@@ -401,13 +397,13 @@ function CartViewInner({
                         className="text-sm font-bold text-center"
                         style={{ minWidth: 36, color: "#f4f4f8" }}
                       >
-                        {item.qty} dona
+                        {t("cart.pcsQty", { qty: item.qty })}
                       </span>
                       <button
                         onClick={() => { haptic.light(); onUpdateQty(item.productId, 1); }}
                         className="flex items-center justify-center active:scale-90 transition-transform"
                         style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: primaryColor, color: "#fff" }}
-                        aria-label="Oshirish"
+                        aria-label={t("cart.increase")}
                       >
                         <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                       </button>
@@ -415,7 +411,7 @@ function CartViewInner({
 
                     {/* Total per line */}
                     <div className="text-right">
-                      <p className="text-xs" style={{ color: "#52526a" }}>Jami</p>
+                      <p className="text-xs" style={{ color: "#52526a" }}>{t("cart.total")}</p>
                       <p className="text-sm font-bold" style={{ color: "#f4f4f8" }}>
                         {fmt(lineTotal, currency)}
                       </p>
@@ -438,17 +434,17 @@ function CartViewInner({
                 <Tag className="w-4 h-4" style={{ color: "#34d399" }} />
                 <div>
                   <p className="text-xs font-bold" style={{ color: "#34d399" }}>
-                    {promoApplied?.code} — chegirma qo'llanildi
+                    {t("cart.promoApplied", { code: promoApplied?.code ?? "" })}
                   </p>
                   <p className="text-[11px]" style={{ color: "#52526a" }}>
-                    -{fmt(promoDiscount, currency)} tejaysiz
+                    {t("cart.youSave", { amount: fmt(promoDiscount, currency) })}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => { setPromoApplied(null); haptic.light(); }}
                 style={{ color: "#52526a" }}
-                aria-label="Promo kodni o'chirish"
+                aria-label={t("cart.removePromo")}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -463,7 +459,7 @@ function CartViewInner({
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Promo kodni kiriting"
+                  placeholder={t("cart.promoPlaceholder")}
                   value={promoInput}
                   onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(null); }}
                   onKeyDown={(e) => { if (e.key === "Enter") applyPromo(); }}
@@ -477,7 +473,7 @@ function CartViewInner({
                   style={{ backgroundColor: primaryColor, color: "#fff" }}
                 >
                   {promoLoading && <span className="w-3 h-3 border border-white/50 border-t-white rounded-full animate-spin" />}
-                  Qo'llash
+                  {t("cart.apply")}
                 </button>
                 <button onClick={() => { setPromoOpen(false); setPromoError(null); }} style={{ color: "#52526a" }}>
                   <X className="w-4 h-4" />
@@ -496,7 +492,7 @@ function CartViewInner({
               <div className="flex items-center gap-2.5">
                 <Tag className="w-4 h-4" style={{ color: "#52526a" }} />
                 <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
-                  Promo kod bormi?
+                  {t("cart.havePromo")}
                 </span>
               </div>
               <ChevronRight className="w-4 h-4" style={{ color: "#3a3a50" }} />
@@ -512,14 +508,14 @@ function CartViewInner({
           >
             <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#3a3a50" }}>
-                Buyurtma xulosasi
+                {t("cart.summary")}
               </p>
             </div>
 
             <div className="px-4 py-3 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: "#52526a" }}>
-                  Mahsulotlar ({selectedCount} ta)
+                  {t("cart.productsCount", { count: selectedCount })}
                 </span>
                 <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
                   {fmt(selectedSubtotal, currency)}
@@ -528,7 +524,7 @@ function CartViewInner({
 
               {savingsTotal > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#52526a" }}>Chegirma</span>
+                  <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.discount")}</span>
                   <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
                     -{fmt(savingsTotal, currency)}
                   </span>
@@ -537,7 +533,7 @@ function CartViewInner({
 
               {promoDiscount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#52526a" }}>Promo ({promoApplied?.code})</span>
+                  <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.promoLabel", { code: promoApplied?.code ?? "" })}</span>
                   <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
                     -{fmt(promoDiscount, currency)}
                   </span>
@@ -545,9 +541,9 @@ function CartViewInner({
               )}
 
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#52526a" }}>Yetkazib berish</span>
+                <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.shipping")}</span>
                 {isFreeDelivery ? (
-                  <span className="text-sm font-semibold" style={{ color: "#34d399" }}>Bepul</span>
+                  <span className="text-sm font-semibold" style={{ color: "#34d399" }}>{t("cart.free")}</span>
                 ) : (
                   <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
                     {fmt(deliveryCost, currency)}
@@ -559,7 +555,7 @@ function CartViewInner({
                 className="flex items-center justify-between pt-2.5 mt-1"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <span className="text-base font-bold" style={{ color: "#f4f4f8" }}>Jami to'lov</span>
+                <span className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("cart.grandTotal")}</span>
                 <span className="text-xl font-bold" style={{ color: primaryColor }}>
                   {fmt(grandTotal, currency)}
                 </span>
@@ -572,7 +568,7 @@ function CartViewInner({
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#34d399" }} />
                   <span className="text-xs" style={{ color: "#34d399" }}>
-                    Siz <b>{fmt(savingsTotal + promoDiscount, currency)}</b> tejadingiz!
+                    {t("cart.youSaved", { amount: fmt(savingsTotal + promoDiscount, currency) })}
                   </span>
                 </div>
               )}
@@ -597,7 +593,7 @@ function CartViewInner({
             className="w-full py-4 rounded-2xl font-bold text-base text-center"
             style={{ backgroundColor: "#1e1e2a", color: "#3a3a50" }}
           >
-            Mahsulot tanlang
+            {t("cart.selectProducts")}
           </button>
         ) : (
           <button
@@ -611,7 +607,7 @@ function CartViewInner({
             >
               {selectedCount}
             </span>
-            <span className="font-bold">Buyurtma berish</span>
+            <span className="font-bold">{t("cart.placeOrder")}</span>
             <span className="font-bold">{fmt(grandTotal, currency)}</span>
           </button>
         )}

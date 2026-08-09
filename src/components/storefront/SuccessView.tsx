@@ -83,11 +83,11 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
           >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>Buyurtma raqami</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>{t("success.orderNumber")}</p>
                 <p className="text-lg font-bold" style={{ color: "#f4f4f8" }}>#{orderResult.code}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>Jami</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>{t("success.total")}</p>
                 <p className="text-lg font-bold" style={{ color: primaryColor }}>
                   {formatPrice(orderResult.total, orderResult.currency)}
                 </p>
@@ -99,7 +99,7 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
             >
               <Truck className="w-4 h-4 flex-shrink-0" style={{ color: "#38bdf8" }} />
               <span className="text-xs" style={{ color: "#94a3b8" }}>
-                Taxminiy yetkazilish: <span className="font-semibold" style={{ color: "#f4f4f8" }}>{delivStr}</span>
+                {t("success.estimatedDelivery")}: <span className="font-semibold" style={{ color: "#f4f4f8" }}>{delivStr}</span>
               </span>
             </div>
           </div>
@@ -113,7 +113,7 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
             }}
           >
             <p className="text-[10px] uppercase tracking-wider mb-4" style={{ color: "#3a3a56" }}>
-              Buyurtma holati
+              {t("success.orderStatus")}
             </p>
             <div className="relative">
               {/* Vertical line */}
@@ -175,7 +175,7 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
             <p className="text-xs leading-relaxed" style={{ color: hasTelegram ? "#bae6fd" : "#52526a" }}>
               {hasTelegram
                 ? t("success.notify.tg")
-                : `Buyurtma raqamingizni saqlang: #${orderResult.code}`}
+                : t("success.saveOrderNumber", { code: orderResult.code })}
             </p>
           </div>
 

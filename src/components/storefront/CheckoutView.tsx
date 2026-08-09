@@ -210,7 +210,7 @@ function CheckoutViewInner({
           {/* Saved addresses chips */}
           {savedAddresses.length > 0 && (
             <div>
-              <p className="text-xs mb-2" style={{ color: "#52526a" }}>Saqlangan manzillar:</p>
+              <p className="text-xs mb-2" style={{ color: "#52526a" }}>{t("checkout.savedAddresses")}</p>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {savedAddresses.map((a) => {
                   const full = formatAddress(a);
