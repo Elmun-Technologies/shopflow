@@ -1091,6 +1091,7 @@ function AddressesList({ addresses, onAdd, onRemove }: { addresses: Address[]; o
 }
 
 function PlaceholderTwoTab({ labelA, labelB }: { labelA: string; labelB: string }) {
+  const { t } = useT();
   const [tab, setTab] = useState<"a" | "b">("a");
   return (
     <div>
@@ -1114,7 +1115,7 @@ function PlaceholderTwoTab({ labelA, labelB }: { labelA: string; labelB: string 
       </div>
       <div className="py-12 text-center">
         <Star className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-        <div className="text-sm text-slate-500 dark:text-slate-400">Hech narsa yo'q</div>
+        <div className="text-sm text-slate-500 dark:text-slate-400">{t("profile.nothingHere")}</div>
       </div>
     </div>
   );
