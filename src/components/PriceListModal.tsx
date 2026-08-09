@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
-import { X, Printer, Filter, PackageCheck, Layers } from "lucide-react";
+import { X, Printer, Filter, PackageCheck } from "lucide-react";
 import { openPriceListPrint, PriceListItem } from "../utils/printPriceList";
-import { useT } from "../i18n";
 
 export interface PriceListModalProps {
   isOpen: boolean;
@@ -18,7 +17,6 @@ export default function PriceListModal({
   currency,
   storeName = "ShopFlow Market",
 }: PriceListModalProps) {
-  const { t } = useT();
   const [filterStockOnly, setFilterStockOnly] = useState(false);
   const [filterRecentOnly, setFilterRecentOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
