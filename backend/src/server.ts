@@ -55,6 +55,7 @@ import { reviewRoutes } from "./routes/reviews.js";
 import { startCartAbandonmentScheduler } from "./lib/cart-abandonment.js";
 import { startEmailReportsScheduler } from "./lib/email-reports.js";
 import { startSalesDoctorWorker, stopSalesDoctorWorker } from "./lib/salesdoctor-worker.js";
+import { startAbandonedCartReminderWorker } from "./lib/abandoned-cart-worker.js";
 import { promoCodeRoutes } from "./routes/promo-codes.js";
 import { deliveryRoutes } from "./routes/delivery.js";
 import { exportRoutes } from "./routes/export.js";
@@ -287,10 +288,12 @@ const stopScheduler = startCartAbandonmentScheduler(app.prisma, (msg, ...rest) =
 const stopEmailReports = startEmailReportsScheduler(app.prisma, (msg, ...rest) => app.log.info({ rest }, msg));
 startSalesDoctorWorker(app.prisma, app.log);
 startBotSequenceWorker(app.prisma, app.log);
+const stopCartReminderWorker = startAbandonedCartReminderWorker(app.prisma);
 app.addHook("onClose", async () => {
   stopScheduler();
   stopEmailReports();
   stopSalesDoctorWorker();
+  clearInterval(stopCartReminderWorker);
 });
 
 // Graceful shutdown — Docker SIGTERM, Ctrl+C SIGINT. onClose hook'ini ishga tushiradi

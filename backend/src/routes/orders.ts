@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { createOrderCodeWithRetry } from "../lib/codes.js";
 import { notifyOrderStatusChange, notifyAdminNewOrder } from "../lib/telegram-notify.js";
+import { notifyCustomerTelegram } from "../lib/bot-notifications.js";
 import { enrollBotSequences } from "../lib/bot-sequence-worker.js";
 import { logAudit } from "../lib/audit.js";
 import { pushOrderToSalesDoctor, pushOrderStatus } from "../lib/salesdoctor-push.js";
@@ -294,6 +295,25 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
           }
         })
         .catch((err) => app.log.warn({ err, orderId: id }, "TG push failed"));
+
+      // ORDER_READY notification — buyurtma COMPLETED bo'lganda
+      if (data.status === "COMPLETED" && order.customerId) {
+        const body =
+          `🎉 <b>Buyurtmangiz tayyor!</b>\n\n` +
+          `Buyurtma: <b>#${order.code}</b>\n\n` +
+          `Olib ketish yoki yetkazib berilishni tayinlang. "Buyurtmalarim" bo'limida to'liq ma'lumot.`;
+        notifyCustomerTelegram(
+          app.prisma,
+          tenantId,
+          order.customerId,
+          null,
+          "ORDER_READY",
+          "🎉 Buyurtmangiz tayyor!",
+          body,
+          "order",
+          order.id,
+        ).catch((err) => app.log.warn({ err, orderId: id }, "ORDER_READY notification failed"));
+      }
 
       // FIRST_PURCHASE bot sekans trigger — birinchi buyurtma COMPLETED bo'lganda
       if (data.status === "COMPLETED" && order.customerId) {

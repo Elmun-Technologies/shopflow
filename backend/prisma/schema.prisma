@@ -65,6 +65,7 @@ model Tenant {
   botSequences    BotSequence[]
   botFlow         BotFlow?
   botSessions     BotSession[]
+  notificationLogs NotificationLog[]
 }
 
 enum UserRole {
@@ -499,6 +500,7 @@ model Customer {
   promoUsages   PromoUsage[]
   loyaltyAccount LoyaltyAccount?
   botEnrollments BotSequenceEnrollment[]
+  notificationLogs NotificationLog[]
 
   @@unique([tenantId, moyskladId])
   @@unique([tenantId, salesDoctorId])
@@ -1757,4 +1759,45 @@ model BotSession {
 
   @@unique([tenantId, chatId])
   @@index([updatedAt])
+}
+
+// Notification log — yuborilgan xabarlar tarixini saqlaydi
+enum NotificationType {
+  CART_ABANDON     // Savatdagi mahsulotlarni eslatish
+  ORDER_CREATED    // Yangi buyurtma
+  ORDER_READY      // Buyurtma tayyor (COMPLETED)
+  ORDER_STATUS     // Buyurtma status o'zgarishi (umumiy)
+  PROMOTION        // Aksiya va taklif
+  MANUAL           // Operator yuborgan xabar
+}
+
+model NotificationLog {
+  id       String           @id @default(cuid())
+  tenantId String
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  customerId String?
+  customer   Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  type     NotificationType
+  title    String
+  body     String           @db.Text
+  status   String           @default("sent") // "sent", "failed", "queued"
+  channel  String           @default("telegram") // "telegram", "sms", "email"
+
+  // Telegram specific
+  telegramUserId BigInt?
+  telegramError  String?
+
+  // Qaysi event orqali yuborildi (orderId, cartId, campaignId, etc.)
+  relatedObjectType String?
+  relatedObjectId   String?
+
+  createdAt DateTime @default(now())
+  sentAt    DateTime?
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, type])
+  @@index([relatedObjectType, relatedObjectId])
 }
