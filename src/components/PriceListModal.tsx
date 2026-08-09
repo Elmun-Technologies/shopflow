@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { X, Printer, Filter, PackageCheck } from "lucide-react";
 import { openPriceListPrint, PriceListItem } from "../utils/printPriceList";
+import type { Product } from "../types/api";
 
 export interface PriceListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  products: any[];
+  products: Product[];
   currency: string;
   storeName?: string;
 }
