@@ -1496,6 +1496,59 @@ function StoreInner({ slug }: { slug: string }) {
               ))}
             </div>
 
+            {/* Smart Cross-Sell & Upsell recommendations in Cart */}
+            {data && data.products.length > 1 && (
+              <div className="px-4 py-3 bg-slate-900/60 border-t border-slate-800">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    Savatga qo'shimcha takliflar (Upsell)
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-semibold bg-amber-400/10 px-2 py-0.5 rounded-full">
+                    Maxsus narx
+                  </span>
+                </div>
+                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+                  {data.products
+                    .filter((p) => !cart.some((c) => c.productId === p.id) && p.stock > 0)
+                    .slice(0, 5)
+                    .map((crossProduct) => (
+                      <div
+                        key={crossProduct.id}
+                        className="w-36 flex-shrink-0 bg-slate-900 rounded-xl p-2 border border-slate-800 flex flex-col justify-between"
+                      >
+                        <div className="relative w-full aspect-square bg-slate-800 rounded-lg overflow-hidden mb-1.5">
+                          {crossProduct.imageUrl ? (
+                            <img src={crossProduct.imageUrl} alt={crossProduct.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-6 h-6 text-slate-600" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[11px] font-medium text-white truncate mb-1">{crossProduct.name}</p>
+                        <div className="flex items-center justify-between gap-1 mt-auto">
+                          <span className="text-xs font-bold text-emerald-400">
+                            {formatPrice(crossProduct.price, data.tenant.currency)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              haptic.medium();
+                              addToCart(crossProduct);
+                            }}
+                            className="p-1.5 rounded-lg bg-emerald-500 text-white active:scale-90 transition-transform"
+                            title="Savatga qo'shish"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
             <div className="p-4 border-t border-slate-800 bg-slate-950">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-slate-400">{t("cart.totalItems", { count: cartCount })}</span>
