@@ -447,14 +447,16 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     const total = subtotal - promoDiscount;
 
     // Kanal — agar mavjud bo'lsa
+    // Telegram Mini App'dan kelgan buyurtma bo'lsa, aktiv TELEGRAM kanalini avtomatik qo'llay
     let channelId: string | undefined;
     if (data.channelSlug) {
       const channel = await app.prisma.channel.findFirst({
         where: { tenantId: tenant.id, type: "TELEGRAM" },
       });
       if (channel) channelId = channel.id;
-    } else if (data.telegram) {
-      // Telegram'dan kelganini avtomatik aniqlash
+    } else {
+      // Telegram'dan kelganini avtomatik aniqlash (data.telegram mavjud bo'lsa yoki
+      // Mini App'dan kelganda Telegram WebApp SDK yuklanmagan bo'lsa)
       const channel = await app.prisma.channel.findFirst({
         where: { tenantId: tenant.id, type: "TELEGRAM", active: true },
       });
