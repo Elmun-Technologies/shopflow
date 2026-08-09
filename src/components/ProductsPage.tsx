@@ -575,6 +575,8 @@ export default function ProductsPage() {
             refetch();
           }}
         />
+      )}
+
       {showPriceList && (
         <PriceListModal
           isOpen={showPriceList}

@@ -117,7 +117,7 @@ export default function PriceListModal({
               }`}
             >
               <PackageCheck className="w-3.5 h-3.5" />
-              Faqat bor mahsulotlar (Qoldiq > 0)
+              Faqat bor mahsulotlar (Qoldiq &gt; 0)
             </button>
             <button
               type="button"
