@@ -1,8 +1,8 @@
 // Bot notification system — xabar yuboruvchi va jadvalga yozuvchi
 // Qo'llab turadi: savatni tashlab ketish, buyurtma tayyor, aksiyalar
 
-import type { PrismaClient, Customer } from "@prisma/client";
-import { sendTelegramMessage, type TelegramSendResult } from "./telegram-notify.js";
+import type { PrismaClient } from "@prisma/client";
+import { sendTelegramRaw } from "./telegram-notify.js";
 
 interface BotNotificationResult {
   sent: boolean;
@@ -177,7 +177,7 @@ export async function notifyCustomerTelegram(
   }
 
   // Xabar yuborish
-  const result = await sendTelegramMessage(token, tgUserId.toString(), body, {
+  const result = await sendTelegramRaw(token, tgUserId.toString(), body, {
     reply_markup: {
       inline_keyboard: [
         [{ text: "📱 Do'konda ko'rish", web_app: { url: `https://shop-flow.uz` } }],

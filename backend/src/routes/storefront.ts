@@ -5,7 +5,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { parseOptions, productPricing, toVariantLike } from "../lib/variant-shape.js";
-import { notifyCustomer } from "../lib/telegram-notify.js";
 import { notifyCustomerTelegram } from "../lib/bot-notifications.js";
 import { authStorefrontCustomer } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
