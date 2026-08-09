@@ -6,6 +6,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { parseOptions, productPricing, toVariantLike } from "../lib/variant-shape.js";
 import { notifyCustomer } from "../lib/telegram-notify.js";
+import { notifyCustomerTelegram } from "../lib/bot-notifications.js";
 import { authStorefrontCustomer } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
@@ -604,18 +605,27 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       url: "/",
     }).catch(() => null);
 
-    // Mijozga Telegram orqali tasdiqlash xabari — fonda, kutmaymiz
+    // Mijozga Telegram orqali tasdiqlash xabari + log'ga yozish — fonda, kutmaymiz
     if (customer.telegramUserId) {
       const totalStr = tenant.currency === "UZS"
         ? `${total.toLocaleString("uz-UZ")} so'm`
         : `${total} ${tenant.currency}`;
-      const text =
+      const body =
         `✅ <b>Buyurtma yaratildi!</b>\n\n` +
         `Buyurtma: <b>#${order.code}</b>\n` +
         `Summa: ${totalStr}\n\n` +
         `Mahsulotlar tayyorlanmoqda. Holat o'zgarganda shu yerda xabar yuboramiz — buyurtmangizni "Buyurtmalarim" bo'limidan kuzating.`;
-      notifyCustomer(app.prisma, tenant.id, customer.id, text)
-        .catch((err) => app.log.warn({ err, orderId: order.id }, "Checkout TG notify failed"));
+      notifyCustomerTelegram(
+        app.prisma,
+        tenant.id,
+        customer.id,
+        customer.telegramUserId,
+        "ORDER_CREATED",
+        "✅ Buyurtma qabul qilindi",
+        body,
+        "order",
+        order.id,
+      ).catch((err) => app.log.warn({ err, orderId: order.id }, "Checkout TG notify failed"));
     }
 
     // Agar mijoz to'lov usulini tanlagan bo'lsa, mos URL'ini yasaymiz
