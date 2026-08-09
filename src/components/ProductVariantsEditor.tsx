@@ -454,8 +454,8 @@ export default function ProductVariantsEditor({
               // Variant nomidan yoki valuelardan kg miqdorini topamiz (e.g., "5 kg", "10kg", "500 gr")
               const nameLower = (v.name + " " + Object.values(v.optionValues).join(" ")).toLowerCase();
               let weightInKg = 1;
-              const kgMatch = nameLower.match(/(\d+(?:[\.,]\d+)?)\s*kg/);
-              const grMatch = nameLower.match(/(\d+(?:[\.,]\d+)?)\s*gr/);
+              const kgMatch = nameLower.match(/(\d+(?:[.,]\d+)?)\s*kg/);
+              const grMatch = nameLower.match(/(\d+(?:[.,]\d+)?)\s*gr/);
 
               if (kgMatch) {
                 weightInKg = parseFloat(kgMatch[1].replace(",", "."));

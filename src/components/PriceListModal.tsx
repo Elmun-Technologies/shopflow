@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { X, Printer, Filter, PackageCheck } from "lucide-react";
 import { openPriceListPrint, PriceListItem } from "../utils/printPriceList";
+import type { Product } from "../types/api";
 
 export interface PriceListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  products: any[];
+  products: Product[];
   currency: string;
   storeName?: string;
 }
@@ -45,9 +46,9 @@ export default function PriceListModal({
       name: p.name,
       sku: p.sku || "—",
       stock: p.stock ?? 0,
-      costPrice: p.costPrice || Math.round((p.price || 0) * 0.7), // Sebestoimost default
-      oldPrice: p.oldPrice || null,
-      price: p.price || 0,
+      costPrice: Math.round((typeof p.price === "number" ? p.price : Number(p.price) || 0) * 0.7),
+      oldPrice: typeof p.oldPrice === "string" ? Number(p.oldPrice) : (p.oldPrice || null),
+      price: typeof p.price === "number" ? p.price : Number(p.price) || 0,
       receiptDate: p.createdAt,
     }));
   }, [products, filterStockOnly, filterRecentOnly, searchQuery]);

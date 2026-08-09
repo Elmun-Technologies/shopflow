@@ -460,7 +460,7 @@ export interface B2bConfig {
 
 export const defaultB2bConfig: B2bConfig = {
   showPrices: false,
-  inquiries: ["price", "sample", "consult"],
+  inquiries: ["price", "sample"],
   requireCompany: true,
   moqNote: "",
   intro: "",
