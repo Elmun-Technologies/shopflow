@@ -7,7 +7,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
-import { useT } from "../../i18n";
+import { getLang, useT } from "../../i18n";
 
 interface LoyaltyRule {
   id: string;
@@ -83,9 +83,9 @@ export default function SodiqlikPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: t("loyalty.stat.activeCustomers"), value: stats.totalAccounts, color: "#3b82f6" },
-            { label: t("loyalty.stat.totalBalance"), value: stats.totalBalance.toLocaleString("uz-UZ"), color: "#8b5cf6", unit: t("loyalty.points") },
-            { label: t("loyalty.stat.earned"), value: stats.totalEarned.toLocaleString("uz-UZ"), color: "#7BC056", unit: t("loyalty.points") },
-            { label: t("loyalty.stat.spent"), value: stats.totalSpent.toLocaleString("uz-UZ"), color: "#f59e0b", unit: t("loyalty.points") },
+            { label: t("loyalty.stat.totalBalance"), value: stats.totalBalance.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ"), color: "#8b5cf6", unit: t("loyalty.points") },
+            { label: t("loyalty.stat.earned"), value: stats.totalEarned.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ"), color: "#7BC056", unit: t("loyalty.points") },
+            { label: t("loyalty.stat.spent"), value: stats.totalSpent.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ"), color: "#f59e0b", unit: t("loyalty.points") },
           ].map((s) => (
             <div
               key={s.label}

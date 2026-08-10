@@ -392,49 +392,49 @@ export default function ProductVariantsEditor({
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-emerald-900 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            1 kg bazaviy narxidan modifikatsiya hisoblash ($ / so'm)
+            {t("variants.priceCalcTitle")}
           </span>
         </div>
         <p className="text-[11px] text-emerald-700">
-          Masalan: 1 kg = 20$, USD kursi va USD/so'm ustamani kiriting. "Hisoblash" bosilganda variantlar hajmi (5kg, 10kg, 20kg...) bo'yicha narxlar avto tiklanadi.
+          {t("variants.priceCalcHint")}
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div>
-            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">1 kg narxi ($ USD)</label>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">{t("variants.baseUsd")}</label>
             <input
               type="number"
               className={inputCls}
-              placeholder="Masalan: 20"
+              placeholder={t("variants.numberExample", { value: "20" })}
               value={kgBaseUsd}
               onChange={(e) => setKgBaseUsd(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">USD kursi (so'm)</label>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">{t("variants.usdRate")}</label>
             <input
               type="number"
               className={inputCls}
-              placeholder="Masalan: 12800"
+              placeholder={t("variants.numberExample", { value: "12800" })}
               value={usdExchangeRate}
               onChange={(e) => setUsdExchangeRate(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">Kg ga ustama ($)</label>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">{t("variants.perKgMarkup")}</label>
             <input
               type="number"
               className={inputCls}
-              placeholder="Masalan: 2"
+              placeholder={t("variants.numberExample", { value: "2" })}
               value={markupUsd}
               onChange={(e) => setMarkupUsd(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">Variantga ustama (%)</label>
+            <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">{t("variants.variantMarkup")}</label>
             <input
               type="number"
               className={inputCls}
-              placeholder="Masalan: 0"
+              placeholder={t("variants.numberExample", { value: "0" })}
               value={markupPercent}
               onChange={(e) => setMarkupPercent(e.target.value)}
             />
@@ -479,7 +479,7 @@ export default function ProductVariantsEditor({
           }}
           className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
         >
-          Modifikatsiya narxlarini avto-hisoblash
+          {t("variants.calculate")}
         </button>
       </div>
 

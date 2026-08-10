@@ -144,7 +144,7 @@ export function IntegrationsHub() {
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
-              {cat.label} <span className="opacity-60">({count})</span>
+              {t(`integrations.cat.${cat.id}`)} <span className="opacity-60">({count})</span>
             </button>
           );
         })}
@@ -189,9 +189,9 @@ export function IntegrationsHub() {
                 <div className="flex items-baseline justify-between mb-3">
                   <h4 className="text-sm font-semibold text-forest-800 flex items-center gap-2">
                     <Icon className="w-4 h-4 text-slate-400" />
-                    {cat.label}
+                    {t(`integrations.cat.${cat.id}`)}
                   </h4>
-                  <p className="text-[11px] text-slate-500">{cat.subtitle}</p>
+                  <p className="text-[11px] text-slate-500">{t(`integrations.cat.${cat.id}.d`)}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {items.map((int) => (
@@ -276,7 +276,7 @@ function IntegrationCard({
             <p className="text-sm font-semibold text-forest-800 truncate">{item.name}</p>
             {item.region === "UZ" && <span className="text-[10px]">🇺🇿</span>}
           </div>
-          <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{item.description}</p>
+          <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{t(`integrations.item.${item.id}.description`)}</p>
         </div>
       </div>
       {!compact && (
@@ -394,7 +394,7 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
               <h3 className="text-base font-semibold text-forest-800">{item.name}</h3>
               {item.region === "UZ" && <span className="text-xs">🇺🇿</span>}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t(`integrations.item.${item.id}.description`)}</p>
           </div>
           <button
             onClick={onClose}
@@ -409,7 +409,7 @@ function SetupModal({ item, onClose }: { item: IntegrationItem; onClose: () => v
         <div className="p-5 space-y-4">
           {item.setupHint && (
             <div className="bg-leaf-100/50 border border-leaf-300/40 rounded-lg p-3">
-              <p className="text-xs text-forest-800 leading-relaxed">💡 {item.setupHint}</p>
+              <p className="text-xs text-forest-800 leading-relaxed">💡 {t(`integrations.item.${item.id}.hint`)}</p>
             </div>
           )}
 

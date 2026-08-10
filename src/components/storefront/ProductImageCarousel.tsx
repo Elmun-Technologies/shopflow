@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Package } from "lucide-react";
 import { haptic } from "./storefront-theme";
+import { useT } from "../../i18n";
 
 interface ProductImageCarouselProps {
   imageUrl: string | null;
@@ -16,6 +17,7 @@ interface ProductImageCarouselProps {
  * - Rasm umuman yo'q: Package placeholder
  */
 export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductImageCarouselProps) {
+  const { t } = useT();
   const allImages = useMemo(() => {
     const set = new Set<string>();
     if (imageUrl) set.add(imageUrl);
@@ -106,7 +108,7 @@ export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductI
       {index > 0 && (
         <button
           onClick={() => goTo(index - 1)}
-          aria-label="Oldingi rasm"
+          aria-label={t("carousel.previous")}
           className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 backdrop-blur items-center justify-center text-white hover:bg-black/60 transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -115,7 +117,7 @@ export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductI
       {index < allImages.length - 1 && (
         <button
           onClick={() => goTo(index + 1)}
-          aria-label="Keyingi rasm"
+          aria-label={t("carousel.next")}
           className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 backdrop-blur items-center justify-center text-white hover:bg-black/60 transition-colors"
         >
           <ChevronRight className="w-5 h-5" />
@@ -128,7 +130,7 @@ export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductI
           <button
             key={i}
             onClick={() => goTo(i)}
-            aria-label={`Rasm ${i + 1}`}
+            aria-label={t("carousel.image", { index: i + 1 })}
             className={`transition-all rounded-full ${
               i === index ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
             }`}

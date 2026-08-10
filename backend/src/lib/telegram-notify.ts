@@ -228,50 +228,62 @@ export async function notifyOrderStatusChange(
   // Notification opt-out — mijoz "buyurtma yangiliklari" ni o'chirgan bo'lsa, jim
   const cust = await prisma.customer.findUnique({
     where: { id: order.customerId },
-    select: { notifyOrderUpdates: true },
+    select: { notifyOrderUpdates: true, language: true },
   });
   if (cust && !cust.notifyOrderUpdates) {
     return { sent: false, reason: "Customer opted out of order updates" };
   }
 
-  const text = formatStatusMessage(order.code, Number(order.total), order.currency, newStatus);
+  const text = formatStatusMessage(
+    order.code,
+    Number(order.total),
+    order.currency,
+    newStatus,
+    cust?.language === "ru" ? "ru" : "uz",
+  );
   if (!text) return { sent: false, reason: `No template for status ${newStatus}` };
 
   return notifyCustomer(prisma, tenantId, order.customerId, text);
 }
 
-function formatStatusMessage(orderCode: string, total: number, currency: string, status: string): string | null {
-  const totalStr = currency === "UZS" ? `${total.toLocaleString("uz-UZ")} so'm` : `${total} ${currency}`;
-  const templates: Record<string, { emoji: string; title: string; body: string }> = {
+export function formatStatusMessage(
+  orderCode: string,
+  total: number,
+  currency: string,
+  status: string,
+  lang: "uz" | "ru" = "uz",
+): string | null {
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
+  const totalStr = currency === "UZS"
+    ? `${total.toLocaleString(locale)} ${lang === "ru" ? "сум" : "so'm"}`
+    : `${total.toLocaleString(locale)} ${currency}`;
+  const templates: Record<string, Record<"uz" | "ru", { emoji: string; title: string; body: string }>> = {
     PENDING: {
-      emoji: "🆕",
-      title: "Yangi buyurtma qabul qilindi",
-      body: "Mahsulotlar tayyorlanmoqda. Status o'zgarganda xabar yuboramiz.",
+      uz: { emoji: "🆕", title: "Yangi buyurtma qabul qilindi", body: "Mahsulotlar tayyorlanmoqda. Holat o'zgarganda xabar yuboramiz." },
+      ru: { emoji: "🆕", title: "Новый заказ принят", body: "Товары готовятся. Мы сообщим об изменении статуса." },
     },
     PROCESSING: {
-      emoji: "🔄",
-      title: "Buyurtmangiz tayyorlanmoqda",
-      body: "Buyurtmangiz tayyorlanmoqda. Tez orada yetkazib beriladi.",
+      uz: { emoji: "🔄", title: "Buyurtmangiz tayyorlanmoqda", body: "Buyurtmangiz tayyorlanmoqda. Tez orada yetkazib beriladi." },
+      ru: { emoji: "🔄", title: "Ваш заказ готовится", body: "Заказ готовится и скоро будет передан в доставку." },
     },
     COMPLETED: {
-      emoji: "✅",
-      title: "Buyurtmangiz yetkazildi",
-      body: "Bizdan xarid qilganingiz uchun rahmat!",
+      uz: { emoji: "✅", title: "Buyurtmangiz yetkazildi", body: "Bizdan xarid qilganingiz uchun rahmat!" },
+      ru: { emoji: "✅", title: "Ваш заказ доставлен", body: "Спасибо за покупку!" },
     },
     CANCELLED: {
-      emoji: "❌",
-      title: "Buyurtma bekor qilindi",
-      body: "Agar bu xato bo'lsa, operatorimiz bilan bog'laning.",
+      uz: { emoji: "❌", title: "Buyurtma bekor qilindi", body: "Agar bu xato bo'lsa, operatorimiz bilan bog'laning." },
+      ru: { emoji: "❌", title: "Заказ отменён", body: "Если это ошибка, свяжитесь с нашим оператором." },
     },
     REFUNDED: {
-      emoji: "↩️",
-      title: "Mablag' qaytarildi",
-      body: "Mablag'ingiz hisobingizga qaytarildi.",
+      uz: { emoji: "↩️", title: "Mablag' qaytarildi", body: "Mablag'ingiz hisobingizga qaytarildi." },
+      ru: { emoji: "↩️", title: "Средства возвращены", body: "Средства возвращены на ваш счёт." },
     },
   };
-  const t = templates[status];
-  if (!t) return null;
-  return `${t.emoji} <b>${t.title}</b>\n\nBuyurtma: <b>#${orderCode}</b>\nSumma: ${totalStr}\n\n${t.body}`;
+  const template = templates[status]?.[lang];
+  if (!template) return null;
+  const orderLabel = lang === "ru" ? "Заказ" : "Buyurtma";
+  const amountLabel = lang === "ru" ? "Сумма" : "Summa";
+  return `${template.emoji} <b>${template.title}</b>\n\n${orderLabel}: <b>#${orderCode}</b>\n${amountLabel}: ${totalStr}\n\n${template.body}`;
 }
 
 // ─── Admin xabarnomalar ────────────────────────────────────────────────────────

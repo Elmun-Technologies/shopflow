@@ -5,7 +5,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { parseOptions, productPricing, toVariantLike } from "../lib/variant-shape.js";
-import { notifyCustomerTelegram } from "../lib/bot-notifications.js";
+import { getNotificationTemplate, notifyCustomerTelegram } from "../lib/bot-notifications.js";
 import { authStorefrontCustomer } from "../lib/telegram-auth.js";
 import { grantOrderPoints } from "./loyalty.js";
 import { pushOrderToSalesDoctor } from "../lib/salesdoctor-push.js";
@@ -311,16 +311,20 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     // To'lov usuli — buyurtma yaratilgandan keyin shu usul URL'i qaytariladi
     // (masalan "click", "payme"). Bo'sh bo'lsa naqd to'lov hisoblanadi.
     paymentMethod: z.string().max(40).optional(),
+    // Mini App interfeysi tili — mijoz profili, Telegram xabarlari va to'lov
+    // sahifasi bir tilda qolishi uchun checkout bilan birga yuboriladi.
+    language: z.enum(["uz", "ru"]).default("uz"),
   });
 
   app.post("/:tenantSlug/checkout", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
     const data = checkoutSchema.parse(req.body);
+    const localize = (uz: string, ru: string) => data.language === "ru" ? ru : uz;
 
     const tenant = await app.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
     });
-    if (!tenant) return reply.code(404).send({ error: "Do'kon topilmadi" });
+    if (!tenant) return reply.code(404).send({ error: localize("Do'kon topilmadi", "Магазин не найден") });
 
     // Mahsulotlarni topish va narxlarni snapshot qilish.
     // Narx **har doim serverdan** olinadi — mijoz yuborgan narxga ishonilmaydi.
@@ -330,7 +334,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       include: { variants: true },
     });
     if (new Set(productIds).size !== new Set(products.map((p) => p.id)).size) {
-      return reply.code(400).send({ error: "Ba'zi mahsulotlar topilmadi yoki sotuvda emas" });
+      return reply.code(400).send({ error: localize("Ba'zi mahsulotlar topilmadi yoki sotuvda emas", "Некоторые товары не найдены или сняты с продажи") });
     }
 
     // Variantli mahsulotda narx va zaxira variantdan olinadi.
@@ -350,18 +354,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
 
       if (hasVariants) {
         if (!item.variantId) {
-          stockErrors.push(`"${p.name}" uchun variant tanlanmagan`);
+          stockErrors.push(localize(`"${p.name}" uchun variant tanlanmagan`, `Для «${p.name}» не выбран вариант`));
           continue;
         }
         const variant = p.variants.find((v) => v.id === item.variantId && v.active);
         if (!variant) {
-          stockErrors.push(`"${p.name}" uchun tanlangan variant topilmadi`);
+          stockErrors.push(localize(`"${p.name}" uchun tanlangan variant topilmadi`, `Выбранный вариант «${p.name}» не найден`));
           continue;
         }
         if (variant.stock < item.qty) {
-          stockErrors.push(
+          stockErrors.push(localize(
             `"${p.name} — ${variant.name}" uchun yetarli tovar yo'q (mavjud: ${variant.stock}, so'ralgan: ${item.qty})`,
-          );
+            `Недостаточно товара «${p.name} — ${variant.name}» (в наличии: ${variant.stock}, запрошено: ${item.qty})`,
+          ));
           continue;
         }
         items.push({
@@ -377,7 +382,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
 
       // Variantsiz mahsulot — avvalgi mantiq o'zgarishsiz
       if (p.stock !== null && p.stock !== undefined && p.stock < item.qty) {
-        stockErrors.push(`"${p.name}" uchun yetarli tovar yo'q (mavjud: ${p.stock}, so'ralgan: ${item.qty})`);
+        stockErrors.push(localize(`"${p.name}" uchun yetarli tovar yo'q (mavjud: ${p.stock}, so'ralgan: ${item.qty})`, `Недостаточно товара «${p.name}» (в наличии: ${p.stock}, запрошено: ${item.qty})`));
         continue;
       }
       items.push({
@@ -391,7 +396,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     }
 
     if (stockErrors.length > 0) {
-      return reply.code(400).send({ error: "Yetarli tovar yo'q", details: stockErrors });
+      return reply.code(400).send({ error: localize("Yetarli tovar yo'q", "Недостаточно товара"), details: stockErrors });
     }
     const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
 
@@ -420,13 +425,17 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           email: data.customer.email || null,
           notes: data.customer.notes,
           telegramUserId: tgUserId,
+          language: data.language,
         },
       });
-    } else if (tgUserId && customer.telegramUserId !== tgUserId) {
-      // Mavjud mijozga Telegram userId ni bog'lab qo'yamiz
+    } else if ((tgUserId && customer.telegramUserId !== tgUserId) || customer.language !== data.language) {
+      // Telegram ID va Mini App'da tanlangan tilni bitta profilda sinxron tutamiz.
       customer = await app.prisma.customer.update({
         where: { id: customer.id },
-        data: { telegramUserId: tgUserId },
+        data: {
+          ...(tgUserId && customer.telegramUserId !== tgUserId ? { telegramUserId: tgUserId } : {}),
+          language: data.language,
+        },
       });
     }
 
@@ -566,7 +575,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
             })
           : null;
         return reply.code(409).send({
-          error: "Mahsulot zaxiradan tugadi",
+          error: localize("Mahsulot zaxiradan tugadi", "Товар закончился на складе"),
           code: "OUT_OF_STOCK",
           product: product
             ? { id: productId, name: product.name, stock: variant ? variant.stock : product.stock }
@@ -607,21 +616,20 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     // Mijozga Telegram orqali tasdiqlash xabari + log'ga yozish — fonda, kutmaymiz
     if (customer.telegramUserId) {
       const totalStr = tenant.currency === "UZS"
-        ? `${total.toLocaleString("uz-UZ")} so'm`
-        : `${total} ${tenant.currency}`;
-      const body =
-        `✅ <b>Buyurtma yaratildi!</b>\n\n` +
-        `Buyurtma: <b>#${order.code}</b>\n` +
-        `Summa: ${totalStr}\n\n` +
-        `Mahsulotlar tayyorlanmoqda. Holat o'zgarganda shu yerda xabar yuboramiz — buyurtmangizni "Buyurtmalarim" bo'limidan kuzating.`;
+        ? `${total.toLocaleString(data.language === "ru" ? "ru-RU" : "uz-UZ")} ${data.language === "ru" ? "сум" : "so'm"}`
+        : `${total.toLocaleString(data.language === "ru" ? "ru-RU" : "uz-UZ")} ${tenant.currency}`;
+      const notification = getNotificationTemplate("order_created", data.language, {
+        orderCode: order.code,
+        total: totalStr,
+      });
       notifyCustomerTelegram(
         app.prisma,
         tenant.id,
         customer.id,
         customer.telegramUserId,
         "ORDER_CREATED",
-        "✅ Buyurtma qabul qilindi",
-        body,
+        notification.title,
+        `${notification.title}\n\n${notification.body}`,
         "order",
         order.id,
       ).catch((err) => app.log.warn({ err, orderId: order.id }, "Checkout TG notify failed"));
@@ -660,7 +668,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
                 amountSom: total,
                 accountField: cfg.accountField ?? "order_id",
                 callbackUrl: returnUrl,
-                language: "uz",
+                language: data.language,
               });
               paymentMethodLabel = method.name;
             }
@@ -900,6 +908,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     lastName: z.string().max(80).optional(),
     username: z.string().max(80).optional(),
     ref: z.coerce.number().int().positive().optional(),
+    language: z.enum(["uz", "ru"]).optional(),
   });
   app.get("/:tenantSlug/profile", async (req, reply) => {
     const { tenantSlug } = z.object({ tenantSlug: z.string() }).parse(req.params);
@@ -943,6 +952,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           lastName: q.lastName ?? null,
           telegramUserId: tgId,
           telegramUsername: q.username ?? null,
+          language: q.language ?? "uz",
           referredByCustomerId,
         },
         include: { addresses: true },

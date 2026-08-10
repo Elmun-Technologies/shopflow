@@ -2,6 +2,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { notifyCustomerByTelegramId } from "../lib/telegram-notify.js";
+import { buildReminderText } from "../lib/cart-abandonment.js";
 
 export const abandonedCartsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.authenticate);
@@ -52,20 +53,20 @@ export const abandonedCartsRoutes: FastifyPluginAsync = async (app) => {
       if (!cart) return reply.code(404).send({ error: "Savat topilmadi" });
 
       const items = Array.isArray(cart.items)
-        ? (cart.items as unknown as Array<{ name: string; qty: number }>)
+        ? (cart.items as unknown as Array<{ productId: string; name: string; qty: number; price: number }>)
         : [];
-      const itemCount = items.reduce((s, i) => s + (i.qty ?? 0), 0);
-      const totalStr = cart.currency === "UZS"
-        ? `${Number(cart.total).toLocaleString("uz-UZ")} so'm`
-        : `${Number(cart.total)} ${cart.currency}`;
-      const greeting = cart.customerName ? `${cart.customerName}, ` : "";
-      const itemsList = items.slice(0, 5).map((i) => `• ${i.name} × ${i.qty}`).join("\n");
-
-      const text =
-        `🛒 <b>${greeting}savatingiz kutmoqda!</b>\n\n` +
-        `<b>${cart.tenant.name}</b> do'konida ${itemCount} ta mahsulot tanlab qoldingiz:\n\n` +
-        itemsList +
-        `\n\n<b>Jami:</b> ${totalStr}\n\nDavom etish uchun do'konga qayting 👇`;
+      const customer = await app.prisma.customer.findFirst({
+        where: { tenantId: cart.tenantId, telegramUserId: cart.telegramUserId },
+        select: { language: true },
+      });
+      const text = buildReminderText({
+        storeName: cart.tenant.name,
+        customerName: cart.customerName,
+        items,
+        total: Number(cart.total),
+        currency: cart.currency,
+        lang: customer?.language === "ru" ? "ru" : "uz",
+      });
 
       const result = await notifyCustomerByTelegramId(
         app.prisma,

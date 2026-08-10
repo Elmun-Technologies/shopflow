@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Mail } from "lucide-react";
 import type { EmailCampaign, EmailCampaignStatus } from "../../data/marketingData";
-import { initialEmailCampaigns, emailCampaignStatusLabels } from "../../data/marketingData";
+import { initialEmailCampaigns } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
 import { useT } from "../../i18n";
 
@@ -12,6 +12,7 @@ const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracki
 const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
 
 function EmailStatusBadge({ status }: { status: EmailCampaignStatus }) {
+  const { t } = useT();
   const map: Record<EmailCampaignStatus, string> = {
     draft: "bg-cream-200 text-slate-700",
     scheduled: "bg-blue-100 text-blue-600",
@@ -19,7 +20,7 @@ function EmailStatusBadge({ status }: { status: EmailCampaignStatus }) {
     sent: "bg-leaf-100 text-forest-700",
     paused: "bg-amber-100 text-amber-600",
   };
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{emailCampaignStatusLabels[status]}</span>;
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{t(`rassilka.status.${status}`)}</span>;
 }
 
 export default function RassilkaPage() {
@@ -236,7 +237,9 @@ function EmailForm({ initial, error, onSave }: EmailFormProps) {
           <div>
             <label htmlFor={`${id}-status`} className={labelClass}>{t("rassilka.col.status")}</label>
             <select id={`${id}-status`} className={inputClass} value={status} onChange={(e) => setStatus(e.target.value as EmailCampaignStatus)}>
-              {Object.entries(emailCampaignStatusLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {(["draft", "scheduled", "sending", "sent", "paused"] as EmailCampaignStatus[]).map((status) => (
+                <option key={status} value={status}>{t(`rassilka.status.${status}`)}</option>
+              ))}
             </select>
           </div>
           <div>

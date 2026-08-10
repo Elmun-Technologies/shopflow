@@ -18,29 +18,44 @@ interface CartItem {
   price: number;
 }
 
-function formatItemsList(items: CartItem[]): string {
+export type CustomerLang = "uz" | "ru";
+
+function formatItemsList(items: CartItem[], lang: CustomerLang): string {
   const lines = items.slice(0, 5).map((i) => `• ${i.name} × ${i.qty}`);
-  if (items.length > 5) lines.push(`<i>...va yana ${items.length - 5} ta</i>`);
+  if (items.length > 5) {
+    lines.push(lang === "ru" ? `<i>...и ещё ${items.length - 5}</i>` : `<i>...va yana ${items.length - 5} ta</i>`);
+  }
   return lines.join("\n");
 }
 
-function buildReminderText(args: {
+export function buildReminderText(args: {
   storeName: string;
   customerName: string | null;
   items: CartItem[];
   total: number;
   currency: string;
+  lang: CustomerLang;
 }): string {
+  const locale = args.lang === "ru" ? "ru-RU" : "uz-UZ";
   const totalStr = args.currency === "UZS"
-    ? `${args.total.toLocaleString("uz-UZ")} so'm`
-    : `${args.total} ${args.currency}`;
+    ? `${args.total.toLocaleString(locale)} ${args.lang === "ru" ? "сум" : "so'm"}`
+    : `${args.total.toLocaleString(locale)} ${args.currency}`;
   const itemCount = args.items.reduce((s, i) => s + i.qty, 0);
   const greeting = args.customerName ? `${args.customerName}, ` : "";
 
+  if (args.lang === "ru") {
+    return (
+      `🛒 <b>${greeting}ваша корзина ждёт!</b>\n\n` +
+      `Вы выбрали ${itemCount} товар(ов) в магазине <b>${args.storeName}</b>:\n\n` +
+      formatItemsList(args.items, args.lang) + `\n\n` +
+      `<b>Итого:</b> ${totalStr}\n\n` +
+      `Вернитесь в магазин, чтобы продолжить 👇`
+    );
+  }
   return (
     `🛒 <b>${greeting}savatingiz kutmoqda!</b>\n\n` +
     `<b>${args.storeName}</b> do'konida ${itemCount} ta mahsulot tanlab qoldingiz:\n\n` +
-    formatItemsList(args.items) + `\n\n` +
+    formatItemsList(args.items, args.lang) + `\n\n` +
     `<b>Jami:</b> ${totalStr}\n\n` +
     `Davom etish uchun do'konga qayting 👇`
   );
@@ -85,7 +100,7 @@ async function processOnce(prisma: PrismaClient, log: (msg: string, ...rest: unk
       // shu eslatmani yuborilgan deb belgilab keyingisini o'tkazib yuboramiz.
       const matchingCustomer = await prisma.customer.findFirst({
         where: { tenantId: cart.tenantId, telegramUserId: cart.telegramUserId },
-        select: { notifyCartAbandonment: true },
+        select: { notifyCartAbandonment: true, language: true },
       });
       if (matchingCustomer && !matchingCustomer.notifyCartAbandonment) {
         await prisma.abandonedCart.update({
@@ -101,6 +116,7 @@ async function processOnce(prisma: PrismaClient, log: (msg: string, ...rest: unk
         items,
         total: Number(cart.total),
         currency: cart.currency,
+        lang: matchingCustomer?.language === "ru" ? "ru" : "uz",
       });
       const result = await notifyCustomerByTelegramId(
         prisma,

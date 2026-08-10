@@ -2,11 +2,14 @@
 // printOrder.ts kabi: yangi oyna ochib HTML yozadi, browser print → PDF.
 // Email yuborish uchun ham shu HTML backend'ga berilishi mumkin (keyingi etap).
 
+import { tStatic, type Lang } from "../i18n";
+
 export interface ReportInput {
   storeName: string;
   periodLabel: string; // "Oylik", "Haftalik", ...
   generatedAt: Date;
   currency: string;
+  lang: Lang;
   kpis: {
     revenue: { value: number; change: number };
     orders: { value: number; change: number };
@@ -19,11 +22,12 @@ export interface ReportInput {
   trafficSources: Array<{ name: string; percentage: number }>;
 }
 
-function fmtMoney(n: number, currency: string): string {
-  return new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " " + (currency === "UZS" ? "so'm" : currency);
+function fmtMoney(n: number, currency: string, lang: Lang): string {
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
+  return new Intl.NumberFormat(locale).format(Math.round(n)) + " " + (currency === "UZS" ? tStatic("common.sum", undefined, lang) : currency);
 }
-function fmtNum(n: number): string {
-  return new Intl.NumberFormat("uz-UZ").format(n);
+function fmtNum(n: number, lang: Lang): string {
+  return new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "uz-UZ").format(n);
 }
 function changeBadge(change: number): string {
   const positive = change >= 0;
@@ -39,7 +43,8 @@ export function openReportPrint(input: ReportInput): boolean {
   const w = window.open("", "_blank", "width=820,height=900");
   if (!w) return false; // Caller toast bilan xabar qiladi
 
-  const dateStr = input.generatedAt.toLocaleString("uz-UZ", { dateStyle: "long", timeStyle: "short" });
+  const tr = (key: string) => tStatic(key, undefined, input.lang);
+  const dateStr = input.generatedAt.toLocaleString(input.lang === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "long", timeStyle: "short" });
   const maxCat = Math.max(1, ...input.categorySales.map((c) => c.value));
 
   const kpiCard = (label: string, value: string, change: number) => `
@@ -50,7 +55,7 @@ export function openReportPrint(input: ReportInput): boolean {
     </div>`;
 
   const html = `<!doctype html>
-<html lang="uz"><head><meta charset="utf-8"><title>Hisobot — ${esc(input.storeName)}</title>
+<html lang="${input.lang}"><head><meta charset="utf-8"><title>${esc(tr("report.title"))} — ${esc(input.storeName)}</title>
 <style>
   @page { size: A4; margin: 14mm; }
   * { box-sizing: border-box; }
@@ -77,47 +82,47 @@ export function openReportPrint(input: ReportInput): boolean {
   @media print { .no-print { display: none !important; } }
 </style></head>
 <body>
-  <button class="print-button no-print" onclick="window.print()">🖨 Print / PDF</button>
+  <button class="print-button no-print" onclick="window.print()">🖨 ${esc(tr("common.printPdf"))}</button>
 
   <div class="header">
     <div>
       <div class="store">${esc(input.storeName)}</div>
-      <div class="sub">Savdo va operatsiya hisoboti · ${dateStr}</div>
+      <div class="sub">${esc(tr("report.salesOps"))} · ${dateStr}</div>
     </div>
     <span class="badge">${esc(input.periodLabel)}</span>
   </div>
 
-  <h2>Asosiy ko'rsatkichlar</h2>
+  <h2>${esc(tr("report.mainMetrics"))}</h2>
   <div class="kpis">
-    ${kpiCard("Daromad", fmtMoney(input.kpis.revenue.value, input.currency), input.kpis.revenue.change)}
-    ${kpiCard("Buyurtmalar", fmtNum(input.kpis.orders.value), input.kpis.orders.change)}
-    ${kpiCard("Mijozlar", fmtNum(input.kpis.customers.value), input.kpis.customers.change)}
-    ${kpiCard("Konversiya", input.kpis.conversion.value.toFixed(1) + "%", input.kpis.conversion.change)}
-    ${input.kpis.avgOrder ? kpiCard("O'rtacha chek", fmtMoney(input.kpis.avgOrder.value, input.currency), input.kpis.avgOrder.change) : ""}
+    ${kpiCard(tr("analytics.kpi.revenue"), fmtMoney(input.kpis.revenue.value, input.currency, input.lang), input.kpis.revenue.change)}
+    ${kpiCard(tr("analytics.kpi.orders"), fmtNum(input.kpis.orders.value, input.lang), input.kpis.orders.change)}
+    ${kpiCard(tr("analytics.kpi.customers"), fmtNum(input.kpis.customers.value, input.lang), input.kpis.customers.change)}
+    ${kpiCard(tr("analytics.kpi.conversion"), input.kpis.conversion.value.toFixed(1) + "%", input.kpis.conversion.change)}
+    ${input.kpis.avgOrder ? kpiCard(tr("analytics.kpi.avgOrder"), fmtMoney(input.kpis.avgOrder.value, input.currency, input.lang), input.kpis.avgOrder.change) : ""}
   </div>
 
   ${input.topProducts.length ? `
-  <h2>Eng ko'p sotilgan mahsulotlar</h2>
+  <h2>${esc(tr("report.topProducts"))}</h2>
   <table>
-    <thead><tr><th>#</th><th>Mahsulot</th><th>Sotildi</th><th style="text-align:right">Daromad</th></tr></thead>
+    <thead><tr><th>#</th><th>${esc(tr("analytics.topProducts.col.product"))}</th><th>${esc(tr("analytics.topProducts.col.sold"))}</th><th style="text-align:right">${esc(tr("analytics.topProducts.col.revenue"))}</th></tr></thead>
     <tbody>
       ${input.topProducts.slice(0, 10).map((p, i) => `
-        <tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${fmtNum(p.sold)}</td>
-        <td style="text-align:right;font-weight:600">${fmtMoney(p.revenue, input.currency)}</td></tr>`).join("")}
+        <tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${fmtNum(p.sold, input.lang)}</td>
+        <td style="text-align:right;font-weight:600">${fmtMoney(p.revenue, input.currency, input.lang)}</td></tr>`).join("")}
     </tbody>
   </table>` : ""}
 
   ${input.categorySales.length ? `
-  <h2>Kategoriyalar bo'yicha savdo</h2>
+  <h2>${esc(tr("report.categorySales"))}</h2>
   ${input.categorySales.slice(0, 8).map((c) => `
     <div class="bar-row">
       <div class="bar-name">${esc(c.name)}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round((c.value / maxCat) * 100)}%"></div></div>
-      <div class="bar-val">${fmtMoney(c.value, input.currency)}</div>
+      <div class="bar-val">${fmtMoney(c.value, input.currency, input.lang)}</div>
     </div>`).join("")}` : ""}
 
   ${input.trafficSources.length ? `
-  <h2>Trafik manbalari</h2>
+  <h2>${esc(tr("analytics.traffic.title"))}</h2>
   ${input.trafficSources.slice(0, 6).map((s) => `
     <div class="bar-row">
       <div class="bar-name">${esc(s.name)}</div>
@@ -125,7 +130,7 @@ export function openReportPrint(input: ReportInput): boolean {
       <div class="bar-val">${s.percentage.toFixed(0)}%</div>
     </div>`).join("")}` : ""}
 
-  <div class="foot">ShopFlow tomonidan yaratildi · ${dateStr}</div>
+  <div class="foot">${esc(tr("report.generated"))} · ${dateStr}</div>
 
   <script>setTimeout(function(){ try { window.print(); } catch(e){} }, 300);</script>
 </body></html>`;

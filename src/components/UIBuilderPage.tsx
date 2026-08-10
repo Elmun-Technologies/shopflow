@@ -61,7 +61,8 @@ function toPreviewProduct(p: Product): PreviewProduct {
 }
 
 export default function UIBuilderPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const [blocks, setBlocks] = useState<UIBlock[]>([]);
   const [brand, setBrand] = useState<BrandSettings>(JSON.parse(JSON.stringify(defaultBrandSettings)));
   const [published, setPublished] = useState(true);
@@ -159,13 +160,13 @@ export default function UIBuilderPage() {
     const newBlock: UIBlock = {
       id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type: def.type,
-      title: def.label,
+      title: t(`ui.block.${def.type}`),
       enabled: true,
       settings: JSON.parse(JSON.stringify(def.defaultSettings)),
     };
     setBlocks((prev) => [...prev, newBlock]);
     setSelectedBlockId(newBlock.id);
-  }, []);
+  }, [t]);
 
   const removeBlock = useCallback((id: string) => {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
@@ -176,11 +177,11 @@ export default function UIBuilderPage() {
     const newBlock: UIBlock = {
       ...JSON.parse(JSON.stringify(block)),
       id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      title: block.title + " (nusxa)",
+      title: `${block.title} (${t("ui.duplicate")})`,
     };
     setBlocks((prev) => [...prev, newBlock]);
     setSelectedBlockId(newBlock.id);
-  }, []);
+  }, [t]);
 
   const toggleBlock = useCallback((id: string) => {
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, enabled: !b.enabled } : b)));
@@ -236,22 +237,12 @@ export default function UIBuilderPage() {
     // Agar yashirin holatda saqlanmoqchi bo'lsa — operator'dan tasdiq so'rash.
     // Aks holda mijoz Mini App'da "Do'kon yopiq" ko'radi va sabab tushunmaydi.
     if (!published) {
-      const choice = window.confirm(
-        "⚠️ Vitrina yashirin holatda saqlanmoqda.\n\n" +
-        "Saqlasangiz mijozlar do'konni Telegram'da ochib ko'ra olmaydi (\"Do'kon yopiq\" xabari chiqadi).\n\n" +
-        "OK — yashirin holda saqlash\n" +
-        "Cancel — bekor qilish (so'ng \"Nashr\" tugmasini bosing)"
-      );
+      const choice = window.confirm(t("ui.confirmHidden"));
       if (!choice) return;
     }
     // Single rejimda mahsulot tanlanmagan bo'lsa — ogohlantirish.
     if (storeMode === "single" && !singleProductId) {
-      const choice = window.confirm(
-        "⚠️ Bitta mahsulot rejimi tanlangan, lekin mahsulot tanlanmagan.\n\n" +
-        "Saqlasangiz mijozlar do'konni ochib bo'sh sahifa ko'radi.\n\n" +
-        "OK — baribir saqlash\n" +
-        "Cancel — avval mahsulot tanlash"
-      );
+      const choice = window.confirm(t("ui.confirmSingleEmpty"));
       if (!choice) return;
     }
     setSaving(true);
@@ -321,7 +312,7 @@ export default function UIBuilderPage() {
     if (result.length === 0) {
       return Array.from<unknown, PreviewProduct>({ length: Math.min(count, 4) }, (_, i) => ({
         id: `placeholder-${i}`,
-        name: `Mahsulot ${i + 1}`,
+        name: t("ui.placeholder.product", { index: i + 1 }),
         price: 0,
         stock: 0,
         featured: false,
@@ -476,7 +467,7 @@ export default function UIBuilderPage() {
               {realCategories.length === 0 && [1, 2, 3, 4, 5, 6].slice(0, s.count || 6).map((i) => (
                 <div key={i} className="bg-cream-100 rounded-xl p-3 text-center">
                   <div className="w-10 h-10 mx-auto rounded-full bg-cream-200 mb-1" />
-                  <p className="text-[10px] text-slate-400">Kategoriya {i}</p>
+                  <p className="text-[10px] text-slate-400">{t("ui.placeholder.category", { index: i })}</p>
                 </div>
               ))}
             </div>
@@ -488,7 +479,7 @@ export default function UIBuilderPage() {
           <div className="w-full">
             <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="space-y-1">
-              {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).map((cat) => (
+              {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: t("ui.placeholder.category", { index: i + 1 }), slug: "", parentId: null, createdAt: "" }))).map((cat) => (
                 <div key={cat.id} className="flex items-center justify-between bg-cream-100 rounded-lg px-3 py-2 hover:bg-cream-200 transition-colors cursor-pointer">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
@@ -508,7 +499,7 @@ export default function UIBuilderPage() {
           <div className="w-full">
             <h3 className="text-sm font-semibold text-forest-800 mb-2">{s.title}</h3>
             <div className="grid grid-cols-2 gap-2">
-              {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }))).slice(0, s.count || 4).map((cat) => (
+              {(realCategories.length > 0 ? realCategories : Array.from({ length: 4 }, (_, i) => ({ id: String(i), name: t("ui.placeholder.category", { index: i + 1 }), slug: "", parentId: null, createdAt: "" }))).slice(0, s.count || 4).map((cat) => (
                 <div key={cat.id} className="bg-cream-100 rounded-xl p-3 flex items-center gap-2 hover:bg-cream-200 transition-colors cursor-pointer">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (categoryColors[cat.name] || "#6366f1") + "30" }}>
                     <Grid3X3 className="w-4 h-4" style={{ color: categoryColors[cat.name] || "#6366f1" }} />
@@ -532,7 +523,7 @@ export default function UIBuilderPage() {
                       <Play className="w-4 h-4 text-slate-500" />
                     </div>
                   </div>
-                  <p className="text-[9px] text-center text-slate-500 mt-1">Hikoya {i}</p>
+                  <p className="text-[9px] text-center text-slate-500 mt-1">{t("ui.placeholder.story", { index: i })}</p>
                 </div>
               ))}
             </div>
@@ -588,7 +579,7 @@ export default function UIBuilderPage() {
       weeklyBuyers: 24,
       comboCount: 2,
     };
-    const deliveryStr = new Date(Date.now() + 2 * 86_400_000).toLocaleDateString("uz-UZ", { day: "numeric", month: "long" });
+    const deliveryStr = new Date(Date.now() + 2 * 86_400_000).toLocaleDateString(locale, { day: "numeric", month: "long" });
     const opts = { deliveryStr, timerLabel: t("single.timerLabel"), timerColor: brand.primaryColor };
     return (
       <div className="space-y-4">
@@ -695,8 +686,8 @@ export default function UIBuilderPage() {
                                       <Icon className="w-4 h-4 text-slate-500" />
                                     </div>
                                     <div className="min-w-0">
-                                      <p className="text-xs text-forest-800 truncate">{def.label}</p>
-                                      <p className="text-[10px] text-slate-500 truncate">{def.description}</p>
+                                      <p className="text-xs text-forest-800 truncate">{t(`ui.block.${def.type}`)}</p>
+                                      <p className="text-[10px] text-slate-500 truncate">{t(`ui.block.${def.type}.d`)}</p>
                                     </div>
                                     <Plus className="w-3.5 h-3.5 text-slate-400 group-hover:text-forest-700 ml-auto flex-shrink-0" />
                                   </button>
@@ -725,11 +716,11 @@ export default function UIBuilderPage() {
                         <LayoutTemplate className="w-5 h-5" style={{ color: tpl.previewColor }} />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-forest-800">{tpl.name}</p>
-                        <p className="text-[10px] text-slate-500">{tpl.category} · {tpl.blocks.length} bo'lim</p>
+                        <p className="text-xs font-semibold text-forest-800">{t(`ui.template.${tpl.id}`)}</p>
+                        <p className="text-[10px] text-slate-500">{t(`ui.template.${tpl.id}.cat`)} · {t("ui.sectionCount", { count: tpl.blocks.length })}</p>
                       </div>
                     </div>
-                    <p className="text-[10px] text-slate-500 leading-relaxed">{tpl.description}</p>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">{t(`ui.template.${tpl.id}.d`)}</p>
                   </button>
                 ))}
               </motion.div>
@@ -1060,7 +1051,7 @@ export default function UIBuilderPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-forest-700 truncate">{selectedSingleProduct.name}</p>
-                        <p className="text-xs text-forest-700/80 font-bold">{selectedSingleProduct.price.toLocaleString()} so'm</p>
+                        <p className="text-xs text-forest-700/80 font-bold">{selectedSingleProduct.price.toLocaleString(locale)} {t("common.sum")}</p>
                       </div>
                       <button
                         onClick={() => setSingleProductId(null)}
@@ -1108,7 +1099,7 @@ export default function UIBuilderPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-forest-800 truncate">{p.name}</p>
-                            <p className="text-[10px] text-slate-500">{p.price.toLocaleString()} so'm</p>
+                            <p className="text-[10px] text-slate-500">{p.price.toLocaleString(locale)} {t("common.sum")}</p>
                           </div>
                           {singleProductId === p.id && <CheckCircle2 className="w-4 h-4 text-forest-700 flex-shrink-0" />}
                         </button>
@@ -1304,7 +1295,7 @@ export default function UIBuilderPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-forest-800">{block.title}</p>
-                        <p className="text-[10px] text-slate-500">{blockDefinitions.find((d) => d.type === block.type)?.description}</p>
+                        <p className="text-[10px] text-slate-500">{t(`ui.block.${block.type}.d`)}</p>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); toggleBlock(block.id); }} className="p-1.5 rounded-lg text-slate-500 hover:text-forest-900 hover:bg-cream-100 transition-colors" title={block.enabled ? t("ui.hide") : t("ui.show")}>

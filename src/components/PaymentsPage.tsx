@@ -95,7 +95,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import type { ChartTooltipProps } from "../utils/chart";
-import { useT } from "../i18n";
+import { tStatic, useT } from "../i18n";
 
 type PaymentMethodStatus = "active" | "inactive" | "pending" | "error";
 
@@ -124,7 +124,7 @@ function CustomTooltip({ active, payload }: ChartTooltipProps) {
       <div className="bg-cream-100 border border-cream-300 rounded-lg px-3 py-2 shadow-xl">
         <p className="text-xs text-forest-800 font-medium">{date}</p>
         {payload.map((p) => (
-          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {p.value} ta</p>
+          <p key={p.dataKey ?? p.name} className="text-xs" style={{ color: p.color }}>{p.name}: {tStatic("payments.txnCountShort", { count: Number(p.value ?? 0) })}</p>
         ))}
       </div>
     );
@@ -133,7 +133,8 @@ function CustomTooltip({ active, payload }: ChartTooltipProps) {
 }
 
 export default function PaymentsPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const [apiMethods, setApiMethods] = useState<ApiMethod[]>([]);
   const [txns, setTxns] = useState<ApiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -313,7 +314,7 @@ export default function PaymentsPage() {
     { code: "payme", name: "Payme" },
     { code: "uzum", name: "Uzum Bank" },
     { code: "alif", name: "Alif" },
-    { code: "cash", name: "Naqd to'lov" },
+    { code: "cash", name: t("payments.cash") },
   ];
   const availableToAdd = KNOWN_METHODS.filter((k) => !apiMethods.some((m) => m.code === k.code));
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -378,10 +379,10 @@ export default function PaymentsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: t("payments.stats.revenue"), value: (totalRevenue / 1000000).toFixed(1) + "M so'm", icon: DollarSign, color: "text-forest-700" },
+          { label: t("payments.stats.revenue"), value: `${(totalRevenue / 1000000).toFixed(1)}M ${t("common.sum")}`, icon: DollarSign, color: "text-forest-700" },
           { label: t("payments.stats.transactions"), value: totalTxns.toLocaleString(), icon: Activity, color: "text-forest-700" },
           { label: t("payments.stats.successRate"), value: avgSuccess + "%", icon: ShieldCheck, color: "text-leaf-600" },
-          { label: t("payments.stats.today"), value: (todayRevenue / 1000000).toFixed(1) + "M so'm", icon: TrendingUp, color: "text-amber-500" },
+          { label: t("payments.stats.today"), value: `${(todayRevenue / 1000000).toFixed(1)}M ${t("common.sum")}`, icon: TrendingUp, color: "text-amber-500" },
         ].map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-white border border-cream-300 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
@@ -500,7 +501,7 @@ export default function PaymentsPage() {
                       </div>
                       <p className="text-sm text-slate-500 mt-1">{method.description}</p>
                       <div className="flex items-center gap-4 mt-2">
-                        <span className="text-xs text-slate-500">{t("payments.lastUpdated")}: {new Date(method.lastUpdated).toLocaleString("uz-UZ", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", year: "numeric" })}</span>
+                        <span className="text-xs text-slate-500">{t("payments.lastUpdated")}: {new Date(method.lastUpdated).toLocaleString(locale, { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short", year: "numeric" })}</span>
                         {method.config.commissionPercent !== undefined && (
                           <span className="text-xs text-slate-500">{t("payments.commission")}: {method.config.commissionPercent}%</span>
                         )}
@@ -614,7 +615,7 @@ export default function PaymentsPage() {
                       <span className={`text-xs font-medium ${ts.color}`}>{tsLabel}</span>
                       {txn.errorMessage && <p className="text-[10px] text-red-600 mt-0.5">{txn.errorMessage}</p>}
                     </td>
-                    <td className="py-3 px-5 text-sm text-slate-500">{new Date(txn.createdAt).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</td>
+                    <td className="py-3 px-5 text-sm text-slate-500">{new Date(txn.createdAt).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })}</td>
                   </motion.tr>
                 );
               })}

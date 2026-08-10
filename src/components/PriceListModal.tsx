@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { X, Printer, Filter, PackageCheck } from "lucide-react";
 import { openPriceListPrint, PriceListItem } from "../utils/printPriceList";
 import type { Product } from "../types/api";
+import { useT } from "../i18n";
 
 export interface PriceListModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export default function PriceListModal({
   currency,
   storeName = "ShopFlow Market",
 }: PriceListModalProps) {
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const [filterStockOnly, setFilterStockOnly] = useState(false);
   const [filterRecentOnly, setFilterRecentOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,10 +59,10 @@ export default function PriceListModal({
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    let filterLabel = "Barcha mahsulotlar";
-    if (filterStockOnly && filterRecentOnly) filterLabel = "Qoldiqda bor va oxirgi kelganlar";
-    else if (filterStockOnly) filterLabel = "Faqat qoldiqda borlar";
-    else if (filterRecentOnly) filterLabel = "Oxirgi qabul qilinganlar bo'yicha";
+    let filterLabel = t("priceList.filter.all");
+    if (filterStockOnly && filterRecentOnly) filterLabel = t("priceList.filter.stockRecent");
+    else if (filterStockOnly) filterLabel = t("priceList.filter.stock");
+    else if (filterRecentOnly) filterLabel = t("priceList.filter.recent");
 
     openPriceListPrint({
       storeName,
@@ -67,6 +70,7 @@ export default function PriceListModal({
       currency,
       items,
       filterLabel,
+      lang,
     });
   };
 
@@ -80,9 +84,9 @@ export default function PriceListModal({
               <Printer className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-forest-900">Прайс-лист генератори va печать</h3>
+              <h3 className="text-lg font-bold text-forest-900">{t("priceList.title")}</h3>
               <p className="text-xs text-slate-500">
-                A4 formatida yangi narxlar to'ldirish ustuni va qoldiqlar analitikasi bilan
+                {t("priceList.subtitle")}
               </p>
             </div>
           </div>
@@ -99,7 +103,7 @@ export default function PriceListModal({
           <div className="flex items-center gap-2 flex-1 min-w-[240px]">
             <input
               type="text"
-              placeholder="Qidiruv (Nomi, Artikul)..."
+              placeholder={t("priceList.search")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-1.5 rounded-lg border border-cream-300 text-sm focus:outline-none focus:border-leaf-400"
@@ -116,7 +120,7 @@ export default function PriceListModal({
               }`}
             >
               <PackageCheck className="w-3.5 h-3.5" />
-              Faqat bor mahsulotlar (Qoldiq &gt; 0)
+              {t("priceList.stockOnly")}
             </button>
             <button
               type="button"
@@ -128,7 +132,7 @@ export default function PriceListModal({
               }`}
             >
               <Filter className="w-3.5 h-3.5" />
-              Oxirgi qabul qilinganlar (Приемка)
+              {t("priceList.recentOnly")}
             </button>
           </div>
         </div>
@@ -139,20 +143,20 @@ export default function PriceListModal({
             <thead>
               <tr className="border-b border-cream-300 bg-cream-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
                 <th className="py-2.5 px-2">№</th>
-                <th className="py-2.5 px-2">Наименование товара</th>
-                <th className="py-2.5 px-2">Артикул</th>
-                <th className="py-2.5 px-2 text-center">Остаток</th>
-                <th className="py-2.5 px-2 text-right">Себ-сть</th>
-                <th className="py-2.5 px-2 text-right">Старая цена</th>
-                <th className="py-2.5 px-2 text-right">Текущая цена</th>
-                <th className="py-2.5 px-2 text-center bg-slate-100">Новая цена (печать)</th>
+                <th className="py-2.5 px-2">{t("priceList.col.product")}</th>
+                <th className="py-2.5 px-2">{t("priceList.col.sku")}</th>
+                <th className="py-2.5 px-2 text-center">{t("priceList.col.stock")}</th>
+                <th className="py-2.5 px-2 text-right">{t("priceList.col.cost")}</th>
+                <th className="py-2.5 px-2 text-right">{t("priceList.col.oldPrice")}</th>
+                <th className="py-2.5 px-2 text-right">{t("priceList.col.currentPrice")}</th>
+                <th className="py-2.5 px-2 text-center bg-slate-100">{t("priceList.col.newPrice")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-cream-200">
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-400">
-                    Mahsulotlar topilmadi
+                    {t("catalog.productsNotFound")}
                   </td>
                 </tr>
               ) : (
@@ -169,16 +173,16 @@ export default function PriceListModal({
                       {item.stock}
                     </td>
                     <td className="py-2 px-2 text-right text-slate-600">
-                      {item.costPrice ? item.costPrice.toLocaleString("uz-UZ") : "—"}
+                      {item.costPrice ? item.costPrice.toLocaleString(locale) : "—"}
                     </td>
                     <td className="py-2 px-2 text-right text-slate-400 line-through">
-                      {item.oldPrice ? item.oldPrice.toLocaleString("uz-UZ") : "—"}
+                      {item.oldPrice ? item.oldPrice.toLocaleString(locale) : "—"}
                     </td>
                     <td className="py-2 px-2 text-right font-bold text-forest-700">
-                      {item.price.toLocaleString("uz-UZ")} {currency}
+                      {item.price.toLocaleString(locale)} {currency}
                     </td>
                     <td className="py-2 px-2 text-center bg-slate-50 border-l border-r border-dashed border-slate-300">
-                      <span className="text-[10px] text-slate-400 italic">[ Bo'sh ustun ]</span>
+                      <span className="text-[10px] text-slate-400 italic">{t("priceList.emptyColumn")}</span>
                     </td>
                   </tr>
                 ))
@@ -190,7 +194,7 @@ export default function PriceListModal({
         {/* Footer Actions */}
         <div className="px-6 py-4 border-t border-cream-200 bg-cream-50/50 flex items-center justify-between">
           <span className="text-xs text-slate-500 font-medium">
-            Jami: {items.length} ta mahsulot saralandi
+            {t("priceList.total", { count: items.length })}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -198,7 +202,7 @@ export default function PriceListModal({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-cream-200 transition-colors"
             >
-              Yopish
+              {t("common.close")}
             </button>
             <button
               type="button"
@@ -206,7 +210,7 @@ export default function PriceListModal({
               className="flex items-center gap-2 px-5 py-2 rounded-xl bg-forest-800 text-white text-xs font-semibold hover:bg-forest-900 shadow-md transition-colors"
             >
               <Printer className="w-4 h-4" />
-              Chop etish (Печать)
+              {t("priceList.print")}
             </button>
           </div>
         </div>

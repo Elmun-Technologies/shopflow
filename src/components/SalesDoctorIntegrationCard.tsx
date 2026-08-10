@@ -10,7 +10,7 @@ import {
 import { salesDoctorApi, type SalesDoctorStatus, type SalesDoctorReference } from "../api/endpoints";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 
 const STATUS_BADGE_CLS: Record<SalesDoctorStatus["status"], string> = {
   CONNECTED: "bg-leaf-100 text-forest-700",
@@ -29,7 +29,7 @@ const STATUS_LABEL_KEYS: Record<SalesDoctorStatus["status"], string> = {
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" });
+    return new Date(iso).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "medium", timeStyle: "short" });
   } catch {
     return iso;
   }

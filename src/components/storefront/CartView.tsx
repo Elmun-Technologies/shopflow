@@ -1,4 +1,4 @@
-import { memo, useState, useMemo } from "react";
+import { memo, useState } from "react";
 import {
   ArrowLeft, Package, ShoppingCart,
   Minus, Plus, Trash2, Tag, ChevronRight,
@@ -22,8 +22,8 @@ function tgInitData(): string {
   return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp?.initData ?? "";
 }
 
-function fmt(price: number, currency: string): string {
-  if (currency === "UZS") return price.toLocaleString("uz-UZ") + " so'm";
+function fmt(price: number, currency: string, lang: "uz" | "ru"): string {
+  if (currency === "UZS") return price.toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ") + (lang === "ru" ? " сум" : " so'm");
   if (currency === "USD") return "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2 });
   return price.toLocaleString() + " " + currency;
 }
@@ -50,7 +50,7 @@ function CartViewInner({
   storeSlug, tgUserId,
   onBack, onCheckout, onUpdateQty,
 }: CartViewProps) {
-  const { t } = useT();
+  const { t, lang } = useT();
 
   // Tanlangan mahsulotlar (checkbox)
   const [selected, setSelected] = useState<Set<string>>(
@@ -91,13 +91,12 @@ function CartViewInner({
   const selectedCount = selectedItems.reduce((s, i) => s + i.qty, 0);
 
   // Chegirma (eski narx - yangi narx)
-  const savingsTotal = useMemo(() =>
-    selectedItems.reduce((s, i) => {
-      if (i.oldPrice && i.oldPrice > i.price) return s + (i.oldPrice - i.price) * i.qty;
-      return s;
-    }, 0),
-    [selectedItems]
-  );
+  const savingsTotal = selectedItems.reduce((sum, item) => {
+    if (item.oldPrice && item.oldPrice > item.price) {
+      return sum + (item.oldPrice - item.price) * item.qty;
+    }
+    return sum;
+  }, 0);
 
   // Promo kod chegirmasi
   const promoDiscount = promoApplied?.discount ?? 0;
@@ -247,7 +246,7 @@ function CartViewInner({
               <div className="flex items-center gap-2 mb-2">
                 <Truck className="w-4 h-4" style={{ color: "#38bdf8" }} />
                 <span className="text-xs font-medium" style={{ color: "#94a3b8" }}>
-                  {t("cart.freeDeliveryProgress", { amount: fmt(FREE_DELIVERY_THRESHOLD - selectedSubtotal, currency) })}
+                  {t("cart.freeDeliveryProgress", { amount: fmt(FREE_DELIVERY_THRESHOLD - selectedSubtotal, currency, lang) })}
                 </span>
               </div>
               <div className="relative h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#2a2a38" }}>
@@ -345,18 +344,18 @@ function CartViewInner({
                       {/* Prices */}
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         <span className="text-base font-bold" style={{ color: primaryColor }}>
-                          {fmt(lineTotal, currency)}
+                          {fmt(lineTotal, currency, lang)}
                         </span>
                         {oldLineTotal && oldLineTotal > lineTotal && (
                           <span className="text-xs line-through" style={{ color: "#3a3a50" }}>
-                            {fmt(oldLineTotal, currency)}
+                            {fmt(oldLineTotal, currency, lang)}
                           </span>
                         )}
                       </div>
 
                       {/* Unit price */}
                       <p className="text-[11px] mt-0.5" style={{ color: "#52526a" }}>
-                        {t("cart.perPiece", { price: fmt(item.price, currency) })}
+                        {t("cart.perPiece", { price: fmt(item.price, currency, lang) })}
                       </p>
 
                       {/* Discount badge */}
@@ -413,7 +412,7 @@ function CartViewInner({
                     <div className="text-right">
                       <p className="text-xs" style={{ color: "#52526a" }}>{t("cart.total")}</p>
                       <p className="text-sm font-bold" style={{ color: "#f4f4f8" }}>
-                        {fmt(lineTotal, currency)}
+                        {fmt(lineTotal, currency, lang)}
                       </p>
                     </div>
                   </div>
@@ -437,7 +436,7 @@ function CartViewInner({
                     {t("cart.promoApplied", { code: promoApplied?.code ?? "" })}
                   </p>
                   <p className="text-[11px]" style={{ color: "#52526a" }}>
-                    {t("cart.youSave", { amount: fmt(promoDiscount, currency) })}
+                    {t("cart.youSave", { amount: fmt(promoDiscount, currency, lang) })}
                   </p>
                 </div>
               </div>
@@ -518,7 +517,7 @@ function CartViewInner({
                   {t("cart.productsCount", { count: selectedCount })}
                 </span>
                 <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
-                  {fmt(selectedSubtotal, currency)}
+                  {fmt(selectedSubtotal, currency, lang)}
                 </span>
               </div>
 
@@ -526,7 +525,7 @@ function CartViewInner({
                 <div className="flex items-center justify-between">
                   <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.discount")}</span>
                   <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
-                    -{fmt(savingsTotal, currency)}
+                    -{fmt(savingsTotal, currency, lang)}
                   </span>
                 </div>
               )}
@@ -535,7 +534,7 @@ function CartViewInner({
                 <div className="flex items-center justify-between">
                   <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.promoLabel", { code: promoApplied?.code ?? "" })}</span>
                   <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
-                    -{fmt(promoDiscount, currency)}
+                    -{fmt(promoDiscount, currency, lang)}
                   </span>
                 </div>
               )}
@@ -546,7 +545,7 @@ function CartViewInner({
                   <span className="text-sm font-semibold" style={{ color: "#34d399" }}>{t("cart.free")}</span>
                 ) : (
                   <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
-                    {fmt(deliveryCost, currency)}
+                    {fmt(deliveryCost, currency, lang)}
                   </span>
                 )}
               </div>
@@ -557,7 +556,7 @@ function CartViewInner({
               >
                 <span className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("cart.grandTotal")}</span>
                 <span className="text-xl font-bold" style={{ color: primaryColor }}>
-                  {fmt(grandTotal, currency)}
+                  {fmt(grandTotal, currency, lang)}
                 </span>
               </div>
 
@@ -568,7 +567,7 @@ function CartViewInner({
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#34d399" }} />
                   <span className="text-xs" style={{ color: "#34d399" }}>
-                    {t("cart.youSaved", { amount: fmt(savingsTotal + promoDiscount, currency) })}
+                    {t("cart.youSaved", { amount: fmt(savingsTotal + promoDiscount, currency, lang) })}
                   </span>
                 </div>
               )}
@@ -608,7 +607,7 @@ function CartViewInner({
               {selectedCount}
             </span>
             <span className="font-bold">{t("cart.placeOrder")}</span>
-            <span className="font-bold">{fmt(grandTotal, currency)}</span>
+            <span className="font-bold">{fmt(grandTotal, currency, lang)}</span>
           </button>
         )}
       </div>

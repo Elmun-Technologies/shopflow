@@ -3,7 +3,7 @@ import { Boxes, CheckCircle2, AlertTriangle, RefreshCw, Loader2, ExternalLink, X
 import { moyskladApi, type MoyskladStatus, type SyncJob } from "../api/endpoints";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 
 const STATUS_BADGE_CLS: Record<MoyskladStatus["status"], string> = {
   CONNECTED: "bg-leaf-100 text-forest-700",
@@ -15,7 +15,7 @@ const STATUS_BADGE_CLS: Record<MoyskladStatus["status"], string> = {
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" });
+    return new Date(iso).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "medium", timeStyle: "short" });
   } catch {
     return iso;
   }

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Share2 } from "lucide-react";
 import type { ChannelPost, ChannelPostStatus, ChannelPlatform } from "../../data/marketingData";
-import { initialChannelPosts, channelPlatformLabels, channelPostStatusLabels } from "../../data/marketingData";
+import { initialChannelPosts, channelPlatformLabels } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
 import { useT } from "../../i18n";
 
@@ -22,12 +22,13 @@ function PlatformBadge({ platform }: { platform: ChannelPlatform }) {
 }
 
 function PostStatusBadge({ status }: { status: ChannelPostStatus }) {
+  const { t } = useT();
   const map: Record<ChannelPostStatus, string> = {
     draft: "bg-cream-200 text-slate-700",
     scheduled: "bg-sky-100 text-sky-600 border border-sky-300",
     published: "bg-leaf-100 text-forest-700 border border-leaf-400/50",
   };
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{channelPostStatusLabels[status]}</span>;
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{t(`kanal.status.${status}`)}</span>;
 }
 
 export default function KanalPage() {

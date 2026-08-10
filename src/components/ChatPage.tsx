@@ -27,7 +27,7 @@ import {
 } from "../data/chatData";
 import type { ChatConversation, FunnelStage, ChatMessage } from "../data/chatData";
 import { api } from "../api/client";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 import { useAppToast } from "./ui/Toast";
 
 // Backend'dan keladigan format
@@ -78,7 +78,7 @@ function adaptListItem(c: ApiConvListItem): ChatConversation {
     agentAvatar: c.assignee?.name?.slice(0, 2).toUpperCase() ?? "—",
     lastMessage: c.lastMessagePreview ?? "",
     lastMessageTime: c.lastMessageAt
-      ? new Date(c.lastMessageAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+      ? new Date(c.lastMessageAt).toLocaleTimeString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { hour: "2-digit", minute: "2-digit" })
       : "",
     unreadCount: c.unreadCount,
     messages: [],
@@ -96,7 +96,7 @@ function adaptDetail(c: ApiConvDetail): ChatConversation {
       id: m.id,
       sender: m.direction === "INBOUND" ? "customer" : "agent",
       text: m.content,
-      timestamp: new Date(m.sentAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
+      timestamp: new Date(m.sentAt).toLocaleTimeString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { hour: "2-digit", minute: "2-digit" }),
       read: m.read,
     })),
   };
@@ -216,7 +216,7 @@ export default function ChatPage() {
       id: tempId,
       sender: "agent",
       text: content,
-      timestamp: new Date().toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
+      timestamp: new Date().toLocaleTimeString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { hour: "2-digit", minute: "2-digit" }),
       read: true,
     };
     setActiveChat((prev) =>
@@ -231,7 +231,7 @@ export default function ChatPage() {
         id: res.message.id,
         sender: "agent",
         text: res.message.content,
-        timestamp: new Date(res.message.sentAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date(res.message.sentAt).toLocaleTimeString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { hour: "2-digit", minute: "2-digit" }),
         read: res.message.read,
       };
       setActiveChat((prev) =>
@@ -496,7 +496,7 @@ export default function ChatPage() {
                   <div className="grid grid-cols-2 gap-1.5 pt-2 mt-2 border-t border-cream-300">
                     <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
                       <option value="all">{t("chat.allChannels")}</option>
-                      {Object.entries(channelLabels).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                      {Object.keys(channelLabels).map((key) => (<option key={key} value={key}>{t(`chat.channel.${key}`)}</option>))}
                     </select>
                     <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="bg-cream-100 border border-cream-300 rounded-md px-2 py-1 text-[10px] text-forest-800 focus:outline-none">
                       <option value="all">{t("chat.allAgents")}</option>
@@ -553,7 +553,7 @@ export default function ChatPage() {
                         <span className={`text-[9px] px-1 py-0.5 rounded border ${cfg.bg} ${cfg.color}`}>
                           {t(`funnel.${chat.funnelStage}`)}
                         </span>
-                        <span className="text-[9px] text-slate-500">{channelLabels[chat.channel]}</span>
+                        <span className="text-[9px] text-slate-500">{t(`chat.channel.${chat.channel}`)}</span>
                         {chat.estimatedValue > 0 && (
                           <span className="text-[9px] text-forest-700">{(chat.estimatedValue / 1000000).toFixed(1)}M</span>
                         )}
@@ -597,7 +597,7 @@ export default function ChatPage() {
                     <p className="text-sm font-semibold text-forest-800">{activeChat.customerName}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-slate-500">{activeChat.customerPhone}</span>
-                      <span className="text-[10px] text-slate-500">{channelLabels[activeChat.channel]}</span>
+                      <span className="text-[10px] text-slate-500">{t(`chat.channel.${activeChat.channel}`)}</span>
                     </div>
                   </div>
                 </div>

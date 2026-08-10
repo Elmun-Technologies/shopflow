@@ -8,20 +8,19 @@ import { handleBotFlowUpdate, type BotEngineCtx } from "../lib/bot-engine.js";
 import { botFlowDefinitionSchema } from "../lib/bot-flow-schema.js";
 
 // ─── Bot menu tugmalari ────────────────────────────────────────────────────
-const BTN_SHOP    = "🛍 Do'kon";
-const BTN_ORDER   = "📦 Buyurtmani kuzatish";
-const BTN_SUPPORT = "🆘 Yordam";
-const BTN_LANG    = "🌐 Til tanlash";
+// Tugmalar ham xabarlar kabi joriy tildan olinadi. Ilgari keyboard doim
+// o'zbekcha bo'lgani uchun rus tilini tanlagandan keyin ham menyu aralashardi.
 
 // Suhbat holati — chatId bo'yicha (xotira, server restart'da tozalanadi — qabul qilinadi)
 const convState = new Map<number, "awaiting_order">();
 
 // Barcha bot javoblari uchun doimiy pastki menyu
-function buildMenu(storeUrl: string) {
+function buildMenu(storeUrl: string, lang: Lang) {
+  const T = i18n[lang];
   return {
     keyboard: [
-      [{ text: BTN_SHOP, web_app: { url: storeUrl } }, { text: BTN_ORDER }],
-      [{ text: BTN_SUPPORT },                           { text: BTN_LANG }],
+      [{ text: T.btnShop, web_app: { url: storeUrl } }, { text: T.btnOrder }],
+      [{ text: T.btnSupport },                           { text: T.btnLang }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -42,6 +41,13 @@ const i18n = {
     cmdMenu:    "Do'konni ochish",
     cmdOrder:   "Buyurtmani kuzatish",
     cmdHelp:    "Yordam va aloqa",
+    btnShop:    "🛍 Do'kon",
+    btnOrder:   "📦 Buyurtmani kuzatish",
+    btnSupport: "🆘 Yordam",
+    btnLang:    "🌐 Til tanlash",
+    friend:     "Do'stim",
+    received:   "✅ Xabaringiz qabul qilindi. Tez orada operatorimiz siz bilan bog'lanadi!",
+    openStore:  "🛒 Do'konga kirish",
   },
   ru: {
     welcome:    (name: string, store: string) => `🛍 <b>${store}</b>\n\nДобро пожаловать, ${name}! Воспользуйтесь меню ниже 👇`,
@@ -55,6 +61,13 @@ const i18n = {
     cmdMenu:    "Открыть магазин",
     cmdOrder:   "Отследить заказ",
     cmdHelp:    "Помощь и контакты",
+    btnShop:    "🛍 Магазин",
+    btnOrder:   "📦 Отследить заказ",
+    btnSupport: "🆘 Поддержка",
+    btnLang:    "🌐 Выбрать язык",
+    friend:     "друг",
+    received:   "✅ Ваше сообщение принято. Оператор скоро свяжется с вами!",
+    openStore:  "🛒 Открыть магазин",
   },
 } as const;
 
@@ -151,7 +164,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     const storeUrl = `https://${domain}/store/${channel.tenant.slug}`;
     const tenantId = channel.tenant.id;
 
-    type TgFrom = { id?: number; first_name?: string; last_name?: string; username?: string };
+    type TgFrom = { id?: number; first_name?: string; last_name?: string; username?: string; language_code?: string };
     type TgMsg  = {
       chat?: { id?: number };
       from?: TgFrom;
@@ -190,8 +203,10 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
           chatId: flowChatId,
           telegramUserId: from.id,
           displayName:
-            [from.first_name, from.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi",
+            [from.first_name, from.last_name].filter(Boolean).join(" ") ||
+            (from.language_code?.toLowerCase().startsWith("ru") ? "Пользователь Telegram" : "Telegram foydalanuvchi"),
           telegramUsername: from.username,
+          telegramLanguageCode: from.language_code,
         };
 
         try {
@@ -245,7 +260,8 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
               tenantId,
               telegramUserId: tgId,
               telegramUsername: (from as { username?: string }).username,
-              name: [from.first_name, from.last_name].filter(Boolean).join(" ") || "Telegram foydalanuvchi",
+              name: [from.first_name, from.last_name].filter(Boolean).join(" ") ||
+                (newLang === "ru" ? "Пользователь Telegram" : "Telegram foydalanuvchi"),
               language: newLang,
             },
           });
@@ -256,7 +272,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         await sendTelegramRaw(
           token, cbChatId,
           newLang === "ru" ? i18n.ru.langSaved : i18n.uz.langSaved,
-          { reply_markup: buildMenu(storeUrl) },
+          { reply_markup: buildMenu(storeUrl, newLang) },
         );
       }
       return { ok: true, action: "lang_saved" };
@@ -275,7 +291,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     const tgUserId = msg.from.id;
     const displayName =
       [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ") ||
-      "Telegram foydalanuvchi";
+      (msg.from.language_code?.toLowerCase().startsWith("ru") ? "Пользователь Telegram" : "Telegram foydalanuvchi");
 
     // Mijoz tilini DB'dan olamiz (default "uz")
     let lang: Lang = "uz";
@@ -285,6 +301,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         select: { language: true },
       });
       if (cust?.language === "ru") lang = "ru";
+      else if (!cust && msg.from.language_code?.toLowerCase().startsWith("ru")) lang = "ru";
     }
     const T = i18n[lang];
 
@@ -294,8 +311,8 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       if (token) {
         await sendTelegramRaw(
           token, chatId,
-          T.welcome(msg.from.first_name || "Do'stim", channel.tenant.name),
-          { reply_markup: buildMenu(storeUrl) },
+          T.welcome(msg.from.first_name || T.friend, channel.tenant.name),
+          { reply_markup: buildMenu(storeUrl, lang) },
         );
         // BotFather slash command menyusini ro'yxatdan o'tkazamiz (fire-and-forget)
         fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
@@ -303,10 +320,11 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             commands: [
-              { command: "start",    description: T.cmdMenu },
-              { command: "buyurtma", description: T.cmdOrder },
-              { command: "yordam",   description: T.cmdHelp },
+              { command: "start", description: T.cmdMenu },
+              { command: "order", description: T.cmdOrder },
+              { command: "help",  description: T.cmdHelp },
             ],
+            language_code: lang,
           }),
         }).catch(() => null);
       }
@@ -314,9 +332,11 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Tanilgan tugma bosishlari — konversatsiya/lead yozuvini o'tkazib yuboramiz
-    const isKnownButton =
-      text === BTN_SHOP || text === BTN_ORDER || text === BTN_SUPPORT || text === BTN_LANG ||
-      text === "/buyurtma" || text === "/yordam";
+    const menuValues: string[] = [i18n.uz, i18n.ru].flatMap((copy) => [
+      copy.btnShop, copy.btnOrder, copy.btnSupport, copy.btnLang,
+    ]);
+    const isKnownButton = menuValues.includes(text) ||
+      ["/buyurtma", "/yordam", "/order", "/help"].includes(text);
 
     // ─── Konversatsiya yozuvi (admin Chat sahifasi uchun) ─────────────────
     if (!isKnownButton && tgUserId) {
@@ -382,7 +402,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       if (!order) {
         if (token) {
           await sendTelegramRaw(token, chatId, T.orderNotFound, {
-            reply_markup: buildMenu(storeUrl),
+            reply_markup: buildMenu(storeUrl, lang),
           });
         }
         return { ok: true, action: "order_not_found" };
@@ -391,36 +411,36 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       const statusLabel = orderStatusLabel(order.status, lang);
       const totalNum = Number(order.total);
       const totalStr = order.currency === "UZS"
-        ? `${totalNum.toLocaleString("uz-UZ")} so'm`
-        : `${totalNum} ${order.currency}`;
+        ? `${totalNum.toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ")} ${lang === "ru" ? "сум" : "so'm"}`
+        : `${totalNum.toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ")} ${order.currency}`;
 
       if (token) {
         await sendTelegramRaw(
           token, chatId,
           T.orderInfo(order.code, statusLabel, order.items.length, totalStr),
-          { reply_markup: buildMenu(storeUrl) },
+          { reply_markup: buildMenu(storeUrl, lang) },
         );
       }
       return { ok: true, action: "order_shown" };
     }
 
     // ─── Tugma handlerlari ────────────────────────────────────────────────
-    if (text === BTN_ORDER || text === "/buyurtma") {
+    if (text === i18n.uz.btnOrder || text === i18n.ru.btnOrder || text === "/buyurtma" || text === "/order") {
       convState.set(chatId, "awaiting_order");
       if (token) {
-        await sendTelegramRaw(token, chatId, T.orderAsk, { reply_markup: buildMenu(storeUrl) });
+        await sendTelegramRaw(token, chatId, T.orderAsk, { reply_markup: buildMenu(storeUrl, lang) });
       }
       return { ok: true, action: "order_ask" };
     }
 
-    if (text === BTN_SUPPORT || text === "/yordam") {
+    if (text === i18n.uz.btnSupport || text === i18n.ru.btnSupport || text === "/yordam" || text === "/help") {
       if (token) {
-        await sendTelegramRaw(token, chatId, T.support, { reply_markup: buildMenu(storeUrl) });
+        await sendTelegramRaw(token, chatId, T.support, { reply_markup: buildMenu(storeUrl, lang) });
       }
       return { ok: true, action: "support_sent" };
     }
 
-    if (text === BTN_LANG) {
+    if (text === i18n.uz.btnLang || text === i18n.ru.btnLang) {
       if (token) {
         await sendTelegramRaw(token, chatId, T.langSelect, {
           reply_markup: {
@@ -435,7 +455,7 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // ─── AI yordamchi → lead fallback ────────────────────────────────────
-    const aiResult = await aiReplyToMessage(app.prisma, channel.tenantId, text).catch(
+    const aiResult = await aiReplyToMessage(app.prisma, channel.tenantId, text, lang).catch(
       (err): Awaited<ReturnType<typeof aiReplyToMessage>> => {
         app.log.warn({ err }, "AI assistant failed, falling back to lead");
         return { used: false, reason: "exception" };
@@ -447,10 +467,10 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
         const replyMarkup = aiResult.productIds?.length
           ? {
               inline_keyboard: [[
-                { text: `🛒 ${channel.tenant.name} do'koniga kirish`, web_app: { url: storeUrl } },
+                { text: `${T.openStore}: ${channel.tenant.name}`, web_app: { url: storeUrl } },
               ]],
             }
-          : buildMenu(storeUrl);
+          : buildMenu(storeUrl, lang);
         await sendTelegramRaw(token, chatId, aiResult.text, { reply_markup: replyMarkup });
       }
       const leadCode = await nextLeadCode(app.prisma, channel.tenantId);
@@ -498,8 +518,8 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     if (token) {
       await sendTelegramRaw(
         token, chatId,
-        "✅ Xabaringiz qabul qilindi. Tez orada operatorimiz siz bilan bog'lanadi!",
-        { reply_markup: buildMenu(storeUrl) },
+T.received,
+        { reply_markup: buildMenu(storeUrl, lang) },
       );
     }
 

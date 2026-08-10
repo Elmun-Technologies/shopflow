@@ -8,7 +8,7 @@ import {
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
-import { useT } from "../i18n";
+import { getLang, tStatic, useT } from "../i18n";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface CustomerDetailResponse {
@@ -49,12 +49,12 @@ const ORDER_STATUS_CLS: Record<OrderStatus, string> = {
 };
 
 function formatMoney(n: number, currency: string): string {
-  if (currency === "UZS") return `${n.toLocaleString("uz-UZ")} so'm`;
+  if (currency === "UZS") return `${n.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")} ${tStatic("common.sum")}`;
   return `${n.toLocaleString()} ${currency}`;
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("uz-UZ", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export interface CustomerDetailDrawerProps {
@@ -182,7 +182,7 @@ export default function CustomerDetailDrawer({
               {/* Stats & Debt Balance */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                  <div className="text-[11px] font-semibold text-amber-800 mb-1">Конечный остаток долга (Qarz)</div>
+                  <div className="text-[11px] font-semibold text-amber-800 mb-1">{t("customerDetail.debtBalance")}</div>
                   <div className="text-lg font-bold text-amber-700">
                     {/* Hozirgi qarz balansini ko'rsatish */}
                     {formatMoney(Math.max(0, 0), "UZS")}
@@ -322,7 +322,7 @@ export default function CustomerDetailDrawer({
                 </Section>
               ) : (
                 <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
-                  Обороты и детализация сделок скрыта для вашей роли (Доступен только конечный остаток долга)
+                  {t("customerDetail.restrictedDetails")}
                 </div>
               )}
             </div>

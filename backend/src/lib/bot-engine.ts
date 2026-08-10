@@ -20,7 +20,7 @@ import { aiReplyToMessage } from "./ai-assistant.js";
 import { productPricing, toVariantLike, visibleVariants } from "./variant-shape.js";
 import { parsePriceTiers } from "./price-tier.js";
 import {
-  pick,
+  pickStrict,
   type BotFlowDefinition,
   type BotForm,
   type BotFormField,
@@ -47,6 +47,8 @@ export interface BotEngineCtx {
   telegramUserId: number | undefined;
   displayName: string;
   telegramUsername: string | undefined;
+  /** Telegram ilovasi tili — hali profil/sessiya yo'q birinchi kirishda fallback. */
+  telegramLanguageCode?: string;
 }
 
 export interface BotUpdateInput {
@@ -120,7 +122,7 @@ function screenKeyboard(screen: BotScreen, lang: BotLang, ctx: BotEngineCtx, has
   const items: Array<{ button: InlineButton; fullWidth: boolean }> = [];
 
   for (const b of screen.buttons) {
-    const label = pick(b.label, lang) || b.id;
+    const label = pickStrict(b.label, lang) || b.id;
     let button: InlineButton;
     if (b.action.type === "webapp") {
       button = { text: label, web_app: { url: ctx.storeUrl } };
@@ -152,7 +154,7 @@ function persistentKeyboard(def: BotFlowDefinition, lang: BotLang, ctx: BotEngin
   return {
     keyboard: [
       [
-        { text: pick(def.settings.storeButtonLabel, lang) || "🛍", web_app: { url: ctx.storeUrl } },
+        { text: pickStrict(def.settings.storeButtonLabel, lang) || "🛍", web_app: { url: ctx.storeUrl } },
         { text: T[lang].menuButton },
       ],
     ],
@@ -199,6 +201,8 @@ const T = {
     view: "👁 Ko'rish",
     catalogNav: "📄 Sahifalash",
     upsellTitle: "🎁 Ko'pincha birga olishadi:",
+    request: "📝 So'rov yuborish",
+    received: "✅ Xabaringiz qabul qilindi. Operator tez orada bog'lanadi!",
   },
   ru: {
 
@@ -235,6 +239,8 @@ const T = {
     view: "👁 Смотреть",
     catalogNav: "📄 Страницы",
     upsellTitle: "🎁 Часто покупают вместе:",
+    request: "📝 Оставить заявку",
+    received: "✅ Ваше сообщение принято. Оператор скоро свяжется с вами!",
   },
 } as const;
 
@@ -256,10 +262,11 @@ function orderStatusLabel(status: string, lang: BotLang): string {
   return labels[status]?.[lang] ?? status;
 }
 
-function formatMoney(value: number, currency: string): string {
+function formatMoney(value: number, currency: string, lang: BotLang): string {
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   return currency === "UZS"
-    ? `${value.toLocaleString("uz-UZ")} so'm`
-    : `${value.toLocaleString("en-US")} ${currency}`;
+    ? `${value.toLocaleString(locale)} ${lang === "ru" ? "сум" : "so'm"}`
+    : `${value.toLocaleString(locale)} ${currency}`;
 }
 
 const PHONE_RE = /^\+?[0-9][0-9\s\-()]{6,19}$/;
@@ -391,13 +398,13 @@ async function showScreen(
   session.fieldIndex = 0;
   session.answers = {};
 
-  const body = [opts.prefix, pick(screen.text, session.lang)].filter((x) => x && x.trim()).join("\n\n");
+  const body = [opts.prefix, pickStrict(screen.text, session.lang)].filter((x) => x && x.trim()).join("\n\n");
   const keyboard = screenKeyboard(screen, session.lang, ctx, session.screenPath.length > 0);
 
   return sendCard(
     ctx,
     screen.imageUrl || undefined,
-    body || screen.name,
+    body || T[session.lang].menuButton,
     keyboard ? { reply_markup: keyboard } : undefined,
   );
 }
@@ -415,13 +422,13 @@ async function askField(ctx: BotEngineCtx, session: Session, form: BotForm): Pro
   if (!field) return 0;
 
   const lang = session.lang;
-  const label = pick(field.label, lang) || field.id;
+  const label = pickStrict(field.label, lang) || field.id;
   const progress = `<i>${session.fieldIndex + 1}/${form.fields.length}</i>`;
   const text = `${progress}\n\n${label}`;
 
   if (field.type === "choice") {
     const rows = field.options.map((opt, i) => [
-      { text: pick(opt, lang) || `#${i + 1}`, callback_data: `o:${i}` },
+      { text: pickStrict(opt, lang) || `#${i + 1}`, callback_data: `o:${i}` },
     ]);
     if (!field.required) rows.push([{ text: T[lang].skip, callback_data: "o:skip" }]);
     rows.push([{ text: T[lang].cancel, callback_data: "o:cancel" }]);
@@ -474,7 +481,7 @@ async function completeForm(
   for (const field of form.fields) {
     const value = session.answers[field.id];
     if (value === undefined || value === "") continue;
-    const label = pick(field.label, lang).replace(/<[^>]+>/g, "").split("\n")[0].trim();
+    const label = pickStrict(field.label, lang).replace(/<[^>]+>/g, "").split("\n")[0].trim();
     lines.push(`${label} ${value}`);
     if (field.mapTo && !mapped[field.mapTo]) mapped[field.mapTo] = value.slice(0, 120);
   }
@@ -528,7 +535,7 @@ async function completeForm(
   session.fieldIndex = 0;
   session.answers = {};
 
-  const successText = pick(form.successText, lang).replace(/\{id\}/g, lead.code);
+  const successText = pickStrict(form.successText, lang).replace(/\{id\}/g, lead.code);
   let sent = await send(ctx, successText || `✅ #${lead.code}`, {
     reply_markup: persistentKeyboard(def, lang, ctx),
   });
@@ -577,7 +584,7 @@ async function startForm(
   session.answers = {};
 
   let sent = 0;
-  const intro = pick(form.intro, session.lang);
+  const intro = pickStrict(form.intro, session.lang);
   if (intro) sent += await send(ctx, intro);
   sent += await askField(ctx, session, form);
   return sent;
@@ -628,7 +635,7 @@ async function showCatalog(
     );
     // Narxlar turlicha bo'lsa "dan" — marketplace uslubi (storefront bilan bir xil)
     const priceLabel = pricing.price > 0
-      ? `${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency)}`
+      ? `${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency, lang)}`
       : T[lang].priceOnRequest;
     return [{ text: `${p.name} — ${priceLabel}`.slice(0, 60), callback_data: `p:${p.id}` }];
   });
@@ -687,7 +694,7 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
       `<b>${T[lang].variantsTitle}</b>`,
       ...variants.slice(0, 12).map((v) => {
         const stockMark = v.stock > 0 ? "" : ` — ${T[lang].outOfStock}`;
-        return `• ${v.name} — ${formatMoney(v.price, p.currency)}${stockMark}`;
+        return `• ${v.name} — ${formatMoney(v.price, p.currency, lang)}${stockMark}`;
       }),
     ]
     : [];
@@ -699,13 +706,13 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     ? [
       "",
       `<b>${T[lang].tiersTitle}</b>`,
-      ...tiers.map((tr) => `• ${T[lang].fromN(tr.minQty, unitLabel)} — ${formatMoney(tr.price, p.currency)}`),
+      ...tiers.map((tr) => `• ${T[lang].fromN(tr.minQty, unitLabel)} — ${formatMoney(tr.price, p.currency, lang)}`),
     ]
     : [];
   const moqLine = p.moq && p.moq > 0 ? [`📦 ${T[lang].moqLine(p.moq, unitLabel)}`] : [];
 
   const priceLine = pricing.price > 0
-    ? `💰 ${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency)}`
+    ? `💰 ${pricing.priceVaries ? T[lang].priceFrom + " " : ""}${formatMoney(pricing.price, p.currency, lang)}`
     : `💰 ${T[lang].priceOnRequest}`;
 
   const image = Array.isArray(p.images) ? (p.images as string[])[0] : undefined;
@@ -750,7 +757,7 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
         const orig = Number(a.addonProduct.price);
         const discounted = a.discountPct > 0 ? Math.round(orig * (1 - a.discountPct / 100)) : orig;
         const pctMark = a.discountPct > 0 ? ` (−${a.discountPct}%)` : "";
-        return `• ${a.addonProduct.name} — ${formatMoney(discounted, a.addonProduct.currency)}${pctMark}`;
+        return `• ${a.addonProduct.name} — ${formatMoney(discounted, a.addonProduct.currency, lang)}${pctMark}`;
       }),
     ]
     : [];
@@ -761,13 +768,13 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
   const rows: InlineButton[][] = [];
   const firstForm = def.forms[0];
   if (firstForm) {
-    rows.push([{ text: firstForm.name, callback_data: `f:${firstForm.id}` }]);
+    rows.push([{ text: T[lang].request, callback_data: `f:${firstForm.id}` }]);
   }
   for (const a of addons) {
     rows.push([{ text: `🎁 ${a.addonProduct.name}`.slice(0, 60), callback_data: `p:${a.addonProduct.id}` }]);
   }
   if (def.settings.showStoreButton) {
-    rows.push([{ text: pick(def.settings.storeButtonLabel, lang) || "🛍", web_app: { url: ctx.storeUrl } }]);
+    rows.push([{ text: pickStrict(def.settings.storeButtonLabel, lang) || "🛍", web_app: { url: ctx.storeUrl } }]);
   }
   rows.push([{ text: T[lang].home, callback_data: "nav:home" }]);
 
@@ -797,8 +804,8 @@ async function lookupOrder(ctx: BotEngineCtx, session: Session, input: string): 
   }
 
   const text = lang === "ru"
-    ? `📦 <b>Заказ #${order.code}</b>\n\nСтатус: ${orderStatusLabel(order.status, lang)}\nТоваров: ${order.items.length} шт.\nИтого: ${formatMoney(Number(order.total), order.currency)}`
-    : `📦 <b>Buyurtma #${order.code}</b>\n\nHolati: ${orderStatusLabel(order.status, lang)}\nMahsulotlar: ${order.items.length} ta\nJami: ${formatMoney(Number(order.total), order.currency)}`;
+    ? `📦 <b>Заказ #${order.code}</b>\n\nСтатус: ${orderStatusLabel(order.status, lang)}\nТоваров: ${order.items.length} шт.\nИтого: ${formatMoney(Number(order.total), order.currency, lang)}`
+    : `📦 <b>Buyurtma #${order.code}</b>\n\nHolati: ${orderStatusLabel(order.status, lang)}\nMahsulotlar: ${order.items.length} ta\nJami: ${formatMoney(Number(order.total), order.currency, lang)}`;
 
   return send(ctx, text, {
     reply_markup: { inline_keyboard: [[{ text: T[lang].home, callback_data: "nav:home" }]] },
@@ -928,7 +935,7 @@ async function runAction(
       session.screenPath = [...session.screenPath, screen.id].slice(-10);
       return {
         action: "text",
-        sent: await send(ctx, pick(act.text, session.lang), { reply_markup: { inline_keyboard: rows } }),
+        sent: await send(ctx, pickStrict(act.text, session.lang) || T[session.lang].somethingWrong, { reply_markup: { inline_keyboard: rows } }),
       };
     }
 
@@ -940,7 +947,7 @@ async function runAction(
       return { action: "track_ask", sent: await send(ctx, T[session.lang].orderAsk) };
 
     case "operator":
-      return { action: "operator", sent: await handoffToOperator(ctx, session, `[${screen.name} → ${pick(button.label, session.lang)}]`) };
+      return { action: "operator", sent: await handoffToOperator(ctx, session, `[${screen.name} → ${pickStrict(button.label, session.lang)}]`) };
 
     case "language":
       return { action: "lang_ask", sent: await askLanguage(ctx, def, session) };
@@ -981,7 +988,10 @@ export async function handleBotFlowUpdate(
   def: BotFlowDefinition,
   update: BotUpdateInput,
 ): Promise<BotEngineResult> {
-  const session = await loadSession(ctx, def.settings.defaultLang);
+  const telegramLang: BotLang = ctx.telegramLanguageCode?.toLowerCase().startsWith("ru") && def.settings.languages.includes("ru")
+    ? "ru"
+    : def.settings.defaultLang;
+  const session = await loadSession(ctx, telegramLang);
 
   // Customer'da saqlangan til sessiyadan ustun (Mini App'da o'zgartirilgan bo'lishi mumkin)
   const customerLang = await resolveLang(ctx, session.lang);
@@ -1062,7 +1072,7 @@ async function dispatch(
       const field = form.fields[session.fieldIndex];
       const option = field?.options[Number(arg)];
       if (!field || !option) return { action: "form_bad_option", sent: 0 };
-      return { action: "form_answer", sent: await advanceForm(ctx, def, session, form, pick(option, session.lang)) };
+      return { action: "form_answer", sent: await advanceForm(ctx, def, session, form, pickStrict(option, session.lang)) };
     }
 
     // b:<screenId>:<buttonId>
@@ -1088,7 +1098,7 @@ async function dispatch(
       return { action: "form_contact", sent: await advanceForm(ctx, def, session, form, update.contactPhone) };
     }
     // Anketadan tashqarida kelgan raqam — mijoz profiliga yozamiz
-    await saveContactPhone(ctx, update.contactPhone);
+    await saveContactPhone(ctx, update.contactPhone, session.lang);
     return { action: "contact_saved", sent: await showScreen(ctx, def, session, def.settings.startScreenId, { pushHistory: false }) };
   }
 
@@ -1105,7 +1115,7 @@ async function dispatch(
     await registerCommands(ctx, def, session.lang);
 
     let sent = 0;
-    const welcome = pick(def.settings.welcome, session.lang);
+    const welcome = pickStrict(def.settings.welcome, session.lang);
     if (welcome) {
       sent += await send(ctx, welcome, { reply_markup: persistentKeyboard(def, session.lang, ctx) });
     } else {
@@ -1144,13 +1154,13 @@ async function dispatch(
       // Variantli savolga matn bilan javob berilsa — mos variantni topamiz
       if (field?.type === "choice") {
         const idx = field.options.findIndex(
-          (o) => pick(o, session.lang).toLowerCase() === text.toLowerCase(),
+          (o) => pickStrict(o, session.lang).toLowerCase() === text.toLowerCase(),
         );
         if (idx < 0) {
           await send(ctx, T[session.lang].requiredField);
           return { action: "form_retry", sent: await askField(ctx, session, form) };
         }
-        return { action: "form_answer", sent: await advanceForm(ctx, def, session, form, pick(field.options[idx], session.lang)) };
+        return { action: "form_answer", sent: await advanceForm(ctx, def, session, form, pickStrict(field.options[idx], session.lang)) };
       }
       return { action: "form_answer", sent: await advanceForm(ctx, def, session, form, text) };
     }
@@ -1173,7 +1183,7 @@ async function dispatch(
       return { action: "fallback_operator", sent: await handoffToOperator(ctx, session, text) };
 
     case "ai": {
-      const ai = await aiReplyToMessage(ctx.prisma, ctx.tenantId, text).catch(() => ({ used: false as const }));
+      const ai = await aiReplyToMessage(ctx.prisma, ctx.tenantId, text, session.lang).catch(() => ({ used: false as const }));
       if (ai.used && "text" in ai && ai.text && !("handoffToOperator" in ai && ai.handoffToOperator)) {
         const rows: InlineButton[][] = [[{ text: T[session.lang].home, callback_data: "nav:home" }]];
         return { action: "fallback_ai", sent: await send(ctx, ai.text, { reply_markup: { inline_keyboard: rows } }) };
@@ -1218,12 +1228,12 @@ async function createFallbackLead(
   });
   publishToTenant(ctx.tenantId, { type: "lead.created", leadId: lead.id, name: lead.name });
 
-  return send(ctx, pick(def.settings.fallbackText, session.lang), {
+  return send(ctx, pickStrict(def.settings.fallbackText, session.lang) || T[session.lang].received, {
     reply_markup: { inline_keyboard: [[{ text: T[session.lang].home, callback_data: "nav:home" }]] },
   });
 }
 
-async function saveContactPhone(ctx: BotEngineCtx, phone: string): Promise<void> {
+async function saveContactPhone(ctx: BotEngineCtx, phone: string, lang: BotLang): Promise<void> {
   if (!ctx.telegramUserId) return;
   const tgId = BigInt(ctx.telegramUserId);
   const existing = await ctx.prisma.customer.findFirst({
@@ -1242,23 +1252,33 @@ async function saveContactPhone(ctx: BotEngineCtx, phone: string): Promise<void>
         telegramUsername: ctx.telegramUsername,
         name: ctx.displayName,
         phone,
+        language: lang,
       },
     });
   }
 }
 
-/** BotFather buyruqlar menyusi — fire-and-forget. */
+/** BotFather buyruqlar menyusi — har ikki Telegram UI tili uchun alohida. */
 async function registerCommands(ctx: BotEngineCtx, def: BotFlowDefinition, lang: BotLang): Promise<void> {
   if (!ctx.botToken || def.settings.commands.length === 0) return;
-  const commands = def.settings.commands.map((c) => ({
-    command: c.command,
-    description: (pick(c.description, lang) || c.command).slice(0, 256),
-  }));
-  fetch(`https://api.telegram.org/bot${ctx.botToken}/setMyCommands`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ commands }),
-  }).catch(() => null);
+  const register = (targetLang: BotLang, languageCode?: BotLang) => {
+    const commands = def.settings.commands.map((c) => ({
+      command: c.command,
+      description: (pickStrict(c.description, targetLang) || c.command).slice(0, 256),
+    }));
+    return fetch(`https://api.telegram.org/bot${ctx.botToken}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands, ...(languageCode ? { language_code: languageCode } : {}) }),
+    }).catch(() => null);
+  };
+
+  // Default menyu tanlangan sessiya tilida, lokal menyular esa bir-birini
+  // qayta yozmaydi. Ilgari har /start global menyuni oxirgi foydalanuvchi tiliga almashtirardi.
+  await Promise.all([
+    register(lang),
+    ...def.settings.languages.map((targetLang) => register(targetLang, targetLang)),
+  ]);
 }
 
 // ─── Preview simulyatori (admin panel uchun) ────────────────────────────────
@@ -1278,7 +1298,7 @@ export function simulateScreen(def: BotFlowDefinition, screenId: string, lang: B
   if (!screen) return null;
 
   const buttons = screen.buttons.map((b) => ({
-    label: pick(b.label, lang) || b.id,
+    label: pickStrict(b.label, lang) || b.id,
     kind:
       b.action.type === "screen"
         ? ("screen" as const)
@@ -1290,7 +1310,7 @@ export function simulateScreen(def: BotFlowDefinition, screenId: string, lang: B
   }));
 
   return {
-    text: pick(screen.text, lang).replace(/\{store\}/g, storeName),
+    text: pickStrict(screen.text, lang).replace(/\{store\}/g, storeName),
     buttons,
   };
 }

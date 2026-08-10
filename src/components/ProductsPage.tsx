@@ -278,10 +278,10 @@ export default function ProductsPage() {
           <button
             onClick={() => setShowPriceList(true)}
             className="flex items-center justify-center gap-2 px-3 py-2 bg-leaf-100 hover:bg-leaf-200 border border-leaf-300 rounded-lg text-sm font-semibold text-forest-800 whitespace-nowrap"
-            title="Прайс-лист генератори va печать"
+            title={t("priceList.title")}
           >
             <Printer className="w-4 h-4 text-forest-700" />
-            <span className="hidden sm:inline">Прайс-лист</span>
+            <span className="hidden sm:inline">{t("priceList.shortTitle")}</span>
           </button>
           <button
             onClick={() => setShowCategories(true)}
@@ -872,7 +872,8 @@ function ProductFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const { tenant } = useAuth();
   const [sku, setSku] = useState(product?.sku ?? "");
   const [name, setName] = useState(product?.name ?? "");
@@ -1477,7 +1478,7 @@ function ProductFormModal({
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-forest-800 truncate">{addon.productName}</div>
-                      <div className="text-[10px] text-slate-500">{Number(addon.productPrice ?? 0).toLocaleString("uz-UZ")} so'm</div>
+                      <div className="text-[10px] text-slate-500">{Number(addon.productPrice ?? 0).toLocaleString(locale)} {t("common.sum")}</div>
                     </div>
                     <label className="flex items-center gap-1 text-[10px] text-slate-500">
                       <input
@@ -1596,7 +1597,7 @@ function ProductFormModal({
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-forest-800 truncate">{p.name}</div>
-                        <div className="text-[10px] text-slate-500">{p.sku} · {Number(p.price).toLocaleString("uz-UZ")} so'm</div>
+                        <div className="text-[10px] text-slate-500">{p.sku} · {Number(p.price).toLocaleString(locale)} {t("common.sum")}</div>
                       </div>
                       <Plus className="w-4 h-4 text-forest-700 flex-shrink-0" />
                     </button>

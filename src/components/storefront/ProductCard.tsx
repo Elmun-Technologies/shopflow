@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Package, Heart, Plus, Minus, ShoppingCart } from "lucide-react";
 import { haptic } from "./storefront-theme";
+import { useT } from "../../i18n";
 
 type SaleBadgeColor = "RED" | "ORANGE" | "EMERALD" | "PURPLE" | "BLUE";
 const BADGE_STYLES: Record<SaleBadgeColor, { bg: string; text: string }> = {
@@ -59,9 +60,11 @@ function ProductCardInner({
   onIncrease,
   onDecrease,
 }: ProductCardProps) {
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const outOfStock = stock <= 0;
   const lowStock = !outOfStock && stock > 0 && stock <= 5;
-  const currencyLabel = currency === "UZS" ? "so'm" : currency;
+  const currencyLabel = currency === "UZS" ? t("common.sum") : currency;
   const inCart = qty > 0;
 
   return (
@@ -107,7 +110,7 @@ function ProductCardInner({
                 backdropFilter: "blur(8px)",
               }}
             >
-              Tugagan
+              {t("pdp.outOfStock")}
             </span>
           </div>
         )}
@@ -142,7 +145,7 @@ function ProductCardInner({
             haptic.light();
             onToggleFav();
           }}
-          aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+          aria-label={isFav ? t("favorites.remove") : t("favorites.add")}
           className="absolute top-2 right-2 z-10 flex items-center justify-center"
           style={{
             width: 30,
@@ -167,14 +170,14 @@ function ProductCardInner({
         {/* Price row */}
         <div className="flex items-baseline gap-1.5 flex-wrap">
           <span className="text-sm font-bold" style={{ color: "#f4f4f8" }}>
-            {price.toLocaleString("uz-UZ")}
+            {price.toLocaleString(locale)}
             <span className="text-[10px] font-normal ml-0.5" style={{ color: "#6b6b80" }}>
               {currencyLabel}
             </span>
           </span>
           {oldPrice != null && oldPrice > price && (
             <span className="text-[10px] line-through" style={{ color: "#4a4a5e" }}>
-              {oldPrice.toLocaleString("uz-UZ")}
+              {oldPrice.toLocaleString(locale)}
             </span>
           )}
         </div>
@@ -190,7 +193,7 @@ function ProductCardInner({
         {/* Meta row — rating or low stock */}
         {lowStock ? (
           <p className="text-[10px] font-medium" style={{ color: "#f59e0b" }}>
-            {stock} ta qoldi
+            {t("pdp.lowStock", { count: stock })}
           </p>
         ) : (avgRating && avgRating > 0) ? (
           <div className="flex items-center gap-1">
@@ -200,7 +203,7 @@ function ProductCardInner({
             </span>
             {weeklyBuyers && weeklyBuyers > 0 ? (
               <span className="text-[10px]" style={{ color: "#4a4a5e" }}>
-                · {weeklyBuyers} ta buyurtma
+                · {t("pdp.orderCount", { count: weeklyBuyers })}
               </span>
             ) : null}
           </div>
@@ -212,7 +215,7 @@ function ProductCardInner({
             className="mt-1 w-full py-2 rounded-xl flex items-center justify-center text-xs font-medium"
             style={{ backgroundColor: "rgba(255,255,255,0.05)", color: "#4a4a5e" }}
           >
-            Sotildi
+            {t("pdp.sold")}
           </div>
         ) : inCart ? (
           <div
@@ -228,12 +231,12 @@ function ProductCardInner({
                 backgroundColor: primaryColor + "30",
                 color: primaryColor,
               }}
-              aria-label="Kamaytirish"
+              aria-label={t("cart.decrease")}
             >
               <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
             </button>
             <span className="text-xs font-bold" style={{ color: primaryColor }}>
-              {qty} dona
+              {t("cart.pcsQty", { qty })}
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); haptic.light(); onIncrease(); }}
@@ -243,7 +246,7 @@ function ProductCardInner({
                 backgroundColor: primaryColor,
                 color: "#fff",
               }}
-              aria-label="Oshirish"
+              aria-label={t("cart.increase")}
             >
               <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
             </button>
@@ -255,7 +258,7 @@ function ProductCardInner({
             style={{ backgroundColor: primaryColor + "18", color: primaryColor }}
           >
             <ShoppingCart className="w-3.5 h-3.5" strokeWidth={2} />
-            Qo'shish
+            {t("common.add")}
           </button>
         )}
       </div>

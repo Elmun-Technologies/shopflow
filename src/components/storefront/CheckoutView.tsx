@@ -35,8 +35,8 @@ function formatAddress(a: StoredAddress): string {
   return [a.city, a.street, a.apartment].filter(Boolean).join(", ");
 }
 
-function formatPrice(price: number, currency: string): string {
-  if (currency === "UZS") return price.toLocaleString("uz-UZ") + " so'm";
+function formatPrice(price: number, currency: string, lang: "uz" | "ru"): string {
+  if (currency === "UZS") return price.toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ") + (lang === "ru" ? " сум" : " so'm");
   if (currency === "USD") return "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2 });
   return price.toLocaleString() + " " + currency;
 }
@@ -92,7 +92,7 @@ function CheckoutViewInner({
   savedAddresses, gpsBusy, submitting, submitError,
   onBack, onFormChange, onGpsBusy, onSubmit,
 }: CheckoutViewProps) {
-  const { t } = useT();
+  const { t, lang } = useT();
 
   const handleGps = () => {
     if (!navigator.geolocation) {
@@ -134,7 +134,7 @@ function CheckoutViewInner({
         </button>
         <div>
           <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("checkout.title")}</h2>
-          <p className="text-xs" style={{ color: "#52526a" }}>{formatPrice(cartTotal, currency)}</p>
+          <p className="text-xs" style={{ color: "#52526a" }}>{formatPrice(cartTotal, currency, lang)}</p>
         </div>
       </div>
 
@@ -155,14 +155,14 @@ function CheckoutViewInner({
                   <span className="ml-1 text-xs" style={{ color: "#3a3a56" }}>×{item.qty}</span>
                 </span>
                 <span className="text-sm font-semibold" style={{ color: primaryColor }}>
-                  {formatPrice(item.price * item.qty, currency)}
+                  {formatPrice(item.price * item.qty, currency, lang)}
                 </span>
               </div>
             ))}
             <div className="flex items-center justify-between pt-3">
               <span className="text-sm font-semibold" style={{ color: "#f4f4f8" }}>{t("checkout.total")}</span>
               <span className="text-base font-bold" style={{ color: primaryColor }}>
-                {formatPrice(cartTotal, currency)}
+                {formatPrice(cartTotal, currency, lang)}
               </span>
             </div>
           </div>
@@ -250,7 +250,7 @@ function CheckoutViewInner({
               onClick={handleGps}
               disabled={gpsBusy}
               className="flex-shrink-0 active:scale-90 transition-transform disabled:opacity-50"
-              aria-label="GPS joylashuv"
+              aria-label={t("checkout.gps")}
               style={{ color: "#3b82f6" }}
             >
               {gpsBusy
@@ -266,7 +266,7 @@ function CheckoutViewInner({
               style={{ backgroundColor: "rgba(34,197,94,0.1)", color: "#4ade80" }}
             >
               <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-              GPS aniqlandi: {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
+              {t("checkout.gpsDetected")}: {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
             </div>
           )}
 
@@ -316,7 +316,7 @@ function CheckoutViewInner({
           {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
           {submitting
             ? t("checkout.sending")
-            : `${t("checkout.submit")} · ${formatPrice(cartTotal, currency)}`}
+            : `${t("checkout.submit")} · ${formatPrice(cartTotal, currency, lang)}`}
         </button>
       </div>
     </div>

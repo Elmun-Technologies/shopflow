@@ -136,16 +136,30 @@ export async function notifyCustomerTelegram(
     return { sent: false, reason: "No bot token" };
   }
 
-  // Notification preferences tekshirish
+  // Notification preferences va til. customerId bo'lmasa Telegram ID orqali ham
+  // topamiz — tugma va tizim xabari mijoz tanlagan tilda qolishi kerak.
+  const customer = customerId
+    ? await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: {
+          language: true,
+          notifyOrderUpdates: true,
+          notifyCartAbandonment: true,
+          notifyPromotions: true,
+        },
+      })
+    : await prisma.customer.findFirst({
+        where: { tenantId, telegramUserId: tgUserId },
+        select: {
+          language: true,
+          notifyOrderUpdates: true,
+          notifyCartAbandonment: true,
+          notifyPromotions: true,
+        },
+      });
+  const lang: "uz" | "ru" = customer?.language === "ru" ? "ru" : "uz";
+
   if (customerId) {
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-      select: {
-        notifyOrderUpdates: true,
-        notifyCartAbandonment: true,
-        notifyPromotions: true,
-      },
-    });
 
     if (type === "CART_ABANDON" && !customer?.notifyCartAbandonment) {
       await logNotification(
@@ -176,12 +190,16 @@ export async function notifyCustomerTelegram(
     }
   }
 
-  // Xabar yuborish
+  // Xabar yuborish. Tugma ham joriy tilda va aynan shu tenant do'koniga ochiladi.
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } });
+  const publicBase = process.env.PUBLIC_URL ?? `https://${process.env.DOMAIN ?? "shop-flow.uz"}`;
+  const storeUrl = tenant ? `${publicBase.replace(/\/$/, "")}/store/${tenant.slug}` : publicBase;
   const result = await sendTelegramRaw(token, tgUserId.toString(), body, {
     reply_markup: {
-      inline_keyboard: [
-        [{ text: "📱 Do'konda ko'rish", web_app: { url: `https://shop-flow.uz` } }],
-      ],
+      inline_keyboard: [[{
+        text: lang === "ru" ? "📱 Открыть магазин" : "📱 Do'konni ochish",
+        web_app: { url: storeUrl },
+      }]],
     },
   });
 

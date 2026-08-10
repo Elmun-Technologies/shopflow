@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MarketingSub } from "../data/marketingData";
-import { marketingSubOrder, marketingSubLabels, marketingSubGroups } from "../data/marketingData";
+import { marketingSubOrder, marketingSubGroups } from "../data/marketingData";
 
 // Marketing sub-itemlar uchun ikonkalar — vizual aniqlik
 const marketingSubIcons: Record<MarketingSub, React.ElementType> = {
@@ -267,7 +267,7 @@ export default function Sidebar({ currentPage, onPageChange, marketingSub, onMar
     for (const sub of marketingSubOrder) {
       list.push({
         page: "marketing-sub",
-        label: marketingSubLabels[sub],
+        label: t(`marketing.sub.${sub}`),
         icon: marketingSubIcons[sub],
         section: t("nav.marketing"),
         sub,
@@ -763,7 +763,7 @@ function MarketingBlock({
             {marketingSubGroups.map((g) => (
               <div key={g.id} className="mb-2">
                 <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-slate-400">
-                  {g.label}
+                  {t(`marketing.group.${g.id}`)}
                 </div>
                 {g.items.map((sub) => {
                   const subActive = active && marketingSub === sub;
@@ -780,7 +780,7 @@ function MarketingBlock({
                       }`}
                     >
                       <SubIcon className={`w-3.5 h-3.5 flex-shrink-0 ${subActive ? "text-forest-700" : "text-slate-500"}`} />
-                      <span className="truncate">{marketingSubLabels[sub]}</span>
+                      <span className="truncate">{t(`marketing.sub.${sub}`)}</span>
                     </button>
                   );
                 })}

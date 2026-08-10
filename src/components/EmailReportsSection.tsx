@@ -23,7 +23,8 @@ const FREQ_KEY: Record<Exclude<Frequency, null>, string> = {
 };
 
 export function EmailReportsSection() {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const toast = useAppToast();
   const [smtpConfigured, setSmtpConfigured] = useState(false);
   const [settings, setSettings] = useState<NotifSettings | null>(null);
@@ -181,7 +182,7 @@ export function EmailReportsSection() {
         </div>
         {settings?.lastReportSentAt && (
           <p className="text-[10px] text-slate-400 mt-2">
-            {t("emailReports.lastSent")} {new Date(settings.lastReportSentAt).toLocaleString("uz-UZ")}
+            {t("emailReports.lastSent")} {new Date(settings.lastReportSentAt).toLocaleString(locale)}
           </p>
         )}
       </div>

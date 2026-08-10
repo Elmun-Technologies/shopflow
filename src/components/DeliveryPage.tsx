@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../api/client";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 import { useAppToast } from "./ui/Toast";
 
 // ─── Tiplar ──────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ export default function DeliveryPage() {
   };
 
   function formatPrice(v: number, currency = "UZS") {
-    if (currency === "UZS") return v.toLocaleString("uz-UZ") + " " + t("common.sum");
+    if (currency === "UZS") return v.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ") + " " + t("common.sum");
     return v.toLocaleString() + " " + currency;
   }
 
@@ -782,7 +782,7 @@ function OrderDetailModal({
               <p className="text-slate-400 text-xs">{t("delivery.orders.price")}</p>
               <p className="font-semibold text-forest-700">
                 {order.price > 0
-                  ? `${order.price.toLocaleString("uz-UZ")} ${t("common.sum")}`
+                  ? `${order.price.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")} ${t("common.sum")}`
                   : t("delivery.type.FREE")}
               </p>
             </div>
