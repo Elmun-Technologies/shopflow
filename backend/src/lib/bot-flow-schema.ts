@@ -175,13 +175,22 @@ export type BotFlowDefinition = z.infer<typeof botFlowDefinitionSchema>;
 
 // ─── Yordamchilar ───────────────────────────────────────────────────────────
 
-/** Tilga mos matn. Bo'sh bo'lsa ikkinchi tilga tushadi. */
+/** Tilga mos matn. Bo'sh bo'lsa ikkinchi tilga tushadi (admin/migratsiya uchun). */
 export function pick(text: Localized | undefined, lang: BotLang): string {
   if (!text) return "";
   const primary = text[lang]?.trim();
   if (primary) return primary;
   const other = lang === "uz" ? text.ru : text.uz;
   return other?.trim() ?? "";
+}
+
+/**
+ * Mijozga yuboriladigan matn uchun qat'iy tanlov: boshqa tildagi kontentni
+ * fallback qilib ko'rsatmaydi. Bo'sh tarjimani runtime o'zining shu tildagi
+ * neytral xabari bilan almashtiradi.
+ */
+export function pickStrict(text: Localized | undefined, lang: BotLang): string {
+  return text?.[lang]?.trim() ?? "";
 }
 
 /**

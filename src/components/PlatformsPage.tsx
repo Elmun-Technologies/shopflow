@@ -206,7 +206,7 @@ function ChannelCard({
           <div>
             <p className="text-sm font-semibold text-forest-800">{channel.name}</p>
             <p className="text-xs text-slate-500">
-              {meta.label}
+              {t(`leads.channel.${channel.type}`)}
               {botUsername && (
                 <>
                   {" · "}
@@ -498,7 +498,7 @@ function AddChannelModal({ onClose, onCreated }: { onClose: () => void; onCreate
           >
             {(Object.keys(channelTypeMeta) as ChannelType[]).map((k) => (
               <option key={k} value={k}>
-                {channelTypeMeta[k].label}
+                {t(`leads.channel.${k}`)}
               </option>
             ))}
           </select>
@@ -603,21 +603,11 @@ function BotTokenModal({
         <h2 className="text-lg font-bold text-forest-800">{t("platforms.botToken")}</h2>
 
         <div className="text-xs text-slate-500 space-y-2 bg-cream-100/50 border border-cream-300 rounded-lg p-3">
-          <p>1. Telegram'da{" "}
-            <a
-              href="https://t.me/BotFather"
-              target="_blank"
-              rel="noreferrer"
-              className="text-forest-700 underline"
-            >
-              @BotFather
-            </a>
-            'ga yozing
-          </p>
-          <p>2. <code className="bg-white px-1 rounded">/newbot</code> komandasini yuboring</p>
-          <p>3. Bot nomi va username'ni bering</p>
-          <p>4. BotFather sizga token beradi (masalan: <code className="bg-white px-1 rounded">7891234567:AAE...</code>)</p>
-          <p>5. Tokenni nusxalab, quyiga joylashtiring</p>
+          <p>{t("platforms.tokenStep1")}</p>
+          <p>{t("platforms.tokenStep2")}</p>
+          <p>{t("platforms.tokenStep3")}</p>
+          <p>{t("platforms.tokenStep4")} (<code className="bg-white px-1 rounded">7891234567:AAE...</code>)</p>
+          <p>{t("platforms.tokenStep5")}</p>
         </div>
 
         <div>

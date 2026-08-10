@@ -8,7 +8,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
-import { useT } from "../../i18n";
+import { getLang, useT } from "../../i18n";
 
 interface PromoCode {
   id: string;
@@ -31,7 +31,7 @@ const cls = "w-full bg-cream-100 border border-cream-300 rounded-xl px-3 py-2.5 
 
 export default function PromoPage() {
   const { t } = useT();
-  const fmtPrice = (v: number) => v.toLocaleString("uz-UZ") + " " + t("common.sum");
+  const fmtPrice = (v: number) => v.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ") + " " + t("common.sum");
   const { data: codes, loading, refetch } = useAsync<PromoCode[]>(
     () => api("/promo-codes"), [],
   );
@@ -182,7 +182,7 @@ export default function PromoPage() {
                       {code.endsAt && (
                         <span>
                           {isExpired ? t("promo.expiredOn") : t("promo.expiresOn")}{" "}
-                          {new Date(code.endsAt).toLocaleDateString("uz-UZ")}
+                          {new Date(code.endsAt).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ")}
                         </span>
                       )}
                     </div>

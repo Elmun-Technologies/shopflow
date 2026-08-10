@@ -403,7 +403,7 @@ function AppShell() {
   );
 }
 
-function App() {
+function AppRoutes() {
   // Public store route: /store/:slug — no auth required
   const path = window.location.pathname;
   const storeMatch = path.match(/^\/store\/([^/]+)/);
@@ -425,17 +425,26 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <LangProvider>
-          <AuthProvider>
-            <AppToastProvider>
-              <ConfirmProvider>
-                <AppShell />
-              </ConfirmProvider>
-            </AppToastProvider>
-          </AuthProvider>
-        </LangProvider>
+        <AuthProvider>
+          <AppToastProvider>
+            <ConfirmProvider>
+              <AppShell />
+            </ConfirmProvider>
+          </AppToastProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  // Til konteksti admin panel bilan birga public Mini App'ni ham o'rashi shart.
+  // Aks holda storefront'dagi til tanlagich local state'ni o'zgartiradi-yu,
+  // useT() provider topolmagani sabab sahifa matnlari o'zbekcha qolib ketadi.
+  return (
+    <LangProvider>
+      <AppRoutes />
+    </LangProvider>
   );
 }
 

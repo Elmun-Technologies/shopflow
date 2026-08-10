@@ -12,7 +12,7 @@ import EmptyState from "../EmptyState";
 import { api } from "../../api/client";
 import { useAppToast } from "../ui/Toast";
 import { useConfirm } from "../ui/ConfirmDialog";
-import { useT } from "../../i18n";
+import { getLang, useT } from "../../i18n";
 
 interface ApiReview {
   id: string;
@@ -63,7 +63,7 @@ function StatusBadge({ status }: { status: ApiReview["status"] }) {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(iso).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "medium", timeStyle: "short" });
 }
 
 export default function IzohlarPage() {

@@ -5,7 +5,7 @@ import {
   Bell as BellIcon,
 } from "lucide-react";
 import { formatUzPhone } from "../../utils/phone";
-import { useT } from "../../i18n";
+import { getLang, useT } from "../../i18n";
 
 type ProfileView =
   | "menu"
@@ -155,6 +155,12 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
   const profileUrl = `${apiBase}/storefront/${encodeURIComponent(storeSlug)}/profile`;
   const addressesUrl = `${apiBase}/storefront/${encodeURIComponent(storeSlug)}/addresses`;
 
+  // Store uchun keshlangan yoki serverdan kelgan til butun Mini App kontekstiga
+  // qo'llansin; faqat picker ichidagi local state o'zgarib qolmasin.
+  useEffect(() => {
+    setGlobalLang(lang);
+  }, [lang, setGlobalLang]);
+
   // Serverdan profilni va manzillarni yuklash (telegramUser bo'lsa)
   useEffect(() => {
     if (!isOnline || profileLoaded) return;
@@ -164,6 +170,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       ...(telegramUser?.firstName && { firstName: telegramUser.firstName }),
       ...(telegramUser?.lastName && { lastName: telegramUser.lastName }),
       ...(telegramUser?.username && { username: telegramUser.username }),
+      language: lang,
     });
     fetch(`${profileUrl}?${params}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -197,7 +204,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       })
       .catch(() => { /* offline fallback — localStorage allaqachon yuklangan */ })
       .finally(() => setProfileLoaded(true));
-  }, [isOnline, profileLoaded, tgUserId, profileUrl, telegramUser, storeSlug]);
+  }, [isOnline, profileLoaded, tgUserId, profileUrl, telegramUser, storeSlug, lang]);
 
   // Save handlers — server PATCH + localStorage cache
   const saveProfile = useCallback(async (next: ProfileData) => {
@@ -349,7 +356,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       <div className="px-4 py-4">
         {view === "info" && <InfoForm profile={profile} onSave={saveProfile} isOnline={isOnline} />}
         {view === "orders" && <OrdersList orders={orders} loading={ordersLoading} />}
-        {view === "reviews" && <PlaceholderTwoTab labelA="Baholanishi kutilmoqda" labelB="Barcha fikrlarim" />}
+        {view === "reviews" && <PlaceholderTwoTab labelA={t("profile.reviews.pending")} labelB={t("profile.reviews.all")} />}
         {view === "promocodes" && <PromocodeForm storeSlug={storeSlug} />}
         {view === "referrals" && <ReferralsView telegramUser={telegramUser} stats={referrals} />}
         {view === "language" && <LanguagePicker lang={lang} onChange={saveLang} />}
@@ -663,7 +670,7 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
         <div className="space-y-2">
           {filtered.map((o) => {
             const isOpen = expanded.has(o.id);
-            const currencyStr = o.currency === "UZS" ? "so'm" : o.currency;
+            const currencyStr = o.currency === "UZS" ? t("common.sum") : o.currency;
             return (
               <div
                 key={o.id}
@@ -684,12 +691,12 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
                     </div>
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {new Date(o.createdAt).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(o.createdAt).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
                   </div>
                   <div className="mt-2 flex items-center justify-between text-sm">
                     <span className="text-slate-500 dark:text-slate-400">{t("profile.orders.itemCount", { n: o.items.length })}</span>
                     <span className="font-semibold text-slate-900 dark:text-white">
-                      {Number(o.total).toLocaleString("uz-UZ")} {currencyStr}
+                      {Number(o.total).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")} {currencyStr}
                     </span>
                   </div>
                 </button>
@@ -713,11 +720,11 @@ function OrdersList({ orders, loading }: { orders: CustomerOrder[] | null; loadi
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-medium text-slate-900 dark:text-white truncate">{it.product.name}</div>
                             <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                              {it.qty} × {Number(it.price).toLocaleString("uz-UZ")} {currencyStr}
+                              {it.qty} × {Number(it.price).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")} {currencyStr}
                             </div>
                           </div>
                           <div className="text-xs font-semibold text-slate-900 dark:text-white whitespace-nowrap">
-                            {(it.qty * Number(it.price)).toLocaleString("uz-UZ")}
+                            {(it.qty * Number(it.price)).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")}
                           </div>
                         </div>
                       ))}
@@ -879,7 +886,7 @@ function ReferralsView({ telegramUser, stats }: { telegramUser?: ProfilePageProp
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{r.displayName}</div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {new Date(r.createdAt).toLocaleDateString("uz-UZ", { year: "numeric", month: "short", day: "numeric" })}
+                  {new Date(r.createdAt).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { year: "numeric", month: "short", day: "numeric" })}
                 </div>
               </div>
               {r.ordersCount > 0 ? (

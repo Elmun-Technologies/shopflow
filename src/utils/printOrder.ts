@@ -3,6 +3,8 @@
 // printer'ga jo'natadi. Yangi oyna popup blokchi tomonidan to'silishi mumkin
 // (lekin user click trigger qilgani uchun odatda o'tadi).
 
+import { tStatic, type Lang } from "../i18n";
+
 interface PrintOrderInput {
   code: string;
   status: string; // ko'rinadigan label (allaqachon tarjima qilingan)
@@ -14,6 +16,7 @@ interface PrintOrderInput {
   shippingAddress: string | null;
   items: Array<{ name: string; sku: string; qty: number; price: number }>;
   tenant: { name: string; phone?: string | null; address?: string | null } | null;
+  lang: Lang;
   // Lokalizatsiya — admin tilidagi labellar
   labels: {
     title: string; // "Hisob-faktura" / "Счёт-фактура"
@@ -33,9 +36,10 @@ interface PrintOrderInput {
   };
 }
 
-function fmtMoney(n: number, currency: string): string {
-  if (currency === "UZS") return `${n.toLocaleString("uz-UZ")} so'm`;
-  return `${n.toLocaleString()} ${currency}`;
+function fmtMoney(n: number, currency: string, lang: Lang): string {
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
+  if (currency === "UZS") return `${n.toLocaleString(locale)} ${tStatic("common.sum", undefined, lang)}`;
+  return `${n.toLocaleString(locale)} ${currency}`;
 }
 
 function escapeHtml(s: string | null | undefined): string {
@@ -52,12 +56,12 @@ export function openOrderPrint(input: PrintOrderInput): void {
   const w = window.open("", "_blank", "width=820,height=900");
   if (!w) {
     // Popup bloklangan — alert va return
-    alert("Pop-up blocked. Brauzer sozlamalaridan ruxsat bering.");
+    alert(tStatic("analytics.popupBlocked", undefined, input.lang));
     return;
   }
 
   const { labels: L } = input;
-  const dateStr = new Date(input.createdAt).toLocaleString("uz-UZ", {
+  const dateStr = new Date(input.createdAt).toLocaleString(input.lang === "ru" ? "ru-RU" : "uz-UZ", {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -70,8 +74,8 @@ export function openOrderPrint(input: PrintOrderInput): void {
         <div class="item-sku">SKU: ${escapeHtml(it.sku)}</div>
       </td>
       <td class="num">${it.qty}</td>
-      <td class="num">${fmtMoney(it.price, input.currency)}</td>
-      <td class="num bold">${fmtMoney(it.price * it.qty, input.currency)}</td>
+      <td class="num">${fmtMoney(it.price, input.currency, input.lang)}</td>
+      <td class="num bold">${fmtMoney(it.price * it.qty, input.currency, input.lang)}</td>
     </tr>
   `).join("");
 
@@ -85,7 +89,7 @@ export function openOrderPrint(input: PrintOrderInput): void {
     : "";
 
   const html = `<!DOCTYPE html>
-<html lang="uz">
+<html lang="${input.lang}">
 <head>
 <meta charset="utf-8" />
 <title>${L.title} #${escapeHtml(input.code)}</title>
@@ -208,7 +212,7 @@ export function openOrderPrint(input: PrintOrderInput): void {
 </style>
 </head>
 <body>
-  <button class="print-button no-print" onclick="window.print()">🖨 Print / PDF</button>
+  <button class="print-button no-print" onclick="window.print()">🖨 ${escapeHtml(tStatic("common.printPdf", undefined, input.lang))}</button>
 
   <div class="header">
     <div>
@@ -261,7 +265,7 @@ export function openOrderPrint(input: PrintOrderInput): void {
 
   <div class="total-row">
     <span class="total-label">${escapeHtml(L.total)}:</span>
-    <span class="total-value">${fmtMoney(input.total, input.currency)}</span>
+    <span class="total-value">${fmtMoney(input.total, input.currency, input.lang)}</span>
   </div>
 
   ${input.notes ? `

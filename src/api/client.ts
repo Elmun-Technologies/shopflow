@@ -2,6 +2,8 @@
 // Access token 15 daqiqada, refresh token 30 kunda tugaydi.
 // 401 javobida refresh tokendan yangi access token olinadi.
 
+import { getLang, tStatic } from "../i18n";
+
 const TOKEN_KEY = "shopflow.token";
 const REFRESH_TOKEN_KEY = "shopflow.refreshToken";
 
@@ -37,6 +39,21 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Eski backend route'laridagi xato matnlarining ko'pi faqat o'zbekcha.
+ * Ruscha interfeys ichida o'zbekcha server xatosini chiqarish o'rniga ruscha,
+ * statusli xavfsiz fallback ko'rsatamiz. Backend Accept-Language'ni qo'llagan
+ * route'larda kirill matn o'z holicha saqlanadi.
+ */
+function localizeErrorMessage(message: string, status: number): string {
+  const lang = getLang();
+  const hasCyrillic = /[А-Яа-яЁё]/.test(message);
+  if (lang === "ru") {
+    return hasCyrillic ? message : tStatic("server.requestFailed", { status }, "ru");
+  }
+  return hasCyrillic ? tStatic("server.requestFailed", { status }, "uz") : message;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
@@ -55,7 +72,7 @@ async function doRefresh(): Promise<string | null> {
   try {
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept-Language": getLang() },
       body: JSON.stringify({ refreshToken }),
     });
     if (!res.ok) {
@@ -81,7 +98,7 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
 
   const token = getToken();
   const hasBody = opts.body !== undefined;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { "Accept-Language": getLang() };
   if (hasBody) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -107,7 +124,7 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     // Refresh ham muvaffaqiyatsiz — logout
     clearAuth();
     window.dispatchEvent(new CustomEvent("shopflow:unauthorized"));
-    throw new ApiError(401, "Unauthorized");
+    throw new ApiError(401, tStatic("server.requestFailed", { status: 401 }));
   }
 
   let payload: unknown;
@@ -118,10 +135,10 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
   }
 
   if (!res.ok) {
-    const msg = (payload && typeof payload === "object" && "error" in payload
+    const rawMessage = (payload && typeof payload === "object" && "error" in payload
       ? String((payload as { error: unknown }).error)
       : `HTTP ${res.status}`);
-    throw new ApiError(res.status, msg, payload);
+    throw new ApiError(res.status, localizeErrorMessage(rawMessage, res.status), payload);
   }
   return payload as T;
 }

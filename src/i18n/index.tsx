@@ -3,7 +3,7 @@
 
 export type Lang = "uz" | "ru";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { dictionary } from "./dictionary";
 
@@ -59,25 +59,42 @@ export function tStatic(
 }
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => loadLang());
+  const [lang, setLangState] = useState<Lang>(() => {
+    const initial = loadLang();
+    currentLang = initial;
+    return initial;
+  });
 
-  const setLang = (next: Lang) => {
+  const setLang = useCallback((next: Lang) => {
     currentLang = next; // module singleton'ni sinxron tut (format.ts uchun)
     setLangState(next);
     try { localStorage.setItem(LS_KEY, next); } catch { /* ignore */ }
     try { document.documentElement.lang = next; } catch { /* ignore */ }
-  };
+  }, []);
 
-  // HTML lang attribute sync
+  // HTML lang attribute sync + boshqa tabda o'zgargan tilni darhol qabul qilish.
   useEffect(() => {
+    currentLang = lang;
     try { document.documentElement.lang = lang; } catch { /* ignore */ }
   }, [lang]);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LS_KEY && (event.newValue === "uz" || event.newValue === "ru")) {
+        currentLang = event.newValue;
+        setLangState(event.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
-  return (
-    <LangContext.Provider value={{ lang, setLang, t: (key, params) => translate(lang, key, params) }}>
-      {children}
-    </LangContext.Provider>
-  );
+  const value = useMemo<LangContextValue>(() => ({
+    lang,
+    setLang,
+    t: (key, params) => translate(lang, key, params),
+  }), [lang, setLang]);
+
+  return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }
 
 export function useT() {

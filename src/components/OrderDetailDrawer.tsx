@@ -10,7 +10,7 @@ import {
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import type { OrderStatus } from "../types/api";
-import { useT } from "../i18n";
+import { getLang, tStatic, useT } from "../i18n";
 import { openOrderPrint } from "../utils/printOrder";
 import { useAuth } from "../contexts/AuthContext";
 import { priceBreakdown } from "../utils/pricing";
@@ -131,12 +131,12 @@ const STATUS_STYLE: Record<OrderStatus, { color: string; bg: string }> = {
 
 function formatMoney(n: string | number, currency: string): string {
   const v = Number(n);
-  if (currency === "UZS") return `${v.toLocaleString("uz-UZ")} so'm`;
+  if (currency === "UZS") return `${v.toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")} ${tStatic("common.sum")}`;
   return `${v.toLocaleString()} ${currency}`;
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(iso).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "medium", timeStyle: "short" });
 }
 
 export interface OrderDetailDrawerProps {
@@ -146,7 +146,7 @@ export interface OrderDetailDrawerProps {
 }
 
 export default function OrderDetailDrawer({ orderId, onClose, onChanged }: OrderDetailDrawerProps) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const { tenant } = useAuth();
   const [order, setOrder] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -323,6 +323,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         price: Number(it.price),
       })),
       tenant: tenant ? { name: tenant.name, phone: null, address: null } : null,
+      lang,
       labels: {
         title: t("invoice.title"),
         code: t("invoice.code"),

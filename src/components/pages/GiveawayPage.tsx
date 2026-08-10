@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Trophy } from "lucide-react";
 import type { GiveawayContest, GiveawayStatus, GiveawayPrizeType, GiveawayAudience } from "../../data/marketingData";
-import { initialGiveaways, giveawayStatusLabels, giveawayPrizeTypeLabels, giveawayAudienceLabels } from "../../data/marketingData";
+import { initialGiveaways } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
 import { useT } from "../../i18n";
 
@@ -12,12 +12,13 @@ const thClass = "text-left text-xs font-semibold text-slate-500 uppercase tracki
 const tdClass = "py-3 px-3 text-sm text-forest-700 border-t border-cream-300";
 
 function GiveawayStatusBadge({ status }: { status: GiveawayStatus }) {
+  const { t } = useT();
   const map: Record<GiveawayStatus, string> = {
     draft: "bg-cream-200 text-slate-700",
     active: "bg-leaf-100 text-forest-700 border border-leaf-400/50",
     ended: "bg-cream-200/70 text-slate-500",
   };
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{giveawayStatusLabels[status]}</span>;
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status]}`}>{t(`giveaway.status.${status}`)}</span>;
 }
 
 export default function GiveawayPage() {
@@ -146,9 +147,9 @@ export default function GiveawayPage() {
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-cream-100/40">
                   <td className={tdClass + " font-medium"}>{c.title}</td>
-                  <td className={tdClass + " text-xs"}>{giveawayPrizeTypeLabels[c.prizeType as GiveawayPrizeType]}</td>
+                  <td className={tdClass + " text-xs"}>{t(`giveaway.prize.${c.prizeType as GiveawayPrizeType}`)}</td>
                   <td className={tdClass}>{c.prizeCount}</td>
-                  <td className={tdClass + " text-xs"}>{giveawayAudienceLabels[c.audience as GiveawayAudience]}</td>
+                  <td className={tdClass + " text-xs"}>{t(`giveaway.audience.${c.audience === "new_subscribers" ? "newSubscribers" : "all"}`)}</td>
                   <td className={tdClass + " text-xs text-slate-500"}>{c.endAt}</td>
                   <td className={tdClass}>{c.participantCount.toLocaleString()}</td>
                   <td className={tdClass}><GiveawayStatusBadge status={c.status} /></td>

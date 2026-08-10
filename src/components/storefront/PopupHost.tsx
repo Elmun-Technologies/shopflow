@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { haptic } from "./storefront-theme";
+import { useT } from "../../i18n";
 
 export type PopupKind = "MODAL" | "BANNER" | "TOAST";
 export type PopupTrigger = "ON_OPEN" | "AFTER_DELAY" | "ON_TAB_CHANGE" | "ON_CART_ABANDON";
@@ -79,6 +80,7 @@ interface PopupHostProps {
 }
 
 export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: PopupHostProps) {
+  const { t } = useT();
   const [popups, setPopups] = useState<PopupItem[]>([]);
   const [active, setActive] = useState<PopupItem | null>(null);
 
@@ -163,7 +165,7 @@ export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: Popu
                 {active.ctaText}
               </button>
             )}
-            <button onClick={handleClose} aria-label="Yopish" className="p-1 text-white/70 hover:text-white">
+            <button onClick={handleClose} aria-label={t("common.close")} className="p-1 text-white/70 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -194,7 +196,7 @@ export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: Popu
             <h3 className="text-lg font-bold text-white leading-tight">{active.title}</h3>
             <button
               onClick={handleClose}
-              aria-label="Yopish"
+              aria-label={t("common.close")}
               className="p-1 -mr-1 text-slate-400 hover:text-white transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
@@ -214,7 +216,7 @@ export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: Popu
             onClick={handleClose}
             className="w-full mt-2 py-2 text-xs text-slate-500 hover:text-slate-300"
           >
-            Keyinroq
+            {t("popup.later")}
           </button>
         </div>
       </div>

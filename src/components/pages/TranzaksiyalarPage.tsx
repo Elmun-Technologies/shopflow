@@ -8,7 +8,7 @@ import {
 import { useAsync } from "../../hooks/useAsync";
 import { api } from "../../api/client";
 import EmptyState from "../EmptyState";
-import { useT } from "../../i18n";
+import { getLang, useT } from "../../i18n";
 
 interface LoyaltyTx {
   id: string;
@@ -73,7 +73,7 @@ export default function TranzaksiyalarPage() {
         t("loyaltyTx.csv.note"),
       ].join(","),
       ...items.map((tx) => [
-        new Date(tx.createdAt).toLocaleDateString("uz-UZ"),
+        new Date(tx.createdAt).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ"),
         `"${tx.account.customer.name}"`,
         tx.account.customer.phone ?? "",
         TYPE_CONF[tx.type] ? t(TYPE_CONF[tx.type].labelKey) : tx.type,
@@ -188,7 +188,7 @@ export default function TranzaksiyalarPage() {
                       className="border-b border-cream-300/50 hover:bg-cream-50/30 transition-colors"
                     >
                       <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                        {new Date(tx.createdAt).toLocaleDateString("uz-UZ", {
+                        {new Date(tx.createdAt).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ", {
                           day: "2-digit",
                           month: "short",
                           hour: "2-digit",

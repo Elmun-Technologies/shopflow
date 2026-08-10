@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, Users, Filter, AlertCircle, CheckCircle2, Loader2, Send } from "lucide-react";
 import type { CustomerSegment, SegmentType, SegmentCondition } from "../../data/customersData";
-import { segmentTypeLabels, segmentConditionFields, customers } from "../../data/customersData";
+import { customers } from "../../data/customersData";
 import { api } from "../../api/client";
 import { useAppToast } from "../ui/Toast";
 import { useT } from "../../i18n";
@@ -41,6 +41,7 @@ const inputClass = "w-full bg-cream-100 border border-cream-300 rounded-lg px-3 
 const labelClass = "block text-xs font-medium text-slate-500 mb-1.5";
 
 function SegmentTypeBadge({ type }: { type: SegmentType }) {
+  const { t } = useT();
   const colors: Record<SegmentType, string> = {
     automatic: "bg-leaf-100 text-forest-700",
     manual: "bg-slate-100 text-slate-600",
@@ -48,7 +49,7 @@ function SegmentTypeBadge({ type }: { type: SegmentType }) {
   };
   return (
     <span className={`text-xs px-2.5 py-1 rounded-full ${colors[type]}`}>
-      {segmentTypeLabels[type]}
+      {t(`segments.typeShort.${type}`)}
     </span>
   );
 }
@@ -423,7 +424,7 @@ function SegmentDetailView({ segment, onBack }: { segment: CustomerSegment; onBa
       <div className="grid grid-cols-4 gap-3">
         <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
           <p className="text-[10px] text-slate-500 uppercase mb-1">{t("segments.detail.type")}</p>
-          <p className="text-sm font-semibold text-forest-800">{segmentTypeLabels[segment.type as SegmentType]}</p>
+          <p className="text-sm font-semibold text-forest-800">{t(`segments.typeShort.${segment.type as SegmentType}`)}</p>
         </div>
         <div className="rounded-xl bg-white border border-cream-300 px-3 py-2">
           <p className="text-[10px] text-slate-500 uppercase mb-1">{t("segments.detail.members")}</p>
@@ -448,7 +449,7 @@ function SegmentDetailView({ segment, onBack }: { segment: CustomerSegment; onBa
           <div className="space-y-2">
             {segment.conditions.map((cond) => (
               <div key={cond.id} className="flex items-center gap-3 p-3 rounded-lg bg-cream-100/50 border border-cream-300">
-                <span className="text-sm font-medium text-slate-700">{segmentConditionFields[cond.field]}</span>
+                <span className="text-sm font-medium text-slate-700">{t(`segments.field.${cond.field}`)}</span>
                 <span className="text-xs px-2 py-1 rounded bg-cream-200 text-slate-700">{cond.operator}</span>
                 <span className="text-sm text-slate-500">{String(cond.value)}</span>
               </div>

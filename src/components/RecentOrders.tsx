@@ -5,7 +5,7 @@ import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import type { OrderStatus } from "../types/api";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 
 const statusStyles: Record<OrderStatus, string> = {
   COMPLETED: "bg-leaf-100 text-forest-700",
@@ -44,7 +44,7 @@ function relTime(iso: string, t: (key: string, vars?: Record<string, string | nu
   if (h < 24) return t("time.hoursAgo", { count: h });
   const d = Math.floor(h / 24);
   if (d < 7) return t("time.daysAgo", { count: d });
-  return new Date(iso).toLocaleDateString("uz-UZ", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { month: "short", day: "numeric" });
 }
 
 export default function RecentOrders({ onViewAll }: { onViewAll?: () => void } = {}) {

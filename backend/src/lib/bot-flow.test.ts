@@ -3,6 +3,7 @@ import {
   botFlowDefinitionSchema,
   findOrphanScreens,
   pick,
+  pickStrict,
   validateFlowRefs,
   type BotFlowDefinition,
 } from "./bot-flow-schema.js";
@@ -60,6 +61,13 @@ describe("pick()", () => {
   it("umuman bo'sh bo'lsa bo'sh satr", () => {
     expect(pick({ uz: "", ru: "" }, "uz")).toBe("");
     expect(pick(undefined, "uz")).toBe("");
+  });
+});
+
+describe("pickStrict()", () => {
+  it("mijozga boshqa tildagi matnni fallback qilib bermaydi", () => {
+    expect(pickStrict({ uz: "Salom", ru: "" }, "ru")).toBe("");
+    expect(pickStrict({ uz: "", ru: "Привет" }, "uz")).toBe("");
   });
 });
 

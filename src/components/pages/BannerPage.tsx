@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, ChevronLeft, Image } from "lucide-react";
 import type { MarketingBanner, BannerPlacement } from "../../data/marketingData";
-import { initialBanners, bannerPlacementLabels } from "../../data/marketingData";
+import { initialBanners } from "../../data/marketingData";
 import EmptyState from "../EmptyState";
 import { useT } from "../../i18n";
 
@@ -143,7 +143,7 @@ export default function BannerPage() {
               {filtered.map((b) => (
                 <tr key={b.id} className="hover:bg-cream-100/40">
                   <td className={tdClass + " font-medium"}>{b.title}</td>
-                  <td className={tdClass + " text-xs"}>{bannerPlacementLabels[b.placement as BannerPlacement]}</td>
+                  <td className={tdClass + " text-xs"}>{t(`banner.placement.${({ home_hero: "homeHero", category_top: "categoryTop", cart_sidebar: "cartSidebar", checkout: "checkout" } as Record<BannerPlacement, string>)[b.placement as BannerPlacement]}`)}</td>
                   <td className={tdClass}>{b.impressions.toLocaleString()}</td>
                   <td className={tdClass}>{b.clicks.toLocaleString()}</td>
                   <td className={tdClass}><CTRBadge impressions={b.impressions} clicks={b.clicks} /></td>

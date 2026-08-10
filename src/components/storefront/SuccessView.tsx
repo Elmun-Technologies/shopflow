@@ -2,17 +2,16 @@ import { memo } from "react";
 import { CheckCircle2, Truck, Bell, ShoppingBag, ArrowRight } from "lucide-react";
 import { useT } from "../../i18n";
 
-const UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
-function formatUzDate(d: Date) {
-  return `${d.getDate()} ${UZ_MONTHS[d.getMonth()]}`;
+function formatDeliveryDate(d: Date, lang: "uz" | "ru") {
+  return d.toLocaleDateString(lang === "ru" ? "ru-RU" : "uz-UZ", { day: "numeric", month: "long" });
 }
 function deliveryDate() {
   const d = new Date();
   d.setDate(d.getDate() + 2);
   return d;
 }
-function formatPrice(price: number, currency: string) {
-  if (currency === "UZS") return price.toLocaleString("uz-UZ") + " so'm";
+function formatPrice(price: number, currency: string, lang: "uz" | "ru") {
+  if (currency === "UZS") return price.toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ") + (lang === "ru" ? " сум" : " so'm");
   if (currency === "USD") return "$" + price.toLocaleString("en-US", { minimumFractionDigits: 2 });
   return price.toLocaleString() + " " + currency;
 }
@@ -33,8 +32,8 @@ const STEPS: Array<{ key: string; done: boolean; active?: boolean }> = [
 ];
 
 function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders, onContinueShopping }: SuccessViewProps) {
-  const { t } = useT();
-  const delivStr = formatUzDate(deliveryDate());
+  const { t, lang } = useT();
+  const delivStr = formatDeliveryDate(deliveryDate(), lang);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
@@ -89,7 +88,7 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>{t("success.total")}</p>
                 <p className="text-lg font-bold" style={{ color: primaryColor }}>
-                  {formatPrice(orderResult.total, orderResult.currency)}
+                  {formatPrice(orderResult.total, orderResult.currency, lang)}
                 </p>
               </div>
             </div>

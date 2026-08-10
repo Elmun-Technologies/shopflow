@@ -31,9 +31,9 @@ export interface SinglePreviewProduct {
 
 export const SECTION_SPACING = "pt-5 mt-5 border-t border-slate-800";
 
-function money(n: number, currency: string): string {
-  const label = currency === "UZS" ? "so'm" : currency;
-  return `${Math.round(n).toLocaleString("uz-UZ")} ${label}`;
+function money(n: number, currency: string, lang: "uz" | "ru"): string {
+  const label = currency === "UZS" ? (lang === "ru" ? "сум" : "so'm") : currency;
+  return `${Math.round(n).toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ")} ${label}`;
 }
 
 // "namuna / образец" yorlig'i — admin'da bo'lmagan (real bo'lmagan) qiymatlar uchun
@@ -92,16 +92,17 @@ export function GalleryPreview({ vm }: { vm: SinglePreviewProduct }) {
 }
 
 export function PricePreview({ vm }: { vm: SinglePreviewProduct }) {
+  const { lang } = useT();
   const discount = vm.oldPrice && vm.oldPrice > vm.price
     ? Math.round((1 - vm.price / vm.oldPrice) * 100)
     : 0;
   return (
     <div className="mt-4">
       <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="text-2xl font-bold text-white">{money(vm.price, vm.currency)}</span>
+        <span className="text-2xl font-bold text-white">{money(vm.price, vm.currency, lang)}</span>
         {vm.oldPrice && vm.oldPrice > vm.price && (
           <>
-            <span className="text-sm text-slate-500 line-through">{money(vm.oldPrice, vm.currency)}</span>
+            <span className="text-sm text-slate-500 line-through">{money(vm.oldPrice, vm.currency, lang)}</span>
             <span className="text-[11px] font-bold text-rose-300 bg-rose-500/10 px-1.5 py-0.5 rounded">−{discount}%</span>
           </>
         )}

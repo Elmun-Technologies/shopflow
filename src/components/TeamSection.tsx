@@ -8,7 +8,7 @@ import { UserPlus, Loader2, Mail, Shield, Trash2, Check, X, Copy, Users } from "
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "AGENT";
 
@@ -33,7 +33,7 @@ function getRoleLabels(t: ReturnType<typeof useT>["t"]): Record<Role, { label: s
 const ASSIGNABLE_ROLES: Role[] = ["ADMIN", "MANAGER", "AGENT"];
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("uz-UZ", { dateStyle: "medium" });
+  return new Date(iso).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ", { dateStyle: "medium" });
 }
 
 function initials(name: string): string {

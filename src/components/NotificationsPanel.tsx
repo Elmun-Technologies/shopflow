@@ -41,7 +41,8 @@ function saveLastSeen(iso: string) {
 }
 
 export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders" | "leads") => void }) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,7 +100,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
             const first = newOrders[0];
             void showBrowserNotification(
               t("notif.newOrder", { code: first.code }),
-              `${first.customer?.name ?? "—"} · ${Number(first.total).toLocaleString("uz-UZ")} ${first.currency === "UZS" ? "so'm" : first.currency}`,
+              `${first.customer?.name ?? "—"} · ${Number(first.total).toLocaleString(locale)} ${first.currency === "UZS" ? t("common.sum") : first.currency}`,
             );
           }
           if (newLeads.length > 0 && prefs.leads.sound) {
@@ -121,7 +122,7 @@ export function NotificationsPanel({ onNavigate }: { onNavigate?: (page: "orders
           id: `o-${o.id}`,
           kind: "order",
           title: `#${o.code} · ${o.customer?.name ?? "—"}`,
-          subtitle: `${Number(o.total).toLocaleString("uz-UZ")} ${o.currency === "UZS" ? "so'm" : o.currency}`,
+          subtitle: `${Number(o.total).toLocaleString(locale)} ${o.currency === "UZS" ? t("common.sum") : o.currency}`,
           createdAt: o.createdAt,
           page: "orders",
           refId: o.id,

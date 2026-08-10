@@ -15,7 +15,7 @@ function growthToPercent(change: number): number {
 }
 
 export default function SalesGauge() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [change, setChange] = useState<number | null>(null);
   const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ export default function SalesGauge() {
       <div className="mt-2 pt-3 border-t border-cream-300 flex items-center justify-between">
         <span className="text-xs text-slate-500">{t("gauge.thisPeriod")}</span>
         <span className="text-sm font-semibold text-forest-800">
-          {new Intl.NumberFormat("uz-UZ").format(revenue)} {t("gauge.currency")}
+          {new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "uz-UZ").format(revenue)} {t("gauge.currency")}
         </span>
       </div>
     </motion.div>

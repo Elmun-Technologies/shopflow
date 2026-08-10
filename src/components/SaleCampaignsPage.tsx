@@ -8,7 +8,7 @@ import {
   Plus, Tag as TagIcon, Edit2, Trash2, Loader2, Eye, EyeOff, X, Calendar, Package as PackageIcon, Search,
 } from "lucide-react";
 import { api } from "../api/client";
-import { useT } from "../i18n";
+import { getLang, useT } from "../i18n";
 import { useAppToast } from "./ui/Toast";
 import { useConfirm } from "./ui/ConfirmDialog";
 
@@ -188,9 +188,9 @@ export default function SaleCampaignsPage() {
                     {(c.startsAt || c.endsAt) && (
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {c.startsAt ? new Date(c.startsAt).toLocaleDateString("uz-UZ") : "—"}
+                        {c.startsAt ? new Date(c.startsAt).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ") : "—"}
                         {" → "}
-                        {c.endsAt ? new Date(c.endsAt).toLocaleDateString("uz-UZ") : t("campaigns.noEndDate")}
+                        {c.endsAt ? new Date(c.endsAt).toLocaleDateString(getLang() === "ru" ? "ru-RU" : "uz-UZ") : t("campaigns.noEndDate")}
                       </span>
                     )}
                     {c.priority > 0 && <span>P:{c.priority}</span>}
@@ -345,7 +345,7 @@ function CampaignEditor({
         ) : (
           <div className="p-5 space-y-3">
             <Field label={t("campaigns.nameLabel")} value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder={t("campaigns.namePlaceholder")} />
-            <Field label={t("campaigns.labelText")} value={form.label} onChange={(v) => setForm({ ...form, label: v })} placeholder="Распродажа" />
+            <Field label={t("campaigns.labelText")} value={form.label} onChange={(v) => setForm({ ...form, label: v })} placeholder={t("campaigns.labelPlaceholder")} />
 
             <div>
               <div className="text-xs text-slate-500 mb-2">{t("campaigns.badgeColor")}</div>
@@ -418,7 +418,7 @@ function CampaignEditor({
                         <div className="text-sm text-forest-800 truncate">{p.name}</div>
                         <div className="text-[10px] text-slate-500">{p.sku}</div>
                       </div>
-                      <div className="text-xs text-slate-500">{Number(p.price).toLocaleString("uz-UZ")}</div>
+                      <div className="text-xs text-slate-500">{Number(p.price).toLocaleString(getLang() === "ru" ? "ru-RU" : "uz-UZ")}</div>
                     </label>
                   ))
                 )}

@@ -214,7 +214,7 @@ export default function AnalyticsPage() {
                     : "text-slate-500 hover:text-forest-900"
                 }`}
               >
-                {timeRangeLabels[range]}
+                {t(`analytics.range.${range}`)}
               </button>
             ))}
           </div>
@@ -244,7 +244,8 @@ export default function AnalyticsPage() {
               if (!kpis) return;
               const ok = openReportPrint({
                 storeName: tenant?.name ?? "ShopFlow",
-                periodLabel: timeRangeLabels[timeRange],
+                periodLabel: t(`analytics.range.${timeRange}`),
+                lang,
                 generatedAt: new Date(),
                 currency: tenant?.currency ?? "UZS",
                 kpis: {

@@ -34,13 +34,19 @@ interface CatalogProduct {
   stock: number;
 }
 
-function buildSystemPrompt(storeName: string, catalogJson: string): string {
+function buildSystemPrompt(storeName: string, catalogJson: string, language?: "uz" | "ru"): string {
+  const languageRule = language === "ru"
+    ? "Respond only in Russian."
+    : language === "uz"
+      ? "Respond only in Uzbek (Latin script)."
+      : "Respond in the customer's language (Uzbek/Russian/English).";
   return `You are a helpful AI shopping assistant for the Telegram store "${storeName}".
 
 Your role:
 - Help customers find products from the store's catalog
 - Answer questions about products (price, availability, features)
-- Be warm, concise, and respond in the customer's language (Uzbek/Russian/English)
+- Be warm and concise
+- ${languageRule}
 - If you recommend products, ONLY use products from the catalog below — never invent
 - If the customer's request is unclear, ask ONE clarifying question
 - If the customer wants to talk to a human operator, set handoffToOperator: true
@@ -61,6 +67,7 @@ export async function aiReplyToMessage(
   prisma: PrismaClient,
   tenantId: string,
   userMessage: string,
+  language?: "uz" | "ru",
 ): Promise<AIResponse> {
   if (!isAiConfigured()) return { used: false, reason: "AI kaliti sozlanmagan" };
   if (!userMessage.trim() || userMessage.length < 2) return { used: false, reason: "Empty message" };
@@ -91,7 +98,7 @@ export async function aiReplyToMessage(
   }));
 
   const res = await aiChat({
-    system: buildSystemPrompt(tenant.name, JSON.stringify(catalog)),
+    system: buildSystemPrompt(tenant.name, JSON.stringify(catalog), language),
     user: userMessage.slice(0, 1000),
     maxTokens: MAX_TOKENS,
     timeoutMs: TIMEOUT_MS,

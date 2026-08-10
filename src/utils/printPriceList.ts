@@ -1,5 +1,6 @@
-// Price List generator va Print chiqaruvchi utilita.
-// Formating: Наименование товара, Артикул, Остаток, Себестоимость, Старая цена, Новая цена (пустой столбик).
+// Narxlar ro'yxatini alohida A4 oynada chiqaruvchi utilita.
+
+import { tStatic, type Lang } from "../i18n";
 
 export interface PriceListItem {
   id: string;
@@ -19,22 +20,26 @@ export interface PriceListPrintInput {
   currency: string;
   items: PriceListItem[];
   filterLabel?: string;
+  lang: Lang;
 }
 
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] ?? c));
 }
 
-function fmtMoney(n: number | undefined | null, currency: string): string {
+function fmtMoney(n: number | undefined | null, currency: string, lang: Lang): string {
   if (n === undefined || n === null) return "—";
-  return new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " " + (currency === "UZS" ? "so'm" : currency);
+  const locale = lang === "ru" ? "ru-RU" : "uz-UZ";
+  return new Intl.NumberFormat(locale).format(Math.round(n)) + " " + (currency === "UZS" ? tStatic("common.sum", undefined, lang) : currency);
 }
 
 export function openPriceListPrint(input: PriceListPrintInput): boolean {
   const w = window.open("", "_blank", "width=900,height=1000");
   if (!w) return false;
 
-  const dateStr = input.generatedAt.toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" });
+  const locale = input.lang === "ru" ? "ru-RU" : "uz-UZ";
+  const tr = (key: string, params?: Record<string, string | number>) => tStatic(key, params, input.lang);
+  const dateStr = input.generatedAt.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
 
   const rowsHtml = input.items
     .map(
@@ -46,14 +51,14 @@ export function openPriceListPrint(input: PriceListPrintInput): boolean {
       <td style="text-align: center; font-weight: 600; color: ${item.stock > 0 ? "#166534" : "#991b1b"};">
         ${item.stock}
       </td>
-      <td style="text-align: right; color: #475569;">${fmtMoney(item.costPrice, input.currency)}</td>
+      <td style="text-align: right; color: #475569;">${fmtMoney(item.costPrice, input.currency, input.lang)}</td>
       <td style="text-align: right; color: #94a3b8; text-decoration: line-through;">
-        ${item.oldPrice ? fmtMoney(item.oldPrice, input.currency) : "—"}
+        ${item.oldPrice ? fmtMoney(item.oldPrice, input.currency, input.lang) : "—"}
       </td>
       <td style="text-align: right; font-weight: 700; color: #166534;">
-        ${fmtMoney(item.price, input.currency)}
+        ${fmtMoney(item.price, input.currency, input.lang)}
       </td>
-      <!-- Пустой столбик для записи новой цены -->
+      <!-- empty column for writing the new price -->
       <td style="width: 140px; border: 1.5px dashed #cbd5e1; background-color: #fafafa;"></td>
     </tr>
   `,
@@ -61,10 +66,10 @@ export function openPriceListPrint(input: PriceListPrintInput): boolean {
     .join("");
 
   const html = `<!doctype html>
-<html lang="ru">
+<html lang="${input.lang}">
 <head>
   <meta charset="utf-8">
-  <title>Прайс-лист — ${esc(input.storeName)}</title>
+  <title>${esc(tr("priceList.shortTitle"))} — ${esc(input.storeName)}</title>
   <style>
     @page { size: A4 portrait; margin: 10mm; }
     * { box-sizing: border-box; }
@@ -83,27 +88,27 @@ export function openPriceListPrint(input: PriceListPrintInput): boolean {
   </style>
 </head>
 <body>
-  <button class="print-button no-print" onclick="window.print()">🖨 Печать Прайс-листа</button>
+  <button class="print-button no-print" onclick="window.print()">🖨 ${esc(tr("priceList.print"))}</button>
 
   <div class="header">
     <div>
-      <div class="title">${esc(input.storeName)} — ПРАЙС ЛИСТ</div>
-      <div class="sub">Сформировано: ${dateStr} ${input.filterLabel ? `· ${esc(input.filterLabel)}` : ""}</div>
+      <div class="title">${esc(input.storeName)} — ${esc(tr("priceList.shortTitle").toUpperCase())}</div>
+      <div class="sub">${esc(tr("priceList.generated"))}: ${dateStr} ${input.filterLabel ? `· ${esc(input.filterLabel)}` : ""}</div>
     </div>
-    <span class="badge">Всего товаров: ${input.items.length}</span>
+    <span class="badge">${esc(tr("priceList.totalBadge", { count: input.items.length }))}</span>
   </div>
 
   <table>
     <thead>
       <tr>
         <th style="width: 30px; text-align: center;">№</th>
-        <th>Наименование товара</th>
-        <th style="width: 90px;">Артикул</th>
-        <th style="width: 60px; text-align: center;">Остаток</th>
-        <th style="width: 100px; text-align: right;">Себестоимость</th>
-        <th style="width: 90px; text-align: right;">Старая цена</th>
-        <th style="width: 100px; text-align: right;">Текущая цена</th>
-        <th style="width: 140px; text-align: center; background: #f1f5f9;">Новая цена (заполнение)</th>
+        <th>${esc(tr("priceList.col.product"))}</th>
+        <th style="width: 90px;">${esc(tr("priceList.col.sku"))}</th>
+        <th style="width: 60px; text-align: center;">${esc(tr("priceList.col.stock"))}</th>
+        <th style="width: 100px; text-align: right;">${esc(tr("priceList.col.cost"))}</th>
+        <th style="width: 90px; text-align: right;">${esc(tr("priceList.col.oldPrice"))}</th>
+        <th style="width: 100px; text-align: right;">${esc(tr("priceList.col.currentPrice"))}</th>
+        <th style="width: 140px; text-align: center; background: #f1f5f9;">${esc(tr("priceList.col.newPrice"))}</th>
       </tr>
     </thead>
     <tbody>
@@ -112,7 +117,7 @@ export function openPriceListPrint(input: PriceListPrintInput): boolean {
   </table>
 
   <div class="foot">
-    ShopFlow Management System · Прайс-лист для ревизии и переоценки
+    ${esc(tr("priceList.footer"))}
   </div>
 </body>
 </html>`;
