@@ -916,6 +916,9 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     firstName: z.string().max(80).optional(),
     lastName: z.string().max(80).optional(),
     username: z.string().max(80).optional(),
+    // Mini App Profile sahifasi telefonni ham yuboradi — schema'siz
+    // `q.phone` tsc'da "Property 'phone' does not exist" xatosini berardi.
+    phone: z.string().max(40).optional(),
     ref: z.coerce.number().int().positive().optional(),
     language: z.enum(["uz", "ru"]).optional(),
   });
