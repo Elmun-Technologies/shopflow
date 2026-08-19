@@ -142,3 +142,48 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
   }
   return payload as T;
 }
+
+/** Multipart rasm yuklash — JWT refresh ham ishlaydi (forma 15 daqiqadan oshsa). */
+export async function uploadFile(file: File): Promise<{ url: string }> {
+  const doPost = async (token: string | null) => {
+    const form = new FormData();
+    form.append("file", file);
+    const headers: Record<string, string> = { "Accept-Language": getLang() };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(`${API_BASE}/upload`, { method: "POST", headers, body: form });
+  };
+
+  let res = await doPost(getToken());
+  if (res.status === 401) {
+    if (!refreshPromise) {
+      refreshPromise = doRefresh().finally(() => {
+        refreshPromise = null;
+      });
+    }
+    const newToken = await refreshPromise;
+    if (!newToken) {
+      clearAuth();
+      window.dispatchEvent(new CustomEvent("shopflow:unauthorized"));
+      throw new ApiError(401, tStatic("server.requestFailed", { status: 401 }));
+    }
+    res = await doPost(newToken);
+  }
+
+  let payload: unknown;
+  const text = await res.text();
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = text;
+    }
+  }
+  if (!res.ok) {
+    const rawMessage =
+      payload && typeof payload === "object" && "error" in payload
+        ? String((payload as { error: unknown }).error)
+        : `HTTP ${res.status}`;
+    throw new ApiError(res.status, localizeErrorMessage(rawMessage, res.status), payload);
+  }
+  return payload as { url: string };
+}

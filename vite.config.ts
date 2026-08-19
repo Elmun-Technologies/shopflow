@@ -15,6 +15,13 @@ const useSingleFile = process.env.VITE_SINGLE_FILE === "true";
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? "/",
   plugins: [react(), tailwindcss(), ...(useSingleFile ? [viteSingleFile()] : [])],
+  server: {
+    host: "0.0.0.0",
+    proxy: {
+      "/api": { target: "http://127.0.0.1:4000", changeOrigin: true },
+      "/uploads": { target: "http://127.0.0.1:4000", changeOrigin: true },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

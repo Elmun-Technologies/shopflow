@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import { mkdir } from "node:fs/promises";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
@@ -144,7 +145,15 @@ await mkdir(UPLOADS_DIR, { recursive: true });
 const ONEC_EXCHANGE_DIR = process.env.ONEC_EXCHANGE_DIR ?? "/app/1c-exchange";
 await mkdir(ONEC_EXCHANGE_DIR, { recursive: true });
 
-await app.register(multipart);
+await app.register(multipart, { limits: { fileSize: 8 * 1024 * 1024 } });
+
+// Dev / to'g'ridan-to'g'ri backend orqali rasm ochish. Production'da nginx
+// ham /uploads ni beradi — ikkalasi ham xavfsiz (faqat shu katalog).
+await app.register(fastifyStatic, {
+  root: UPLOADS_DIR,
+  prefix: "/uploads/",
+  decorateReply: false,
+});
 
 await app.register(helmet, { contentSecurityPolicy: false });
 

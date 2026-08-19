@@ -17,6 +17,12 @@ import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
 import { createOrderCodeWithRetry, nextLeadCode } from "../lib/codes.js";
 import { notifyAdmin } from "../lib/telegram-notify.js";
 import type { PrismaClient } from "@prisma/client";
+import {
+  canonicalPhone,
+  findRelatedCustomers,
+  mergeRelatedCustomerOrders,
+  pickCanonicalCustomer,
+} from "../lib/storefront-customer.js";
 
 // Promo kodni inline tekshirish (import tsikli oldini olish)
 async function applyPromoValidation(
@@ -854,16 +860,19 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     const auth = await authStorefrontCustomer(app.prisma as never, tenant.id, tgUserId, initData);
     if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
-    const customer = await app.prisma.customer.findFirst({
-      where: { tenantId: tenant.id, telegramUserId: BigInt(tgUserId) },
-      select: { id: true },
+    const related = await findRelatedCustomers(app.prisma, tenant.id, {
+      telegramUserId: BigInt(tgUserId),
     });
-    if (!customer) {
+    if (related.length === 0) {
       return { orders: [] };
+    }
+    const canonical = pickCanonicalCustomer(related)!;
+    if (related.length > 1) {
+      await mergeRelatedCustomerOrders(app.prisma, tenant.id, canonical.id, related);
     }
 
     const orders = await app.prisma.order.findMany({
-      where: { tenantId: tenant.id, customerId: customer.id },
+      where: { tenantId: tenant.id, customerId: { in: related.map((r) => r.id) } },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {
@@ -924,10 +933,18 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     if (!auth.ok) return reply.code(auth.code).send({ error: auth.error });
 
     const tgId = BigInt(q.tgUserId);
-    let customer = await app.prisma.customer.findFirst({
-      where: { tenantId: tenant.id, telegramUserId: tgId },
-      include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+    const related = await findRelatedCustomers(app.prisma, tenant.id, {
+      telegramUserId: tgId,
+      phone: q.phone,
     });
+    const identity = pickCanonicalCustomer(related);
+
+    let customer = identity
+      ? await app.prisma.customer.findFirst({
+          where: { id: identity.id, tenantId: tenant.id },
+          include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+        })
+      : null;
 
     // Birinchi marta — avto-ro'yxat (firstName/lastName Telegram'dan).
     // ?ref=<referrerTgId> bo'lsa, referral grafini bog'laymiz (faqat birinchi marta,
@@ -950,6 +967,7 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           name: displayName,
           firstName: q.firstName ?? null,
           lastName: q.lastName ?? null,
+          phone: canonicalPhone(q.phone),
           telegramUserId: tgId,
           telegramUsername: q.username ?? null,
           language: q.language ?? "uz",
@@ -957,6 +975,23 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
         },
         include: { addresses: true },
       });
+    } else {
+      const phoneCanon = canonicalPhone(q.phone);
+      const needsTg = customer.telegramUserId !== tgId;
+      const needsPhone = phoneCanon && customer.phone !== phoneCanon;
+      if (needsTg || needsPhone) {
+        customer = await app.prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            ...(needsTg ? { telegramUserId: tgId, telegramUsername: q.username ?? customer.telegramUsername } : {}),
+            ...(needsPhone ? { phone: phoneCanon } : {}),
+          },
+          include: { addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] } },
+        });
+      }
+      if (related.length > 1) {
+        await mergeRelatedCustomerOrders(app.prisma, tenant.id, customer.id, related);
+      }
     }
 
     return {

@@ -636,6 +636,24 @@ export const dictionary: Record<string, Entry> = {
   "import.invalidWarning": { uz: "{n} ta qator xatolik tufayli o'tkazib yuboriladi", ru: "{n} строк будут пропущены из-за ошибок" },
   "import.doneTitle": { uz: "Import yakunlandi", ru: "Импорт завершён" },
   "import.doneSummary": { uz: "{ok} ta mahsulot muvaffaqiyatli yaratildi ({total} dan). {failed} ta xatolik.", ru: "{ok} товаров создано (из {total}). {failed} ошибок." },
+  "import.doneSummaryFull": {
+    uz: "{created} ta yaratildi, {updated} ta yangilandi ({total} dan). {failed} ta xatolik.",
+    ru: "{created} создано, {updated} обновлено (из {total}). {failed} ошибок.",
+  },
+  "import.updateExisting": {
+    uz: "Mavjud SKU bo'lsa yangilash (qayta import)",
+    ru: "Обновлять товар, если SKU уже есть",
+  },
+  "import.skuAuto": { uz: "avto", ru: "авто" },
+  "import.categoryWillCreate": { uz: "+ yangi", ru: "+ новая" },
+  "import.xlsxNotSupported": {
+    uz: "Excel .xlsx hozircha ochilmaydi. Faylni CSV qilib saqlang yoki jadvalni nusxalab shu yerga joylang.",
+    ru: "Файлы Excel .xlsx пока не читаются. Сохраните как CSV или скопируйте таблицу сюда.",
+  },
+  "import.rulesHint": {
+    uz: "SKU ixtiyoriy. Noma'lum kategoriya avtomatik yaratiladi. Nom va narx majburiy.",
+    ru: "SKU необязателен. Неизвестная категория создаётся автоматически. Название и цена обязательны.",
+  },
   "productForm.featured": { uz: "⭐ Vitrina'da ko'rsatish (asosiy sahifada)", ru: "⭐ Показать в Витрине (на главной)" },
   "productForm.active": { uz: "Sotuvda", ru: "В продаже" },
   "productForm.create": { uz: "Yaratish", ru: "Создать" },
@@ -2715,6 +2733,7 @@ export const dictionary: Record<string, Entry> = {
   "catalog.deliverySuffix": { uz: "· yetkazib berish", ru: "· доставка" },
   "catalog.searchResults": { uz: "\"{query}\" qidiruv natijalari", ru: "Результаты поиска «{query}»" },
   "cart.goToCart": { uz: "Savatga o'tish", ru: "Перейти в корзину" },
+  "cart.added": { uz: "{name} savatga qo'shildi", ru: "{name} добавлен в корзину" },
   "carousel.previous": { uz: "Oldingi rasm", ru: "Предыдущее изображение" },
   "carousel.next": { uz: "Keyingi rasm", ru: "Следующее изображение" },
   "carousel.image": { uz: "Rasm {index}", ru: "Изображение {index}" },

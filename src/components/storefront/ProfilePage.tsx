@@ -171,6 +171,7 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
       ...(telegramUser?.lastName && { lastName: telegramUser.lastName }),
       ...(telegramUser?.username && { username: telegramUser.username }),
       language: lang,
+      ...(profile.phone && { phone: profile.phone }),
     });
     fetch(`${profileUrl}?${params}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -309,20 +310,30 @@ export function ProfilePage({ storeSlug, tenantName, telegramUser, operatorTeleg
     } catch { /* ignore */ }
   }, [addresses, isOnline, addressesUrl, tgUserId, storeSlug]);
 
-  // Fetch orders when entering orders view
+  // Fetch orders when entering orders view. Har safar qayta so'raymiz —
+  // avvalgi bo'sh javob (SDK kechikishi / 401) keshda qolib ketmasin.
   useEffect(() => {
-    if (view !== "orders" || orders !== null) return;
+    if (view !== "orders") return;
     if (!tgUserId) {
       setOrders([]);
       return;
     }
+    const initData = tgInitData();
+    let cancelled = false;
     setOrdersLoading(true);
-    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/orders?tgUserId=${tgUserId}&initData=${encodeURIComponent(tgInitData())}`)
+    fetch(`${apiBase}/storefront/${encodeURIComponent(storeSlug)}/orders?tgUserId=${tgUserId}&initData=${encodeURIComponent(initData)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data: { orders: CustomerOrder[] }) => setOrders(data.orders ?? []))
-      .catch(() => setOrders([]))
-      .finally(() => setOrdersLoading(false));
-  }, [view, orders, tgUserId, storeSlug, apiBase]);
+      .then((data: { orders: CustomerOrder[] }) => {
+        if (!cancelled) setOrders(data.orders ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setOrders([]);
+      })
+      .finally(() => {
+        if (!cancelled) setOrdersLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [view, tgUserId, storeSlug, apiBase]);
 
   // Fetch referrals stats when entering referrals view
   useEffect(() => {

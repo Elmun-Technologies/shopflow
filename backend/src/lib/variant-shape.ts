@@ -273,8 +273,22 @@ export function toVariantLike(row: {
   };
 }
 
-/** `Product.options` JSON'ini xavfsiz o'qiydi — buzuq bo'lsa bo'sh massiv. */
+/**
+ * `Product.options` JSON'ini xavfsiz o'qiydi.
+ * Butun massiv yaroqsiz bo'lsa (masalan bitta bo'sh o'q qo'shilgan)
+ * avvalgi implementatsiya `[]` qaytarib, saqlashni sindirardi.
+ * Endi yaroqli o'qlarni saqlaymiz, yaroqsizlarini tashlaymiz (max 3).
+ */
 export function parseOptions(raw: unknown): ProductOption[] {
-  const parsed = productOptionsSchema.safeParse(raw);
-  return parsed.success ? parsed.data : [];
+  if (!Array.isArray(raw)) {
+    const parsed = productOptionsSchema.safeParse(raw);
+    return parsed.success ? parsed.data : [];
+  }
+  const out: ProductOption[] = [];
+  for (const item of raw) {
+    const parsed = productOptionSchema.safeParse(item);
+    if (parsed.success) out.push(parsed.data);
+    if (out.length >= 3) break;
+  }
+  return out;
 }

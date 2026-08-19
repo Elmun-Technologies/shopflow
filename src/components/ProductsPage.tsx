@@ -45,7 +45,7 @@ import { useAppToast } from "./ui/Toast";
 const MAX_IMAGES = 10;
 import { useQueryAsync } from "../hooks/useQueryAsync";
 import { productsApi, categoriesApi } from "../api/endpoints";
-import { api, ApiError } from "../api/client";
+import { api, ApiError, uploadFile } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCurrency } from "../utils/format";
 import { priceBreakdown } from "../utils/pricing";
@@ -990,19 +990,7 @@ function ProductFormModal({
   const [imageToast, setImageToast] = useState<string | null>(null);
 
   const uploadSingle = async (file: File): Promise<string> => {
-    const form = new FormData();
-    form.append("file", file);
-    const token = localStorage.getItem("shopflow.token");
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: t("productForm.uploadError") }));
-      throw new Error((err as { error?: string }).error || t("productForm.uploadError"));
-    }
-    const { url } = (await res.json()) as { url: string };
+    const { url } = await uploadFile(file);
     return url;
   };
 
@@ -1065,9 +1053,8 @@ function ProductFormModal({
     setError(null);
     try {
       // SKU bo'sh bo'lsa name'dan avto-generate (harflar + raqamlar, max 20)
-      const finalSku = sku.trim() ||
-        name.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20) ||
-        `SKU${Date.now().toString().slice(-8)}`;
+      const finalSku = sku.trim() || undefined;
+      const cleanOptions = variantOptions.filter((o) => o.values.length > 0);
       const data = {
         sku: finalSku,
         name,
@@ -1090,7 +1077,7 @@ function ProductFormModal({
         content: serializeProductContent(contentState) ?? null,
         // Variantlar — o'q qiymatlari bilan birga. Bo'sh massiv variantlarni
         // o'chiradi (mahsulot oddiy holatga qaytadi).
-        options: variantOptions,
+        options: cleanOptions,
         variants: variants.map((v, i) => ({
           ...(v.id ? { id: v.id } : {}),
           sku: v.sku.trim(),
@@ -1122,8 +1109,8 @@ function ProductFormModal({
         savedProductId = created.id;
       }
 
-      // Combo addons saqlash — faqat ulanma bo'lsa
-      if (savedProductId && comboAddons.length > 0) {
+      // Combo addons — tahrirlashda bo'sh massiv ham yuboriladi (tozalash uchun)
+      if (savedProductId && (comboAddons.length > 0 || product)) {
         await api(`/products/${savedProductId}/addons`, {
           method: "PUT",
           body: {
@@ -1140,10 +1127,12 @@ function ProductFormModal({
       setSuccess(product ? t("productForm.saveSuccess") : t("productForm.createSuccess"));
       setTimeout(() => onSaved(), 1200);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 400 && err.data && typeof err.data === "object" && "details" in err.data) {
-        const details = (err.data as { details?: Array<{ path: string; message: string }> }).details;
-        if (details?.length) {
-          setError(details.map(d => `${d.path || "maydon"}: ${d.message}`).join(" · "));
+      if (err instanceof ApiError && err.data && typeof err.data === "object") {
+        const payload = err.data as { details?: Array<{ path: string; message: string }>; issues?: string[] };
+        if (payload.issues?.length) {
+          setError(payload.issues.join(" · "));
+        } else if (payload.details?.length) {
+          setError(payload.details.map((d) => `${d.path || "maydon"}: ${d.message}`).join(" · "));
         } else {
           setError(err.message);
         }
@@ -1180,15 +1169,15 @@ function ProductFormModal({
 
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Field label={`${t("productForm.sku")} *`}>
+            <Field label={t("productForm.skuOptional")}>
               <input
                 type="text"
-                required
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
                 placeholder={t("productForm.skuPlaceholder")}
                 className="input"
               />
+              <p className="text-[10px] text-slate-400 mt-1">{t("productForm.skuHelp")}</p>
             </Field>
             <Field label={t("productForm.category")}>
               <select
@@ -1806,11 +1795,18 @@ function CategoriesModal({
     if (!newName.trim()) return;
     setSaving(true);
     try {
+      const autoSlug =
+        newSlug.trim() ||
+        newName
+          .trim()
+          .toLowerCase()
+          .replace(/['']/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") ||
+        `cat-${Date.now().toString(36)}`;
       await categoriesApi.create({
         name: newName.trim(),
-        slug:
-          newSlug.trim() ||
-          newName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+        slug: autoSlug.slice(0, 80),
         imageUrl: newImageUrl || null,
       });
       setNewName("");

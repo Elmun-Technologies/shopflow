@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { logAudit } from "../lib/audit.js";
 import { pushProductToSD } from "../lib/salesdoctor-push.js";
-import { uniqueProductSlug } from "../lib/slug.js";
+import { uniqueCategorySlug, uniqueProductSku, uniqueProductSlug } from "../lib/slug.js";
 import {
   buildVariantLabel,
   parseOptions,
@@ -31,14 +31,38 @@ const variantInSchema = z.object({
   sortOrder: z.number().int().default(0),
 });
 
+/** Excel/CSV import va forma "14,500,000" / "14 500" ni ham qabul qiladi. */
+const coerceMoney = z.preprocess((v) => {
+  if (typeof v === "string") {
+    const n = Number(v.replace(/[\s,]/g, ""));
+    return Number.isFinite(n) ? n : v;
+  }
+  return v;
+}, z.number().nonnegative());
+
+const coerceStock = z.preprocess((v) => {
+  if (typeof v === "string") {
+    const n = Number(v.replace(/[\s,]/g, ""));
+    return Number.isFinite(n) ? Math.trunc(n) : v;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v);
+  return v;
+}, z.number().int().nonnegative());
+
+const emptyToUndef = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
+
 const productSchema = z.object({
-  sku: z.string().min(1).max(60),
+  // Bo'sh SKU — nomdan avto-generatsiya. Import ko'pincha artikulsiz keladi.
+  sku: z.preprocess(emptyToUndef, z.string().min(1).max(60).optional()),
   name: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  price: z.number().nonnegative(),
-  oldPrice: z.number().nonnegative().optional().nullable(),
+  description: z.string().max(2000).optional().nullable(),
+  price: coerceMoney,
+  oldPrice: z.preprocess(
+    (v) => (v === "" || v === null ? null : v),
+    coerceMoney.nullable().optional(),
+  ),
   currency: z.string().default("UZS"),
-  stock: z.number().int().nonnegative().default(0),
+  stock: coerceStock.optional(),
   active: z.boolean().default(true),
   featured: z.boolean().default(false),
   // Local upload paths ("/uploads/...") yoki absolute URL — har ikkalasi ham qabul
@@ -46,9 +70,9 @@ const productSchema = z.object({
   images: z.array(z.string().max(500)).optional(),
   categoryId: z.string().optional().nullable(),
   // Public API (v1) maydonlari — ixtiyoriy. slug bo'sh bo'lsa name'dan generatsiya.
-  slug: z.string().max(80).regex(/^[a-z0-9-]+$/).optional(),
+  slug: z.preprocess(emptyToUndef, z.string().max(80).regex(/^[a-z0-9-]+$/).optional()),
   origin: z.string().max(60).optional().nullable(),
-  content: z.unknown().optional(),
+  content: z.unknown().optional().nullable(),
   // Variant o'qlari (Hajm / Rang / …). Bo'sh massiv — variantsiz mahsulot.
   options: productOptionsSchema.optional(),
   // Variantlar. `id` berilgan bo'lsa mavjudi yangilanadi, aks holda yangisi
@@ -214,17 +238,31 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       if (tierErrors.length) return reply.code(400).send({ error: "Narx pog'onalarida xato", issues: tierErrors });
     }
 
+    const sku = data.sku?.trim()
+      ? data.sku.trim()
+      : await uniqueProductSku(app.prisma, tenantId, data.name);
+    if (data.sku?.trim()) {
+      const clash = await app.prisma.product.findFirst({
+        where: { tenantId, sku },
+        select: { id: true },
+      });
+      if (clash) return reply.code(409).send({ error: "Bu SKU allaqachon mavjud" });
+    }
+
     const slug = await uniqueProductSlug(app.prisma, tenantId, data.slug || data.name);
     const created = await app.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
         data: {
           ...rest,
+          sku,
+          description: data.description || null,
+          stock: data.stock ?? 0,
           slug,
           imageUrl: data.imageUrl || null,
           oldPrice: data.oldPrice ?? null,
           categoryId: data.categoryId || null,
           origin: data.origin || null,
-          content: toJsonInput(content),
+          content: toJsonInput(content ?? undefined),
           options: parsedOptions as unknown as Prisma.InputJsonValue,
           // Pog'onalarni saralab saqlaymiz — narx hisoblash tartibga tayanadi
           ...(priceTiers !== undefined && { priceTiers: parsePriceTiers(priceTiers) as unknown as Prisma.InputJsonValue }),
@@ -256,6 +294,161 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const { variants: createdVariants, ...createdRest } = full;
     return withPricing(createdRest, createdVariants);
   });
+
+  // CSV/Excel paste import — kategoriya avto-yaratiladi, SKU ixtiyoriy,
+  // mavjud SKU yangilanadi (katalogni qayta yuklash).
+  const importItemSchema = z.object({
+    sku: z.preprocess(emptyToUndef, z.string().min(1).max(60).optional()),
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).optional().nullable(),
+    price: coerceMoney,
+    oldPrice: z.preprocess(
+      (v) => (v === "" || v === null || v === undefined ? null : v),
+      coerceMoney.nullable().optional(),
+    ),
+    stock: coerceStock.optional().default(0),
+    categoryName: z.string().max(80).optional().nullable(),
+    categoryId: z.string().optional().nullable(),
+    active: z.boolean().optional().default(true),
+    featured: z.boolean().optional().default(false),
+  });
+  const importSchema = z.object({
+    items: z.array(importItemSchema).min(1).max(500),
+    updateExisting: z.boolean().optional().default(true),
+  });
+
+  app.post(
+    "/import",
+    { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
+    async (req) => {
+      const body = importSchema.parse(req.body);
+      const tenantId = req.session.tenantId;
+      const tenant = await app.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { currency: true },
+      });
+      const currency = tenant?.currency ?? "UZS";
+
+      const categories = await app.prisma.category.findMany({
+        where: { tenantId },
+        select: { id: true, name: true },
+      });
+      const catByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]));
+
+      const results: Array<{
+        row: number;
+        ok: boolean;
+        action?: "created" | "updated";
+        id?: string;
+        sku?: string;
+        error?: string;
+      }> = [];
+      let created = 0;
+      let updated = 0;
+      let categoriesCreated = 0;
+
+      const resolveCategory = async (name: string | null | undefined, id: string | null | undefined) => {
+        if (id) return id;
+        const trimmed = name?.trim();
+        if (!trimmed) return null;
+        const key = trimmed.toLowerCase();
+        const existing = catByName.get(key);
+        if (existing) return existing;
+        const slug = await uniqueCategorySlug(app.prisma, tenantId, trimmed);
+        const cat = await app.prisma.category.create({
+          data: { tenantId, name: trimmed.slice(0, 80), slug },
+        });
+        catByName.set(key, cat.id);
+        categoriesCreated += 1;
+        return cat.id;
+      };
+
+      for (let i = 0; i < body.items.length; i++) {
+        const item = body.items[i];
+        try {
+          const categoryId = await resolveCategory(item.categoryName, item.categoryId);
+          const givenSku = item.sku?.trim();
+          const existing = givenSku
+            ? await app.prisma.product.findFirst({
+                where: { tenantId, sku: givenSku },
+                select: { id: true },
+              })
+            : null;
+
+          if (existing && body.updateExisting) {
+            await app.prisma.product.update({
+              where: { id: existing.id },
+              data: {
+                name: item.name,
+                description: item.description || null,
+                price: item.price,
+                oldPrice: item.oldPrice ?? null,
+                stock: item.stock ?? 0,
+                categoryId,
+                active: item.active,
+                featured: item.featured,
+              },
+            });
+            updated += 1;
+            results.push({ row: i + 1, ok: true, action: "updated", id: existing.id, sku: givenSku });
+            continue;
+          }
+
+          const sku = existing && !body.updateExisting
+            ? await uniqueProductSku(app.prisma, tenantId, givenSku || item.name)
+            : givenSku || (await uniqueProductSku(app.prisma, tenantId, item.name));
+          const slug = await uniqueProductSlug(app.prisma, tenantId, item.name);
+          const product = await app.prisma.product.create({
+            data: {
+              tenantId,
+              sku,
+              name: item.name,
+              description: item.description || null,
+              price: item.price,
+              oldPrice: item.oldPrice ?? null,
+              stock: item.stock ?? 0,
+              currency,
+              categoryId,
+              active: item.active,
+              featured: item.featured,
+              slug,
+              source: "MANUAL",
+            },
+          });
+          created += 1;
+          results.push({ row: i + 1, ok: true, action: "created", id: product.id, sku: product.sku });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Yaratib bo'lmadi";
+          results.push({ row: i + 1, ok: false, error: message });
+        }
+      }
+
+      const actor = await app.prisma.user.findUnique({
+        where: { id: req.session.userId },
+        select: { name: true },
+      });
+      await logAudit({
+        prisma: app.prisma,
+        tenantId,
+        actorId: req.session.userId,
+        actorName: actor?.name ?? null,
+        action: "IMPORT",
+        resourceType: "product",
+        resourceId: results.find((r) => r.id)?.id ?? tenantId,
+        summary: `Import: ${created} yaratildi, ${updated} yangilandi, ${body.items.length - created - updated} xato`,
+        changes: { created, updated, failed: body.items.length - created - updated, categoriesCreated },
+      });
+
+      return {
+        created,
+        updated,
+        failed: body.items.length - created - updated,
+        categoriesCreated,
+        results,
+        summary: `${created} ta yaratildi, ${updated} ta yangilandi`,
+      };
+    },
+  );
 
   app.patch("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
