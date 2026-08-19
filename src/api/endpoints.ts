@@ -137,6 +137,37 @@ export const productsApi = {
     }),
 
   duplicate: (id: string) => api<Product>(`/products/${id}/duplicate`, { method: "POST" }),
+
+  import: (body: {
+    items: Array<{
+      sku?: string;
+      name: string;
+      description?: string | null;
+      price: number;
+      oldPrice?: number | null;
+      stock?: number;
+      categoryName?: string | null;
+      categoryId?: string | null;
+      active?: boolean;
+      featured?: boolean;
+    }>;
+    updateExisting?: boolean;
+  }) =>
+    api<{
+      created: number;
+      updated: number;
+      failed: number;
+      categoriesCreated: number;
+      summary: string;
+      results: Array<{
+        row: number;
+        ok: boolean;
+        action?: "created" | "updated";
+        id?: string;
+        sku?: string;
+        error?: string;
+      }>;
+    }>("/products/import", { method: "POST", body }),
 };
 
 // ===== Customers =====

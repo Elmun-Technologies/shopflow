@@ -4,6 +4,7 @@ import {
   absoluteUrl,
   localizeContent,
   shapeProduct,
+  telegramPhotoUrl,
   type RawProductForShape,
 } from "./public-shape.js";
 
@@ -28,6 +29,26 @@ describe("absoluteUrl", () => {
   });
   it("null → null", () => {
     expect(absoluteUrl(null)).toBeNull();
+  });
+});
+
+describe("telegramPhotoUrl", () => {
+  it("cover imageUrl ni images dan oldin oladi", () => {
+    expect(telegramPhotoUrl("/uploads/cover.jpg", ["/uploads/gallery.jpg"])).toBe(
+      "https://shop-flow.uz/uploads/cover.jpg",
+    );
+  });
+
+  it("cover yo'q bo'lsa gallery rasmini oladi", () => {
+    expect(telegramPhotoUrl(null, ["", "/uploads/g.jpg"])).toBe("https://shop-flow.uz/uploads/g.jpg");
+  });
+
+  it("http'ni https qiladi", () => {
+    expect(telegramPhotoUrl("http://cdn.x/a.png")).toBe("https://cdn.x/a.png");
+  });
+
+  it("hech narsa bo'lmasa undefined", () => {
+    expect(telegramPhotoUrl(null, [], undefined, "")).toBeUndefined();
   });
 });
 

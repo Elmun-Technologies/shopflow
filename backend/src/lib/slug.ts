@@ -12,6 +12,38 @@ const CYRILLIC: Record<string, string> = {
   ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya", ў: "o", қ: "q", ғ: "g", ҳ: "h",
 };
 
+/** SKU uchun lotin/raqam — bo'sh qoldirilgan artikulni nomdan yasash. */
+export function skuify(input: string): string {
+  const mapped = slugify(input).replace(/-/g, "").toUpperCase();
+  return mapped.slice(0, 20);
+}
+
+/**
+ * Tenant ichida unique mahsulot SKU. Base bo'sh bo'lsa "SKU" + raqam.
+ * Band bo'lsa -2, -3 qo'shiladi.
+ */
+export async function uniqueProductSku(
+  prisma: Pick<PrismaClient, "product">,
+  tenantId: string,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  const root = (skuify(base) || "SKU").slice(0, 50);
+  let candidate = root;
+  for (let i = 2; ; i++) {
+    const existing = await prisma.product.findFirst({
+      where: {
+        tenantId,
+        sku: candidate,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (!existing) return candidate.slice(0, 60);
+    candidate = `${root}-${i}`.slice(0, 60);
+  }
+}
+
 /** Matnni URL-safe slug'ga aylantiradi. Bo'sh chiqsa "" qaytaradi. */
 export function slugify(input: string): string {
   return input

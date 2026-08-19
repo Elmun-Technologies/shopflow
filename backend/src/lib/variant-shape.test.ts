@@ -270,13 +270,22 @@ describe("parseOptions", () => {
     expect(parseOptions([{ id: "x" }])).toEqual([]);
   });
 
-  it("3 tadan ko'p o'q rad etiladi", () => {
+  it("3 tadan ko'p o'qning faqat birinchilari olinadi", () => {
     const four = [1, 2, 3, 4].map((i) => ({
       id: `o${i}`,
       name: { uz: `O${i}`, ru: `O${i}` },
       values: [{ id: "v", label: { uz: "v", ru: "v" } }],
     }));
-    expect(parseOptions(four)).toEqual([]);
+    expect(parseOptions(four).map((o) => o.id)).toEqual(["o1", "o2", "o3"]);
+  });
+
+  it("yaroqsiz o'qni tashlab yaroqlisini saqlaydi", () => {
+    const mixed = [
+      { id: "bad" },
+      OPTIONS[0],
+      { id: "empty", name: { uz: "X", ru: "X" }, values: [] },
+    ];
+    expect(parseOptions(mixed)).toEqual(OPTIONS);
   });
 });
 

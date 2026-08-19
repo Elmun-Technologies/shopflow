@@ -18,7 +18,7 @@ import { ProductGridSkeleton } from "./storefront/Skeleton";
 import { ToastProvider, useToast } from "./storefront/Toast";
 import { PopupHost } from "./storefront/PopupHost";
 import { ProductImageCarousel } from "./storefront/ProductImageCarousel";
-import { formatUzPhone, isValidUzPhone } from "../utils/phone";
+import { formatUzPhone, isValidUzPhone, toE164Uz } from "../utils/phone";
 import { normalizeSingleConfig, type SingleSectionKey } from "../data/uiBuilderData";
 import {
   CountdownBanner,
@@ -489,6 +489,17 @@ function viewToTab(v: StoreView): StoreTab | null {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
+function storefrontUrl(slug: string, path = ""): string {
+  return `${API_BASE}/storefront/${encodeURIComponent(slug)}${path}`;
+}
+
+function pickLocalizedLabel(v: { uz?: string; ru?: string } | undefined, lang: Lang): string {
+  if (!v) return "";
+  const primary = lang === "ru" ? v.ru : v.uz;
+  const fallback = lang === "ru" ? v.uz : v.ru;
+  return (primary?.trim() || fallback?.trim() || "");
+}
+
 // Telegram WebApp signed initData — backend verifikatsiyasi uchun har bir
 // customer-scoped so'rovga qo'shiladi (tgUserId yolg'iz tasdiqlanmaydi).
 function tgInitData(): string {
@@ -526,7 +537,7 @@ async function submitCheckout(
   slug: string,
   payload: {
     customer: CheckoutForm;
-    items: { productId: string; qty: number }[];
+    items: { productId: string; variantId?: string; qty: number }[];
     telegram?: { userId?: number; username?: string; firstName?: string; lastName?: string };
     paymentMethod?: string;
     language: Lang;
@@ -646,13 +657,13 @@ function StoreInner({ slug }: { slug: string }) {
     const tgUid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
     if (tgUid) {
       if (added) {
-        fetch(`/api/storefront/${slug}/wishlist`, {
+        fetch(storefrontUrl(slug, "/wishlist"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ tgUserId: tgUid, productId, initData: tgInitData() }),
         }).catch(() => null);
       } else {
-        fetch(`/api/storefront/${slug}/wishlist/${productId}?tgUserId=${tgUid}&initData=${encodeURIComponent(tgInitData())}`, {
+        fetch(storefrontUrl(slug, `/wishlist/${encodeURIComponent(productId)}?tgUserId=${tgUid}&initData=${encodeURIComponent(tgInitData())}`), {
           method: "DELETE",
         }).catch(() => null);
       }
@@ -711,7 +722,7 @@ function StoreInner({ slug }: { slug: string }) {
         ...(ref && /^\d+$/.test(ref) ? { ref } : {}),
         language: lang,
       });
-      fetch(`/api/storefront/${slug}/profile?${params}`)
+      fetch(`${storefrontUrl(slug, "/profile")}?${params}`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
         .then((profileData: { customer?: { language?: string } }) => {
           const savedLang = profileData.customer?.language;
@@ -725,7 +736,7 @@ function StoreInner({ slug }: { slug: string }) {
         });
       // Wishlist'ni server'dan yuklab, lokal favoritlar bilan birlashtiramiz.
       // Server "haqiqat" manbai — qurilmadan-qurilmaga sevimlilar saqlanadi.
-      fetch(`/api/storefront/${slug}/wishlist?tgUserId=${tgUser.id}&initData=${encodeURIComponent(tgInitData())}`)
+      fetch(`${storefrontUrl(slug, "/wishlist")}?tgUserId=${tgUser.id}&initData=${encodeURIComponent(tgInitData())}`)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
         .then((data: { items: Array<{ productId: string }> }) => {
           const serverFavs = new Set(data.items.map((i) => i.productId));
@@ -768,15 +779,19 @@ function StoreInner({ slug }: { slug: string }) {
         // Bot ichida ro'yxat o'rniga Mini App katalogini shu joyda ochamiz.
         try {
           const q = new URLSearchParams(window.location.search);
+          const productId = q.get("product");
+          if (productId) {
+            const found = d.products.find((p) => p.id === productId);
+            if (found) setSelectedProduct(found);
+          }
           if (q.get("view") === "catalog") {
             const catId = q.get("category");
             const catExists = catId && d.categories?.some((c) => c.id === catId);
             if (catExists) {
               setSelectedCategoryId(catId);
-              setCatalogMode("products");
-            } else {
-              setCatalogMode("categories");
             }
+            // Bot "Katalog" tugmasi — kategoriya bo'lmasa ham mahsulotlar ro'yxati.
+            setCatalogMode("products");
             setView("catalog");
           }
         } catch { /* URL o'qib bo'lmasa — oddiy bosh sahifa */ }
@@ -915,7 +930,7 @@ function StoreInner({ slug }: { slug: string }) {
         );
       }
       const label = chosen ? `${product.name} · ${chosen.name}` : product.name;
-      toast.show(`${label} savatga qo'shildi`, "success");
+      toast.show(t("cart.added", { name: label }), "success");
       return [...prev, {
         productId: product.id,
         variantId: chosen?.id ?? null,
@@ -926,7 +941,7 @@ function StoreInner({ slug }: { slug: string }) {
         imageUrl: chosen?.images[0] ?? product.imageUrl,
       }];
     });
-  }, [toast]);
+  }, [toast, t]);
 
   const updateQty = useCallback((productId: string, delta: number, variantId?: string | null) => {
     haptic.soft();
@@ -959,9 +974,15 @@ function StoreInner({ slug }: { slug: string }) {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const tgUser = twa?.initDataUnsafe?.user;
+      const liveTwa = window.Telegram?.WebApp;
+      const tgUser = liveTwa?.initDataUnsafe?.user ?? twa?.initDataUnsafe?.user;
       const result = await submitCheckout(slug, {
-        customer: { ...form, lat: form.lat ?? undefined, lng: form.lng ?? undefined },
+        customer: {
+          ...form,
+          phone: toE164Uz(form.phone) || form.phone,
+          lat: form.lat ?? undefined,
+          lng: form.lng ?? undefined,
+        },
         items: cart.map((i) => ({
           productId: i.productId,
           ...(i.variantId ? { variantId: i.variantId } : {}),
@@ -1906,7 +1927,7 @@ function StoreInner({ slug }: { slug: string }) {
             <button
               onClick={() => toggleFavorite(selectedProduct.id)}
               className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+              aria-label={isFav ? t("favorites.remove") : t("favorites.add")}
             >
               <Heart className={`w-5 h-5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
             </button>
@@ -1940,7 +1961,7 @@ function StoreInner({ slug }: { slug: string }) {
             <button
               onClick={() => toggleFavorite(selectedProduct.id)}
               className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
-              aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+              aria-label={isFav ? t("favorites.remove") : t("favorites.add")}
             >
               <Heart className={`w-4.5 h-4.5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
             </button>
@@ -2061,14 +2082,14 @@ function StoreInner({ slug }: { slug: string }) {
             {hasVariants && (
               <div className="mb-4 space-y-3">
                 {(selectedProduct.options ?? []).map((opt) => {
-                  const axisLabel = opt.name.uz?.trim() || opt.name.ru?.trim() || "";
+                  const axisLabel = pickLocalizedLabel(opt.name, lang);
                   return (
                     <div key={opt.id}>
                       <p className="text-[11px] text-slate-400 mb-1.5">
                         {axisLabel}
                         {variant?.optionValues[opt.id] && (
                           <span className="text-white ml-1">
-                            {opt.values.find((v) => v.id === variant.optionValues[opt.id])?.label.uz ?? ""}
+                            {pickLocalizedLabel(opt.values.find((v) => v.id === variant.optionValues[opt.id])?.label, lang)}
                           </span>
                         )}
                       </p>
@@ -2099,7 +2120,7 @@ function StoreInner({ slug }: { slug: string }) {
                                   : "border-slate-700 bg-slate-900 text-slate-300"
                               } ${soldOut ? "opacity-40" : ""}`}
                             >
-                              {value.label.uz?.trim() || value.label.ru?.trim() || value.id}
+                              {pickLocalizedLabel(value.label, lang) || value.id}
                               {soldOut && <span className="ml-1 text-[10px] text-slate-500">·</span>}
                             </button>
                           );
@@ -2134,10 +2155,10 @@ function StoreInner({ slug }: { slug: string }) {
                     {variant.attributes.map((attr, i) => (
                       <div key={i} className="flex items-start justify-between gap-3 px-3 py-2">
                         <span className="text-xs text-slate-400">
-                          {attr.label.uz?.trim() || attr.label.ru?.trim() || ""}
+                          {pickLocalizedLabel(attr.label, lang)}
                         </span>
                         <span className="text-xs text-white text-right">
-                          {attr.value.uz?.trim() || attr.value.ru?.trim() || ""}
+                          {pickLocalizedLabel(attr.value, lang)}
                         </span>
                       </div>
                     ))}
@@ -2327,7 +2348,7 @@ function StoreInner({ slug }: { slug: string }) {
                 style={{ backgroundColor: primaryColor }}
               >
                 <ShoppingCart className="w-4 h-4" />
-                {isSingle ? t("single.buy") : "Savatga o'tish"}
+                {isSingle ? t("single.buy") : t("cart.goToCart")}
               </button>
             </div>
           )}
@@ -2535,7 +2556,7 @@ function StoreInner({ slug }: { slug: string }) {
         {/* Top-right heart (favorite) */}
         <button
           onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
-          aria-label={isFav ? "Sevimlilardan o'chirish" : "Sevimlilarga qo'shish"}
+          aria-label={isFav ? t("favorites.remove") : t("favorites.add")}
           className="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
         >
           <Heart
@@ -2736,7 +2757,7 @@ function StoreInner({ slug }: { slug: string }) {
               </button>
             )}
             <h2 className="text-base font-semibold text-white flex-1">
-              {showCatGrid ? "Katalog" : (selectedCat?.name || t("catalog.allProducts"))}
+              {showCatGrid ? t("store.tab.catalog") : (selectedCat?.name || t("catalog.allProducts"))}
             </h2>
           </div>
           <div className="relative">

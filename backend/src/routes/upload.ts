@@ -37,6 +37,10 @@ export const uploadRoutes: FastifyPluginAsync = async (app) => {
     const data = await req.file({ limits: { fileSize: MAX_SIZE } });
     if (!data) return reply.code(400).send({ error: "Fayl topilmadi" });
 
+    if (data.mimetype === "image/heic" || data.mimetype === "image/heif") {
+      data.file.resume();
+      return reply.code(400).send({ error: "HEIC/HEIF qo'llab-quvvatlanmaydi — rasmni JPEG yoki PNG qilib saqlang" });
+    }
     if (!ALLOWED_MIMES.has(data.mimetype)) {
       data.file.resume();
       return reply.code(400).send({ error: "Faqat rasm fayllari: JPEG, PNG, WebP, GIF" });

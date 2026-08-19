@@ -42,12 +42,14 @@ export function verifyTelegramInitData(
     const userRaw = params.get("user");
     if (!userRaw) return { valid: true };
 
-    const user = JSON.parse(decodeURIComponent(userRaw)) as {
-      id?: number;
-      username?: string;
-      first_name?: string;
-      last_name?: string;
-    };
+    // URLSearchParams.get allaqachon decode qiladi. Qo'shimcha decodeURIComponent
+    // "%", kirill ism va h.k. da parse'ni yiqitib, butun auth'ni 401 qilardi.
+    let user: { id?: number; username?: string; first_name?: string; last_name?: string };
+    try {
+      user = JSON.parse(userRaw) as typeof user;
+    } catch {
+      user = JSON.parse(decodeURIComponent(userRaw)) as typeof user;
+    }
 
     return {
       valid: true,

@@ -24,6 +24,25 @@ export function absoluteUrl(path: string | null | undefined): string | null {
   return `${PUBLIC_BASE}/${path.replace(/^\/+/, "")}`;
 }
 
+/**
+ * Telegram sendPhoto uchun birinchi yaroqli HTTPS URL.
+ * Bot `imageUrl` (cover) yoki `images[]` da nisbiy `/uploads/...` saqlaydi —
+ * Telegram esa faqat ochiq HTTPS manzildan rasm oladi.
+ */
+export function telegramPhotoUrl(
+  ...sources: Array<string | null | undefined | readonly string[]>
+): string | undefined {
+  for (const source of sources) {
+    if (!source) continue;
+    const list = typeof source === "string" ? [source] : source;
+    for (const u of list) {
+      const abs = absoluteUrl(u);
+      if (abs) return abs;
+    }
+  }
+  return undefined;
+}
+
 // ── Kichik coercion yordamchilari (content JSON ishonchsiz bo'lishi mumkin) ──
 type Dict = Record<string, unknown>;
 const isObj = (v: unknown): v is Dict => typeof v === "object" && v !== null && !Array.isArray(v);

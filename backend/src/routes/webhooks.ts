@@ -48,6 +48,7 @@ const i18n = {
     friend:     "Do'stim",
     received:   "✅ Xabaringiz qabul qilindi. Tez orada operatorimiz siz bilan bog'lanadi!",
     openStore:  "🛒 Do'konga kirish",
+    contactSaved: "✅ Telefon raqamingiz saqlandi.",
   },
   ru: {
     welcome:    (name: string, store: string) => `🛍 <b>${store}</b>\n\nДобро пожаловать, ${name}! Воспользуйтесь меню ниже 👇`,
@@ -68,6 +69,7 @@ const i18n = {
     friend:     "друг",
     received:   "✅ Ваше сообщение принято. Оператор скоро свяжется с вами!",
     openStore:  "🛒 Открыть магазин",
+    contactSaved: "✅ Номер телефона сохранён.",
   },
 } as const;
 
@@ -278,16 +280,16 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
       return { ok: true, action: "lang_saved" };
     }
 
-    // ─── Oddiy matn xabari ─────────────────────────────────────────────────
+    // ─── Oddiy matn yoki kontakt ───────────────────────────────────────────
     const msg = (req.body as { message?: TgMsg }).message;
-    if (!msg?.from || !msg?.text) {
+    if (!msg?.from || (!msg.text && !msg.contact?.phone_number)) {
       return { ok: true, skipped: true };
     }
 
     const chatId = msg.chat?.id ?? msg.from.id;
     if (!chatId) return { ok: true, skipped: true };
 
-    const text = msg.text.trim();
+    const text = (msg.text ?? "").trim();
     const tgUserId = msg.from.id;
     const displayName =
       [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ") ||
@@ -305,6 +307,38 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
     }
     const T = i18n[lang];
 
+    // ─── Kontakt ulashildi (raqamni yuborish tugmasi) ──────────────────────
+    if (msg.contact?.phone_number && !text) {
+      const phone = msg.contact.phone_number.trim();
+      if (tgUserId && phone) {
+        const tgId = BigInt(tgUserId);
+        const existing = await app.prisma.customer.findFirst({
+          where: { tenantId, telegramUserId: tgId },
+          select: { id: true, phone: true },
+        });
+        if (existing) {
+          if (!existing.phone) {
+            await app.prisma.customer.update({ where: { id: existing.id }, data: { phone } });
+          }
+        } else {
+          await app.prisma.customer.create({
+            data: {
+              tenantId,
+              telegramUserId: tgId,
+              telegramUsername: msg.from.username,
+              name: displayName,
+              phone,
+              language: lang,
+            },
+          });
+        }
+      }
+      if (token) {
+        await sendTelegramRaw(token, chatId, T.contactSaved, { reply_markup: buildMenu(storeUrl, lang) });
+      }
+      return { ok: true, action: "contact_saved" };
+    }
+
     // ─── /start ────────────────────────────────────────────────────────────
     if (text === "/start" || text.startsWith("/start ")) {
       convState.delete(chatId);
@@ -314,19 +348,21 @@ export const webhookRoutes: FastifyPluginAsync = async (app) => {
           T.welcome(msg.from.first_name || T.friend, channel.tenant.name),
           { reply_markup: buildMenu(storeUrl, lang) },
         );
-        // BotFather slash command menyusini ro'yxatdan o'tkazamiz (fire-and-forget)
-        fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            commands: [
-              { command: "start", description: T.cmdMenu },
-              { command: "order", description: T.cmdOrder },
-              { command: "help",  description: T.cmdHelp },
-            ],
-            language_code: lang,
-          }),
-        }).catch(() => null);
+        // BotFather slash command menyusi — default + har bir UI tili.
+        // Faqat language_code: lang yozilsa, boshqa tildagi Telegram
+        // interfeysida buyruqlar umuman chiqmasdi.
+        const commandsFor = (l: Lang) => [
+          { command: "start", description: i18n[l].cmdMenu },
+          { command: "order", description: i18n[l].cmdOrder },
+          { command: "help",  description: i18n[l].cmdHelp },
+        ];
+        const setCmds = (commands: ReturnType<typeof commandsFor>, languageCode?: Lang) =>
+          fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ commands, ...(languageCode ? { language_code: languageCode } : {}) }),
+          }).catch(() => null);
+        void Promise.all([setCmds(commandsFor(lang)), setCmds(commandsFor("uz"), "uz"), setCmds(commandsFor("ru"), "ru")]);
       }
       return { ok: true, action: "start_sent" };
     }

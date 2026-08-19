@@ -19,6 +19,7 @@ import { publishToTenant } from "./sse-bus.js";
 import { aiReplyToMessage } from "./ai-assistant.js";
 import { productPricing, toVariantLike, visibleVariants } from "./variant-shape.js";
 import { parsePriceTiers } from "./price-tier.js";
+import { telegramPhotoUrl } from "./public-shape.js";
 import {
   pickStrict,
   type BotFlowDefinition,
@@ -116,6 +117,12 @@ function catalogDeepLink(storeUrl: string, categoryId: string | null): string {
   const sep = storeUrl.includes("?") ? "&" : "?";
   const cat = categoryId ? `&category=${encodeURIComponent(categoryId)}` : "";
   return `${storeUrl}${sep}view=catalog${cat}`;
+}
+
+/** Mini App mahsulot sahifasi — share/havola `?product=` ni ochadi. */
+function productDeepLink(storeUrl: string, productId: string): string {
+  const sep = storeUrl.includes("?") ? "&" : "?";
+  return `${storeUrl}${sep}product=${encodeURIComponent(productId)}`;
 }
 
 function screenKeyboard(screen: BotScreen, lang: BotLang, ctx: BotEngineCtx, hasParent: boolean) {
@@ -344,16 +351,18 @@ async function sendCard(
 ): Promise<number> {
   if (!ctx.botToken) return 0;
   const body = interpolate(text, ctx);
-  if (image) {
+  // Telegram nisbiy /uploads/... ni o'qiy olmaydi — faqat ochiq HTTPS.
+  const photo = telegramPhotoUrl(image);
+  if (photo) {
     // Butun karta caption'ga sig'sa — bitta rasm+caption+tugma xabari.
     // (HTML teglar buzilmasligi uchun faqat to'liq sig'ganda birlashtiramiz.)
     if (body.length <= TG_CAPTION_LIMIT) {
-      const res = await sendTelegramPhoto(ctx.botToken, ctx.chatId, image, body, options);
+      const res = await sendTelegramPhoto(ctx.botToken, ctx.chatId, photo, body, options);
       if (res.ok) return 1;
       // Rasm yuborilmadi (yaroqsiz URL) — matnga qaytamiz.
     } else {
       // Karta uzun — rasmni caption'siz alohida, matnni pastda tugmalar bilan.
-      await sendTelegramPhoto(ctx.botToken, ctx.chatId, image).catch(() => null);
+      await sendTelegramPhoto(ctx.botToken, ctx.chatId, photo).catch(() => null);
     }
   }
   return send(ctx, body, options);
@@ -613,7 +622,7 @@ async function showCatalog(
       // Product.price (odatda 0) ni ko'rsatib, "0 so'm" deb yozardi.
       select: {
         id: true, name: true, price: true, oldPrice: true, currency: true, stock: true,
-        images: true,
+        imageUrl: true, images: true,
         variants: { where: { active: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -652,10 +661,11 @@ async function showCatalog(
     : "";
 
   // Birinchi mahsulot rasmini "banner" sifatida ishlatamiz — ro'yxat rasmsiz,
-  // quruq matn bo'lib ko'rinmasligi uchun (marketplace uslubi).
-  const bannerImage = products.find((p) => Array.isArray(p.images) && (p.images as string[])[0])
-    ?.images as string[] | undefined;
-  const banner = bannerImage?.[0];
+  // quruq matn bo'lib ko'rinmasligi uchun (marketplace uslubi). Cover `imageUrl`
+  // ko'pincha gallery `images` dan mustaqil saqlanadi.
+  const banner = products
+    .map((p) => telegramPhotoUrl(p.imageUrl, p.images))
+    .find((url): url is string => Boolean(url));
 
   return sendCard(ctx, banner, T[lang].catalogTitle + pageInfo, { reply_markup: { inline_keyboard: rows } });
 }
@@ -667,7 +677,7 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     where: { id: productId, tenantId: ctx.tenantId, active: true },
     select: {
       id: true, name: true, description: true, price: true, oldPrice: true,
-      currency: true, stock: true, sku: true, images: true,
+      currency: true, stock: true, sku: true, imageUrl: true, images: true,
       priceTiers: true, moq: true, unit: true,
       variants: { where: { active: true }, orderBy: { sortOrder: "asc" } },
     },
@@ -680,7 +690,7 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
       price: Number(p.price),
       oldPrice: p.oldPrice === null ? null : Number(p.oldPrice),
       stock: p.stock,
-      imageUrl: null,
+      imageUrl: p.imageUrl,
       images: p.images,
     },
     variants,
@@ -774,7 +784,10 @@ async function showProduct(ctx: BotEngineCtx, def: BotFlowDefinition, session: S
     rows.push([{ text: `🎁 ${a.addonProduct.name}`.slice(0, 60), callback_data: `p:${a.addonProduct.id}` }]);
   }
   if (def.settings.showStoreButton) {
-    rows.push([{ text: pickStrict(def.settings.storeButtonLabel, lang) || "🛍", web_app: { url: ctx.storeUrl } }]);
+    rows.push([{
+      text: pickStrict(def.settings.storeButtonLabel, lang) || "🛍",
+      web_app: { url: productDeepLink(ctx.storeUrl, p.id) },
+    }]);
   }
   rows.push([{ text: T[lang].home, callback_data: "nav:home" }]);
 
