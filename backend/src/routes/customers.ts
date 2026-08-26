@@ -44,7 +44,12 @@ export const customerRoutes: FastifyPluginAsync = async (app) => {
         take: q.pageSize,
       }),
     ]);
-    return { total, page: q.page, pageSize: q.pageSize, items };
+    return {
+      total,
+      page: q.page,
+      pageSize: q.pageSize,
+      items: items.map((c) => ({ ...c, telegramUserId: c.telegramUserId?.toString() ?? null })),
+    };
   });
 
   /** GET /:id — mijoz to'liq ma'lumot + buyurtma tarixi + statistika */
