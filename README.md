@@ -133,6 +133,7 @@ bash scripts/bootstrap.sh main shopflow.example.com admin@example.com
 
 Mavjud serverdagi ma'lumotlarni saqlab ko'chirish uchun bu qisqa bootstrap emas,
 **[SERVER_MIGRATION.md](SERVER_MIGRATION.md)** dagi backup/restore tartibi kerak.
+Fly.io varianti uchun **[FLY.md](FLY.md)** dagi ikki-app deploy tartibidan foydalaning.
 
 Bootstrap skripti:
 - Docker o'rnatadi
