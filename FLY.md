@@ -228,7 +228,22 @@ Fly Volume snapshot'larini yagona backup deb qabul qilmang. PostgreSQL uchun
 muntazam `pg_dump` va offsite S3/R2 backup sozlang; uploads uchun ham R2/S3
 backup yoki volume archive qiling.
 
-## 12. Rollback
+## 12. GitHub Actions orqali deploy
+
+Repository'ga quyidagilarni qo'shing:
+
+- **Secret:** `FLY_API_TOKEN` — faqat shu app'larni deploy qilishga mo'ljallangan token;
+- **Variable:** `FLY_BACKEND_APP` — backend app nomi;
+- **Variable:** `FLY_FRONTEND_APP` — frontend app nomi;
+- **Variable (ixtiyoriy):** `VITE_GOOGLE_CLIENT_ID`;
+- **Variable (ixtiyoriy):** `VITE_SENTRY_DSN`.
+
+`.github/workflows/deploy-fly.yml` ataylab faqat `workflow_dispatch` bilan ishlaydi.
+Fly app, volume, PostgreSQL, secrets va DNS tekshirilgandan keyin GitHub Actions
+→ **Deploy to Fly.io** → **Run workflow** orqali ishga tushiring. Workflow avval
+backend'ni, keyin frontend'ni deploy qiladi.
+
+## 13. Rollback
 
 ```bash
 fly releases --app shopflow-frontend

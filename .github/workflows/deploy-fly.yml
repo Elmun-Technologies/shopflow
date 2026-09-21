@@ -1,0 +1,60 @@
+name: Deploy to Fly.io
+
+# Avval FLY_API_TOKEN secret va app nomlari Variables'da sozlang.
+# Workflow ataylab faqat qo'lda ishga tushadi — Fly account/DNS tayyor bo'lmaguncha
+# main push'lari yangi platformaga tasodifan deploy bo'lmasin.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-fly
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy backend and frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      BACKEND_APP: ${{ vars.FLY_BACKEND_APP || 'shopflow-backend' }}
+      FRONTEND_APP: ${{ vars.FLY_FRONTEND_APP || 'shopflow-frontend' }}
+      VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID || '' }}
+      VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Validate Fly configuration
+        run: |
+          set -euo pipefail
+          test -n "$FLY_API_TOKEN" || {
+            echo "::error::FLY_API_TOKEN secret sozlanmagan"
+            exit 1
+          }
+          flyctl status --app "$BACKEND_APP"
+          flyctl status --app "$FRONTEND_APP"
+
+      - name: Deploy backend
+        run: flyctl deploy ./backend --config ../fly/backend.toml --app "$BACKEND_APP"
+
+      - name: Deploy frontend
+        run: |
+          flyctl deploy . \
+            --config fly/frontend.toml \
+            --app "$FRONTEND_APP" \
+            --build-arg "BACKEND_APP=$BACKEND_APP" \
+            --build-arg "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" \
+            --build-arg "VITE_SENTRY_DSN=$VITE_SENTRY_DSN"
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          flyctl checks list --app "$BACKEND_APP"
+          flyctl checks list --app "$FRONTEND_APP"

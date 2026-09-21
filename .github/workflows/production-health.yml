@@ -47,4 +47,3 @@ jobs:
           set -euo pipefail
           echo | openssl s_client -connect "${DOMAIN}:443" -servername "$DOMAIN" 2>/dev/null \
             | openssl x509 -noout -checkend 1209600
-
