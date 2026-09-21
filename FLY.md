@@ -107,19 +107,6 @@ Fly Postgres ishlatilsa, Fly'ning PostgreSQL import usulidan yoki oddiy
 `pg_dump`/`psql` orqali restore qiling. Restore tugamaguncha backend deploy
 qilmang.
 
-Upload arxivini backend Machine'iga yuboring. Backend deploy qilingan va volume
-mount bo'lgan bo'lishi kerak:
-
-```bash
-fly ssh sftp put uploads.tar.gz /tmp/uploads.tar.gz --app shopflow-backend
-fly ssh console --app shopflow-backend \
-  -C 'mkdir -p /data/uploads && tar xzf /tmp/uploads.tar.gz -C /data/uploads && rm -f /tmp/uploads.tar.gz'
-```
-
-Agar `onec_exchange_data` ham ko'chirilsa, ikkinchi arxivni `/data/1c-exchange`
-katalogiga xuddi shu tarzda extract qiling. Bu usul single-Machine migration uchun;
-keyinchalik R2/S3 ishlatilsa arxivni object storage'ga import qilish kerak.
-
 ## 6. Backend deploy
 
 Backend Dockerfile build context sifatida `backend/` katalogini kutadi:
@@ -141,6 +128,19 @@ fly checks list --app shopflow-backend
 Backend private network'da ham `/health` endpoint'iga javob berishi kerak. Prisma
 migration runner container startup'da ishlaydi. Restore qilingan database'da
 migration tarixi bo'lsa, faqat yetishmayotgan migration'lar qo'llanadi.
+
+Upload arxivini backend Machine'iga yuboring. Backend deploy qilingan va volume
+mount bo'lgan bo'lishi kerak:
+
+```bash
+fly ssh sftp put uploads.tar.gz /tmp/uploads.tar.gz --app shopflow-backend
+fly ssh console --app shopflow-backend \
+  -C 'mkdir -p /data/uploads && tar xzf /tmp/uploads.tar.gz -C /data/uploads && rm -f /tmp/uploads.tar.gz'
+```
+
+Agar `onec_exchange_data` ham ko'chirilsa, ikkinchi arxivni `/data/1c-exchange`
+katalogiga xuddi shu tarzda extract qiling. Bu usul single-Machine migration uchun;
+keyinchalik R2/S3 ishlatilsa arxivni object storage'ga import qilish kerak.
 
 ## 7. Frontend deploy
 

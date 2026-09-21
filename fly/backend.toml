@@ -14,6 +14,7 @@ primary_region = "fra"
   PORT = "4000"
   UPLOADS_DIR = "/data/uploads"
   ONEC_EXCHANGE_DIR = "/data/1c-exchange"
+  FIX_VOLUME_PERMISSIONS = "true"
 
 [http_service]
   internal_port = 4000
