@@ -119,7 +119,8 @@ cd ..
 
 The backend config points to `../backend/Dockerfile` because Fly resolves the
 Dockerfile path relative to the config file in `fly/` while the build context
-remains `backend/`.
+remains `backend/`. It also listens on IPv6 `::` for Fly's `.internal` 6PN
+network; the existing Compose deployment keeps its own `HOST` value.
 
 Tekshiring:
 

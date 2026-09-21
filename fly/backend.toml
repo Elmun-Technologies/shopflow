@@ -11,7 +11,9 @@ primary_region = "fra"
 
 [env]
   NODE_ENV = "production"
-  HOST = "0.0.0.0"
+  # Fly's .internal DNS resolves to a 6PN IPv6 address; listen on IPv6 (dual-stack)
+  # so the frontend can reach the backend privately. Compose keeps its own HOST.
+  HOST = "::"
   PORT = "4000"
   UPLOADS_DIR = "/data/uploads"
   ONEC_EXCHANGE_DIR = "/data/1c-exchange"
