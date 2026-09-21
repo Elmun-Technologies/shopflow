@@ -9,7 +9,9 @@
 #
 #   2) Serverda:
 #        export GH_TOKEN=ghp_xxxxxxxxxxxxxxxx
-#        git clone https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git /opt/shopflow
+#        # Token remote URL'ga yozilmaydi; Authorization header faqat clone/fetch paytida ishlatiladi.
+#        git -c "http.extraHeader=Authorization: Basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
+#          clone -b main https://github.com/Elmun-Technologies/shopflow.git /opt/shopflow
 #        cd /opt/shopflow
 #        bash scripts/bootstrap.sh [branch] [domain] [email]
 #
@@ -24,10 +26,30 @@ EMAIL="${3:-${EMAIL:-}}"
 GH_TOKEN="${GH_TOKEN:-}"
 SKIP_GIT_SYNC="${SKIP_GIT_SYNC:-false}"
 
+# Tokenni remote URL'ga qo'shmaymiz: aks holda u `.git/config` ichida doimiy
+# saqlanib qoladi. Private repo uchun faqat fetch/clone jarayonida vaqtinchalik
+# Authorization header ishlatiladi.
 REPO_URL="https://github.com/Elmun-Technologies/shopflow.git"
+GIT_AUTH_HEADER=""
 if [ -n "$GH_TOKEN" ]; then
-  REPO_URL="https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git"
+  GIT_AUTH_HEADER="Basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
 fi
+
+git_fetch() {
+  if [ -n "$GIT_AUTH_HEADER" ]; then
+    git -c "http.extraHeader=Authorization: $GIT_AUTH_HEADER" fetch origin --prune
+  else
+    git fetch --all --prune
+  fi
+}
+
+git_clone() {
+  if [ -n "$GIT_AUTH_HEADER" ]; then
+    git -c "http.extraHeader=Authorization: $GIT_AUTH_HEADER" clone -b "$BRANCH" "$REPO_URL" "$1"
+  else
+    git clone -b "$BRANCH" "$REPO_URL" "$1"
+  fi
+}
 
 # stdin pipe orqali kelganda (curl | bash) interactive prompt ishlamaydi
 if [ ! -t 0 ] && { [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; }; then
@@ -56,7 +78,7 @@ apt upgrade -y -qq
 
 echo ""
 echo "===== 2. Asosiy paketlar ====="
-apt install -y -qq curl git ufw ca-certificates
+apt install -y -qq curl git ufw ca-certificates openssl
 
 echo ""
 echo "===== 3. Docker o'rnatish ====="
@@ -86,7 +108,10 @@ if [ "$SKIP_GIT_SYNC" = "true" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
 elif [ -d "$REPO_ROOT/.git" ] && [ -f "$REPO_ROOT/docker-compose.yml" ]; then
   echo "   Skript repo ichidan ishga tushirildi: $REPO_ROOT"
   cd "$REPO_ROOT"
-  git fetch --all --prune
+  if [ -n "$GH_TOKEN" ]; then
+    git remote set-url origin "$REPO_URL"
+  fi
+  git_fetch
   git checkout -B "$BRANCH" "origin/$BRANCH"
   git reset --hard "origin/$BRANCH"
 else
@@ -95,7 +120,10 @@ else
   if [ -d shopflow/.git ]; then
     echo "   Repo allaqachon mavjud, yangilanmoqda..."
     cd shopflow
-    git fetch --all --prune
+    if [ -n "$GH_TOKEN" ]; then
+      git remote set-url origin "$REPO_URL"
+    fi
+    git_fetch
     git checkout -B "$BRANCH" "origin/$BRANCH"
     git reset --hard "origin/$BRANCH"
   else
@@ -106,7 +134,7 @@ else
       echo "     bash scripts/bootstrap.sh [branch] [domain] [email]"
       exit 1
     fi
-    git clone -b "$BRANCH" "$REPO_URL" shopflow
+    git_clone shopflow
     cd shopflow
   fi
 fi

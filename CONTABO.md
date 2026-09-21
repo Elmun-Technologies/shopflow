@@ -62,9 +62,17 @@ Repo PRIVATE bo'lgani uchun GitHub Personal Access Token (PAT) kerak. **GitHub â
 ```bash
 export GH_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxxxxxx
 cd /opt
-git clone https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git
+# Token remote URL'iga yozilmaydi.
+AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+git -c "http.extraHeader=Authorization: Basic ${AUTH_HEADER}" \
+  clone https://github.com/Elmun-Technologies/shopflow.git shopflow
 cd shopflow
+git remote set-url origin https://github.com/Elmun-Technologies/shopflow.git
 ```
+
+Mavjud production ma'lumotlari bilan ko'chirish uchun **SERVER_MIGRATION.md**
+dagi backup/restore tartibini ishlating; `.env` ni yangi domain va avvalgi
+`JWT_SECRET`/`SECRETS_ENCRYPTION_KEY` bilan to'g'ri to'ldiring.
 
 Environment fayl yarating:
 

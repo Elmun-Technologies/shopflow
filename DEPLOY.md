@@ -47,10 +47,19 @@ Server ichida quyidagi buyruqlarni ishga tushiring (TOKEN o'rniga PAT'ni qo'ying
 ```bash
 export GH_TOKEN=github_pat_xxxxxxxxxxxxxxxxxxxxxxxx
 mkdir -p /opt && cd /opt
-git clone https://${GH_TOKEN}@github.com/Elmun-Technologies/shopflow.git
+# Token remote URL'iga yozilmaydi; faqat clone paytida vaqtinchalik header.
+AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+git -c "http.extraHeader=Authorization: Basic ${AUTH_HEADER}" \
+  clone https://github.com/Elmun-Technologies/shopflow.git shopflow
 cd shopflow
+git remote set-url origin https://github.com/Elmun-Technologies/shopflow.git
 bash scripts/bootstrap.sh main
 ```
+
+Mavjud serverdan database va upload'larni ko'chirish uchun esa avval
+**[SERVER_MIGRATION.md](SERVER_MIGRATION.md)** dagi final backup/restore tartibini
+bajaring. GitHub Actions'dagi `PRODUCTION_DOMAIN` repository variable yangi
+domain bilan mos bo'lishi kerak.
 
 Skript so'raydi:
 - **Domain**: agar domain bo'lsa kiriting (masalan `shopflow.example.com`), agar yo'q bo'lsa `:80` yozing (IP orqali HTTP only ishlaydi)
@@ -91,6 +100,12 @@ Brauzerda oching:
 
 Ixtiyoriy:
 | `VPS_PORT` | `22` (default, agar boshqa port bo'lmasa shart emas) |
+
+**Repository variable** (Settings → Secrets and variables → Actions → Variables):
+
+| Variable nomi | Qiymat |
+|---|---|
+| `PRODUCTION_DOMAIN` | yangi production domain; bo'sh bo'lsa `shop-flow.uz` ishlatiladi |
 
 ### 4-qadam: Test qiling
 

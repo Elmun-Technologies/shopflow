@@ -30,14 +30,34 @@ docker compose logs --tail=20 backend
 
 ## Schema migration
 
-Backend ishga tushganda `prisma db push` avtomatik (additive schema).
-Yangi unique constraint qo'shilsa "data loss" ogohlantirishi chiqishi
-mumkin — yangi ustun bo'sh bo'ladi, xavfsiz:
+Production'da schema o'zgarishlari versiyalangan Prisma migration'lar orqali
+boshqariladi. `backend` konteyneri ishga tushishidan oldin:
+
+```text
+node scripts/db-migrate.mjs
+  -> prisma migrate deploy
+  -> node dist/server.js
+```
+
+Shuning uchun har bir `schema.prisma` o'zgarishi bilan migration ham commit qilinadi:
 
 ```bash
-docker compose run --rm --entrypoint sh backend -c \
-  "npx prisma db push --accept-data-loss --skip-generate"
-docker compose up -d backend
+cd backend
+npx prisma migrate dev --name qisqacha_tavsif
+git add prisma/migrations prisma/schema.prisma
+git commit
+```
+
+**Muhim:** production'da qo'lda `prisma db push --accept-data-loss` ishlatmang.
+Legacy (`_prisma_migrations` jadvali yo'q) database uchun startup runner bir marta
+`0_init` baseline yaratadi va keyingi migration'larni qo'llaydi. Drift xatosi chiqsa,
+backup oling, sababni tekshiring va alohida migration yozing.
+
+Migration holatini tekshirish:
+
+```bash
+docker compose logs --tail=100 backend | grep db-migrate
+docker compose exec backend npx prisma migrate status
 ```
 
 ## Backup va restore

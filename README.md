@@ -117,16 +117,26 @@ Login: `.env`dagi `SEED_EMAIL` va `SEED_PASSWORD`.
 
 ### Production (VPSda)
 
-Bir buyruq bilan:
+Yangi serverga mavjud production ma'lumotlari bilan ko'chirish kerak bo'lsa,
+**[SERVER_MIGRATION.md](SERVER_MIGRATION.md)** dagi backup/restore tartibini bajaring.
+Bu loyiha full-stack Docker Compose stack: faqat root frontend Dockerfile'ini
+ishga tushirish yetarli emas.
+
+Bootstrap uchun private repo'da avval deploy key/GitHub CLI yoki vaqtinchalik
+read-only GitHub credential bilan repo'ni `/opt/shopflow` ga clone qiling, so'ng:
 
 ```bash
 ssh root@<vps-ip>
-curl -fsSL https://raw.githubusercontent.com/Elmun-Technologies/shopflow/main/scripts/bootstrap.sh | bash -s -- main shopflow.example.com admin@example.com
+cd /opt/shopflow
+bash scripts/bootstrap.sh main shopflow.example.com admin@example.com
 ```
+
+Mavjud serverdagi ma'lumotlarni saqlab ko'chirish uchun bu qisqa bootstrap emas,
+**[SERVER_MIGRATION.md](SERVER_MIGRATION.md)** dagi backup/restore tartibi kerak.
 
 Bootstrap skripti:
 - Docker o'rnatadi
-- `.env` ni avtomatik generatsiya qiladi (POSTGRES parol va JWT secret xavfsiz)
+- `.env` ni avtomatik generatsiya qiladi (Postgres parol va JWT secret xavfsiz)
 - Postgres + Backend + Frontend + Caddy konteynerlarini ko'taradi
 - Prisma migrate va seed bajaradi
 - Birinchi admin akkauntni terminalga chiqaradi

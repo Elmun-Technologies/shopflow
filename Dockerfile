@@ -32,7 +32,9 @@ RUN set -eu; \
 ENV VITE_BASE_PATH=/
 # Google OAuth client id — Vite build vaqtida embed qilinadi (bo'sh bo'lsa tugma yashirin)
 ARG VITE_GOOGLE_CLIENT_ID=""
+ARG VITE_SENTRY_DSN=""
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 RUN npm run build
 
 # nginx worker'lari `nginx` foydalanuvchisi ostida ishlaydi, root emas. Build

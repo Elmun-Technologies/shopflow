@@ -36,14 +36,16 @@ Xavfsizlik kamchiligini topgan bo'lsangiz, **public issue ochmang**.
 - 300 req/min per tenant (auth token bo'yicha)
 - IP fallback (auth bo'lmaganda — login, public storefront)
 
-## Headers (nginx + helmet)
+## Headers (nginx + Caddy + helmet)
 
 - `Strict-Transport-Security: max-age=31536000`
-- `X-Frame-Options: SAMEORIGIN`
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
-- CSP (frame-ancestors Telegram Web App ruxsat etiladi)
+- CSP, jumladan `frame-ancestors` (Telegram Mini App uchun)
+
+`X-Frame-Options` ataylab yuborilmaydi: `SAMEORIGIN` Telegram WebView'ini
+bloklashi mumkin. Clickjacking himoyasi CSP `frame-ancestors` orqali beriladi.
 
 ## Logging
 
