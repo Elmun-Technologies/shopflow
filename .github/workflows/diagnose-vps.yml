@@ -1,0 +1,80 @@
+name: Diagnose VPS
+
+# Production sayt ishlamay qolganda bu workflow faqat O'QIYDI:
+# restart, pull, build yoki volume o'chirish qilmaydi.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Read-only VPS diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check VPS secrets configured
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST" || { echo "::error::VPS_HOST sozlanmagan"; exit 1; }
+          test -n "$VPS_SSH_KEY" || { echo "::error::VPS_SSH_KEY sozlanmagan"; exit 1; }
+
+      - name: Collect read-only diagnostics
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 8m
+          script: |
+            set +e
+            echo "===== HOST ====="
+            hostname -f 2>/dev/null || hostname
+            date -Is
+            uptime || true
+
+            echo "===== RESOURCES ====="
+            df -h / || true
+            free -m || true
+            docker system df 2>/dev/null || true
+
+            echo "===== REPO ====="
+            if [ -d /opt/shopflow ]; then
+              cd /opt/shopflow
+              git status --short --branch 2>/dev/null || true
+              git log -1 --oneline 2>/dev/null || true
+            else
+              echo "MISSING: /opt/shopflow"
+            fi
+
+            echo "===== DOCKER COMPOSE ====="
+            if [ -f /opt/shopflow/docker-compose.yml ]; then
+              cd /opt/shopflow
+              docker compose ps || true
+            fi
+
+            echo "===== LOCAL HEALTH ====="
+            curl -sS -o /tmp/shopflow-health -w "frontend /health HTTP %{http_code}\\n" \
+              --max-time 10 http://127.0.0.1/ || true
+            cat /tmp/shopflow-health 2>/dev/null || true
+            curl -sS -o /tmp/shopflow-api-health -w "backend /api/health HTTP %{http_code}\\n" \
+              --max-time 10 http://127.0.0.1/api/health || true
+            cat /tmp/shopflow-api-health 2>/dev/null || true
+
+            echo "===== LISTENING PORTS ====="
+            (ss -lntp 2>/dev/null || netstat -lntp 2>/dev/null) | grep -E ':(80|443|4000|5432)\\b' || true
+
+            echo "===== SERVICE LOG TAILS ====="
+            if [ -f /opt/shopflow/docker-compose.yml ]; then
+              cd /opt/shopflow
+              docker compose logs --tail=80 --no-log-prefix caddy backend postgres 2>&1 || true
+            fi
+
+            echo "===== CERTIFICATE (LOCAL) ====="
+            echo | openssl s_client -connect 127.0.0.1:443 -servername shop-flow.uz 2>/dev/null \
+              | openssl x509 -noout -subject -issuer -dates 2>/dev/null || true

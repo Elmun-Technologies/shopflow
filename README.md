@@ -131,7 +131,9 @@ cd /opt/shopflow
 bash scripts/bootstrap.sh main shopflow.example.com admin@example.com
 ```
 
-Mavjud serverdagi ma'lumotlarni saqlab ko'chirish uchun bu qisqa bootstrap emas,
+Agar mavjud `shop-flow.uz` ishlamay qolgan bo'lsa, avval
+**[OUTAGE_RECOVERY.md](OUTAGE_RECOVERY.md)** dagi o'zgartirmaydigan diagnostikani
+bajaring. Mavjud serverdagi ma'lumotlarni saqlab ko'chirish uchun
 **[SERVER_MIGRATION.md](SERVER_MIGRATION.md)** dagi backup/restore tartibi kerak.
 Fly.io varianti uchun **[FLY.md](FLY.md)** dagi ikki-app deploy tartibidan foydalaning.
 
