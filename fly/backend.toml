@@ -6,7 +6,8 @@ app = "shopflow-backend"
 primary_region = "fra"
 
 [build]
-  dockerfile = "Dockerfile"
+  # backend deploy context is backend/; this path is relative to fly/backend.toml.
+  dockerfile = "../backend/Dockerfile"
 
 [env]
   NODE_ENV = "production"

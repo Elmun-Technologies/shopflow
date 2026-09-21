@@ -6,7 +6,8 @@ app = "shopflow-frontend"
 primary_region = "fra"
 
 [build]
-  dockerfile = "fly/frontend.Dockerfile"
+  # root deploy context is the repository root; this path is relative to fly/frontend.toml.
+  dockerfile = "../frontend.Dockerfile"
   [build.args]
     BACKEND_APP = "shopflow-backend"
     VITE_GOOGLE_CLIENT_ID = ""

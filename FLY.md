@@ -117,6 +117,10 @@ fly deploy --config ../fly/backend.toml
 cd ..
 ```
 
+The backend config points to `../backend/Dockerfile` because Fly resolves the
+Dockerfile path relative to the config file in `fly/` while the build context
+remains `backend/`.
+
 Tekshiring:
 
 ```bash
