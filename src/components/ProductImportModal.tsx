@@ -9,9 +9,10 @@ import type { Category } from "../types/api";
 import { useT } from "../i18n";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import {
+  ProductImportFileError,
   SAMPLE_PRODUCT_CSV,
-  looksLikeSpreadsheetBinary,
   parseProductCsv,
+  readProductFile,
 } from "../utils/productImport";
 
 interface Props {
@@ -28,7 +29,14 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
   const [fileError, setFileError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [updateExisting, setUpdateExisting] = useState(true);
-  const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0, created: 0, updated: 0 });
+  const [progress, setProgress] = useState({
+    done: 0,
+    total: 0,
+    failed: 0,
+    created: 0,
+    updated: 0,
+    errors: [] as string[],
+  });
   const [showDone, setShowDone] = useState(false);
   const panelRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
@@ -38,17 +46,24 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
 
   const handleFile = async (file: File) => {
     setFileError(null);
-    const ext = file.name.toLowerCase();
-    if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
-      setFileError(t("import.xlsxNotSupported"));
-      return;
+    try {
+      const content = await readProductFile(file);
+      setText(content);
+    } catch (error) {
+      if (error instanceof ProductImportFileError) {
+        const messageKey =
+          error.code === "legacy-xls"
+            ? "import.legacyXls"
+            : error.code === "too-large"
+              ? "import.fileTooLarge"
+              : error.code === "empty"
+                ? "import.fileEmpty"
+                : "import.fileReadError";
+        setFileError(t(messageKey));
+      } else {
+        setFileError(t("import.fileReadError"));
+      }
     }
-    const content = await file.text();
-    if (looksLikeSpreadsheetBinary(content)) {
-      setFileError(t("import.xlsxNotSupported"));
-      return;
-    }
-    setText(content);
   };
 
   const handleImport = async () => {
@@ -57,7 +72,8 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
     let failed = 0;
     let created = 0;
     let updated = 0;
-    setProgress({ done: 0, total: validRows.length, failed: 0, created: 0, updated: 0 });
+    const importErrors: string[] = [];
+    setProgress({ done: 0, total: validRows.length, failed: 0, created: 0, updated: 0, errors: [] });
 
     for (let i = 0; i < validRows.length; i += CHUNK) {
       const slice = validRows.slice(i, i + CHUNK);
@@ -80,8 +96,19 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
         created += res.created;
         updated += res.updated;
         failed += res.failed;
-      } catch {
+        for (const result of res.results) {
+          if (!result.ok) {
+            const sourceRow = slice[result.row - 1]?.rowNum ?? result.row + i;
+            importErrors.push(`#${sourceRow}: ${result.error || t("common.error")}`);
+          }
+        }
+      } catch (error) {
         failed += slice.length;
+        importErrors.push(
+          `${t("import.batchError", { n: Math.floor(i / CHUNK) + 1 })}: ${
+            error instanceof Error ? error.message : t("common.error")
+          }`,
+        );
       }
       setProgress({
         done: Math.min(i + slice.length, validRows.length),
@@ -89,6 +116,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
         failed,
         created,
         updated,
+        errors: importErrors.slice(),
       });
     }
     setImporting(false);
@@ -122,6 +150,19 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
                 total: progress.total,
               })}
             </p>
+            {progress.errors.length > 0 && (
+              <div className="text-left bg-rose-50 border border-rose-200 rounded-lg p-3 mb-4">
+                <p className="text-xs font-semibold text-rose-700 mb-1">{t("import.errorDetails")}</p>
+                <ul className="space-y-0.5 text-[11px] text-rose-600 max-h-28 overflow-y-auto">
+                  {progress.errors.slice(0, 50).map((message, index) => (
+                    <li key={`${message}-${index}`}>{message}</li>
+                  ))}
+                </ul>
+                {progress.errors.length > 50 && (
+                  <p className="text-[10px] text-rose-500 mt-1">{t("import.moreErrors", { n: progress.errors.length - 50 })}</p>
+                )}
+              </div>
+            )}
             <button
               onClick={() => {
                 onDone();
@@ -189,7 +230,7 @@ export default function ProductImportModal({ categories, onClose, onDone }: Prop
                     <Upload className="w-4 h-4 text-slate-500" />
                     <input
                       type="file"
-                      accept=".csv,.txt,.tsv,text/csv,text/plain"
+                      accept=".csv,.txt,.tsv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) void handleFile(f);

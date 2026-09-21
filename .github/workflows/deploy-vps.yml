@@ -173,7 +173,8 @@ jobs:
         env:
           DEPLOY_BRANCH: ${{ steps.branch.outputs.name }}
           GH_TOKEN: ${{ github.token }}
-          DOMAIN: shop-flow.uz
+          # Repository variable PRODUCTION_DOMAIN yangi server/domain uchun almashtiriladi.
+          DOMAIN: ${{ vars.PRODUCTION_DOMAIN || 'shop-flow.uz' }}
 
       # Deploy o'zi yashil bo'lsa ham sayt TASHQARIDAN yetib bormasligi mumkin:
       # yuqoridagi healthcheck `--resolve ...:127.0.0.1` bilan, ya'ni serverning
@@ -199,19 +200,19 @@ jobs:
             echo "===== xotira ====="
             free -m || true
             echo "===== DNS (server ko'zi bilan) ====="
-            getent hosts shop-flow.uz || echo "DNS: yechilmadi"
+            getent hosts "$DOMAIN" || echo "DNS: yechilmadi"
             echo "===== HTTPS ichkaridan (loopback) ====="
             curl -sS -o /dev/null -w "loopback: %{http_code}\n" \
-              --resolve "shop-flow.uz:443:127.0.0.1" https://shop-flow.uz/ || true
+              --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/" || true
             curl -sS -o /dev/null -w "loopback /store: %{http_code}\n" \
-              --resolve "shop-flow.uz:443:127.0.0.1" https://shop-flow.uz/store/gulf || true
+              --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/store/gulf" || true
             curl -sS -o /dev/null -w "loopback /vendor: %{http_code}\n" \
-              --resolve "shop-flow.uz:443:127.0.0.1" https://shop-flow.uz/vendor/telegram-web-app.js || true
+              --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/vendor/telegram-web-app.js" || true
             echo "===== HTTPS haqiqiy DNS orqali (tashqi yo'l) ====="
             curl -sS -o /dev/null -w "public: %{http_code} (dns->%{remote_ip})\n" \
-              --max-time 15 https://shop-flow.uz/ || echo "public: YETIB BORMADI"
+              --max-time 15 "https://${DOMAIN}/" || echo "public: YETIB BORMADI"
             echo "===== sertifikat ====="
-            echo | openssl s_client -connect 127.0.0.1:443 -servername shop-flow.uz 2>/dev/null \
+            echo | openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" 2>/dev/null \
               | openssl x509 -noout -subject -dates 2>/dev/null || echo "sertifikat o'qilmadi"
             echo "===== 80/443 tinglanyaptimi ====="
             (ss -lntp 2>/dev/null || netstat -lntp 2>/dev/null) | grep -E ':(80|443)\b' || echo "port topilmadi"
@@ -221,6 +222,9 @@ jobs:
             docker compose logs --tail=40 caddy || true
             echo "===== nginx (shopflow) log ====="
             docker compose logs --tail=20 shopflow || true
+          envs: DOMAIN
+        env:
+          DOMAIN: ${{ vars.PRODUCTION_DOMAIN || 'shop-flow.uz' }}
 
       - name: Notify success
         if: success()

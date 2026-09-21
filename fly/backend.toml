@@ -1,0 +1,44 @@
+# Deploy from repository root with:
+#   cd backend && fly deploy --config ../fly/backend.toml
+# Change `app` before the first deploy if this name is already taken.
+
+app = "shopflow-backend"
+primary_region = "fra"
+
+[build]
+  # backend deploy context is backend/; this path is relative to fly/backend.toml.
+  dockerfile = "../backend/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  # Fly's .internal DNS resolves to a 6PN IPv6 address; listen on IPv6 (dual-stack)
+  # so the frontend can reach the backend privately. Compose keeps its own HOST.
+  HOST = "::"
+  PORT = "4000"
+  UPLOADS_DIR = "/data/uploads"
+  ONEC_EXCHANGE_DIR = "/data/1c-exchange"
+  FIX_VOLUME_PERMISSIONS = "true"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/health"
+
+[[mounts]]
+  source = "shopflow_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

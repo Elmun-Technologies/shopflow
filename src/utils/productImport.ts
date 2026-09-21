@@ -1,6 +1,8 @@
 // CSV / Excel paste parser — mahsulot importi uchun.
 // Header aliaslari (uz/ru/en), BOM, SKU ixtiyoriy, noma'lum kategoriya xato emas.
 
+import { strFromU8, unzipSync } from "fflate";
+
 export interface ParsedProductRow {
   rowNum: number;
   sku: string;
@@ -78,6 +80,131 @@ export function looksLikeSpreadsheetBinary(text: string): boolean {
   return text.startsWith("PK") || text.includes("xl/") || text.includes("Workbook");
 }
 
+export type ProductImportFileErrorCode = "legacy-xls" | "invalid-xlsx" | "too-large" | "empty";
+
+export class ProductImportFileError extends Error {
+  constructor(public code: ProductImportFileErrorCode) {
+    super(code);
+    this.name = "ProductImportFileError";
+  }
+}
+
+const MAX_IMPORT_FILE_BYTES = 25 * 1024 * 1024;
+
+function elementsByLocalName(root: Document | Element, name: string): Element[] {
+  const namespaced = root.getElementsByTagNameNS("*", name);
+  if (namespaced.length > 0) return Array.from(namespaced);
+  return Array.from(root.getElementsByTagName(name));
+}
+
+function parseXml(bytes: Uint8Array): Document {
+  const doc = new DOMParser().parseFromString(strFromU8(bytes), "application/xml");
+  if (doc.getElementsByTagName("parsererror").length > 0) {
+    throw new ProductImportFileError("invalid-xlsx");
+  }
+  return doc;
+}
+
+function zipText(files: Record<string, Uint8Array>, path: string): Uint8Array | null {
+  return files[path] ?? null;
+}
+
+function resolveZipPath(baseDir: string, target: string): string {
+  const raw = target.startsWith("/") ? target.slice(1) : `${baseDir}/${target}`;
+  const parts: string[] = [];
+  for (const part of raw.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") parts.pop();
+    else parts.push(part);
+  }
+  return parts.join("/");
+}
+
+function columnIndex(cellRef: string): number {
+  const letters = /^([A-Z]+)/i.exec(cellRef)?.[1].toUpperCase() ?? "A";
+  let result = 0;
+  for (const letter of letters) result = result * 26 + letter.charCodeAt(0) - 64;
+  return result - 1;
+}
+
+function csvEscape(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/**
+ * Reads the first worksheet of an .xlsx file without importing the vulnerable
+ * legacy SheetJS package. XLSX is a ZIP of small XML files, so the browser can
+ * safely decode the values needed by the product import form.
+ */
+export async function parseProductXlsx(file: File): Promise<string> {
+  try {
+    const files = unzipSync(new Uint8Array(await file.arrayBuffer()));
+    const workbookBytes = zipText(files, "xl/workbook.xml");
+    const relsBytes = zipText(files, "xl/_rels/workbook.xml.rels");
+    if (!workbookBytes || !relsBytes) throw new ProductImportFileError("invalid-xlsx");
+
+    const workbook = parseXml(workbookBytes);
+    const relations = parseXml(relsBytes);
+    const sharedStringsBytes = zipText(files, "xl/sharedStrings.xml");
+    const sharedStrings = sharedStringsBytes
+      ? elementsByLocalName(parseXml(sharedStringsBytes), "si").map((item) => item.textContent ?? "")
+      : [];
+
+    const firstSheet = elementsByLocalName(workbook, "sheet")[0];
+    if (!firstSheet) throw new ProductImportFileError("invalid-xlsx");
+    const relationId = firstSheet.getAttribute("r:id") || firstSheet.getAttribute("id");
+    const relation = elementsByLocalName(relations, "Relationship").find(
+      (item) => item.getAttribute("Id") === relationId,
+    );
+    const target = relation?.getAttribute("Target");
+    if (!target) throw new ProductImportFileError("invalid-xlsx");
+
+    const worksheetPath = resolveZipPath("xl", target);
+    const worksheetBytes = zipText(files, worksheetPath);
+    if (!worksheetBytes) throw new ProductImportFileError("invalid-xlsx");
+    const worksheet = parseXml(worksheetBytes);
+
+    const lines: string[] = [];
+    for (const row of elementsByLocalName(worksheet, "row")) {
+      const values: string[] = [];
+      for (const cell of elementsByLocalName(row, "c")) {
+        const reference = cell.getAttribute("r") ?? "A1";
+        const index = columnIndex(reference);
+        const type = cell.getAttribute("t");
+        const inline = elementsByLocalName(cell, "is")[0]?.textContent ?? "";
+        const rawValue = elementsByLocalName(cell, "v")[0]?.textContent ?? "";
+        let value = type === "inlineStr" ? inline : rawValue;
+        if (type === "s") value = sharedStrings[Number(rawValue)] ?? "";
+        else if (type === "b") value = rawValue === "1" ? "TRUE" : "FALSE";
+        while (values.length <= index) values.push("");
+        values[index] = value;
+      }
+      if (values.some((value) => value.trim() !== "")) lines.push(values.map(csvEscape).join(","));
+    }
+
+    if (lines.length === 0) throw new ProductImportFileError("empty");
+    return lines.join("\n");
+  } catch (error) {
+    if (error instanceof ProductImportFileError) throw error;
+    throw new ProductImportFileError("invalid-xlsx");
+  }
+}
+
+/** Reads CSV/TSV/TXT or the first worksheet from an XLSX workbook. */
+export async function readProductFile(file: File): Promise<string> {
+  if (file.size > MAX_IMPORT_FILE_BYTES) throw new ProductImportFileError("too-large");
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".xls") && !name.endsWith(".xlsx")) {
+    throw new ProductImportFileError("legacy-xls");
+  }
+  if (name.endsWith(".xlsx")) return parseProductXlsx(file);
+
+  const content = await file.text();
+  if (!content.trim()) throw new ProductImportFileError("empty");
+  if (looksLikeSpreadsheetBinary(content)) throw new ProductImportFileError("invalid-xlsx");
+  return content;
+}
+
 export function parseProductCsv(
   text: string,
   categories: Array<{ id: string; name: string }>,
@@ -134,8 +261,12 @@ export function parseProductCsv(
     const price = parseNumber(priceRaw);
     if (price == null || price < 0) errors.push("price");
     const oldPrice = oldPriceRaw ? parseNumber(oldPriceRaw) : null;
-    if (oldPriceRaw && oldPrice == null) errors.push("oldPrice");
-    const stock = stockRaw ? parseNumber(stockRaw) ?? 0 : 0;
+    if (oldPriceRaw && (oldPrice == null || oldPrice < 0)) errors.push("oldPrice");
+    const parsedStock = stockRaw ? parseNumber(stockRaw) : 0;
+    const stock = parsedStock ?? 0;
+    if (stockRaw && (parsedStock == null || parsedStock < 0 || !Number.isInteger(parsedStock))) {
+      errors.push("stock");
+    }
     if (!sku) notes.push("sku-auto");
 
     let categoryId: string | null = null;

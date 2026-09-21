@@ -167,7 +167,10 @@ export type BotSettings = z.infer<typeof settingsSchema>;
 
 export const botFlowDefinitionSchema = z.object({
   version: z.literal(1).default(1),
-  settings: settingsSchema.default({}),
+  // `settingsSchema.default({})` qayta ishlatiladigan xom obyektni qaytarib,
+  // ichki default'larni ishlatmasligi mumkin. Transform orqali bo'sh oqim ham
+  // to'liq, mustaqil default sozlamalarni oladi.
+  settings: settingsSchema.optional().transform((value) => settingsSchema.parse(value ?? {})),
   screens: z.array(screenSchema).max(60).default([]),
   forms: z.array(formSchema).max(30).default([]),
 });

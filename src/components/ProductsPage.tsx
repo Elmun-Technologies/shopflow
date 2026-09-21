@@ -562,7 +562,10 @@ export default function ProductsPage() {
         <ProductImportModal
           categories={cats}
           onClose={() => setShowImport(false)}
-          onDone={() => refetch()}
+          onDone={() => {
+            refetch();
+            refetchCategories();
+          }}
         />
       )}
 
