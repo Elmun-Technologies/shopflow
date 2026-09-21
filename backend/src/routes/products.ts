@@ -226,6 +226,14 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const { content, options, variants, priceTiers, ...rest } = data;
     const tenantId = req.session.tenantId;
 
+    if (data.categoryId) {
+      const category = await app.prisma.category.findFirst({
+        where: { id: data.categoryId, tenantId },
+        select: { id: true },
+      });
+      if (!category) return reply.code(400).send({ error: "Kategoriya topilmadi" });
+    }
+
     const parsedOptions = parseOptions(options ?? []);
     const variantErrors = validateVariants(parsedOptions, (variants ?? []).map((v) => ({
       sku: v.sku, name: v.name ?? "", optionValues: v.optionValues,
@@ -334,6 +342,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
         select: { id: true, name: true },
       });
       const catByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]));
+      const categoryIds = new Set(categories.map((c) => c.id));
 
       const results: Array<{
         row: number;
@@ -348,7 +357,12 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
       let categoriesCreated = 0;
 
       const resolveCategory = async (name: string | null | undefined, id: string | null | undefined) => {
-        if (id) return id;
+        if (id) {
+          // Import body is user-controlled; a category ID from another tenant
+          // must never be attached to this tenant's product.
+          if (!categoryIds.has(id)) throw new Error("Kategoriya topilmadi");
+          return id;
+        }
         const trimmed = name?.trim();
         if (!trimmed) return null;
         const key = trimmed.toLowerCase();
@@ -458,6 +472,14 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     });
     if (!product) return reply.code(404).send({ error: "Not found" });
 
+    if (data.categoryId) {
+      const category = await app.prisma.category.findFirst({
+        where: { id: data.categoryId, tenantId: req.session.tenantId },
+        select: { id: true },
+      });
+      if (!category) return reply.code(400).send({ error: "Kategoriya topilmadi" });
+    }
+
     const { content, options, variants, priceTiers, ...rest } = data;
 
     if (priceTiers) {
@@ -554,6 +576,13 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] },
     async (req, reply) => {
       const data = bulkSchema.parse(req.body);
+      if (data.action === "setCategory" && data.categoryId) {
+        const category = await app.prisma.category.findFirst({
+          where: { id: data.categoryId, tenantId: req.session.tenantId },
+          select: { id: true },
+        });
+        if (!category) return reply.code(400).send({ error: "Kategoriya topilmadi" });
+      }
       // tenant scope tekshiruvi — boshqa tenant mahsulotlariga ta'sir qilmaslik
       const owned = await app.prisma.product.findMany({
         where: { id: { in: data.ids }, tenantId: req.session.tenantId },

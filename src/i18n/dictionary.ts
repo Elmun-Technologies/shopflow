@@ -616,9 +616,9 @@ export const dictionary: Record<string, Entry> = {
   "products.export": { uz: "Eksport", ru: "Экспорт" },
   "products.export.done": { uz: "{n} ta mahsulot eksport qilindi", ru: "Экспортировано {n} товаров" },
   "import.title": { uz: "Mahsulotlarni import qilish", ru: "Импорт товаров" },
-  "import.subtitle": { uz: "CSV faylni yuklang yoki Excel'dan paste qiling", ru: "Загрузите CSV файл или вставьте данные из Excel" },
+  "import.subtitle": { uz: "CSV yoki Excel (.xlsx) faylni yuklang yoki jadvalni paste qiling", ru: "Загрузите CSV или Excel (.xlsx) файл либо вставьте таблицу" },
   "import.format": { uz: "Format", ru: "Формат" },
-  "import.formatHint": { uz: "Birinchi qator — sarlavhalar (sku, name, price va h.k.). Excel'dan nusxalansa tab-separated bo'ladi — avtomatik tushuniladi.", ru: "Первая строка — заголовки (sku, name, price и т.д.). При копировании из Excel получаются tab-separated данные — определяется автоматически." },
+  "import.formatHint": { uz: "CSV, XLSX yoki Excel'dan nusxalangan jadval ishlaydi. Birinchi qator — sarlavhalar (sku, name, price va h.k.). Excel'dan nusxalansa tab-separated bo'ladi — avtomatik tushuniladi.", ru: "Поддерживаются CSV, XLSX и данные, скопированные из Excel. Первая строка — заголовки (sku, name, price и т.д.). Вставка из Excel определяется автоматически." },
   "import.downloadSample": { uz: "Namuna faylni yuklab olish", ru: "Скачать пример" },
   "import.fromFile": { uz: "Fayldan yuklash", ru: "Загрузить из файла" },
   "import.orPaste": { uz: "yoki paste qiling", ru: "или вставьте" },
@@ -647,8 +647,36 @@ export const dictionary: Record<string, Entry> = {
   "import.skuAuto": { uz: "avto", ru: "авто" },
   "import.categoryWillCreate": { uz: "+ yangi", ru: "+ новая" },
   "import.xlsxNotSupported": {
-    uz: "Excel .xlsx hozircha ochilmaydi. Faylni CSV qilib saqlang yoki jadvalni nusxalab shu yerga joylang.",
-    ru: "Файлы Excel .xlsx пока не читаются. Сохраните как CSV или скопируйте таблицу сюда.",
+    uz: "Excel faylini o'qib bo'lmadi. XLSX yoki CSV formatidan foydalaning.",
+    ru: "Не удалось прочитать Excel-файл. Используйте формат XLSX или CSV.",
+  },
+  "import.legacyXls": {
+    uz: "Eski .xls formati qo'llab-quvvatlanmaydi. Faylni .xlsx yoki CSV qilib saqlang.",
+    ru: "Старый формат .xls не поддерживается. Сохраните файл как .xlsx или CSV.",
+  },
+  "import.fileTooLarge": {
+    uz: "Fayl juda katta. Maksimal hajm — 25 MB.",
+    ru: "Файл слишком большой. Максимальный размер — 25 МБ.",
+  },
+  "import.fileEmpty": {
+    uz: "Fayl bo'sh.",
+    ru: "Файл пуст.",
+  },
+  "import.fileReadError": {
+    uz: "Fayl o'qilmadi. XLSX, CSV yoki TSV formatini tekshiring.",
+    ru: "Не удалось прочитать файл. Проверьте формат XLSX, CSV или TSV.",
+  },
+  "import.batchError": {
+    uz: "{n}-partiyani yuklashda xato",
+    ru: "Ошибка загрузки партии №{n}",
+  },
+  "import.errorDetails": {
+    uz: "Yuklanmagan qatorlar:",
+    ru: "Строки, которые не загрузились:",
+  },
+  "import.moreErrors": {
+    uz: "yana {n} ta xato",
+    ru: "ещё {n} ошибок",
   },
   "import.rulesHint": {
     uz: "SKU ixtiyoriy. Noma'lum kategoriya avtomatik yaratiladi. Nom va narx majburiy.",
