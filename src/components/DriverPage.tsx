@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CheckCircle2, Clock, Loader2, LocateFixed, LogOut, MapPin, Navigation, PackageCheck, Phone, Play, Square, Truck, XCircle } from "lucide-react";
+import { Camera, CheckCircle2, Clock, Loader2, LocateFixed, LogOut, MapPin, Navigation, PackageCheck, Pause, Phone, Play, Square, Truck, XCircle } from "lucide-react";
 import { api, uploadFile } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { useAppToast } from "./ui/Toast";
@@ -103,6 +103,12 @@ export default function DriverPage() {
     catch (error) { toast.error(error instanceof Error ? error.message : "Smena boshlanmadi"); }
     finally { setBusy(false); }
   };
+  const togglePause = async () => {
+    if (!shift) return; setBusy(true);
+    try { const updated = await api<Shift>("/logistics/driver/shifts/pause", { method: "POST", body: { paused: shift.status === "ACTIVE" } }); setShift(updated); toast.success(updated.status === "PAUSED" ? "Smena pauza qilindi" : "Smena davom ettirildi"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Smena holati o‘zgarmadi"); }
+    finally { setBusy(false); }
+  };
   const finishShift = async () => {
     setBusy(true);
     try { await api("/logistics/driver/shifts/finish", { method: "POST" }); setShift(null); stopGps(); toast.success("Smena yakunlandi"); }
@@ -142,8 +148,8 @@ export default function DriverPage() {
     </header>
     <main className="p-4 max-w-xl mx-auto space-y-4">
       <section className="rounded-2xl bg-slate-900 border border-slate-800 p-4">
-        <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${shift ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} /><span className="font-semibold">{shift ? "Smena faol" : "Smena boshlanmagan"}</span></div>{shift && <span className={`text-xs ${gps === "active" ? "text-emerald-400" : gps === "error" ? "text-rose-400" : "text-amber-400"}`}><LocateFixed className="inline w-4 h-4 mr-1" />GPS {gps}{queuedGps > 0 ? ` · ${queuedGps} navbatda` : ""}</span>}</div>
-        {!shift ? <div className="mt-4 space-y-3"><select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-3"><option value="">Mashinasiz ishlash</option>{vehicles.map((v) => <option key={v.id} value={v.id}>{v.plateNumber} · {[v.make, v.model].filter(Boolean).join(" ")}</option>)}</select><button disabled={busy} onClick={startShift} className="w-full py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold flex items-center justify-center gap-2"><Play className="w-5 h-5" /> Ishni boshlash</button></div> : <div className="mt-4 flex items-center justify-between"><div className="text-sm text-slate-400"><Truck className="inline w-4 h-4 mr-1" />{shift.vehicle?.plateNumber ?? "Mashinasiz"}<br/><Clock className="inline w-4 h-4 mr-1" />{new Date(shift.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} dan</div><button disabled={busy} onClick={finishShift} className="px-4 py-2.5 rounded-xl bg-rose-500/15 text-rose-400 font-medium flex gap-2"><Square className="w-4 h-4" /> Tugatish</button></div>}
+        <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${shift ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} /><span className="font-semibold">{shift?.status === "PAUSED" ? "Smena pauzada" : shift ? "Smena faol" : "Smena boshlanmagan"}</span></div>{shift && <span className={`text-xs ${gps === "active" ? "text-emerald-400" : gps === "error" ? "text-rose-400" : "text-amber-400"}`}><LocateFixed className="inline w-4 h-4 mr-1" />GPS {gps}{queuedGps > 0 ? ` · ${queuedGps} navbatda` : ""}</span>}</div>
+        {!shift ? <div className="mt-4 space-y-3"><select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-3"><option value="">Mashinasiz ishlash</option>{vehicles.map((v) => <option key={v.id} value={v.id}>{v.plateNumber} · {[v.make, v.model].filter(Boolean).join(" ")}</option>)}</select><button disabled={busy} onClick={startShift} className="w-full py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold flex items-center justify-center gap-2"><Play className="w-5 h-5" /> Ishni boshlash</button></div> : <div className="mt-4 flex items-center justify-between"><div className="text-sm text-slate-400"><Truck className="inline w-4 h-4 mr-1" />{shift.vehicle?.plateNumber ?? "Mashinasiz"}<br/><Clock className="inline w-4 h-4 mr-1" />{new Date(shift.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} dan</div><div className="flex gap-2"><button disabled={busy} onClick={togglePause} className="px-3 py-2.5 rounded-xl bg-amber-500/15 text-amber-400 font-medium flex gap-2">{shift.status === "PAUSED" ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}{shift.status === "PAUSED" ? "Davom" : "Pauza"}</button><button disabled={busy} onClick={finishShift} className="px-3 py-2.5 rounded-xl bg-rose-500/15 text-rose-400 font-medium flex gap-2"><Square className="w-4 h-4" /> Tugatish</button></div></div>}
       </section>
 
       {nextStop && <section className="rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 p-4 text-slate-950">

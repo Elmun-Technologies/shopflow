@@ -7,6 +7,8 @@ import { createDeliveryCode, verifyDeliveryCode } from "../lib/delivery-verifica
 import { notifyCustomer } from "../lib/telegram-notify.js";
 import { allocateDeliveries } from "../lib/dispatch-planner.js";
 
+const escapeTelegramHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const employeeSchema = z.object({
   userId: z.string(),
   position: z.enum(["ADMINISTRATOR", "MANAGER", "OPERATOR", "WAREHOUSE", "COURIER", "DRIVER", "OTHER"]),
@@ -123,9 +125,22 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send(shift);
   });
 
+  app.post("/driver/shifts/pause", async (req, reply) => {
+    const { paused } = z.object({ paused: z.boolean() }).parse(req.body);
+    const shift = await app.prisma.driverShift.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, status: { in: ["ACTIVE", "PAUSED"] } }, orderBy: { startedAt: "desc" } });
+    if (!shift) return reply.code(404).send({ error: "Faol smena topilmadi" });
+    const target = paused ? "PAUSED" : "ACTIVE";
+    if (shift.status === target) return shift;
+    const updated = await app.prisma.driverShift.update({ where: { id: shift.id }, data: { status: target } });
+    await logAuditFor(app.prisma, req.session, { action: "STATUS_CHANGE", resourceType: "driver_shift", resourceId: shift.id, summary: paused ? "Haydovchi smenani pauza qildi" : "Haydovchi smenani davom ettirdi", changes: { from: shift.status, to: target } });
+    return updated;
+  });
+
   app.post("/driver/shifts/finish", async (req, reply) => {
     const shift = await app.prisma.driverShift.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, status: { in: ["ACTIVE", "PAUSED"] } }, orderBy: { startedAt: "desc" } });
     if (!shift) return reply.code(404).send({ error: "Faol smena topilmadi" });
+    const unfinishedRun = await app.prisma.deliveryRun.findFirst({ where: { driverId: shift.employeeId, status: { in: ["PLANNED", "ACTIVE"] }, stops: { some: { status: { in: ["PENDING", "ARRIVED"] } } } }, select: { code: true } });
+    if (unfinishedRun) return reply.code(409).send({ error: `${unfinishedRun.code} marshrutida tugallanmagan manzillar bor` });
     const updated = await app.prisma.driverShift.update({ where: { id: shift.id }, data: { status: "COMPLETED", endedAt: new Date() } });
     if (shift.vehicleId) await app.prisma.vehicle.updateMany({ where: { id: shift.vehicleId, tenantId: req.session.tenantId }, data: { status: "AVAILABLE" } });
     return updated;
@@ -153,7 +168,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       throw error;
     }
 
-    await recalculateActiveEta(employee.id, data);
+    if (data.accuracy == null || data.accuracy <= 200) await recalculateActiveEta(employee.id, data);
     return reply.code(201).send({ ok: true, id: point.id, receivedAt: point.receivedAt });
   });
 
@@ -169,9 +184,26 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const valid = points.map((point) => ({ ...point, capturedAt: new Date(point.capturedAt) })).filter((point) => point.capturedAt.getTime() >= cutoff && point.capturedAt.getTime() <= Date.now() + 5 * 60 * 1_000);
     if (!valid.length) return reply.code(400).send({ error: "Yaroqli GPS nuqta mavjud emas" });
     const result = await app.prisma.courierLocation.createMany({ data: valid.map((point) => ({ ...point, tenantId: req.session.tenantId, employeeId: employee.id, userId: req.session.userId })), skipDuplicates: true });
-    const latest = valid.reduce((current, point) => point.capturedAt > current.capturedAt ? point : current);
-    await recalculateActiveEta(employee.id, latest);
+    const accurate = valid.filter((point) => point.accuracy == null || point.accuracy <= 200);
+    const latest = accurate.length ? accurate.reduce((current, point) => point.capturedAt > current.capturedAt ? point : current) : null;
+    if (latest) await recalculateActiveEta(employee.id, latest);
     return reply.code(201).send({ ok: true, received: points.length, accepted: valid.length, inserted: result.count, duplicates: valid.length - result.count });
+  });
+
+  app.get("/locations/history", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const q = z.object({ employeeId: z.string(), from: z.string().datetime(), to: z.string().datetime() }).refine((value) => new Date(value.to) > new Date(value.from) && new Date(value.to).getTime() - new Date(value.from).getTime() <= 31 * 24 * 60 * 60 * 1_000, { message: "Oraliq 31 kundan oshmasligi kerak" }).parse(req.query);
+    const employee = await app.prisma.employeeProfile.findFirst({ where: { id: q.employeeId, tenantId: req.session.tenantId }, select: { id: true } });
+    if (!employee) return reply.code(404).send({ error: "Kuryer topilmadi" });
+    const points = await app.prisma.courierLocation.findMany({ where: { tenantId: req.session.tenantId, employeeId: employee.id, capturedAt: { gte: new Date(q.from), lte: new Date(q.to) } }, orderBy: { capturedAt: "asc" }, take: 20_000, select: { lat: true, lng: true, accuracy: true, speed: true, heading: true, capturedAt: true } });
+    return points.map((point) => ({ ...point, lat: Number(point.lat), lng: Number(point.lng) }));
+  });
+
+  app.delete("/locations/retention", { preHandler: [app.requireRole("OWNER", "ADMIN")] }, async (req) => {
+    const { days } = z.object({ days: z.number().int().min(30).max(365).default(90) }).parse(req.body);
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1_000);
+    const result = await app.prisma.courierLocation.deleteMany({ where: { tenantId: req.session.tenantId, capturedAt: { lt: cutoff } } });
+    await logAuditFor(app.prisma, req.session, { action: "DELETE", resourceType: "courier_location", resourceId: req.session.tenantId, summary: `${days} kundan eski GPS nuqtalar tozalandi`, changes: { deleted: result.count, cutoff } });
+    return { ok: true, deleted: result.count, cutoff };
   });
 
   app.get("/analytics", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
@@ -233,6 +265,17 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const sent = await notifyCustomer(app.prisma, req.session.tenantId, delivery.order.customerId, text);
     if (!sent.sent) return reply.code(409).send({ error: sent.reason ?? "Mijoz uchun faol xabar kanali topilmadi" });
     await logAuditFor(app.prisma, req.session, { action: "NOTIFY", resourceType: "delivery_order", resourceId: delivery.id, summary: `#${delivery.order.code} tracking havolasi mijozga yuborildi` });
+    return { ok: true };
+  });
+
+  app.post<{ Params: { id: string } }>("/deliveries/:id/retry", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const delivery = await app.prisma.deliveryOrder.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId, status: "FAILED" }, include: { deliveryStop: true, order: { select: { code: true } } } });
+    if (!delivery) return reply.code(404).send({ error: "Qayta rejalashtiriladigan yetkazish topilmadi" });
+    await app.prisma.$transaction(async (tx) => {
+      if (delivery.deliveryStop) await tx.deliveryStop.delete({ where: { id: delivery.deliveryStop.id } });
+      await tx.deliveryOrder.update({ where: { id: delivery.id }, data: { status: "PENDING", failedAt: null, courierId: null, vehicleId: null, courierName: null, courierPhone: null, verificationCodeHash: null, verificationExpiresAt: null } });
+    });
+    await logAuditFor(app.prisma, req.session, { action: "STATUS_CHANGE", resourceType: "delivery_order", resourceId: delivery.id, summary: `#${delivery.order.code} qayta yetkazishga yuborildi`, changes: { from: "FAILED", to: "PENDING", attemptCount: delivery.attemptCount } });
     return { ok: true };
   });
 
@@ -338,7 +381,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
         const current = deliveries.find((delivery) => delivery.id === deliveryId)!;
         await tx.deliveryOrder.update({ where: { id: deliveryId }, data: {
           courierId: driver.id, vehicleId: data.vehicleId ?? null, courierName: driver.user.name,
-          courierPhone: driver.phone, status: "ASSIGNED",
+          courierPhone: driver.phone, status: "ASSIGNED", attemptCount: { increment: 1 },
           ...(!current.trackingToken && { trackingToken: randomBytes(24).toString("base64url"), trackingExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) }),
           verificationCodeHash: verification.get(deliveryId)!.hash,
           verificationExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
@@ -438,7 +481,9 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     if (status === "FAILED" && (!notes || notes.length < 3 || !proofFileUrl)) return reply.code(400).send({ error: "Yetkazilmagan sabab va tasdiqlovchi surat majburiy" });
     const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true }, include: { user: { select: { name: true } } } });
     if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
-    const stop = await app.prisma.deliveryStop.findFirst({ where: { id: req.params.id, run: { tenantId: req.session.tenantId, driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } } }, include: { run: true, deliveryOrder: true } });
+    const activeShift = await app.prisma.driverShift.findFirst({ where: { employeeId: employee.id, status: "ACTIVE" }, select: { id: true } });
+    if (!activeShift) return reply.code(409).send({ error: "Amal uchun smenani davom ettiring" });
+    const stop = await app.prisma.deliveryStop.findFirst({ where: { id: req.params.id, run: { tenantId: req.session.tenantId, driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } } }, include: { run: true, deliveryOrder: { include: { order: { select: { code: true, customerId: true, customer: { select: { language: true } } } } } } } });
     if (!stop) return reply.code(404).send({ error: "Marshrut manzili topilmadi" });
     if (status === "COMPLETED" && stop.deliveryOrder.verificationCodeHash) {
       if (!verificationCode || !stop.deliveryOrder.verificationExpiresAt || stop.deliveryOrder.verificationExpiresAt < new Date() || !verifyDeliveryCode(verificationCode, stop.deliveryOrder.verificationCodeHash)) {
@@ -458,6 +503,14 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       return changed;
     });
     await logAuditFor(app.prisma, req.session, { action: "STATUS_CHANGE", resourceType: "delivery_order", resourceId: stop.deliveryOrderId, summary: `Yetkazish holati ${status} ga o'zgardi`, changes: { stopId: stop.id, from: stop.status, to: status, ...(notes && { notes }) } });
+    const customerId = stop.deliveryOrder.order.customerId;
+    if (customerId && ["ARRIVED", "COMPLETED", "FAILED"].includes(status)) {
+      const ru = stop.deliveryOrder.order.customer?.language === "ru";
+      const messages: Record<string, string> = ru
+        ? { ARRIVED: `🚚 Курьер прибыл с заказом <b>#${stop.deliveryOrder.order.code}</b>.`, COMPLETED: `✅ Заказ <b>#${stop.deliveryOrder.order.code}</b> доставлен.`, FAILED: `⚠️ Заказ <b>#${stop.deliveryOrder.order.code}</b> не доставлен. Причина: ${escapeTelegramHtml(notes ?? "—")}` }
+        : { ARRIVED: `🚚 Kuryer <b>#${stop.deliveryOrder.order.code}</b> buyurtmasi bilan yetib keldi.`, COMPLETED: `✅ <b>#${stop.deliveryOrder.order.code}</b> buyurtmangiz yetkazildi.`, FAILED: `⚠️ <b>#${stop.deliveryOrder.order.code}</b> buyurtmasi yetkazilmadi. Sabab: ${escapeTelegramHtml(notes ?? "—")}` };
+      void notifyCustomer(app.prisma, req.session.tenantId, customerId, messages[status]).catch((error) => app.log.warn({ error, deliveryOrderId: stop.deliveryOrderId }, "delivery lifecycle notification failed"));
+    }
     return updated;
   });
 };

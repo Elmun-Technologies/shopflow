@@ -17,7 +17,7 @@ export const trackingRoutes: FastifyPluginAsync = async (app) => {
     const stop = delivery.deliveryStop;
     const preceding = stop ? stop.run.stops.filter((item) => item.sequence < stop.sequence && !["COMPLETED", "FAILED", "SKIPPED"].includes(item.status)).length : null;
     const latest = delivery.courier?.locations[0];
-    const fresh = latest && Date.now() - latest.capturedAt.getTime() < 5 * 60 * 1000;
+    const fresh = latest && Date.now() - latest.capturedAt.getTime() < 5 * 60 * 1000 && (latest.accuracy == null || latest.accuracy <= 200);
     return {
       orderCode: delivery.order.code,
       status: delivery.status,

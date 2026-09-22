@@ -1542,6 +1542,7 @@ model DeliveryOrder {
   windowStartAt DateTime?
   windowEndAt   DateTime?
   serviceMinutes Int @default(10)
+  attemptCount Int @default(0)
 
   // Narx
   price    Decimal @default(0) @db.Decimal(14, 2)
