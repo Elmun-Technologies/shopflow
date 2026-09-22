@@ -297,8 +297,21 @@ model Product {
   priceTiers Json @default("[]")
   // Minimal buyurtma miqdori (MOQ) — null bo'lsa cheklov yo'q.
   moq Int?
-  // O'lchov birligi ("kg", "l", "dona") — MOQ va pog'onalarni ko'rsatishda.
+  // O'lchov birligi ("kg", "l", "dona") — narx, MOQ va savatda ko'rsatiladi.
   unit String?
+
+  // Moslashuvchan e-commerce miqdor modeli. Eski mahsulotlar PIECE bo'lib qoladi.
+  // productType: PHYSICAL | SERVICE; quantityMode: PIECE | LENGTH | AREA | WEIGHT | VOLUME | CUSTOM;
+  // inputMode: STEPPER | QUANTITY | DIMENSIONS. String ishlatilishi kelajakda tenantga
+  // yangi rejim qo'shishni enum migratsiyasisiz amalga oshirish imkonini beradi.
+  productType      String  @default("PHYSICAL")
+  quantityMode     String  @default("PIECE")
+  inputMode        String  @default("STEPPER")
+  quantityStep     Decimal @default(1) @db.Decimal(12, 3)
+  minQuantity      Decimal? @db.Decimal(12, 3)
+  maxQuantity      Decimal? @db.Decimal(12, 3)
+  trackStock       Boolean @default(true)
+  requiresDelivery Boolean @default(true)
 
   // Boy marketing kontenti (public API Product detali uchun). Ixtiyoriy.
   // Shakl: { tagline, highlights[], benefits[], ingredients[], howToUse,
@@ -629,8 +642,17 @@ model OrderItem {
   /// Sotilgan paytdagi variant nomi ("1 kg") — variant o'chirilsa ham chek/hisobotda qoladi.
   variantLabel String?
 
-  qty       Int
-  price     Decimal @db.Decimal(14, 2)
+  // Legacy dona miqdori integratsiyalar bilan moslik uchun Int bo'lib qoladi.
+  qty         Int
+  // Kasrli savdo miqdori (m, m², kg...) o'lchovli mahsulotlarda to'ldiriladi.
+  // Oddiy dona mahsulotlarda null va qty yagona manba bo'lib qoladi.
+  quantity    Decimal? @db.Decimal(14, 3)
+  price       Decimal @db.Decimal(14, 2)
+  // Buyurtma paytidagi birlik va o'lchamlar snapshot'i. Mahsulot sozlamasi
+  // keyinchalik o'zgarsa ham eski chek tushunarli bo'lib qoladi.
+  unit        String?
+  measurement Json?
+  trackStock  Boolean @default(true)
 
   @@index([orderId])
   @@index([productId])

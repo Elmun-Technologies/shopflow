@@ -128,6 +128,14 @@ export interface ShapedProduct {
   moq: number | null;
   /** O'lchov birligi ("kg" / "l" / "dona"). Yo'q bo'lsa null. */
   unit: string | null;
+  productType: string;
+  quantityMode: string;
+  inputMode: string;
+  quantityStep: number;
+  minQuantity: number | null;
+  maxQuantity: number | null;
+  trackStock: boolean;
+  requiresDelivery: boolean;
 }
 
 // Prisma'dan keladigan xom mahsulot (kerakli maydonlar bilan).
@@ -161,6 +169,14 @@ export interface RawProductForShape {
   priceTiers?: unknown;
   moq?: number | null;
   unit?: string | null;
+  productType?: string;
+  quantityMode?: string;
+  inputMode?: string;
+  quantityStep?: unknown;
+  minQuantity?: unknown | null;
+  maxQuantity?: unknown | null;
+  trackStock?: boolean;
+  requiresDelivery?: boolean;
 }
 
 export interface ShapeProductOpts {
@@ -331,6 +347,14 @@ export function shapeProduct(p: RawProductForShape, opts: ShapeProductOpts): Sha
     priceTiers: parsePriceTiers(p.priceTiers),
     moq: p.moq ?? null,
     unit: p.unit ?? null,
+    productType: p.productType ?? "PHYSICAL",
+    quantityMode: p.quantityMode ?? "PIECE",
+    inputMode: p.inputMode ?? "STEPPER",
+    quantityStep: Number(p.quantityStep ?? 1),
+    minQuantity: p.minQuantity == null ? null : Number(p.minQuantity),
+    maxQuantity: p.maxQuantity == null ? null : Number(p.maxQuantity),
+    trackStock: p.trackStock ?? true,
+    requiresDelivery: p.requiresDelivery ?? true,
   };
 }
 

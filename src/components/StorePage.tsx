@@ -176,6 +176,14 @@ type StoreProduct = {
   priceTiers?: { minQty: number; price: number }[];
   moq?: number | null;
   unit?: string | null;
+  productType?: "PHYSICAL" | "SERVICE";
+  quantityMode?: "PIECE" | "LENGTH" | "AREA" | "WEIGHT" | "VOLUME" | "CUSTOM";
+  inputMode?: "STEPPER" | "QUANTITY" | "DIMENSIONS";
+  quantityStep?: string | number;
+  minQuantity?: string | number | null;
+  maxQuantity?: string | number | null;
+  trackStock?: boolean;
+  requiresDelivery?: boolean;
 };
 
 interface StoreReview {
@@ -406,6 +414,8 @@ type CartItem = {
   /** "1 kg" — savat va buyurtmada ko'rinadi */
   variantLabel: string | null;
   qty: number;
+  measurement?: { width?: number; length?: number; pieces?: number };
+  unit?: string | null;
   name: string;
   price: number;
   imageUrl: string | null;
@@ -537,7 +547,7 @@ async function submitCheckout(
   slug: string,
   payload: {
     customer: CheckoutForm;
-    items: { productId: string; variantId?: string; qty: number }[];
+    items: { productId: string; variantId?: string; qty: number; measurement?: { width?: number; length?: number; pieces?: number } }[];
     telegram?: { userId?: number; username?: string; firstName?: string; lastName?: string };
     paymentMethod?: string;
     language: Lang;
@@ -610,6 +620,10 @@ function StoreInner({ slug }: { slug: string }) {
   const [cartRemindShown, setCartRemindShown] = useState(false);
   const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "newest">("popular");
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
+  const [measureWidth, setMeasureWidth] = useState("");
+  const [measureLength, setMeasureLength] = useState("");
+  const [measurePieces, setMeasurePieces] = useState("1");
+  const [directQuantity, setDirectQuantity] = useState("");
   const [form, setForm] = useState<CheckoutForm>({ name: "", phone: "", email: "", address: "", notes: "", lat: null, lng: null });
   const [gpsBusy, setGpsBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -911,12 +925,13 @@ function StoreInner({ slug }: { slug: string }) {
   // eng arzon varianti bilan ochiladi.
   useEffect(() => {
     setSelectedVariantId(null);
+    setMeasureWidth(""); setMeasureLength(""); setMeasurePieces("1"); setDirectQuantity("");
   }, [selectedProduct?.id]);
 
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
 
-  const addToCart = useCallback((product: StoreProduct, variant?: StoreVariant | null) => {
+  const addToCart = useCallback((product: StoreProduct, variant?: StoreVariant | null, measured?: { qty: number; measurement?: CartItem["measurement"] }) => {
     haptic.light();
     // Variantli mahsulotda variant berilmasa — eng arzon sotib olinadigani
     const chosen = variant ?? pickDefaultVariant(product.variants);
@@ -926,7 +941,9 @@ function StoreInner({ slug }: { slug: string }) {
       const existing = prev.find((i) => cartLineKey(i.productId, i.variantId) === key);
       if (existing) {
         return prev.map((i) =>
-          cartLineKey(i.productId, i.variantId) === key ? { ...i, qty: i.qty + 1 } : i,
+          cartLineKey(i.productId, i.variantId) === key
+            ? measured ? { ...i, qty: measured.qty, measurement: measured.measurement, unit: product.unit } : { ...i, qty: i.qty + 1 }
+            : i,
         );
       }
       const label = chosen ? `${product.name} · ${chosen.name}` : product.name;
@@ -935,7 +952,9 @@ function StoreInner({ slug }: { slug: string }) {
         productId: product.id,
         variantId: chosen?.id ?? null,
         variantLabel: chosen?.name ?? null,
-        qty: 1,
+        qty: measured?.qty ?? 1,
+        measurement: measured?.measurement,
+        unit: product.unit,
         name: product.name,
         price: chosen ? chosen.price : Number(product.price),
         imageUrl: chosen?.images[0] ?? product.imageUrl,
@@ -987,6 +1006,7 @@ function StoreInner({ slug }: { slug: string }) {
           productId: i.productId,
           ...(i.variantId ? { variantId: i.variantId } : {}),
           qty: i.qty,
+          ...(i.measurement ? { measurement: i.measurement } : {}),
         })),
         telegram: tgUser ? {
           userId: tgUser.id,
@@ -1622,7 +1642,7 @@ function StoreInner({ slug }: { slug: string }) {
     const oldPrice = variant
       ? variant.oldPrice
       : selectedProduct.oldPrice != null ? Number(selectedProduct.oldPrice) : null;
-    const availableStock = variant ? variant.stock : selectedProduct.stock;
+    const availableStock = selectedProduct.trackStock === false ? Number.POSITIVE_INFINITY : variant ? variant.stock : selectedProduct.stock;
     const pdpImages = variant && variant.images.length > 0 ? variant.images : selectedProduct.images;
     const discountPct = calcDiscountPct(price, oldPrice);
     const savings = oldPrice && oldPrice > price ? oldPrice - price : 0;
@@ -1633,6 +1653,12 @@ function StoreInner({ slug }: { slug: string }) {
     const descIsLong = desc.length > 220 || (desc.match(/\n/g) ?? []).length > 3;
     const deliveryStr = formatDeliveryDate(estimatedDeliveryDate(), lang);
     const currencyStr = data.tenant.currency === "UZS" ? t("common.sum") : data.tenant.currency;
+    const isMeasured = (selectedProduct.quantityMode ?? "PIECE") !== "PIECE";
+    const width = Number(measureWidth), length = Number(measureLength), pieces = Math.max(1, Number(measurePieces) || 1);
+    const measuredQty = selectedProduct.inputMode === "DIMENSIONS" ? Math.round(width * length * pieces * 1000) / 1000 : Math.round((Number(directQuantity) || 0) * 1000) / 1000;
+    const minQty = selectedProduct.minQuantity == null ? 0 : Number(selectedProduct.minQuantity);
+    const maxQty = selectedProduct.maxQuantity == null ? Infinity : Number(selectedProduct.maxQuantity);
+    const measuredValid = measuredQty > 0 && measuredQty >= minQty && measuredQty <= maxQty;
 
     // Share — Telegram Web App API yoki clipboard fallback
     const handleShare = async () => {
@@ -2196,6 +2222,20 @@ function StoreInner({ slug }: { slug: string }) {
                 </div>
               ));
             })()}
+            {isMeasured && (
+              <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
+                {selectedProduct.inputMode === "DIMENSIONS" ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="text-[11px] text-slate-400">{t("measurement.width")}<input type="number" min="0" step="0.01" value={measureWidth} onChange={(e) => setMeasureWidth(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-white" /></label>
+                    <label className="text-[11px] text-slate-400">{t("measurement.length")}<input type="number" min="0" step="0.01" value={measureLength} onChange={(e) => setMeasureLength(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-white" /></label>
+                    <label className="text-[11px] text-slate-400">{t("measurement.pieces")}<input type="number" min="1" step="1" value={measurePieces} onChange={(e) => setMeasurePieces(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-white" /></label>
+                  </div>
+                ) : (
+                  <label className="text-xs text-slate-400">{t("measurement.quantity", { unit: selectedProduct.unit || "" })}<input type="number" min={minQty || 0} max={Number.isFinite(maxQty) ? maxQty : undefined} step={Number(selectedProduct.quantityStep) || 0.01} value={directQuantity} onChange={(e) => setDirectQuantity(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2.5 text-white" /></label>
+                )}
+                {measuredQty > 0 && <div className="flex justify-between text-sm"><span className="text-slate-300">{t("measurement.total", { qty: measuredQty.toLocaleString(locale), unit: selectedProduct.unit || "" })}</span><strong className="text-white">{formatPrice(measuredQty * price, data.tenant.currency, lang)}</strong></div>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -2238,6 +2278,15 @@ function StoreInner({ slug }: { slug: string }) {
                   ))}
                 </div>
               );
+            }
+
+            if (isMeasured) {
+              return <button disabled={!measuredValid} onClick={() => {
+                addToCart(selectedProduct, variant, { qty: measuredQty, measurement: selectedProduct.inputMode === "DIMENSIONS" ? { width, length, pieces } : undefined });
+                if (isSingle) setView("checkout"); else { setSelectedProduct(null); setView("cart"); }
+              }} className="w-full py-3.5 rounded-2xl font-semibold text-white disabled:opacity-40 active:scale-[0.98]" style={{ backgroundColor: primaryColor }}>
+                {t("measurement.add")} {measuredValid ? `· ${formatPrice(measuredQty * price, data.tenant.currency, lang)}` : ""}
+              </button>;
             }
 
             // Combo total = main + selected addons (discount qo'llanadi)
@@ -2525,8 +2574,8 @@ function StoreInner({ slug }: { slug: string }) {
     const discountPct = calcDiscountPct(price, oldPrice);
     const liveCampaign = isCampaignLive(product.saleCampaign);
     const isFav = favorites.has(product.id);
-    const outOfStock = card.stock <= 0;
-    const lowStock = !outOfStock && card.stock > 0 && card.stock <= 5;
+    const outOfStock = product.trackStock !== false && card.stock <= 0;
+    const lowStock = product.trackStock !== false && !outOfStock && card.stock > 0 && card.stock <= 5;
     // Variantlar narxi turlicha bo'lsa "… dan" ko'rsatamiz (marketplace uslubi)
     const priceFrom = card.varies;
     const hasCardVariants = (product.variants ?? []).some((v) => v.active);

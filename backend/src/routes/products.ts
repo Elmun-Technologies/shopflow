@@ -14,6 +14,7 @@ import {
   variantAttributesSchema,
 } from "../lib/variant-shape.js";
 import { parsePriceTiers, priceTiersSchema, validatePriceTiers } from "../lib/price-tier.js";
+import { inputModeSchema, productTypeSchema, quantityModeSchema } from "../lib/quantity.js";
 
 const variantInSchema = z.object({
   /** Mavjud variantni yangilash uchun. Bo'sh — yangi variant. */
@@ -51,7 +52,7 @@ const coerceStock = z.preprocess((v) => {
 
 const emptyToUndef = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
-const productSchema = z.object({
+const productBaseSchema = z.object({
   // Bo'sh SKU — nomdan avto-generatsiya. Import ko'pincha artikulsiz keladi.
   sku: z.preprocess(emptyToUndef, z.string().min(1).max(60).optional()),
   name: z.string().min(1).max(200),
@@ -82,7 +83,39 @@ const productSchema = z.object({
   priceTiers: priceTiersSchema.optional(),
   moq: z.number().int().positive().max(10_000_000).nullable().optional(),
   unit: z.string().max(16).nullable().optional(),
+  productType: productTypeSchema.optional(),
+  quantityMode: quantityModeSchema.optional(),
+  inputMode: inputModeSchema.optional(),
+  quantityStep: z.number().positive().max(1_000_000).optional(),
+  minQuantity: z.number().positive().max(1_000_000_000).nullable().optional(),
+  maxQuantity: z.number().positive().max(1_000_000_000).nullable().optional(),
+  trackStock: z.boolean().optional(),
+  requiresDelivery: z.boolean().optional(),
 });
+
+function validateQuantitySettings(data: {
+  quantityMode?: string;
+  quantityStep?: number;
+  inputMode?: string;
+  minQuantity?: number | null;
+  maxQuantity?: number | null;
+  trackStock?: boolean;
+}, ctx: z.RefinementCtx) {
+  if (data.quantityMode === "PIECE" && data.quantityStep != null && !Number.isInteger(data.quantityStep)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["quantityStep"], message: "Dona uchun qadam butun son bo'lishi kerak" });
+  }
+  if (data.inputMode === "DIMENSIONS" && data.quantityMode !== "AREA") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["inputMode"], message: "Eni × uzunligi faqat maydon uchun ishlaydi" });
+  }
+  if (data.quantityMode && data.quantityMode !== "PIECE" && data.trackStock === true) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["trackStock"], message: "Kasrli o'lchovlarda ombor nazoratini o'chiring" });
+  }
+  if (data.minQuantity != null && data.maxQuantity != null && data.minQuantity > data.maxQuantity) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["maxQuantity"], message: "Maksimal miqdor minimaldan kichik bo'lmasligi kerak" });
+  }
+}
+const productSchema = productBaseSchema.superRefine(validateQuantitySettings);
+const productPatchSchema = productBaseSchema.partial().superRefine(validateQuantitySettings);
 
 // content (ixtiyoriy JSON) ni Prisma input'ga keltirish.
 // - undefined  → maydonga tegilmaydi (patch'da o'zgarmaydi)
@@ -466,7 +499,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch("/:id", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
-    const data = productSchema.partial().parse(req.body);
+    const data = productPatchSchema.parse(req.body);
     const product = await app.prisma.product.findFirst({
       where: { id, tenantId: req.session.tenantId },
     });
@@ -807,6 +840,14 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
             priceTiers: (src.priceTiers ?? []) as Prisma.InputJsonValue,
             moq: src.moq,
             unit: src.unit,
+            productType: src.productType,
+            quantityMode: src.quantityMode,
+            inputMode: src.inputMode,
+            quantityStep: src.quantityStep,
+            minQuantity: src.minQuantity,
+            maxQuantity: src.maxQuantity,
+            trackStock: src.trackStock,
+            requiresDelivery: src.requiresDelivery,
             saleCampaignId: src.saleCampaignId,
             source: "MANUAL",
           },

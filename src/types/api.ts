@@ -172,6 +172,14 @@ export interface Product {
   priceTiers?: { minQty: number; price: number }[];
   moq?: number | null;
   unit?: string | null;
+  productType?: "PHYSICAL" | "SERVICE";
+  quantityMode?: "PIECE" | "LENGTH" | "AREA" | "WEIGHT" | "VOLUME" | "CUSTOM";
+  inputMode?: "STEPPER" | "QUANTITY" | "DIMENSIONS";
+  quantityStep?: string | number;
+  minQuantity?: string | number | null;
+  maxQuantity?: string | number | null;
+  trackStock?: boolean;
+  requiresDelivery?: boolean;
   createdAt: string;
   updatedAt: string;
 }

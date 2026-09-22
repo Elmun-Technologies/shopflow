@@ -110,6 +110,9 @@ interface OrderDetailResponse {
   items: Array<{
     id: string;
     qty: number;
+    quantity?: string | number | null;
+    unit?: string | null;
+    measurement?: { width?: number; length?: number; pieces?: number } | null;
     price: string | number;
     product: {
       id: string;
@@ -300,7 +303,7 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
     }
   };
 
-  const subtotal = order?.items.reduce((s, i) => s + Number(i.price) * i.qty, 0) ?? 0;
+  const subtotal = order?.items.reduce((s, i) => s + Number(i.price) * Number(i.quantity ?? i.qty), 0) ?? 0;
   const itemCount = order?.items.reduce((s, i) => s + i.qty, 0) ?? 0;
 
   const handlePrint = () => {
@@ -317,9 +320,9 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
         : null,
       shippingAddress: order.shippingAddress,
       items: order.items.map((it) => ({
-        name: it.product.name,
+        name: `${it.product.name}${it.measurement?.width && it.measurement?.length ? ` (${it.measurement.width} × ${it.measurement.length} m)` : ""}`,
         sku: it.product.sku,
-        qty: it.qty,
+        qty: Number(it.quantity ?? it.qty),
         price: Number(it.price),
       })),
       tenant: tenant ? { name: tenant.name, phone: null, address: null } : null,
@@ -520,10 +523,10 @@ export default function OrderDetailDrawer({ orderId, onClose, onChanged }: Order
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="text-sm font-semibold text-forest-800">
-                          {formatMoney(Number(item.price) * item.qty, order.currency)}
+                          {formatMoney(Number(item.price) * Number(item.quantity ?? item.qty), order.currency)}
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          {item.qty} × {formatMoney(item.price, order.currency)}
+                          {Number(item.quantity ?? item.qty).toLocaleString()} {item.unit ?? ""} × {formatMoney(item.price, order.currency)}
                         </div>
                       </div>
                     </div>

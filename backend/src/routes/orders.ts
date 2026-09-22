@@ -29,9 +29,10 @@ const statusEnum = z.enum(["PENDING", "PROCESSING", "COMPLETED", "CANCELLED", "R
 function restoreStock(
   prisma: PrismaClient,
   tenantId: string,
-  item: { productId: string; variantId: string | null; qty: number },
+  item: { productId: string; variantId: string | null; qty: number; trackStock: boolean },
   restore: boolean,
 ) {
+  if (!item.trackStock) return Promise.resolve({ count: 0 });
   const delta = restore ? item.qty : -item.qty;
   if (item.variantId) {
     return prisma.productVariant.updateMany({
@@ -264,7 +265,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         const restore = isTerminal(data.status);
         const items = await app.prisma.orderItem.findMany({
           where: { orderId: id },
-          select: { productId: true, variantId: true, qty: true },
+          select: { productId: true, variantId: true, qty: true, trackStock: true },
         });
         if (items.length > 0) {
           await app.prisma.$transaction(
@@ -465,7 +466,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
           const restore = isTerminal(toStatus);
           const items = await app.prisma.orderItem.findMany({
             where: { orderId: { in: crossing.map((t) => t.id) } },
-            select: { productId: true, variantId: true, qty: true },
+            select: { productId: true, variantId: true, qty: true, trackStock: true },
           });
           if (items.length > 0) {
             await app.prisma.$transaction(
