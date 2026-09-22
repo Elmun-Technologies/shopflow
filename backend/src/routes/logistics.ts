@@ -121,7 +121,18 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     if (!shift) return reply.code(409).send({ error: "GPS yuborish uchun faol smenani boshlang" });
     const capturedAt = new Date(data.capturedAt);
     if (Math.abs(Date.now() - capturedAt.getTime()) > 24 * 60 * 60 * 1000) return reply.code(400).send({ error: "GPS vaqti noto'g'ri" });
-    const point = await app.prisma.courierLocation.create({ data: { tenantId: req.session.tenantId, employeeId: employee.id, userId: req.session.userId, ...data, capturedAt } });
+    const duplicate = await app.prisma.courierLocation.findFirst({ where: { employeeId: employee.id, capturedAt }, select: { id: true, receivedAt: true } });
+    if (duplicate) return { ok: true, id: duplicate.id, receivedAt: duplicate.receivedAt, duplicate: true };
+    let point;
+    try {
+      point = await app.prisma.courierLocation.create({ data: { tenantId: req.session.tenantId, employeeId: employee.id, userId: req.session.userId, ...data, capturedAt } });
+    } catch (error) {
+      // Parallel offline retries unique indexda to'qnashsa, ikkala so'rov ham
+      // muvaffaqiyatli deb hisoblanadi; bir xil GPS nuqta ko'payib ketmaydi.
+      const raced = await app.prisma.courierLocation.findFirst({ where: { employeeId: employee.id, capturedAt }, select: { id: true, receivedAt: true } });
+      if (raced) return { ok: true, id: raced.id, receivedAt: raced.receivedAt, duplicate: true };
+      throw error;
+    }
 
     // Faol marshrut ETA'larini yangi GPS nuqtasidan qayta hisoblaymiz. Qurilma
     // bergan tezlik juda past/yo'q bo'lsa shahar fallback tezligi ishlaydi.
@@ -192,6 +203,22 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     return app.prisma.deliveryProof.findMany({ where: { deliveryOrderId: delivery.id, tenantId: req.session.tenantId }, orderBy: { createdAt: "desc" } });
   });
 
+  app.post<{ Params: { id: string } }>("/deliveries/:id/send-tracking", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const { origin } = z.object({ origin: z.string().url().max(500) }).parse(req.body);
+    const parsedOrigin = new URL(origin);
+    if (!(["https:", "http:"].includes(parsedOrigin.protocol))) return reply.code(400).send({ error: "Noto'g'ri tracking manzili" });
+    const delivery = await app.prisma.deliveryOrder.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId }, include: { order: { select: { code: true, customerId: true, customer: { select: { language: true } } } } } });
+    if (!delivery?.trackingToken || !delivery.trackingExpiresAt || delivery.trackingExpiresAt < new Date()) return reply.code(404).send({ error: "Faol tracking havolasi topilmadi" });
+    if (!delivery.order.customerId) return reply.code(400).send({ error: "Buyurtmaga mijoz biriktirilmagan" });
+    const link = `${parsedOrigin.origin}/track/${delivery.trackingToken}`;
+    const isRu = delivery.order.customer?.language === "ru";
+    const text = isRu ? `🚚 Отслеживание заказа <b>#${delivery.order.code}</b>:\n${link}` : `🚚 <b>#${delivery.order.code}</b> buyurtmangizni kuzatish:\n${link}`;
+    const sent = await notifyCustomer(app.prisma, req.session.tenantId, delivery.order.customerId, text);
+    if (!sent.sent) return reply.code(409).send({ error: sent.reason ?? "Mijoz uchun faol xabar kanali topilmadi" });
+    await logAuditFor(app.prisma, req.session, { action: "NOTIFY", resourceType: "delivery_order", resourceId: delivery.id, summary: `#${delivery.order.code} tracking havolasi mijozga yuborildi` });
+    return { ok: true };
+  });
+
   // Dispatcher pool: koordinatasi bor va hali marshrutga kiritilmagan yetkazishlar.
   app.get("/dispatch/pool", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const rows = await app.prisma.deliveryOrder.findMany({
@@ -260,6 +287,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       }
       return created;
     });
+    await logAuditFor(app.prisma, req.session, { action: "CREATE", resourceType: "delivery_run", resourceId: run.id, summary: `${run.code} marshruti yaratildi`, changes: { driverId: driver.id, vehicleId: data.vehicleId ?? null, deliveryOrderIds: data.deliveryOrderIds } });
     // Xabar yuborish transactiondan tashqarida: Telegram muammosi marshrutni rollback qilmaydi.
     for (const delivery of deliveries) {
       if (!delivery.order.customerId) continue;
@@ -275,8 +303,15 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/runs", async (req) => {
     const q = z.object({ status: z.enum(["DRAFT", "PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"]).optional() }).parse(req.query);
-    return app.prisma.deliveryRun.findMany({ where: { tenantId: req.session.tenantId, ...(q.status && { status: q.status }) },
-      include: { driver: { include: { user: { select: { name: true, email: true } } } }, vehicle: true, stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, customer: { select: { name: true, phone: true } } } } } } } }, orderBy: { createdAt: "desc" }, take: 100 });
+    return app.prisma.deliveryRun.findMany({
+      where: { tenantId: req.session.tenantId, ...(q.status && { status: q.status }) },
+      include: {
+        driver: { include: { user: { select: { name: true, email: true } } } },
+        vehicle: true,
+        stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, customer: { select: { name: true, phone: true } } } } } } } },
+      },
+      orderBy: { createdAt: "desc" }, take: 100,
+    });
   });
 
   app.patch<{ Params: { id: string } }>("/runs/:id/cancel", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
@@ -288,6 +323,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       if (deliveryIds.length) await tx.deliveryOrder.updateMany({ where: { id: { in: deliveryIds }, tenantId: req.session.tenantId, status: "ASSIGNED" }, data: { status: "PENDING", courierId: null, vehicleId: null, courierName: null, courierPhone: null } });
       await tx.deliveryRun.update({ where: { id: run.id }, data: { status: "CANCELLED", completedAt: new Date() } });
     });
+    await logAuditFor(app.prisma, req.session, { action: "STATUS_CHANGE", resourceType: "delivery_run", resourceId: run.id, summary: `${run.code} marshruti bekor qilindi`, changes: { from: run.status, to: "CANCELLED" } });
     return { ok: true };
   });
 
@@ -318,8 +354,14 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
   app.get("/driver/run", async (req, reply) => {
     const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true } });
     if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
-    return app.prisma.deliveryRun.findFirst({ where: { driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } },
-      include: { vehicle: true, stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, shippingLat: true, shippingLng: true, customer: { select: { name: true, phone: true } } } } } } } }, orderBy: { createdAt: "desc" } });
+    return app.prisma.deliveryRun.findFirst({
+      where: { driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } },
+      include: {
+        vehicle: true,
+        stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, shippingLat: true, shippingLng: true, customer: { select: { name: true, phone: true } } } } } } } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
   });
 
   app.post<{ Params: { id: string } }>("/driver/stops/:id/proofs", async (req, reply) => {
@@ -356,6 +398,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       if (remaining === 0 && ["COMPLETED", "FAILED", "SKIPPED"].includes(status)) await tx.deliveryRun.update({ where: { id: stop.runId }, data: { status: "COMPLETED", completedAt: now } });
       return changed;
     });
+    await logAuditFor(app.prisma, req.session, { action: "STATUS_CHANGE", resourceType: "delivery_order", resourceId: stop.deliveryOrderId, summary: `Yetkazish holati ${status} ga o'zgardi`, changes: { stopId: stop.id, from: stop.status, to: status, ...(notes && { notes }) } });
     return updated;
   });
 };

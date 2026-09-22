@@ -1690,6 +1690,7 @@ model CourierLocation {
   capturedAt DateTime
   receivedAt DateTime @default(now())
 
+  @@unique([employeeId, capturedAt])
   @@index([tenantId, employeeId, capturedAt])
   @@index([capturedAt])
 }
