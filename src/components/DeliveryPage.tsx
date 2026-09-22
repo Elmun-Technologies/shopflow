@@ -8,6 +8,7 @@ import { useAsync } from "../hooks/useAsync";
 import { api } from "../api/client";
 import { getLang, useT } from "../i18n";
 import { useAppToast } from "./ui/Toast";
+import LogisticsControl from "./LogisticsControl";
 
 // ─── Tiplar ──────────────────────────────────────────────────────────────────
 
@@ -57,13 +58,13 @@ interface DeliveryOrder {
   method: { id: string; name: string; type: string } | null;
 }
 
-type Tab = "methods" | "zones" | "orders";
+type Tab = "logistics" | "methods" | "zones" | "orders";
 
 // ─── Asosiy sahifa ────────────────────────────────────────────────────────────
 
 export default function DeliveryPage() {
   const { t } = useT();
-  const [activeTab, setActiveTab] = useState<Tab>("methods");
+  const [activeTab, setActiveTab] = useState<Tab>("logistics");
   const [showMethodForm, setShowMethodForm] = useState(false);
   const [editMethod, setEditMethod] = useState<DeliveryMethod | null>(null);
   const [showZoneForm, setShowZoneForm] = useState(false);
@@ -162,7 +163,7 @@ export default function DeliveryPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-cream-100 p-1 rounded-xl w-fit border border-cream-300">
-        {(["methods", "zones", "orders"] as Tab[]).map((tab) => (
+        {(["logistics", "orders", "methods", "zones"] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -172,10 +173,13 @@ export default function DeliveryPage() {
               : { color: "#64748b" }
             }
           >
-            {tab === "methods" ? t("delivery.tab.methodsLabel") : tab === "zones" ? t("delivery.tab.zonesLabel") : t("delivery.tab.ordersLabel")}
+            {tab === "logistics" ? "Logistika" : tab === "methods" ? t("delivery.tab.methodsLabel") : tab === "zones" ? t("delivery.tab.zonesLabel") : t("delivery.tab.ordersLabel")}
           </button>
         ))}
       </div>
+
+      {/* Logistics control: live GPS, couriers and fleet */}
+      {activeTab === "logistics" && <LogisticsControl />}
 
       {/* Methods tab */}
       {activeTab === "methods" && (
