@@ -43,10 +43,10 @@ function loadYandexMaps(apiKey: string): Promise<YMapsApi> {
   return yandexLoader;
 }
 
-function LiveMap({ couriers }: { couriers: LiveCourier[] }) {
+function LiveMap({ couriers, apiKey }: { couriers: LiveCourier[]; apiKey?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<YMap | null>(null);
-  const key = import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined;
+  const key = apiKey || (import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined);
 
   useEffect(() => {
     if (!key || !host.current) return;
@@ -76,7 +76,7 @@ function LiveMap({ couriers }: { couriers: LiveCourier[] }) {
     <div className="h-96 rounded-2xl border border-dashed border-amber-300 bg-amber-50 flex flex-col items-center justify-center text-center p-6">
       <MapPinned className="w-10 h-10 text-amber-500 mb-3" />
       <p className="font-semibold text-amber-900">Yandex Maps API kaliti kiritilmagan</p>
-      <p className="text-sm text-amber-700 mt-1">Frontend environment’ga VITE_YANDEX_MAPS_API_KEY qo‘shing. Kuryerlarning GPS ro‘yxati pastda ishlashda davom etadi.</p>
+      <p className="text-sm text-amber-700 mt-1">Sozlamalar → Integratsiyalar bo‘limida tenant uchun Yandex Maps kalitini kiriting.</p>
     </div>
   );
   return <div ref={host} className="h-96 rounded-2xl overflow-hidden border border-cream-300 bg-cream-100" />;
@@ -86,6 +86,7 @@ export default function LogisticsControl() {
   const toast = useAppToast();
   const [tab, setTab] = useState<LogisticsTab>("live");
   const [live, setLive] = useState<LiveCourier[]>([]);
+  const [yandexKey, setYandexKey] = useState<string>();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<TeamUser[]>([]);
@@ -106,10 +107,10 @@ export default function LogisticsControl() {
   const reload = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     try {
-      const [liveRows, employeeRows, vehicleRows, userRows, poolRows, runRows, analyticsRow] = await Promise.all([
-        api<LiveCourier[]>("/logistics/live"), api<Employee[]>("/logistics/employees"), api<Vehicle[]>("/logistics/vehicles"), api<TeamUser[]>("/settings/users"), api<PoolDelivery[]>("/logistics/dispatch/pool"), api<DeliveryRun[]>("/logistics/runs"), api<LogisticsAnalytics>("/logistics/analytics"),
+      const [liveRows, employeeRows, vehicleRows, userRows, poolRows, runRows, analyticsRow, runtime] = await Promise.all([
+        api<LiveCourier[]>("/logistics/live"), api<Employee[]>("/logistics/employees"), api<Vehicle[]>("/logistics/vehicles"), api<TeamUser[]>("/settings/users"), api<PoolDelivery[]>("/logistics/dispatch/pool"), api<DeliveryRun[]>("/logistics/runs"), api<LogisticsAnalytics>("/logistics/analytics"), api<{ YANDEX_MAPS_API_KEY?: string }>("/tenant-secrets/runtime"),
       ]);
-      setLive(liveRows); setEmployees(employeeRows); setVehicles(vehicleRows); setUsers(userRows); setPool(poolRows); setRuns(runRows); setAnalytics(analyticsRow);
+      setLive(liveRows); setEmployees(employeeRows); setVehicles(vehicleRows); setUsers(userRows); setPool(poolRows); setRuns(runRows); setAnalytics(analyticsRow); setYandexKey(runtime.YANDEX_MAPS_API_KEY);
     } catch (error) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "Logistika ma’lumotlari yuklanmadi");
     } finally { if (!quiet) setLoading(false); }
@@ -231,7 +232,7 @@ export default function LogisticsControl() {
       </div>
 
       {loading ? <div className="h-64 grid place-items-center"><Loader2 className="w-7 h-7 animate-spin text-leaf-500" /></div> : tab === "live" ? <>
-        <LiveMap couriers={live} />
+        <LiveMap couriers={live} apiKey={yandexKey} />
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{live.map((courier) => <CourierCard key={courier.id} courier={courier} />)}</div>
       </> : tab === "routes" ? (
         <div className="space-y-4">

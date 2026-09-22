@@ -68,6 +68,7 @@ import { settingsRoutes } from "./routes/settings.js";
 import { smsRoutes } from "./routes/sms.js";
 import { loyaltyRoutes } from "./routes/loyalty.js";
 import { publicApiRoutes } from "./routes/public-api.js";
+import { tenantSecretRoutes } from "./routes/tenant-secrets.js";
 
 const app = Fastify({
   logger: {
@@ -284,6 +285,7 @@ await app.register(logisticsRoutes, { prefix: "/api/logistics" });
 await app.register(trackingRoutes, { prefix: "/api/tracking" });
 await app.register(exportRoutes, { prefix: "/api/export" });
 await app.register(settingsRoutes, { prefix: "/api/settings" });
+await app.register(tenantSecretRoutes, { prefix: "/api/tenant-secrets" });
 await app.register(smsRoutes, { prefix: "/api/sms" });
 await app.register(loyaltyRoutes, { prefix: "/api/loyalty" });
 // Public API v1 — tashqi mijoz websaytlari uchun (API kalit auth).

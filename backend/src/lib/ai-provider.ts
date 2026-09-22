@@ -33,6 +33,7 @@ export interface AiConfig {
   apiKey: string;
   model: string;
 }
+export type AiRuntimeConfig = Partial<Record<"OPENAI_API_KEY" | "OPENAI_MODEL" | "OPENAI_MODEL_FAST" | "ANTHROPIC_API_KEY" | "ANTHROPIC_MODEL" | "ANTHROPIC_MODEL_FAST" | "AI_PROVIDER", string>>;
 
 export interface AiChatRequest {
   system: string;
@@ -53,29 +54,29 @@ export interface AiChatResult {
 }
 
 /** AI umuman sozlanganmi (admin UI tugmani yoqish/o'chirish uchun). */
-export function isAiConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim());
+export function isAiConfigured(runtime: AiRuntimeConfig = process.env): boolean {
+  return Boolean(runtime.OPENAI_API_KEY?.trim() || runtime.ANTHROPIC_API_KEY?.trim());
 }
 
-/** Ishlatiladigan provayder va model. Kalit yo'q bo'lsa null. */
-export function resolveAiConfig(tier: AiTier): AiConfig | null {
-  const openaiKey = process.env.OPENAI_API_KEY?.trim();
-  const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
-  const forced = process.env.AI_PROVIDER?.trim().toLowerCase();
+/** Ishlatiladigan provayder va model. Tenant runtime config env fallback'dan ustun. */
+export function resolveAiConfig(tier: AiTier, runtime: AiRuntimeConfig = process.env): AiConfig | null {
+  const openaiKey = runtime.OPENAI_API_KEY?.trim();
+  const anthropicKey = runtime.ANTHROPIC_API_KEY?.trim();
+  const forced = runtime.AI_PROVIDER?.trim().toLowerCase();
 
   const useAnthropic =
     forced === "anthropic" ? Boolean(anthropicKey) : !openaiKey && Boolean(anthropicKey);
 
   if (useAnthropic && anthropicKey) {
     const model =
-      (tier === "fast" ? process.env.ANTHROPIC_MODEL_FAST : process.env.ANTHROPIC_MODEL)?.trim() ||
+      (tier === "fast" ? runtime.ANTHROPIC_MODEL_FAST : runtime.ANTHROPIC_MODEL)?.trim() ||
       DEFAULTS.anthropic[tier];
     return { provider: "anthropic", apiKey: anthropicKey, model };
   }
 
   if (openaiKey) {
     const model =
-      (tier === "fast" ? process.env.OPENAI_MODEL_FAST : process.env.OPENAI_MODEL)?.trim() ||
+      (tier === "fast" ? runtime.OPENAI_MODEL_FAST : runtime.OPENAI_MODEL)?.trim() ||
       DEFAULTS.openai[tier];
     return { provider: "openai", apiKey: openaiKey, model };
   }
@@ -87,8 +88,8 @@ export function resolveAiConfig(tier: AiTier): AiConfig | null {
  * Bitta system+user so'rovni yuboradi va model matnini qaytaradi.
  * Hech qachon throw qilmaydi — chaqiruvchilar failsoft ishlaydi.
  */
-export async function aiChat(req: AiChatRequest): Promise<AiChatResult> {
-  const cfg = resolveAiConfig(req.tier);
+export async function aiChat(req: AiChatRequest, runtime: AiRuntimeConfig = process.env): Promise<AiChatResult> {
+  const cfg = resolveAiConfig(req.tier, runtime);
   if (!cfg) return { ok: false, reason: "OPENAI_API_KEY yoki ANTHROPIC_API_KEY sozlanmagan" };
 
   const controller = new AbortController();

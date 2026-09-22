@@ -14,7 +14,7 @@ import {
   validateFlowRefs,
   type BotFlowDefinition,
 } from "./bot-flow-schema.js";
-import { aiChat, extractJson } from "./ai-provider.js";
+import { aiChat, extractJson, type AiRuntimeConfig } from "./ai-provider.js";
 
 const MAX_TOKENS = 16_000;
 const TIMEOUT_MS = 120_000;
@@ -128,6 +128,7 @@ Return the JSON object and nothing else.`;
 export async function generateBotFlow(
   brief: string,
   context: { storeName: string; hasProducts: boolean; existing?: BotFlowDefinition },
+  aiRuntime: AiRuntimeConfig = process.env,
 ): Promise<BotFlowAIResult> {
   const trimmed = brief.trim();
   if (trimmed.length < 20) return { ok: false, reason: "Brif juda qisqa" };
@@ -157,7 +158,7 @@ export async function generateBotFlow(
     timeoutMs: TIMEOUT_MS,
     tier: "smart",
     json: true,
-  });
+  }, aiRuntime);
 
   if (!res.ok || !res.text) return { ok: false, reason: res.reason ?? "Generatsiya muvaffaqiyatsiz" };
 

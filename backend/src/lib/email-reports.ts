@@ -3,7 +3,7 @@
 // va kerakli tenantlarga email yuboradi.
 
 import type { PrismaClient } from "@prisma/client";
-import { sendEmail, isEmailConfigured } from "./email.js";
+import { sendTenantEmail, isTenantEmailConfigured } from "./email.js";
 
 type Freq = "daily" | "weekly" | "monthly";
 const PERIOD_DAYS: Record<Freq, number> = { daily: 1, weekly: 7, monthly: 30 };
@@ -122,7 +122,7 @@ export async function sendReportToTenant(
   tenantId: string,
   freq: Freq,
 ): Promise<{ ok: boolean; reason?: string; sent?: number }> {
-  if (!isEmailConfigured()) return { ok: false, reason: "smtp_not_configured" };
+  if (!(await isTenantEmailConfigured(prisma, tenantId))) return { ok: false, reason: "smtp_not_configured" };
   const settings = await prisma.tenantNotifSettings.findUnique({ where: { tenantId } });
   if (!settings || !settings.emailNotificationsEnabled) return { ok: false, reason: "disabled" };
   if (!settings.emailRecipients || settings.emailRecipients.length === 0) return { ok: false, reason: "no_recipients" };
@@ -130,7 +130,7 @@ export async function sendReportToTenant(
   const data = await buildReport(prisma, tenantId, freq);
   if (!data) return { ok: false, reason: "no_tenant" };
 
-  const result = await sendEmail({
+  const result = await sendTenantEmail(prisma, tenantId, {
     to: settings.emailRecipients,
     subject: `[ShopFlow] ${data.periodLabel} hisobot — ${data.storeName}`,
     html: buildReportHtml(data),
@@ -159,10 +159,6 @@ export function startEmailReportsScheduler(
   log: (msg: string, ...rest: unknown[]) => void = console.log,
 ): () => void {
   if (timer) return () => undefined;
-  if (!isEmailConfigured()) {
-    log("[email-reports] SMTP sozlanmagan — scheduler ishlatilmaydi");
-    return () => undefined;
-  }
 
   const tick = async () => {
     try {

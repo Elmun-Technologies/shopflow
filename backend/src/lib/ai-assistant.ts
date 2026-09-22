@@ -10,7 +10,8 @@
 //   - Yoki murakkab/yangi savol bo'lsa, operatorga yo'naltirishni so'raydi
 
 import type { PrismaClient } from "@prisma/client";
-import { aiChat, extractJson, isAiConfigured } from "./ai-provider.js";
+import { aiChat, extractJson, isAiConfigured, type AiRuntimeConfig } from "./ai-provider.js";
+import { getTenantSecrets } from "./tenant-secrets.js";
 
 const MAX_TOKENS = 600;
 const TIMEOUT_MS = 15_000;
@@ -69,7 +70,9 @@ export async function aiReplyToMessage(
   userMessage: string,
   language?: "uz" | "ru",
 ): Promise<AIResponse> {
-  if (!isAiConfigured()) return { used: false, reason: "AI kaliti sozlanmagan" };
+  const tenantAi = await getTenantSecrets(prisma, tenantId, ["OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_MODEL_FAST", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "ANTHROPIC_MODEL_FAST", "AI_PROVIDER"]);
+  const aiRuntime = { ...process.env, ...tenantAi } as AiRuntimeConfig;
+  if (!isAiConfigured(aiRuntime)) return { used: false, reason: "AI kaliti sozlanmagan" };
   if (!userMessage.trim() || userMessage.length < 2) return { used: false, reason: "Empty message" };
 
   const tenant = await prisma.tenant.findUnique({
@@ -104,7 +107,7 @@ export async function aiReplyToMessage(
     timeoutMs: TIMEOUT_MS,
     tier: "fast",
     json: true,
-  });
+  }, aiRuntime);
 
   if (!res.ok || !res.text) return { used: false, reason: res.reason ?? "AI javob bermadi" };
 

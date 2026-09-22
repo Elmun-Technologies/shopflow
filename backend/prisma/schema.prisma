@@ -61,6 +61,7 @@ model Tenant {
   deliveryProofs  DeliveryProof[]
   apiKeys         ApiKey[]
   notifSettings   TenantNotifSettings?
+  secrets         TenantSecret[]
   loyaltyAccounts LoyaltyAccount[]
   loyaltyRules    LoyaltyRule[]
   botSequences    BotSequence[]
@@ -1796,6 +1797,21 @@ model ApiKey {
 
   @@index([tenantId, active])
   @@index([keyHash])
+}
+
+// ============== TENANT CREDENTIAL VA RUNTIME CONFIG ==============
+model TenantSecret {
+  id             String @id @default(cuid())
+  tenantId       String
+  tenant         Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key            String
+  encryptedValue String
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@index([tenantId, updatedAt])
 }
 
 // ============== NOTIFICATION SETTINGS ==============

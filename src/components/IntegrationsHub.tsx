@@ -18,6 +18,7 @@ import { WebhookIntegrationCard } from "./WebhookIntegrationCard";
 import { useAppToast } from "./ui/Toast";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useT } from "../i18n";
+import { TenantCredentialsCard } from "./TenantCredentialsCard";
 
 const CATEGORY_ICONS: Record<IntegrationCategory, React.ElementType> = {
   payments: CreditCard,
@@ -60,6 +61,7 @@ export function IntegrationsHub() {
 
   return (
     <div className="space-y-6">
+      <TenantCredentialsCard />
       {/* Hero — statistika va search */}
       <div className="bg-gradient-to-br from-leaf-100 to-cream-50 border border-leaf-300/40 rounded-2xl p-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">

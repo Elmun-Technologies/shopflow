@@ -1,72 +1,38 @@
-// Email yuborish — SMTP credentials env'da bo'lsa ishlaydi, aks holda silent skip.
-// Gmail App Password, SendGrid, Mailgun, o'z SMTP — istalganini qo'llab-quvvatlaydi.
-
+// Email transport. Tenant SMTP credential platform env fallback'dan ustun.
 import nodemailer, { type Transporter } from "nodemailer";
+import type { PrismaClient } from "@prisma/client";
+import { getTenantSecrets } from "./tenant-secrets.js";
 
-const SMTP_HOST = process.env.SMTP_HOST ?? "";
-const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);
-const SMTP_USER = process.env.SMTP_USER ?? "";
-const SMTP_PASS = process.env.SMTP_PASS ?? "";
-const SMTP_FROM = process.env.SMTP_FROM ?? SMTP_USER;
-const SMTP_SECURE = process.env.SMTP_SECURE === "true"; // 465 uchun true
+const envConfig = {
+  host: process.env.SMTP_HOST ?? "", port: Number(process.env.SMTP_PORT ?? 587), user: process.env.SMTP_USER ?? "",
+  pass: process.env.SMTP_PASS ?? "", from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "", secure: process.env.SMTP_SECURE === "true",
+};
+let transporter: Transporter | null = envConfig.host && envConfig.user && envConfig.pass
+  ? nodemailer.createTransport({ host: envConfig.host, port: envConfig.port, secure: envConfig.secure, auth: { user: envConfig.user, pass: envConfig.pass } }) : null;
 
-let transporter: Transporter | null = null;
-let configured = false;
+export function isEmailConfigured(): boolean { return Boolean(transporter); }
+export interface EmailMessage { to: string | string[]; subject: string; html?: string; text?: string; attachments?: Array<{ filename: string; content: Buffer | string; contentType?: string }> }
 
-if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-  try {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    });
-    configured = true;
-  } catch {
-    /* config xato — silent */
-  }
+async function sendWith(transport: Transporter | null, from: string, msg: EmailMessage): Promise<{ ok: boolean; reason?: string }> {
+  if (!transport) return { ok: false, reason: "not_configured" };
+  try { await transport.sendMail({ from, to: Array.isArray(msg.to) ? msg.to.join(", ") : msg.to, subject: msg.subject, html: msg.html, text: msg.text, attachments: msg.attachments }); return { ok: true }; }
+  catch (err) { return { ok: false, reason: err instanceof Error ? err.message : "unknown" }; }
 }
-
-export function isEmailConfigured(): boolean {
-  return configured;
-}
-
-export interface EmailMessage {
-  to: string | string[];
-  subject: string;
-  html?: string;
-  text?: string;
-  attachments?: Array<{ filename: string; content: Buffer | string; contentType?: string }>;
-}
-
-/**
- * Email yuboradi. Configured bo'lmasa { ok: false, reason: 'not_configured' }.
- * Fire-and-forget rejimda ishlatish mumkin (throw qilmaydi).
- */
-export async function sendEmail(msg: EmailMessage): Promise<{ ok: boolean; reason?: string }> {
-  if (!transporter || !configured) return { ok: false, reason: "not_configured" };
-  try {
-    await transporter.sendMail({
-      from: SMTP_FROM,
-      to: Array.isArray(msg.to) ? msg.to.join(", ") : msg.to,
-      subject: msg.subject,
-      html: msg.html,
-      text: msg.text,
-      attachments: msg.attachments,
-    });
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, reason: err instanceof Error ? err.message : "unknown" };
-  }
-}
-
-/** SMTP ulanishni tekshirish (Settings'dagi "Test" tugmasi uchun). */
+export async function sendEmail(msg: EmailMessage) { return sendWith(transporter, envConfig.from, msg); }
 export async function verifyEmailConnection(): Promise<{ ok: boolean; reason?: string }> {
-  if (!transporter || !configured) return { ok: false, reason: "not_configured" };
-  try {
-    await transporter.verify();
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, reason: err instanceof Error ? err.message : "unknown" };
-  }
+  if (!transporter) return { ok: false, reason: "not_configured" };
+  try { await transporter.verify(); return { ok: true }; } catch (err) { return { ok: false, reason: err instanceof Error ? err.message : "unknown" }; }
+}
+
+async function tenantTransport(prisma: PrismaClient, tenantId: string): Promise<{ transport: Transporter | null; from: string }> {
+  const value = await getTenantSecrets(prisma, tenantId, ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_SECURE"]);
+  const host = value.SMTP_HOST ?? envConfig.host; const user = value.SMTP_USER ?? envConfig.user; const pass = value.SMTP_PASS ?? envConfig.pass;
+  if (!host || !user || !pass) return { transport: null, from: value.SMTP_FROM ?? envConfig.from };
+  return { transport: nodemailer.createTransport({ host, port: Number(value.SMTP_PORT ?? envConfig.port), secure: (value.SMTP_SECURE ?? String(envConfig.secure)) === "true", auth: { user, pass } }), from: value.SMTP_FROM ?? envConfig.from ?? user };
+}
+export async function isTenantEmailConfigured(prisma: PrismaClient, tenantId: string): Promise<boolean> { return Boolean((await tenantTransport(prisma, tenantId)).transport); }
+export async function sendTenantEmail(prisma: PrismaClient, tenantId: string, msg: EmailMessage) { const config = await tenantTransport(prisma, tenantId); return sendWith(config.transport, config.from, msg); }
+export async function verifyTenantEmailConnection(prisma: PrismaClient, tenantId: string): Promise<{ ok: boolean; reason?: string }> {
+  const { transport } = await tenantTransport(prisma, tenantId); if (!transport) return { ok: false, reason: "not_configured" };
+  try { await transport.verify(); return { ok: true }; } catch (err) { return { ok: false, reason: err instanceof Error ? err.message : "unknown" }; }
 }
