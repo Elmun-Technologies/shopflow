@@ -115,6 +115,12 @@ export default function LogisticsControl() {
     return () => window.clearInterval(timer);
   }, [reload, tab]);
 
+  const cancelRoute = async (run: DeliveryRun) => {
+    if (!window.confirm(`${run.code} marshrutini bekor qilasizmi?`)) return;
+    try { await api(`/logistics/runs/${run.id}/cancel`, { method: "PATCH" }); await reload(true); toast.success("Marshrut bekor qilindi"); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Marshrut bekor qilinmadi"); }
+  };
+
   const createRoute = async () => {
     if (!routeDraft.driverId || selectedDeliveries.size === 0) return toast.error("Haydovchi va buyurtmalarni tanlang");
     setSaving(true);
@@ -177,7 +183,7 @@ export default function LogisticsControl() {
             </div>
             <div className="max-h-64 overflow-y-auto divide-y divide-cream-200 border border-cream-200 rounded-xl">{pool.length === 0 ? <p className="p-4 text-sm text-slate-500">Koordinatali, taqsimlanmagan buyurtma yo‘q</p> : pool.map((delivery) => <label key={delivery.id} className="p-3 flex items-start gap-3 cursor-pointer hover:bg-cream-50"><input type="checkbox" className="mt-1" checked={selectedDeliveries.has(delivery.id)} onChange={(e) => setSelectedDeliveries((old) => { const next = new Set(old); if (e.target.checked) next.add(delivery.id); else next.delete(delivery.id); return next; })} /><div><p className="text-sm font-medium text-forest-800">#{delivery.order.code} · {delivery.order.customer?.name ?? "—"}</p><p className="text-xs text-slate-500">{delivery.order.shippingAddress ?? `${delivery.lat}, ${delivery.lng}`}</p></div></label>)}</div>
           </div>
-          <div className="space-y-3">{runs.map((run) => <div key={run.id} className="rounded-2xl border border-cream-300 bg-white p-4"><div className="flex items-center justify-between"><div><p className="font-semibold text-forest-800">{run.code}</p><p className="text-xs text-slate-500">{run.driver.user.name} · {run.vehicle?.plateNumber ?? "Mashinasiz"} · {run.totalDistanceMeters ? `${(run.totalDistanceMeters / 1000).toFixed(1)} km` : "—"}</p></div><span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">{run.status}</span></div><ol className="mt-3 space-y-2">{run.stops.map((stop) => <li key={stop.id} className="flex gap-3 text-sm"><span className="w-6 h-6 rounded-full bg-leaf-100 text-forest-700 grid place-items-center text-xs font-bold">{stop.sequence}</span><div><p className="text-forest-800">#{stop.deliveryOrder.order.code} · {stop.deliveryOrder.order.customer?.name ?? "—"}</p><p className="text-xs text-slate-500">{stop.deliveryOrder.order.shippingAddress ?? "Manzil yo‘q"}</p></div></li>)}</ol></div>)}</div>
+          <div className="space-y-3">{runs.map((run) => <div key={run.id} className="rounded-2xl border border-cream-300 bg-white p-4"><div className="flex items-center justify-between"><div><p className="font-semibold text-forest-800">{run.code}</p><p className="text-xs text-slate-500">{run.driver.user.name} · {run.vehicle?.plateNumber ?? "Mashinasiz"} · {run.totalDistanceMeters ? `${(run.totalDistanceMeters / 1000).toFixed(1)} km` : "—"}</p></div><div className="flex items-center gap-2"><span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">{run.status}</span>{run.status === "PLANNED" && <button onClick={() => void cancelRoute(run)} className="text-xs px-2 py-1 rounded-lg bg-rose-50 text-rose-600">Bekor qilish</button>}</div></div><ol className="mt-3 space-y-2">{run.stops.map((stop) => <li key={stop.id} className="flex gap-3 text-sm"><span className="w-6 h-6 rounded-full bg-leaf-100 text-forest-700 grid place-items-center text-xs font-bold">{stop.sequence}</span><div><p className="text-forest-800">#{stop.deliveryOrder.order.code} · {stop.deliveryOrder.order.customer?.name ?? "—"}</p><p className="text-xs text-slate-500">{stop.deliveryOrder.order.shippingAddress ?? "Manzil yo‘q"}</p></div></li>)}</ol></div>)}</div>
         </div>
       ) : tab === "couriers" ? (
         <div className="space-y-3">

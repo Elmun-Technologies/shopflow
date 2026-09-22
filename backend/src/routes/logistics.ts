@@ -122,6 +122,27 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const capturedAt = new Date(data.capturedAt);
     if (Math.abs(Date.now() - capturedAt.getTime()) > 24 * 60 * 60 * 1000) return reply.code(400).send({ error: "GPS vaqti noto'g'ri" });
     const point = await app.prisma.courierLocation.create({ data: { tenantId: req.session.tenantId, employeeId: employee.id, userId: req.session.userId, ...data, capturedAt } });
+
+    // Faol marshrut ETA'larini yangi GPS nuqtasidan qayta hisoblaymiz. Qurilma
+    // bergan tezlik juda past/yo'q bo'lsa shahar fallback tezligi ishlaydi.
+    const activeRun = await app.prisma.deliveryRun.findFirst({
+      where: { driverId: employee.id, status: "ACTIVE" },
+      include: { stops: { where: { status: { in: ["PENDING", "ARRIVED"] } }, orderBy: { sequence: "asc" } } },
+      orderBy: { startedAt: "desc" },
+    });
+    if (activeRun?.stops.length) {
+      const metersPerSecond = data.speed && data.speed >= 2 ? Math.min(data.speed, 40) : 25_000 / 3_600;
+      let cursor = { lat: data.lat, lng: data.lng };
+      let elapsed = 0;
+      await Promise.all(activeRun.stops.map((stop) => {
+        const target = { lat: Number(stop.lat), lng: Number(stop.lng) };
+        elapsed += Math.round(distanceMeters(cursor, target) / metersPerSecond);
+        const eta = new Date(Date.now() + elapsed * 1_000);
+        elapsed += stop.serviceMinutes * 60;
+        cursor = target;
+        return app.prisma.deliveryStop.update({ where: { id: stop.id }, data: { estimatedArrivalAt: eta } });
+      }));
+    }
     return reply.code(201).send({ ok: true, id: point.id, receivedAt: point.receivedAt });
   });
 
@@ -141,6 +162,12 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     if (!delivery || !courier) return reply.code(404).send({ error: "Yetkazish yoki kuryer topilmadi" });
     const updated = await app.prisma.deliveryOrder.update({ where: { id: delivery.id }, data: { courierId, vehicleId: vehicleId ?? null, courierName: courier.user.name, courierPhone: courier.phone, status: "ASSIGNED" } });
     return updated;
+  });
+
+  app.get<{ Params: { id: string } }>("/deliveries/:id/proofs", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const delivery = await app.prisma.deliveryOrder.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId }, select: { id: true } });
+    if (!delivery) return reply.code(404).send({ error: "Yetkazish topilmadi" });
+    return app.prisma.deliveryProof.findMany({ where: { deliveryOrderId: delivery.id, tenantId: req.session.tenantId }, orderBy: { createdAt: "desc" } });
   });
 
   // Dispatcher pool: koordinatasi bor va hali marshrutga kiritilmagan yetkazishlar.
@@ -228,6 +255,30 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const q = z.object({ status: z.enum(["DRAFT", "PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"]).optional() }).parse(req.query);
     return app.prisma.deliveryRun.findMany({ where: { tenantId: req.session.tenantId, ...(q.status && { status: q.status }) },
       include: { driver: { include: { user: { select: { name: true, email: true } } } }, vehicle: true, stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, customer: { select: { name: true, phone: true } } } } } } } }, orderBy: { createdAt: "desc" }, take: 100 });
+  });
+
+  app.patch<{ Params: { id: string } }>("/runs/:id/cancel", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const run = await app.prisma.deliveryRun.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId, status: { in: ["DRAFT", "PLANNED"] } }, include: { stops: true } });
+    if (!run) return reply.code(404).send({ error: "Bekor qilish mumkin bo'lgan marshrut topilmadi" });
+    await app.prisma.$transaction(async (tx) => {
+      const deliveryIds = run.stops.map((stop) => stop.deliveryOrderId);
+      await tx.deliveryStop.deleteMany({ where: { runId: run.id } });
+      if (deliveryIds.length) await tx.deliveryOrder.updateMany({ where: { id: { in: deliveryIds }, tenantId: req.session.tenantId, status: "ASSIGNED" }, data: { status: "PENDING", courierId: null, vehicleId: null, courierName: null, courierPhone: null } });
+      await tx.deliveryRun.update({ where: { id: run.id }, data: { status: "CANCELLED", completedAt: new Date() } });
+    });
+    return { ok: true };
+  });
+
+  app.patch<{ Params: { id: string } }>("/runs/:id/reorder", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const { stopIds } = z.object({ stopIds: z.array(z.string()).min(1).max(100) }).parse(req.body);
+    const run = await app.prisma.deliveryRun.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId, status: { in: ["DRAFT", "PLANNED"] } }, include: { stops: true } });
+    if (!run || stopIds.length !== run.stops.length || new Set(stopIds).size !== stopIds.length || stopIds.some((id) => !run.stops.some((stop) => stop.id === id))) return reply.code(400).send({ error: "Stoplar ro'yxati marshrutga mos emas" });
+    await app.prisma.$transaction(async (tx) => {
+      // Unique(runId, sequence) to'qnashmasligi uchun avval vaqtinchalik manfiy tartib.
+      for (let index = 0; index < stopIds.length; index++) await tx.deliveryStop.update({ where: { id: stopIds[index] }, data: { sequence: -(index + 1) } });
+      for (let index = 0; index < stopIds.length; index++) await tx.deliveryStop.update({ where: { id: stopIds[index] }, data: { sequence: index + 1 } });
+    });
+    return { ok: true };
   });
 
   app.get("/driver/run", async (req, reply) => {
