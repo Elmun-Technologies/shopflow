@@ -323,6 +323,54 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  app.post("/dispatch/auto-create", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const data = z.object({ deliveryOrderIds: z.array(z.string()).min(1).max(500), startLat: z.number().min(-90).max(90), startLng: z.number().min(-180).max(180) }).parse(req.body);
+    const tenantId = req.session.tenantId;
+    const deliveries = await app.prisma.deliveryOrder.findMany({
+      where: { tenantId, id: { in: data.deliveryOrderIds }, deliveryStop: null, status: "PENDING", order: { shippingLat: { not: null }, shippingLng: { not: null } } },
+      include: { order: { select: { code: true, shippingLat: true, shippingLng: true, shippingAddress: true, customerId: true, customer: { select: { language: true } } } } },
+    });
+    if (deliveries.length !== new Set(data.deliveryOrderIds).size) return reply.code(409).send({ error: "Ba'zi buyurtmalar allaqachon taqsimlangan yoki koordinatasiz" });
+    const drivers = await app.prisma.employeeProfile.findMany({
+      where: { tenantId, active: true, canDrive: true, shifts: { some: { status: "ACTIVE" } }, runs: { none: { status: { in: ["PLANNED", "ACTIVE"] } } } },
+      include: { user: { select: { name: true } }, shifts: { where: { status: "ACTIVE" }, orderBy: { startedAt: "desc" }, take: 1, include: { vehicle: true } }, locations: { orderBy: { capturedAt: "desc" }, take: 1 } },
+    });
+    if (!drivers.length) return reply.code(409).send({ error: "Bo'sh va faol smenadagi haydovchi topilmadi" });
+    const resources = drivers.map((driver) => {
+      const vehicle = driver.shifts[0]?.vehicle; const location = driver.locations[0];
+      return { driverId: driver.id, vehicleId: vehicle?.id ?? null, start: location ? { lat: Number(location.lat), lng: Number(location.lng) } : { lat: data.startLat, lng: data.startLng }, capacityKg: vehicle?.capacityKg == null ? (vehicle ? null : 20) : Number(vehicle.capacityKg), capacityM3: vehicle?.capacityM3 == null ? (vehicle ? null : 0.15) : Number(vehicle.capacityM3) };
+    });
+    const allocation = allocateDeliveries(deliveries.map((delivery) => ({ id: delivery.id, lat: Number(delivery.order.shippingLat), lng: Number(delivery.order.shippingLng), priority: delivery.priority, weightKg: delivery.weightKg == null ? null : Number(delivery.weightKg), volumeM3: delivery.volumeM3 == null ? null : Number(delivery.volumeM3), windowEndAt: delivery.windowEndAt })), resources);
+    if (!allocation.plans.length) return reply.code(409).send({ error: "Buyurtmalar mavjud transport sig'imiga mos kelmadi", unassigned: allocation.unassigned });
+    const byId = new Map(deliveries.map((delivery) => [delivery.id, delivery]));
+    const driverById = new Map(drivers.map((driver) => [driver.id, driver]));
+    const verification = new Map(deliveries.map((delivery) => [delivery.id, createDeliveryCode()]));
+    const now = new Date();
+    const createdRuns = await app.prisma.$transaction(async (tx) => {
+      const result = [];
+      for (let runIndex = 0; runIndex < allocation.plans.length; runIndex++) {
+        const assigned = allocation.plans[runIndex]; const driver = driverById.get(assigned.driverId)!;
+        const points = assigned.deliveryIds.map((id) => { const delivery = byId.get(id)!; return { id, lat: Number(delivery.order.shippingLat), lng: Number(delivery.order.shippingLng), priority: delivery.priority, windowStartAt: delivery.windowStartAt, windowEndAt: delivery.windowEndAt, serviceMinutes: delivery.serviceMinutes }; });
+        const route = planConstrainedRoute(assigned.start, points, now);
+        const code = `RUN-${now.toISOString().slice(0, 10).replaceAll("-", "")}-${Date.now().toString(36).toUpperCase()}-${runIndex + 1}`;
+        const run = await tx.deliveryRun.create({ data: { tenantId, code, status: "PLANNED", driverId: driver.id, userId: driver.userId, vehicleId: assigned.vehicleId ?? null, plannedStartAt: now, totalDistanceMeters: route.totalDistanceMeters, totalDurationSeconds: route.totalDurationSeconds, routeProvider: "FALLBACK_HAVERSINE", routeData: { start: assigned.start, assumedAverageSpeedKmh: 25, planningMode: "AUTO_DISPATCH", lateStops: route.lateStops }, stops: { create: route.stops.map((point, index) => ({ deliveryOrderId: point.id, sequence: index + 1, lat: point.lat, lng: point.lng, address: byId.get(point.id)?.order.shippingAddress, serviceMinutes: point.serviceMinutes ?? 10, estimatedArrivalAt: point.arrivalAt })) } } });
+        for (const deliveryId of assigned.deliveryIds) {
+          const delivery = byId.get(deliveryId)!;
+          await tx.deliveryOrder.update({ where: { id: deliveryId }, data: { courierId: driver.id, vehicleId: assigned.vehicleId ?? null, courierName: driver.user.name, courierPhone: driver.phone, status: "ASSIGNED", attemptCount: { increment: 1 }, ...(!delivery.trackingToken && { trackingToken: randomBytes(24).toString("base64url"), trackingExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1_000) }), verificationCodeHash: verification.get(deliveryId)!.hash, verificationExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1_000) } });
+        }
+        result.push(run);
+      }
+      return result;
+    });
+    for (const delivery of deliveries.filter((item) => !allocation.unassigned.some((row) => row.id === item.id))) {
+      if (!delivery.order.customerId) continue; const otp = verification.get(delivery.id)!.code; const ru = delivery.order.customer?.language === "ru";
+      const text = ru ? `🚚 Заказ <b>#${delivery.order.code}</b> передан курьеру. Код подтверждения: <b>${otp}</b>` : `🚚 <b>#${delivery.order.code}</b> buyurtmangiz kuryerga berildi. Tasdiqlash kodi: <b>${otp}</b>`;
+      void notifyCustomer(app.prisma, tenantId, delivery.order.customerId, text).catch((error) => app.log.warn({ error, deliveryId: delivery.id }, "auto dispatch notification failed"));
+    }
+    await logAuditFor(app.prisma, req.session, { action: "CREATE", resourceType: "delivery_run", resourceId: createdRuns.map((run) => run.id).join(","), summary: `${createdRuns.length} ta marshrut avtomatik va atomik yaratildi`, changes: { deliveryOrderIds: data.deliveryOrderIds, unassigned: allocation.unassigned } });
+    return reply.code(201).send({ runs: createdRuns, unassigned: allocation.unassigned });
+  });
+
   // Dispatcher pool: koordinatasi bor va hali marshrutga kiritilmagan yetkazishlar.
   app.get("/dispatch/pool", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const rows = await app.prisma.deliveryOrder.findMany({

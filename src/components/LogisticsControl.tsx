@@ -14,7 +14,6 @@ type Vehicle = { id: string; plateNumber: string; make: string | null; model: st
 type TeamUser = { id: string; name: string; email: string; active: boolean };
 type PoolDelivery = { id: string; status: string; scheduledAt: string | null; priority: number; weightKg: number | null; volumeM3: number | null; windowStartAt: string | null; windowEndAt: string | null; serviceMinutes: number; lat: number; lng: number; order: { code: string; shippingAddress: string | null; customer: { name: string; phone: string | null } | null } };
 type LogisticsAnalytics = { total: number; delivered: number; failed: number; successRate: number; averageDeliveryMinutes: number | null; couriers: Array<{ id: string; name: string; delivered: number; failed: number }> };
-type AutoDispatchPlan = { driverId: string; driverName: string; vehicleId: string | null; vehiclePlate: string | null; start: { lat: number; lng: number }; deliveryIds: string[]; totalWeightKg: number; totalVolumeM3: number; estimatedDistanceMeters: number };
 type DeliveryProof = { id: string; type: string; fileUrl: string | null; note: string | null; createdByName: string | null; createdAt: string };
 type DeliveryRun = { id: string; code: string; status: string; totalDistanceMeters: number | null; driver: { user: { name: string } }; vehicle: Vehicle | null; stops: Array<{ id: string; sequence: number; status: string; deliveryOrder: { id: string; trackingToken: string | null; order: { code: string; shippingAddress: string | null; customer: { name: string } | null } } }> };
 type PlanningDraft = { id: string; code: string; priority: number; weightKg: string; volumeM3: string; windowStartAt: string; windowEndAt: string; serviceMinutes: number };
@@ -172,14 +171,9 @@ export default function LogisticsControl() {
     if (!window.confirm(`${deliveryOrderIds.length} ta buyurtmani faol kuryerlarga avtomatik taqsimlaysizmi?`)) return;
     setSaving(true);
     try {
-      const result = await api<{ plans: AutoDispatchPlan[]; unassigned: Array<{ id: string; reason: string }> }>("/logistics/dispatch/auto-plan", { method: "POST", body: { deliveryOrderIds, startLat: Number(routeDraft.startLat), startLng: Number(routeDraft.startLng) } });
-      let created = 0;
-      for (const plan of result.plans) {
-        await api("/logistics/runs", { method: "POST", body: { driverId: plan.driverId, vehicleId: plan.vehicleId, deliveryOrderIds: plan.deliveryIds, startLat: plan.start.lat, startLng: plan.start.lng, serviceMinutes: 10 } });
-        created++;
-      }
+      const result = await api<{ runs: Array<{ id: string }>; unassigned: Array<{ id: string; reason: string }> }>("/logistics/dispatch/auto-create", { method: "POST", body: { deliveryOrderIds, startLat: Number(routeDraft.startLat), startLng: Number(routeDraft.startLng) } });
       setSelectedDeliveries(new Set()); await reload(true);
-      toast.success(`${created} ta marshrut avtomatik yaratildi${result.unassigned.length ? `, ${result.unassigned.length} ta buyurtma sig‘madi` : ""}`);
+      toast.success(`${result.runs.length} ta marshrut atomik yaratildi${result.unassigned.length ? `, ${result.unassigned.length} ta buyurtma sig‘madi` : ""}`);
     } catch (error) { await reload(true); toast.error(error instanceof Error ? error.message : "Avtomatik taqsimlash bajarilmadi"); }
     finally { setSaving(false); }
   };
