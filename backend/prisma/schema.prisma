@@ -1536,6 +1536,12 @@ model DeliveryOrder {
   deliveryStop DeliveryStop?
   proofs       DeliveryProof[]
   notes        String?
+  priority     Int @default(0)
+  weightKg     Decimal? @db.Decimal(12, 3)
+  volumeM3     Decimal? @db.Decimal(12, 4)
+  windowStartAt DateTime?
+  windowEndAt   DateTime?
+  serviceMinutes Int @default(10)
 
   // Narx
   price    Decimal @default(0) @db.Decimal(14, 2)
@@ -1551,6 +1557,7 @@ model DeliveryOrder {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, status])
+  @@index([tenantId, priority, scheduledAt])
   @@index([orderId])
   @@index([courierId, status])
   @@index([vehicleId])

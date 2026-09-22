@@ -45,3 +45,60 @@ export function routeDistance(start: Pick<RoutePoint, "lat" | "lng">, ordered: R
   }
   return Math.round(total);
 }
+
+export type ConstrainedRoutePoint = RoutePoint & {
+  priority?: number;
+  windowStartAt?: Date | null;
+  windowEndAt?: Date | null;
+  serviceMinutes?: number;
+};
+export type PlannedRoutePoint = ConstrainedRoutePoint & {
+  arrivalAt: Date;
+  departureAt: Date;
+  distanceFromPreviousMeters: number;
+  waitingSeconds: number;
+  lateSeconds: number;
+};
+
+/**
+ * Provider-independent constrained fallback planner. Masofadan tashqari mijozning
+ * vaqt oynasi va delivery prioritetini hisobga oladi. Road matrix kelgach faqat
+ * segment travel time manbasi almashtiriladi, kontrakt o'zgarmaydi.
+ */
+export function planConstrainedRoute(
+  start: Pick<RoutePoint, "lat" | "lng">,
+  points: ConstrainedRoutePoint[],
+  departureAt: Date,
+  averageSpeedKmh = 25,
+): { stops: PlannedRoutePoint[]; totalDistanceMeters: number; totalDurationSeconds: number; lateStops: number } {
+  const remaining = [...points];
+  const stops: PlannedRoutePoint[] = [];
+  const metersPerSecond = Math.max(5, averageSpeedKmh) * 1_000 / 3_600;
+  let cursor = start;
+  let clock = departureAt.getTime();
+  let totalDistance = 0;
+
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < remaining.length; index++) {
+      const point = remaining[index];
+      const travelSeconds = distanceMeters(cursor, point) / metersPerSecond;
+      const rawArrival = clock + travelSeconds * 1_000;
+      const lateSeconds = point.windowEndAt ? Math.max(0, (rawArrival - point.windowEndAt.getTime()) / 1_000) : 0;
+      const deadlineUrgency = point.windowEndAt ? Math.max(0, (point.windowEndAt.getTime() - clock) / 1_000) / 20 : 100_000;
+      const score = travelSeconds + lateSeconds * 20 + deadlineUrgency - Math.max(0, point.priority ?? 0) * 600;
+      if (score < bestScore || (score === bestScore && point.id < remaining[bestIndex].id)) { bestIndex = index; bestScore = score; }
+    }
+    const [point] = remaining.splice(bestIndex, 1);
+    const segmentDistance = distanceMeters(cursor, point);
+    const rawArrival = clock + segmentDistance / metersPerSecond * 1_000;
+    const arrivalMs = point.windowStartAt ? Math.max(rawArrival, point.windowStartAt.getTime()) : rawArrival;
+    const waitingSeconds = Math.max(0, Math.round((arrivalMs - rawArrival) / 1_000));
+    const lateSeconds = point.windowEndAt ? Math.max(0, Math.round((arrivalMs - point.windowEndAt.getTime()) / 1_000)) : 0;
+    const departureMs = arrivalMs + (point.serviceMinutes ?? 10) * 60_000;
+    stops.push({ ...point, arrivalAt: new Date(arrivalMs), departureAt: new Date(departureMs), distanceFromPreviousMeters: Math.round(segmentDistance), waitingSeconds, lateSeconds });
+    totalDistance += segmentDistance; clock = departureMs; cursor = point;
+  }
+  return { stops, totalDistanceMeters: Math.round(totalDistance), totalDurationSeconds: Math.max(0, Math.round((clock - departureAt.getTime()) / 1_000)), lateStops: stops.filter((stop) => stop.lateSeconds > 0).length };
+}

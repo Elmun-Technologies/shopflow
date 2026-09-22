@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distanceMeters, orderNearest, routeDistance } from "./route-planner.js";
+import { distanceMeters, orderNearest, planConstrainedRoute, routeDistance } from "./route-planner.js";
 
 describe("route planner fallback", () => {
   it("calculates realistic distance", () => {
@@ -22,5 +22,32 @@ describe("route planner fallback", () => {
     const points = [{ id: "a", lat: 1, lng: 1 }];
     orderNearest({ lat: 0, lng: 0 }, points);
     expect(points).toHaveLength(1);
+  });
+
+  it("puts an urgent time window before a nearer unrestricted stop", () => {
+    const departure = new Date("2026-09-22T08:00:00.000Z");
+    const plan = planConstrainedRoute({ lat: 0, lng: 0 }, [
+      { id: "near", lat: 0, lng: 0.01 },
+      { id: "urgent", lat: 0, lng: 0.02, windowEndAt: new Date("2026-09-22T08:06:00.000Z") },
+    ], departure, 30);
+    expect(plan.stops.map((stop) => stop.id)).toEqual(["urgent", "near"]);
+  });
+
+  it("waits when arriving before the customer time window", () => {
+    const departure = new Date("2026-09-22T08:00:00.000Z");
+    const plan = planConstrainedRoute({ lat: 0, lng: 0 }, [
+      { id: "window", lat: 0, lng: 0.001, windowStartAt: new Date("2026-09-22T09:00:00.000Z"), serviceMinutes: 5 },
+    ], departure);
+    expect(plan.stops[0].arrivalAt.toISOString()).toBe("2026-09-22T09:00:00.000Z");
+    expect(plan.stops[0].waitingSeconds).toBeGreaterThan(3_000);
+    expect(plan.totalDurationSeconds).toBeGreaterThanOrEqual(3_900);
+  });
+
+  it("prioritizes a high priority delivery", () => {
+    const plan = planConstrainedRoute({ lat: 0, lng: 0 }, [
+      { id: "normal", lat: 0, lng: 0.01, priority: 0 },
+      { id: "vip", lat: 0, lng: 0.02, priority: 10 },
+    ], new Date("2026-09-22T08:00:00.000Z"));
+    expect(plan.stops[0].id).toBe("vip");
   });
 });

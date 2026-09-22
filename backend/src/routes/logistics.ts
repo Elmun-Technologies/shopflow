@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { logAuditFor } from "../lib/audit.js";
-import { distanceMeters, orderNearest, routeDistance } from "../lib/route-planner.js";
+import { distanceMeters, planConstrainedRoute } from "../lib/route-planner.js";
 import { createDeliveryCode, verifyDeliveryCode } from "../lib/delivery-verification.js";
 import { notifyCustomer } from "../lib/telegram-notify.js";
 
@@ -219,6 +219,18 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true };
   });
 
+  app.patch<{ Params: { id: string } }>("/deliveries/:id/planning", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const data = z.object({
+      priority: z.number().int().min(0).max(100).optional(), weightKg: z.number().nonnegative().nullable().optional(), volumeM3: z.number().nonnegative().nullable().optional(),
+      windowStartAt: z.string().datetime().nullable().optional(), windowEndAt: z.string().datetime().nullable().optional(), serviceMinutes: z.number().int().min(1).max(240).optional(),
+    }).refine((value) => !value.windowStartAt || !value.windowEndAt || new Date(value.windowEndAt) > new Date(value.windowStartAt), { message: "Vaqt oynasi noto'g'ri" }).parse(req.body);
+    const delivery = await app.prisma.deliveryOrder.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId, deliveryStop: null } });
+    if (!delivery) return reply.code(404).send({ error: "Rejalashtiriladigan yetkazish topilmadi" });
+    const updated = await app.prisma.deliveryOrder.update({ where: { id: delivery.id }, data: { ...data, windowStartAt: data.windowStartAt === undefined ? undefined : data.windowStartAt ? new Date(data.windowStartAt) : null, windowEndAt: data.windowEndAt === undefined ? undefined : data.windowEndAt ? new Date(data.windowEndAt) : null } });
+    await logAuditFor(app.prisma, req.session, { action: "UPDATE", resourceType: "delivery_order", resourceId: delivery.id, summary: "Yetkazish rejalashtirish parametrlari yangilandi", changes: data });
+    return updated;
+  });
+
   // Dispatcher pool: koordinatasi bor va hali marshrutga kiritilmagan yetkazishlar.
   app.get("/dispatch/pool", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const rows = await app.prisma.deliveryOrder.findMany({
@@ -227,7 +239,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       include: { order: { select: { code: true, shippingAddress: true, shippingLat: true, shippingLng: true, customer: { select: { name: true, phone: true } } } }, method: { select: { name: true } } },
       orderBy: [{ scheduledAt: "asc" }, { createdAt: "asc" }],
     });
-    return rows.map((row) => ({ ...row, price: Number(row.price), lat: Number(row.order.shippingLat), lng: Number(row.order.shippingLng) }));
+    return rows.map((row) => ({ ...row, price: Number(row.price), weightKg: row.weightKg == null ? null : Number(row.weightKg), volumeM3: row.volumeM3 == null ? null : Number(row.volumeM3), lat: Number(row.order.shippingLat), lng: Number(row.order.shippingLng) }));
   });
 
   const runSchema = z.object({
@@ -242,29 +254,27 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const tenantId = req.session.tenantId;
     const driver = await app.prisma.employeeProfile.findFirst({ where: { id: data.driverId, tenantId, active: true, canDrive: true }, include: { user: true } });
     if (!driver) return reply.code(400).send({ error: "Faol haydovchi topilmadi" });
-    if (data.vehicleId) {
-      const vehicle = await app.prisma.vehicle.findFirst({ where: { id: data.vehicleId, tenantId, status: { in: ["AVAILABLE", "IN_USE"] } } });
-      if (!vehicle) return reply.code(400).send({ error: "Mashina mavjud emas" });
-    }
+    const selectedVehicle = data.vehicleId ? await app.prisma.vehicle.findFirst({ where: { id: data.vehicleId, tenantId, status: { in: ["AVAILABLE", "IN_USE"] } } }) : null;
+    if (data.vehicleId && !selectedVehicle) return reply.code(400).send({ error: "Mashina mavjud emas" });
     const deliveries = await app.prisma.deliveryOrder.findMany({
       where: { id: { in: data.deliveryOrderIds }, tenantId, deliveryStop: null, order: { shippingLat: { not: null }, shippingLng: { not: null } } },
       include: { order: { select: { shippingLat: true, shippingLng: true, shippingAddress: true, code: true, customerId: true, customer: { select: { language: true } } } } },
     });
     if (deliveries.length !== new Set(data.deliveryOrderIds).size) return reply.code(409).send({ error: "Ba'zi buyurtmalar topilmadi, koordinatasiz yoki boshqa marshrutga qo'shilgan" });
-    const points = deliveries.map((d) => ({ id: d.id, lat: Number(d.order.shippingLat), lng: Number(d.order.shippingLng) }));
-    const ordered = orderNearest({ lat: data.startLat, lng: data.startLng }, points);
-    const byId = new Map(deliveries.map((d) => [d.id, d]));
-    const distance = routeDistance({ lat: data.startLat, lng: data.startLng }, ordered);
+    const totalWeightKg = deliveries.reduce((sum, delivery) => sum + Number(delivery.weightKg ?? 0), 0);
+    if (selectedVehicle?.capacityKg != null && totalWeightKg > Number(selectedVehicle.capacityKg)) return reply.code(409).send({ error: `Yuk og'irligi (${totalWeightKg.toFixed(1)} kg) transport sig'imidan (${Number(selectedVehicle.capacityKg).toFixed(1)} kg) yuqori` });
+    const points = deliveries.map((delivery) => ({
+      id: delivery.id, lat: Number(delivery.order.shippingLat), lng: Number(delivery.order.shippingLng),
+      priority: delivery.priority, windowStartAt: delivery.windowStartAt, windowEndAt: delivery.windowEndAt,
+      serviceMinutes: delivery.serviceMinutes || data.serviceMinutes,
+    }));
+    const byId = new Map(deliveries.map((delivery) => [delivery.id, delivery]));
     const departure = data.plannedStartAt ? new Date(data.plannedStartAt) : new Date();
-    const etaById = new Map<string, Date>();
-    let cursor = { lat: data.startLat, lng: data.startLng };
-    let elapsedSeconds = 0;
-    for (const point of ordered) {
-      elapsedSeconds += Math.round(distanceMeters(cursor, point) / (25_000 / 3_600));
-      etaById.set(point.id, new Date(departure.getTime() + elapsedSeconds * 1_000));
-      elapsedSeconds += data.serviceMinutes * 60;
-      cursor = point;
-    }
+    const plan = planConstrainedRoute({ lat: data.startLat, lng: data.startLng }, points, departure);
+    const ordered = plan.stops;
+    const distance = plan.totalDistanceMeters;
+    const elapsedSeconds = plan.totalDurationSeconds;
+    const etaById = new Map(plan.stops.map((stop) => [stop.id, stop.arrivalAt]));
     const code = `RUN-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${Date.now().toString(36).toUpperCase()}`;
     const verification = new Map(deliveries.map((delivery) => [delivery.id, createDeliveryCode()]));
     const run = await app.prisma.$transaction(async (tx) => {
@@ -272,8 +282,8 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
         tenantId, code, status: "PLANNED", driverId: driver.id, userId: driver.userId, vehicleId: data.vehicleId ?? null,
         plannedStartAt: data.plannedStartAt ? new Date(data.plannedStartAt) : null,
         totalDistanceMeters: distance, totalDurationSeconds: elapsedSeconds, routeProvider: "FALLBACK_HAVERSINE",
-        routeData: { start: { lat: data.startLat, lng: data.startLng }, assumedAverageSpeedKmh: 25 },
-        stops: { create: ordered.map((point, index) => ({ deliveryOrderId: point.id, sequence: index + 1, lat: point.lat, lng: point.lng, address: byId.get(point.id)?.order.shippingAddress, serviceMinutes: data.serviceMinutes, estimatedArrivalAt: etaById.get(point.id) })) },
+        routeData: { start: { lat: data.startLat, lng: data.startLng }, assumedAverageSpeedKmh: 25, planningMode: "CONSTRAINED_FALLBACK", lateStops: plan.lateStops },
+        stops: { create: ordered.map((point, index) => ({ deliveryOrderId: point.id, sequence: index + 1, lat: point.lat, lng: point.lng, address: byId.get(point.id)?.order.shippingAddress, serviceMinutes: point.serviceMinutes ?? data.serviceMinutes, estimatedArrivalAt: etaById.get(point.id) })) },
       }, include: { stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { include: { customer: true } } } } } }, driver: { include: { user: true } }, vehicle: true } });
       for (const deliveryId of data.deliveryOrderIds) {
         const current = deliveries.find((delivery) => delivery.id === deliveryId)!;
