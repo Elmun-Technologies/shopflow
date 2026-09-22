@@ -3,6 +3,7 @@ import { Camera, CheckCircle2, Clock, Loader2, LocateFixed, LogOut, MapPin, Navi
 import { api, uploadFile } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { useAppToast } from "./ui/Toast";
+import { SignaturePad } from "./SignaturePad";
 
 type Vehicle = { id: string; plateNumber: string; make: string | null; model: string | null; status: string };
 type Shift = { id: string; status: string; startedAt: string; vehicle: Vehicle | null };
@@ -26,6 +27,7 @@ export default function DriverPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [proofUploading, setProofUploading] = useState(false);
   const [proofStops, setProofStops] = useState<Set<string>>(new Set());
+  const [signatureStop, setSignatureStop] = useState<Stop | null>(null);
   const [queuedGps, setQueuedGps] = useState(() => readGpsQueue().length);
   const watchId = useRef<number | null>(null);
   const lastSentAt = useRef(0);
@@ -100,13 +102,15 @@ export default function DriverPage() {
     catch (error) { toast.error(error instanceof Error ? error.message : "Smena yakunlanmadi"); }
     finally { setBusy(false); }
   };
-  const addPhotoProof = async (stop: Stop, file: File) => {
+  const addProofFile = async (stop: Stop, file: File, type: "PHOTO" | "SIGNATURE") => {
     setProofUploading(true);
     try {
       const uploaded = await uploadFile(file);
-      await api(`/logistics/driver/stops/${stop.id}/proofs`, { method: "POST", body: { type: "PHOTO", fileUrl: uploaded.url } });
-      setProofStops((current) => new Set(current).add(stop.id)); toast.success("Tasdiqlovchi surat saqlandi");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Surat saqlanmadi"); }
+      await api(`/logistics/driver/stops/${stop.id}/proofs`, { method: "POST", body: { type, fileUrl: uploaded.url } });
+      setProofStops((current) => new Set(current).add(stop.id));
+      if (type === "SIGNATURE") setSignatureStop(null);
+      toast.success(type === "PHOTO" ? "Tasdiqlovchi surat saqlandi" : "Mijoz imzosi saqlandi");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Tasdiq saqlanmadi"); }
     finally { setProofUploading(false); }
   };
   const updateStop = async (stop: Stop, status: "ARRIVED" | "COMPLETED" | "FAILED") => {
@@ -134,7 +138,8 @@ export default function DriverPage() {
         <div className="grid grid-cols-2 gap-2 mt-4"><a href={`https://yandex.com/maps/?rtext=~${Number(nextStop.lat)},${Number(nextStop.lng)}&rtt=auto`} target="_blank" rel="noreferrer" className="py-3 rounded-xl bg-slate-950 text-white font-semibold flex items-center justify-center gap-2"><Navigation className="w-4 h-4" /> Navigatsiya</a>{nextStop.deliveryOrder.order.customer?.phone ? <a href={`tel:${nextStop.deliveryOrder.order.customer.phone}`} className="py-3 rounded-xl bg-white/80 font-semibold flex items-center justify-center gap-2"><Phone className="w-4 h-4" /> Qo‘ng‘iroq</a> : <span />}</div>
       </section>}
 
-      <section><div className="flex items-center justify-between mb-2"><h2 className="font-semibold">Bugungi marshrut</h2>{run && <span className="text-xs text-slate-500">{run.code}</span>}</div>{!run ? <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-slate-500"><PackageCheck className="w-9 h-9 mx-auto mb-2" />Marshrut hali biriktirilmagan</div> : <div className="space-y-2">{run.stops.map((stop) => <article key={stop.id} className={`rounded-2xl border p-3 ${stop.status === "COMPLETED" ? "bg-emerald-950/30 border-emerald-900" : stop.id === nextStop?.id ? "bg-slate-900 border-emerald-500" : "bg-slate-900 border-slate-800"}`}><div className="flex gap-3"><span className="w-7 h-7 rounded-full bg-slate-800 grid place-items-center text-xs font-bold">{stop.sequence}</span><div className="flex-1"><div className="flex justify-between gap-2"><p className="font-medium">#{stop.deliveryOrder.order.code} · {stop.deliveryOrder.order.customer?.name ?? "—"}</p>{stop.status === "COMPLETED" && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}</div><p className="text-xs text-slate-400 mt-1">{stop.address || stop.deliveryOrder.order.shippingAddress}</p>{stop.id === nextStop?.id && <div className="mt-3 space-y-2"><label className={`w-full py-2.5 rounded-lg border border-dashed flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer ${proofStops.has(stop.id) ? "border-emerald-600 text-emerald-400" : "border-slate-600 text-slate-300"}`}><Camera className="w-4 h-4" />{proofUploading ? "Surat yuklanmoqda…" : proofStops.has(stop.id) ? "Surat saqlandi" : "Yetkazish suratini olish"}<input type="file" accept="image/*" capture="environment" className="hidden" disabled={proofUploading} onChange={(e) => { const file = e.target.files?.[0]; if (file) void addPhotoProof(stop, file); e.currentTarget.value = ""; }} /></label><input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Mijozning 6 xonali tasdiqlash kodi" className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm tracking-widest" /><div className="grid grid-cols-3 gap-2"><button disabled={busy} onClick={() => updateStop(stop, "ARRIVED")} className="py-2 rounded-lg bg-blue-500/15 text-blue-400 text-xs font-semibold">Yetib keldim</button><button disabled={busy || verificationCode.length !== 6} onClick={() => updateStop(stop, "COMPLETED")} className="py-2 rounded-lg bg-emerald-500 text-slate-950 text-xs font-semibold disabled:opacity-40">Topshirildi</button><button disabled={busy} onClick={() => updateStop(stop, "FAILED")} className="py-2 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-semibold"><XCircle className="inline w-3 h-3" /> Xato</button></div></div>}</div></div></article>)}</div>}</section>
+      <section><div className="flex items-center justify-between mb-2"><h2 className="font-semibold">Bugungi marshrut</h2>{run && <span className="text-xs text-slate-500">{run.code}</span>}</div>{!run ? <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-slate-500"><PackageCheck className="w-9 h-9 mx-auto mb-2" />Marshrut hali biriktirilmagan</div> : <div className="space-y-2">{run.stops.map((stop) => <article key={stop.id} className={`rounded-2xl border p-3 ${stop.status === "COMPLETED" ? "bg-emerald-950/30 border-emerald-900" : stop.id === nextStop?.id ? "bg-slate-900 border-emerald-500" : "bg-slate-900 border-slate-800"}`}><div className="flex gap-3"><span className="w-7 h-7 rounded-full bg-slate-800 grid place-items-center text-xs font-bold">{stop.sequence}</span><div className="flex-1"><div className="flex justify-between gap-2"><p className="font-medium">#{stop.deliveryOrder.order.code} · {stop.deliveryOrder.order.customer?.name ?? "—"}</p>{stop.status === "COMPLETED" && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}</div><p className="text-xs text-slate-400 mt-1">{stop.address || stop.deliveryOrder.order.shippingAddress}</p>{stop.id === nextStop?.id && <div className="mt-3 space-y-2"><label className={`w-full py-2.5 rounded-lg border border-dashed flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer ${proofStops.has(stop.id) ? "border-emerald-600 text-emerald-400" : "border-slate-600 text-slate-300"}`}><Camera className="w-4 h-4" />{proofUploading ? "Surat yuklanmoqda…" : proofStops.has(stop.id) ? "Surat saqlandi" : "Yetkazish suratini olish"}<input type="file" accept="image/*" capture="environment" className="hidden" disabled={proofUploading} onChange={(e) => { const file = e.target.files?.[0]; if (file) void addProofFile(stop, file, "PHOTO"); e.currentTarget.value = ""; }} /></label><button type="button" onClick={() => setSignatureStop(stop)} className="w-full py-2.5 rounded-lg border border-slate-600 text-slate-300 text-xs font-semibold">Mijoz imzosini olish</button><input inputMode="numeric" maxLength={6} value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Mijozning 6 xonali tasdiqlash kodi" className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm tracking-widest" /><div className="grid grid-cols-3 gap-2"><button disabled={busy} onClick={() => updateStop(stop, "ARRIVED")} className="py-2 rounded-lg bg-blue-500/15 text-blue-400 text-xs font-semibold">Yetib keldim</button><button disabled={busy || verificationCode.length !== 6} onClick={() => updateStop(stop, "COMPLETED")} className="py-2 rounded-lg bg-emerald-500 text-slate-950 text-xs font-semibold disabled:opacity-40">Topshirildi</button><button disabled={busy} onClick={() => updateStop(stop, "FAILED")} className="py-2 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-semibold"><XCircle className="inline w-3 h-3" /> Xato</button></div></div>}</div></div></article>)}</div>}</section>
     </main>
+    {signatureStop && <SignaturePad busy={proofUploading} onCancel={() => setSignatureStop(null)} onSave={(file) => void addProofFile(signatureStop, file, "SIGNATURE")} />}
   </div>;
 }

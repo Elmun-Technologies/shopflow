@@ -146,6 +146,28 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({ ok: true, id: point.id, receivedAt: point.receivedAt });
   });
 
+  app.get("/analytics", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
+    const q = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).parse(req.query);
+    const since = new Date(Date.now() - q.days * 24 * 60 * 60 * 1000);
+    const deliveries = await app.prisma.deliveryOrder.findMany({
+      where: { tenantId: req.session.tenantId, createdAt: { gte: since } },
+      select: { status: true, createdAt: true, deliveredAt: true, failedAt: true, courierId: true, courier: { include: { user: { select: { name: true } } } } }, take: 10_000,
+    });
+    const completed = deliveries.filter((item) => item.status === "DELIVERED");
+    const durations = completed.filter((item) => item.deliveredAt).map((item) => item.deliveredAt!.getTime() - item.createdAt.getTime());
+    const courierMap = new Map<string, { id: string; name: string; delivered: number; failed: number }>();
+    for (const item of deliveries) {
+      if (!item.courierId || !item.courier) continue;
+      const row = courierMap.get(item.courierId) ?? { id: item.courierId, name: item.courier.user.name, delivered: 0, failed: 0 };
+      if (item.status === "DELIVERED") row.delivered++; if (item.status === "FAILED") row.failed++;
+      courierMap.set(item.courierId, row);
+    }
+    return { days: q.days, total: deliveries.length, delivered: completed.length, failed: deliveries.filter((item) => item.status === "FAILED").length,
+      successRate: deliveries.length ? Math.round(completed.length / deliveries.length * 1000) / 10 : 0,
+      averageDeliveryMinutes: durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length / 60_000) : null,
+      couriers: [...courierMap.values()].sort((a, b) => b.delivered - a.delivered) };
+  });
+
   // Admin live map: har bir faol kuryerning faqat eng so'nggi nuqtasi.
   app.get("/live", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
     const employees = await app.prisma.employeeProfile.findMany({
@@ -273,10 +295,22 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const { stopIds } = z.object({ stopIds: z.array(z.string()).min(1).max(100) }).parse(req.body);
     const run = await app.prisma.deliveryRun.findFirst({ where: { id: req.params.id, tenantId: req.session.tenantId, status: { in: ["DRAFT", "PLANNED"] } }, include: { stops: true } });
     if (!run || stopIds.length !== run.stops.length || new Set(stopIds).size !== stopIds.length || stopIds.some((id) => !run.stops.some((stop) => stop.id === id))) return reply.code(400).send({ error: "Stoplar ro'yxati marshrutga mos emas" });
+    const orderedStops = stopIds.map((id) => run.stops.find((stop) => stop.id === id)!);
+    const routeData = run.routeData as { start?: { lat?: number; lng?: number } } | null;
+    let cursor = { lat: Number(routeData?.start?.lat ?? orderedStops[0].lat), lng: Number(routeData?.start?.lng ?? orderedStops[0].lng) };
+    let elapsed = 0;
+    const departure = run.plannedStartAt ?? new Date();
+    const eta = new Map<string, Date>();
+    for (const stop of orderedStops) {
+      const target = { lat: Number(stop.lat), lng: Number(stop.lng) };
+      elapsed += Math.round(distanceMeters(cursor, target) / (25_000 / 3_600)); eta.set(stop.id, new Date(departure.getTime() + elapsed * 1000));
+      elapsed += stop.serviceMinutes * 60; cursor = target;
+    }
     await app.prisma.$transaction(async (tx) => {
       // Unique(runId, sequence) to'qnashmasligi uchun avval vaqtinchalik manfiy tartib.
       for (let index = 0; index < stopIds.length; index++) await tx.deliveryStop.update({ where: { id: stopIds[index] }, data: { sequence: -(index + 1) } });
-      for (let index = 0; index < stopIds.length; index++) await tx.deliveryStop.update({ where: { id: stopIds[index] }, data: { sequence: index + 1 } });
+      for (let index = 0; index < stopIds.length; index++) await tx.deliveryStop.update({ where: { id: stopIds[index] }, data: { sequence: index + 1, estimatedArrivalAt: eta.get(stopIds[index]) } });
+      await tx.deliveryRun.update({ where: { id: run.id }, data: { totalDurationSeconds: elapsed } });
     });
     return { ok: true };
   });
