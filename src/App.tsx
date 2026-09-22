@@ -54,6 +54,8 @@ const SettingsPage = lazy(() => import("./components/SettingsPage"));
 const UIBuilderPage = lazy(() => import("./components/UIBuilderPage"));
 const BotBuilderPage = lazy(() => import("./components/BotBuilderPage"));
 const StorePage = lazy(() => import("./components/StorePage"));
+const DriverPage = lazy(() => import("./components/DriverPage"));
+const TrackingPage = lazy(() => import("./components/TrackingPage"));
 
 // Recharts-og'ir dashboard grafiklar — lazy (recharts initial bundle'dan chiqadi).
 // KPI raqamlari + gauge + traffic darhol render bo'ladi, grafiklar oqib keladi.
@@ -403,9 +405,22 @@ function AppShell() {
   );
 }
 
+function DriverShell() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-slate-950 grid place-items-center"><Loader2 className="w-8 h-8 text-emerald-400 animate-spin" /></div>;
+  if (!user) return <LoginPage />;
+  return <Suspense fallback={<PageLoader />}><DriverPage /></Suspense>;
+}
+
 function AppRoutes() {
-  // Public store route: /store/:slug — no auth required
   const path = window.location.pathname;
+  const trackingMatch = path.match(/^\/track\/([^/]+)/);
+  if (trackingMatch) return <ErrorBoundary><Suspense fallback={<div className="min-h-screen grid place-items-center"><Loader2 className="w-8 h-8 animate-spin text-leaf-500" /></div>}><TrackingPage token={trackingMatch[1]} /></Suspense></ErrorBoundary>;
+  if (path === "/driver" || path.startsWith("/driver/")) {
+    return <ErrorBoundary><QueryClientProvider client={queryClient}><AuthProvider><AppToastProvider><ConfirmProvider><DriverShell /></ConfirmProvider></AppToastProvider></AuthProvider></QueryClientProvider></ErrorBoundary>;
+  }
+
+  // Public store route: /store/:slug — no auth required
   const storeMatch = path.match(/^\/store\/([^/]+)/);
   if (storeMatch) {
     const slug = storeMatch[1];

@@ -746,7 +746,7 @@ function ProductCard({
 }) {
   const { t } = useT();
   const { tenant } = useAuth();
-  const lowStock = product.stock <= 5;
+  const lowStock = product.trackStock !== false && product.stock <= 5;
   const cur = product.currency || currency;
   // Narx tarkibi (faqat boshqaruv ko'rinishi) — mahsulot narxidan yetkazib berish + xizmat
   const bd = priceBreakdown(Number(product.price), tenant?.deliveryPct, tenant?.servicePct);
@@ -790,13 +790,11 @@ function ProductCard({
           </span>
         )}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onRestock}
-            className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900"
-            title={t("products.restock.title")}
-          >
-            <PackagePlus className="w-3.5 h-3.5" />
-          </button>
+          {product.trackStock !== false && (
+            <button onClick={onRestock} className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900" title={t("products.restock.title")}>
+              <PackagePlus className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={onEdit}
             className="p-1.5 rounded-md bg-white/80 backdrop-blur text-slate-700 hover:text-forest-900"
@@ -835,7 +833,11 @@ function ProductCard({
             </span>
           )}
         </div>
-        {lowStock ? (
+        {product.trackStock === false ? (
+          <span className="text-xs px-2 py-0.5 rounded-md bg-sky-100 text-sky-700">
+            {product.productType === "SERVICE" ? t("selling.service") : `${product.unit ?? ""}`}
+          </span>
+        ) : lowStock ? (
           <button
             onClick={onRestock}
             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md font-medium transition-colors ${
@@ -930,6 +932,15 @@ function ProductFormModal({
   const [b2bOpen, setB2bOpen] = useState(
     () => (product?.priceTiers?.length ?? 0) > 0 || product?.moq != null,
   );
+  const [productType, setProductType] = useState<"PHYSICAL" | "SERVICE">(product?.productType ?? "PHYSICAL");
+  const [quantityMode, setQuantityMode] = useState<"PIECE" | "LENGTH" | "AREA" | "WEIGHT" | "VOLUME" | "CUSTOM">(product?.quantityMode ?? "PIECE");
+  const [inputMode, setInputMode] = useState<"STEPPER" | "QUANTITY" | "DIMENSIONS">(product?.inputMode ?? "STEPPER");
+  const [quantityStep, setQuantityStep] = useState(String(product?.quantityStep ?? 1));
+  const [minQuantity, setMinQuantity] = useState(product?.minQuantity == null ? "" : String(product.minQuantity));
+  const [maxQuantity, setMaxQuantity] = useState(product?.maxQuantity == null ? "" : String(product.maxQuantity));
+  const [trackStock, setTrackStock] = useState(product?.trackStock ?? true);
+  const [requiresDelivery, setRequiresDelivery] = useState(product?.requiresDelivery ?? true);
+  const [sellingOpen, setSellingOpen] = useState(() => (product?.quantityMode ?? "PIECE") !== "PIECE" || product?.productType === "SERVICE");
 
   const [comboAddons, setComboAddons] = useState<Array<{ addonProductId: string; discountPct: number; defaultSelected: boolean; position: number; productName?: string; productImage?: string | null; productPrice?: string | number }>>([]);
   const [comboPickerOpen, setComboPickerOpen] = useState(false);
@@ -1103,6 +1114,14 @@ function ProductFormModal({
           .filter((t) => t.minQty > 0),
         moq: moq.trim() ? Number(unformatGrouped(moq)) : null,
         unit: unit.trim() || null,
+        productType,
+        quantityMode,
+        inputMode,
+        quantityStep: Number(quantityStep) || 1,
+        minQuantity: minQuantity.trim() ? Number(minQuantity) : null,
+        maxQuantity: maxQuantity.trim() ? Number(maxQuantity) : null,
+        trackStock,
+        requiresDelivery,
       };
       let savedProductId = product?.id;
       if (product) {
@@ -1220,6 +1239,151 @@ function ProductFormModal({
               className="input resize-none"
             />
           </Field>
+
+
+          <div className="rounded-2xl border border-cream-300 bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setSellingOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-cream-50"
+            >
+              <span className="text-sm font-medium text-forest-800">{t("selling.section")}</span>
+              {sellingOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+            {sellingOpen && (
+              <div className="px-4 pb-4 border-t border-cream-200 pt-4 space-y-4">
+                <p className="text-[11px] text-slate-500">{t("selling.intro")}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Field label={t("selling.productType")}>
+                    <select
+                      value={productType}
+                      onChange={(e) => {
+                        const value = e.target.value as "PHYSICAL" | "SERVICE";
+                        setProductType(value);
+                        if (value === "SERVICE") setTrackStock(false);
+                      }}
+                      className="input"
+                    >
+                      <option value="PHYSICAL">{t("selling.physical")}</option>
+                      <option value="SERVICE">{t("selling.service")}</option>
+                    </select>
+                  </Field>
+                  <Field label={t("selling.quantityMode")}>
+                    <select
+                      value={quantityMode}
+                      onChange={(e) => {
+                        const value = e.target.value as typeof quantityMode;
+                        setQuantityMode(value);
+                        if (value === "PIECE") {
+                          setInputMode("STEPPER");
+                          setQuantityStep("1");
+                        } else {
+                          setInputMode(value === "AREA" ? "DIMENSIONS" : "QUANTITY");
+                          setTrackStock(false);
+                          setQuantityStep("0.01");
+                        }
+                        const defaults: Record<string, string> = {
+                          PIECE: "dona",
+                          LENGTH: "m",
+                          AREA: "m²",
+                          WEIGHT: "kg",
+                          VOLUME: "l",
+                        };
+                        if (defaults[value]) setUnit(defaults[value]);
+                      }}
+                      className="input"
+                    >
+                      <option value="PIECE">{t("selling.piece")}</option>
+                      <option value="LENGTH">{t("selling.length")}</option>
+                      <option value="AREA">{t("selling.area")}</option>
+                      <option value="WEIGHT">{t("selling.weight")}</option>
+                      <option value="VOLUME">{t("selling.volume")}</option>
+                      <option value="CUSTOM">{t("selling.custom")}</option>
+                    </select>
+                  </Field>
+                  <Field label={t("selling.inputMode")}>
+                    <select
+                      value={inputMode}
+                      onChange={(e) => setInputMode(e.target.value as typeof inputMode)}
+                      className="input"
+                    >
+                      <option value="STEPPER">{t("selling.stepper")}</option>
+                      <option value="QUANTITY">{t("selling.direct")}</option>
+                      {quantityMode === "AREA" && (
+                        <option value="DIMENSIONS">{t("selling.dimensions")}</option>
+                      )}
+                    </select>
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Field label={t("selling.unit")}>
+                    <input
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value.slice(0, 16))}
+                      placeholder="m²"
+                      className="input"
+                    />
+                  </Field>
+                  <Field label={t("selling.step")}>
+                    <input
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      value={quantityStep}
+                      onChange={(e) => setQuantityStep(e.target.value)}
+                      className="input"
+                    />
+                  </Field>
+                  <Field label={t("selling.min")}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={minQuantity}
+                      onChange={(e) => setMinQuantity(e.target.value)}
+                      className="input"
+                    />
+                  </Field>
+                  <Field label={t("selling.max")}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={maxQuantity}
+                      onChange={(e) => setMaxQuantity(e.target.value)}
+                      className="input"
+                    />
+                  </Field>
+                </div>
+                <div className="flex flex-wrap gap-5 text-sm text-slate-600">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={trackStock}
+                      onChange={(e) => setTrackStock(e.target.checked)}
+                      disabled={quantityMode !== "PIECE"}
+                    />
+                    {t("selling.trackStock")}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={requiresDelivery}
+                      onChange={(e) => setRequiresDelivery(e.target.checked)}
+                    />
+                    {t("selling.requiresDelivery")}
+                  </label>
+                </div>
+                {quantityMode !== "PIECE" && (
+                  <p className="text-[11px] text-amber-600">{t("selling.measuredStockHint")}</p>
+                )}
+              </div>
+            )}
+          </div>
 
           {hasVariants && (
             <div className="rounded-xl bg-cream-100/70 border border-cream-300 px-3 py-2.5">

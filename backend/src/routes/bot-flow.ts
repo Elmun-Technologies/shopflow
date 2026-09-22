@@ -20,6 +20,8 @@ import { TEMPLATE_LIST, getTemplate, type BotTemplateId } from "../lib/bot-flow-
 import { generateBotFlow } from "../lib/bot-flow-ai.js";
 import { isAiConfigured, resolveAiConfig } from "../lib/ai-provider.js";
 import { logAuditFor } from "../lib/audit.js";
+import { getTenantSecrets } from "../lib/tenant-secrets.js";
+import type { AiRuntimeConfig } from "../lib/ai-provider.js";
 
 const EMPTY_DEFINITION = botFlowDefinitionSchema.parse({
   screens: [
@@ -40,14 +42,16 @@ export const botFlowRoutes: FastifyPluginAsync = async (app) => {
   app.get("/", async (req) => {
     const tenantId = req.session.tenantId;
 
-    const [row, channel, productCount] = await Promise.all([
+    const [row, channel, productCount, tenantAi] = await Promise.all([
       app.prisma.botFlow.findUnique({ where: { tenantId } }),
       app.prisma.channel.findFirst({
         where: { tenantId, type: "TELEGRAM", active: true },
         select: { id: true, name: true, config: true, webhookKey: true },
       }),
       app.prisma.product.count({ where: { tenantId, active: true } }),
+      getTenantSecrets(app.prisma, tenantId, ["OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_MODEL_FAST", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "ANTHROPIC_MODEL_FAST", "AI_PROVIDER"]),
     ]);
+    const aiRuntime = { ...process.env, ...tenantAi } as AiRuntimeConfig;
 
     const parsed = row ? botFlowDefinitionSchema.safeParse(row.definition) : null;
     const definition = parsed?.success ? parsed.data : EMPTY_DEFINITION;
@@ -70,9 +74,9 @@ export const botFlowRoutes: FastifyPluginAsync = async (app) => {
         channelId: channel?.id ?? null,
       },
       productCount,
-      aiAvailable: isAiConfigured(),
-      /** Admin qaysi model ishlayotganini ko'rishi kerak — model env orqali almashadi */
-      aiModel: resolveAiConfig("smart")?.model ?? null,
+      aiAvailable: isAiConfigured(aiRuntime),
+      /** Tenant modeli platform fallback'dan ustun. */
+      aiModel: resolveAiConfig("smart", aiRuntime)?.model ?? null,
     };
   });
 
@@ -199,10 +203,11 @@ export const botFlowRoutes: FastifyPluginAsync = async (app) => {
         .parse(req.body);
 
       const tenantId = req.session.tenantId;
-      const [tenant, productCount, row] = await Promise.all([
+      const [tenant, productCount, row, tenantAi] = await Promise.all([
         app.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
         app.prisma.product.count({ where: { tenantId, active: true } }),
         app.prisma.botFlow.findUnique({ where: { tenantId } }),
+        getTenantSecrets(app.prisma, tenantId, ["OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_MODEL_FAST", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "ANTHROPIC_MODEL_FAST", "AI_PROVIDER"]),
       ]);
 
       let existing;
@@ -215,7 +220,7 @@ export const botFlowRoutes: FastifyPluginAsync = async (app) => {
         storeName: tenant?.name ?? "Do'kon",
         hasProducts: productCount > 0,
         existing,
-      });
+      }, { ...process.env, ...tenantAi } as AiRuntimeConfig);
 
       if (!result.ok || !result.definition) {
         return reply.code(422).send({ error: result.reason ?? "Generatsiya muvaffaqiyatsiz" });

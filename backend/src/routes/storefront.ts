@@ -17,6 +17,7 @@ import { buildPaymeCheckoutUrl } from "../lib/payme-client.js";
 import { createOrderCodeWithRetry, nextLeadCode } from "../lib/codes.js";
 import { notifyAdmin } from "../lib/telegram-notify.js";
 import type { PrismaClient } from "@prisma/client";
+import { measurementSchema, validateAndNormalizeQuantity } from "../lib/quantity.js";
 import {
   canonicalPhone,
   findRelatedCustomers,
@@ -297,7 +298,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           productId: z.string(),
           /** Variantli mahsulotda aynan qaysi variant sotib olinyapti */
           variantId: z.string().optional(),
-          qty: z.number().int().positive(),
+          qty: z.number().positive().max(1_000_000_000),
+          measurement: measurementSchema,
         }),
       )
       .min(1),
@@ -352,10 +354,22 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
       qty: number;
       price: number;
       stock: number | null;
+      unit: string | null;
+      measurement: Record<string, number> | null;
+      measured: boolean;
+      trackStock: boolean;
     }> = [];
 
     for (const item of data.items) {
       const p = products.find((pp) => pp.id === item.productId)!;
+      let normalized: ReturnType<typeof validateAndNormalizeQuantity>;
+      try {
+        normalized = validateAndNormalizeQuantity(p, item.qty, item.measurement);
+      } catch (error) {
+        stockErrors.push(`${p.name}: ${error instanceof Error ? error.message : localize("Miqdor noto'g'ri", "Неверное количество")}`);
+        continue;
+      }
+      const qty = normalized.qty;
       const hasVariants = p.variants.some((v) => v.active);
 
       if (hasVariants) {
@@ -368,10 +382,10 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           stockErrors.push(localize(`"${p.name}" uchun tanlangan variant topilmadi`, `Выбранный вариант «${p.name}» не найден`));
           continue;
         }
-        if (variant.stock < item.qty) {
+        if (p.trackStock && variant.stock < qty) {
           stockErrors.push(localize(
-            `"${p.name} — ${variant.name}" uchun yetarli tovar yo'q (mavjud: ${variant.stock}, so'ralgan: ${item.qty})`,
-            `Недостаточно товара «${p.name} — ${variant.name}» (в наличии: ${variant.stock}, запрошено: ${item.qty})`,
+            `"${p.name} — ${variant.name}" uchun yetarli tovar yo'q (mavjud: ${variant.stock}, so'ralgan: ${qty})`,
+            `Недостаточно товара «${p.name} — ${variant.name}» (в наличии: ${variant.stock}, запрошено: ${qty})`,
           ));
           continue;
         }
@@ -379,25 +393,33 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           productId: p.id,
           variantId: variant.id,
           variantLabel: variant.name,
-          qty: item.qty,
+          qty,
           price: Number(variant.price),
           stock: variant.stock,
+          unit: p.unit,
+          measurement: normalized.measurement,
+          measured: p.quantityMode !== "PIECE",
+          trackStock: p.trackStock,
         });
         continue;
       }
 
       // Variantsiz mahsulot — avvalgi mantiq o'zgarishsiz
-      if (p.stock !== null && p.stock !== undefined && p.stock < item.qty) {
-        stockErrors.push(localize(`"${p.name}" uchun yetarli tovar yo'q (mavjud: ${p.stock}, so'ralgan: ${item.qty})`, `Недостаточно товара «${p.name}» (в наличии: ${p.stock}, запрошено: ${item.qty})`));
+      if (p.trackStock && p.stock !== null && p.stock !== undefined && p.stock < qty) {
+        stockErrors.push(localize(`"${p.name}" uchun yetarli tovar yo'q (mavjud: ${p.stock}, so'ralgan: ${qty})`, `Недостаточно товара «${p.name}» (в наличии: ${p.stock}, запрошено: ${qty})`));
         continue;
       }
       items.push({
         productId: p.id,
         variantId: null,
         variantLabel: null,
-        qty: item.qty,
+        qty,
         price: Number(p.price),
         stock: p.stock,
+        unit: p.unit,
+        measurement: normalized.measurement,
+        measured: p.quantityMode !== "PIECE",
+        trackStock: p.trackStock,
       });
     }
 
@@ -496,6 +518,8 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
           // muvaffaqiyatli o'tadi. Concurrent checkout'larda oversell oldini oladi
           // (updateMany count=0 → transaction qaytariladi).
           for (const item of items) {
+            if (!item.trackStock) continue;
+            if (!Number.isInteger(item.qty)) throw new Error(`FRACTIONAL_STOCK:${item.productId}`);
             if (item.variantId) {
               // Variantli mahsulotda zaxira variantda — mahsulot ustuni tegilmaydi
               const res = await tx.productVariant.updateMany({
@@ -539,8 +563,12 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
                   productId: i.productId,
                   variantId: i.variantId,
                   variantLabel: i.variantLabel,
-                  qty: i.qty,
+                  qty: i.measured ? (i.measurement?.pieces ?? 1) : Math.round(i.qty),
+                  quantity: i.measured ? i.qty : undefined,
                   price: i.price,
+                  unit: i.unit,
+                  measurement: i.measurement ?? undefined,
+                  trackStock: i.trackStock,
                 })),
               },
             },

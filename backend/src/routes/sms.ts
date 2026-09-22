@@ -4,22 +4,15 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { sendSmsEskiz, sendBulkSmsEskiz } from "../lib/sms.js";
+import { getTenantSecrets } from "../lib/tenant-secrets.js";
 
-// Channel config'idan SMS sozlamalarini olish
+// Tenant credential birinchi, platform env esa backward-compatible fallback.
 async function getSmsConfig(prisma: Parameters<FastifyPluginAsync>[0]["prisma"], tenantId: string) {
-  // SMS config'ni tenant channel'idan olamiz yoki env'dan
-  const envLogin = process.env.ESKIZ_LOGIN;
-  const envPassword = process.env.ESKIZ_PASSWORD;
-  const envFrom = process.env.ESKIZ_FROM ?? "ShopFlow";
-
-  if (envLogin && envPassword) {
-    return { login: envLogin, password: envPassword, from: envFrom };
-  }
-
-  // Channel'dan olish (kelajakda)
-  void prisma;
-  void tenantId;
-  return null;
+  const tenant = await getTenantSecrets(prisma, tenantId, ["ESKIZ_LOGIN", "ESKIZ_PASSWORD", "ESKIZ_FROM"]);
+  const login = tenant.ESKIZ_LOGIN ?? process.env.ESKIZ_LOGIN;
+  const password = tenant.ESKIZ_PASSWORD ?? process.env.ESKIZ_PASSWORD;
+  const from = tenant.ESKIZ_FROM ?? process.env.ESKIZ_FROM ?? "ShopFlow";
+  return login && password ? { login, password, from } : null;
 }
 
 export const smsRoutes: FastifyPluginAsync = async (app) => {

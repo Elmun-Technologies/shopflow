@@ -58,14 +58,21 @@ model Tenant {
   deliveryZones   DeliveryZone[]
   deliveryMethods DeliveryMethod[]
   deliveryOrders  DeliveryOrder[]
+  deliveryProofs  DeliveryProof[]
   apiKeys         ApiKey[]
   notifSettings   TenantNotifSettings?
+  secrets         TenantSecret[]
   loyaltyAccounts LoyaltyAccount[]
   loyaltyRules    LoyaltyRule[]
   botSequences    BotSequence[]
   botFlow         BotFlow?
   botSessions     BotSession[]
   notificationLogs NotificationLog[]
+  employeeProfiles EmployeeProfile[]
+  vehicles         Vehicle[]
+  driverShifts     DriverShift[]
+  courierLocations CourierLocation[]
+  deliveryRuns     DeliveryRun[]
 }
 
 enum UserRole {
@@ -97,6 +104,10 @@ model User {
   moderatedReviews      Review[]              @relation("ReviewModerator")
   refreshTokens  RefreshToken[]
   pushSubscriptions PushSubscription[]
+  employeeProfile   EmployeeProfile?
+  driverShifts      DriverShift[]
+  courierLocations  CourierLocation[]
+  deliveryRuns      DeliveryRun[] @relation("DeliveryRunDriver")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -297,8 +308,21 @@ model Product {
   priceTiers Json @default("[]")
   // Minimal buyurtma miqdori (MOQ) — null bo'lsa cheklov yo'q.
   moq Int?
-  // O'lchov birligi ("kg", "l", "dona") — MOQ va pog'onalarni ko'rsatishda.
+  // O'lchov birligi ("kg", "l", "dona") — narx, MOQ va savatda ko'rsatiladi.
   unit String?
+
+  // Moslashuvchan e-commerce miqdor modeli. Eski mahsulotlar PIECE bo'lib qoladi.
+  // productType: PHYSICAL | SERVICE; quantityMode: PIECE | LENGTH | AREA | WEIGHT | VOLUME | CUSTOM;
+  // inputMode: STEPPER | QUANTITY | DIMENSIONS. String ishlatilishi kelajakda tenantga
+  // yangi rejim qo'shishni enum migratsiyasisiz amalga oshirish imkonini beradi.
+  productType      String  @default("PHYSICAL")
+  quantityMode     String  @default("PIECE")
+  inputMode        String  @default("STEPPER")
+  quantityStep     Decimal @default(1) @db.Decimal(12, 3)
+  minQuantity      Decimal? @db.Decimal(12, 3)
+  maxQuantity      Decimal? @db.Decimal(12, 3)
+  trackStock       Boolean @default(true)
+  requiresDelivery Boolean @default(true)
 
   // Boy marketing kontenti (public API Product detali uchun). Ixtiyoriy.
   // Shakl: { tagline, highlights[], benefits[], ingredients[], howToUse,
@@ -629,8 +653,17 @@ model OrderItem {
   /// Sotilgan paytdagi variant nomi ("1 kg") — variant o'chirilsa ham chek/hisobotda qoladi.
   variantLabel String?
 
-  qty       Int
-  price     Decimal @db.Decimal(14, 2)
+  // Legacy dona miqdori integratsiyalar bilan moslik uchun Int bo'lib qoladi.
+  qty         Int
+  // Kasrli savdo miqdori (m, m², kg...) o'lchovli mahsulotlarda to'ldiriladi.
+  // Oddiy dona mahsulotlarda null va qty yagona manba bo'lib qoladi.
+  quantity    Decimal? @db.Decimal(14, 3)
+  price       Decimal @db.Decimal(14, 2)
+  // Buyurtma paytidagi birlik va o'lchamlar snapshot'i. Mahsulot sozlamasi
+  // keyinchalik o'zgarsa ham eski chek tushunarli bo'lib qoladi.
+  unit        String?
+  measurement Json?
+  trackStock  Boolean @default(true)
 
   @@index([orderId])
   @@index([productId])
@@ -1491,9 +1524,26 @@ model DeliveryOrder {
 
   status       DeliveryStatus @default(PENDING)
   trackingCode String?
-  courierName  String?
-  courierPhone String?
+  trackingToken String? @unique
+  trackingExpiresAt DateTime?
+  verificationCodeHash String?
+  verificationExpiresAt DateTime?
+  courierName  String? // legacy snapshot
+  courierPhone String? // legacy snapshot
+  courierId    String?
+  courier      EmployeeProfile? @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  vehicleId    String?
+  vehicle      Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  deliveryStop DeliveryStop?
+  proofs       DeliveryProof[]
   notes        String?
+  priority     Int @default(0)
+  weightKg     Decimal? @db.Decimal(12, 3)
+  volumeM3     Decimal? @db.Decimal(12, 4)
+  windowStartAt DateTime?
+  windowEndAt   DateTime?
+  serviceMinutes Int @default(10)
+  attemptCount Int @default(0)
 
   // Narx
   price    Decimal @default(0) @db.Decimal(14, 2)
@@ -1509,7 +1559,223 @@ model DeliveryOrder {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, status])
+  @@index([tenantId, priority, scheduledAt])
   @@index([orderId])
+  @@index([courierId, status])
+  @@index([vehicleId])
+}
+
+// ============== LOGISTICS / FLEET ==============
+
+enum EmployeePosition {
+  ADMINISTRATOR
+  MANAGER
+  OPERATOR
+  WAREHOUSE
+  COURIER
+  DRIVER
+  OTHER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum DriverShiftStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum DeliveryRunStatus {
+  DRAFT
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliveryStopStatus {
+  PENDING
+  ARRIVED
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model EmployeeProfile {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  position      EmployeePosition @default(OTHER)
+  phone         String?
+  employeeCode  String?
+  branch        String?
+  licenseNumber String?
+  canDrive      Boolean @default(false)
+  active        Boolean @default(true)
+
+  assignedVehicles Vehicle[] @relation("VehicleDefaultDriver")
+  deliveryOrders   DeliveryOrder[]
+  shifts           DriverShift[]
+  locations        CourierLocation[]
+  runs             DeliveryRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, employeeCode])
+  @@index([tenantId, position, active])
+}
+
+model Vehicle {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  plateNumber String
+  make        String?
+  model       String?
+  color       String?
+  capacityKg  Decimal? @db.Decimal(12, 3)
+  capacityM3  Decimal? @db.Decimal(12, 3)
+  status      VehicleStatus @default(AVAILABLE)
+  notes       String?
+
+  defaultDriverId String?
+  defaultDriver   EmployeeProfile? @relation("VehicleDefaultDriver", fields: [defaultDriverId], references: [id], onDelete: SetNull)
+  deliveryOrders DeliveryOrder[]
+  shifts         DriverShift[]
+  runs           DeliveryRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, plateNumber])
+  @@index([tenantId, status])
+  @@index([defaultDriverId])
+}
+
+model DriverShift {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  status    DriverShiftStatus @default(ACTIVE)
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+
+  @@index([tenantId, status])
+  @@index([employeeId, startedAt])
+}
+
+model CourierLocation {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lat       Decimal @db.Decimal(10, 7)
+  lng       Decimal @db.Decimal(10, 7)
+  accuracy  Float?
+  speed     Float?
+  heading   Float?
+  altitude  Float?
+  capturedAt DateTime
+  receivedAt DateTime @default(now())
+
+  @@unique([employeeId, capturedAt])
+  @@index([tenantId, employeeId, capturedAt])
+  @@index([capturedAt])
+}
+
+model DeliveryRun {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code     String
+  status   DeliveryRunStatus @default(DRAFT)
+  driverId String
+  driver   EmployeeProfile @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  userId   String
+  user     User @relation("DeliveryRunDriver", fields: [userId], references: [id], onDelete: Restrict)
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  plannedStartAt DateTime?
+  startedAt DateTime?
+  completedAt DateTime?
+  totalDistanceMeters Int?
+  totalDurationSeconds Int?
+  routeProvider String?
+  routeData Json?
+  stops DeliveryStop[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status, plannedStartAt])
+  @@index([driverId, status])
+}
+
+enum DeliveryProofType {
+  OTP
+  PHOTO
+  SIGNATURE
+  NOTE
+}
+
+model DeliveryProof {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveryOrderId String
+  deliveryOrder DeliveryOrder @relation(fields: [deliveryOrderId], references: [id], onDelete: Cascade)
+  type     DeliveryProofType
+  fileUrl  String?
+  note     String?
+  lat      Decimal? @db.Decimal(10, 7)
+  lng      Decimal? @db.Decimal(10, 7)
+  createdById String?
+  createdByName String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, deliveryOrderId, createdAt])
+}
+
+model DeliveryStop {
+  id       String @id @default(cuid())
+  runId    String
+  run      DeliveryRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  deliveryOrderId String @unique
+  deliveryOrder DeliveryOrder @relation(fields: [deliveryOrderId], references: [id], onDelete: Cascade)
+  sequence Int
+  status DeliveryStopStatus @default(PENDING)
+  lat Decimal @db.Decimal(10, 7)
+  lng Decimal @db.Decimal(10, 7)
+  address String?
+  estimatedArrivalAt DateTime?
+  arrivedAt DateTime?
+  completedAt DateTime?
+  serviceMinutes Int @default(10)
+  notes String?
+
+  @@unique([runId, sequence])
+  @@index([runId, status])
 }
 
 // ============== API KEYS ==============
@@ -1531,6 +1797,21 @@ model ApiKey {
 
   @@index([tenantId, active])
   @@index([keyHash])
+}
+
+// ============== TENANT CREDENTIAL VA RUNTIME CONFIG ==============
+model TenantSecret {
+  id             String @id @default(cuid())
+  tenantId       String
+  tenant         Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key            String
+  encryptedValue String
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@index([tenantId, updatedAt])
 }
 
 // ============== NOTIFICATION SETTINGS ==============

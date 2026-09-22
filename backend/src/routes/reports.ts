@@ -4,19 +4,19 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { sendReportToTenant } from "../lib/email-reports.js";
-import { isEmailConfigured, verifyEmailConnection } from "../lib/email.js";
+import { isTenantEmailConfigured, verifyTenantEmailConnection } from "../lib/email.js";
 
 export const reportsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.authenticate);
 
   // SMTP konfiguratsiya statusi
-  app.get("/status", async () => ({
-    configured: isEmailConfigured(),
+  app.get("/status", async (req) => ({
+    configured: await isTenantEmailConfigured(app.prisma, req.session.tenantId),
   }));
 
   // SMTP ulanish testi (Settings'da "Tekshirish" tugmasi)
-  app.post("/verify", { preHandler: [app.requireRole("OWNER", "ADMIN")] }, async () => {
-    return verifyEmailConnection();
+  app.post("/verify", { preHandler: [app.requireRole("OWNER", "ADMIN")] }, async (req) => {
+    return verifyTenantEmailConnection(app.prisma, req.session.tenantId);
   });
 
   // Hozir yuborish — tanlangan davr bo'yicha
