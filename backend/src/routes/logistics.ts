@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { logAuditFor } from "../lib/audit.js";
 import { orderNearest, routeDistance } from "../lib/route-planner.js";
@@ -79,6 +80,11 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     if (!found) return reply.code(404).send({ error: "Mashina topilmadi" });
     return app.prisma.vehicle.update({ where: { id: found.id }, data });
   });
+
+  app.get("/driver/shifts/current", async (req) => app.prisma.driverShift.findFirst({
+    where: { userId: req.session.userId, tenantId: req.session.tenantId, status: { in: ["ACTIVE", "PAUSED"] } },
+    include: { vehicle: true }, orderBy: { startedAt: "desc" },
+  }));
 
   // Driver app: smenani boshlash. Bitta foydalanuvchida bir vaqtda bitta faol smena.
   app.post("/driver/shifts/start", async (req, reply) => {
@@ -180,7 +186,14 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
         routeData: { start: { lat: data.startLat, lng: data.startLng } },
         stops: { create: ordered.map((point, index) => ({ deliveryOrderId: point.id, sequence: index + 1, lat: point.lat, lng: point.lng, address: byId.get(point.id)?.order.shippingAddress, serviceMinutes: data.serviceMinutes })) },
       }, include: { stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { include: { customer: true } } } } } }, driver: { include: { user: true } }, vehicle: true } });
-      await tx.deliveryOrder.updateMany({ where: { id: { in: data.deliveryOrderIds }, tenantId }, data: { courierId: driver.id, vehicleId: data.vehicleId ?? null, courierName: driver.user.name, courierPhone: driver.phone, status: "ASSIGNED" } });
+      for (const deliveryId of data.deliveryOrderIds) {
+        const current = deliveries.find((delivery) => delivery.id === deliveryId)!;
+        await tx.deliveryOrder.update({ where: { id: deliveryId }, data: {
+          courierId: driver.id, vehicleId: data.vehicleId ?? null, courierName: driver.user.name,
+          courierPhone: driver.phone, status: "ASSIGNED",
+          ...(!current.trackingToken && { trackingToken: randomBytes(24).toString("base64url"), trackingExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) }),
+        } });
+      }
       return created;
     });
     return reply.code(201).send(run);

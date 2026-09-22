@@ -1522,6 +1522,8 @@ model DeliveryOrder {
 
   status       DeliveryStatus @default(PENDING)
   trackingCode String?
+  trackingToken String? @unique
+  trackingExpiresAt DateTime?
   courierName  String? // legacy snapshot
   courierPhone String? // legacy snapshot
   courierId    String?

@@ -59,6 +59,7 @@ import { startSalesDoctorWorker, stopSalesDoctorWorker } from "./lib/salesdoctor
 import { promoCodeRoutes } from "./routes/promo-codes.js";
 import { deliveryRoutes } from "./routes/delivery.js";
 import { logisticsRoutes } from "./routes/logistics.js";
+import { trackingRoutes } from "./routes/tracking.js";
 import { exportRoutes } from "./routes/export.js";
 import { botSequencesRoutes } from "./routes/bot-sequences.js";
 import { botFlowRoutes } from "./routes/bot-flow.js";
@@ -280,6 +281,7 @@ await app.register(reviewRoutes, { prefix: "/api/reviews" });
 await app.register(promoCodeRoutes, { prefix: "/api/promo-codes" });
 await app.register(deliveryRoutes, { prefix: "/api/delivery" });
 await app.register(logisticsRoutes, { prefix: "/api/logistics" });
+await app.register(trackingRoutes, { prefix: "/api/tracking" });
 await app.register(exportRoutes, { prefix: "/api/export" });
 await app.register(settingsRoutes, { prefix: "/api/settings" });
 await app.register(smsRoutes, { prefix: "/api/sms" });
