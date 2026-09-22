@@ -40,6 +40,24 @@ const locationSchema = z.object({
 export const logisticsRoutes: FastifyPluginAsync = async (app) => {
   app.addHook("preHandler", app.authenticate);
 
+  const recalculateActiveEta = async (employeeId: string, point: { lat: number; lng: number; speed?: number }) => {
+    const activeRun = await app.prisma.deliveryRun.findFirst({
+      where: { driverId: employeeId, status: "ACTIVE" },
+      include: { stops: { where: { status: { in: ["PENDING", "ARRIVED"] } }, orderBy: { sequence: "asc" } } },
+      orderBy: { startedAt: "desc" },
+    });
+    if (!activeRun?.stops.length) return;
+    const metersPerSecond = point.speed && point.speed >= 2 ? Math.min(point.speed, 40) : 25_000 / 3_600;
+    let cursor = { lat: point.lat, lng: point.lng };
+    let elapsed = 0;
+    for (const stop of activeRun.stops) {
+      const target = { lat: Number(stop.lat), lng: Number(stop.lng) };
+      elapsed += Math.round(distanceMeters(cursor, target) / metersPerSecond);
+      await app.prisma.deliveryStop.update({ where: { id: stop.id }, data: { estimatedArrivalAt: new Date(Date.now() + elapsed * 1_000) } });
+      elapsed += stop.serviceMinutes * 60; cursor = target;
+    }
+  };
+
   app.get("/employees", async (req) => app.prisma.employeeProfile.findMany({
     where: { tenantId: req.session.tenantId }, orderBy: { createdAt: "desc" },
     include: { user: { select: { id: true, name: true, email: true, active: true } }, assignedVehicles: true },
@@ -113,7 +131,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Driver app GPS telemetry. capturedAt qurilma vaqti; receivedAt server vaqti.
-  app.post("/driver/location", async (req, reply) => {
+  app.post("/driver/location", { config: { rateLimit: { max: 180, timeWindow: "1 minute" } } }, async (req, reply) => {
     const data = locationSchema.parse(req.body);
     const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true, canDrive: true } });
     if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
@@ -134,27 +152,25 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       throw error;
     }
 
-    // Faol marshrut ETA'larini yangi GPS nuqtasidan qayta hisoblaymiz. Qurilma
-    // bergan tezlik juda past/yo'q bo'lsa shahar fallback tezligi ishlaydi.
-    const activeRun = await app.prisma.deliveryRun.findFirst({
-      where: { driverId: employee.id, status: "ACTIVE" },
-      include: { stops: { where: { status: { in: ["PENDING", "ARRIVED"] } }, orderBy: { sequence: "asc" } } },
-      orderBy: { startedAt: "desc" },
-    });
-    if (activeRun?.stops.length) {
-      const metersPerSecond = data.speed && data.speed >= 2 ? Math.min(data.speed, 40) : 25_000 / 3_600;
-      let cursor = { lat: data.lat, lng: data.lng };
-      let elapsed = 0;
-      await Promise.all(activeRun.stops.map((stop) => {
-        const target = { lat: Number(stop.lat), lng: Number(stop.lng) };
-        elapsed += Math.round(distanceMeters(cursor, target) / metersPerSecond);
-        const eta = new Date(Date.now() + elapsed * 1_000);
-        elapsed += stop.serviceMinutes * 60;
-        cursor = target;
-        return app.prisma.deliveryStop.update({ where: { id: stop.id }, data: { estimatedArrivalAt: eta } });
-      }));
-    }
+    await recalculateActiveEta(employee.id, data);
     return reply.code(201).send({ ok: true, id: point.id, receivedAt: point.receivedAt });
+  });
+
+  // Offline navbat uchun bitta so'rovda 500 tagacha GPS nuqta. DB unique
+  // constraint va skipDuplicates qayta yuborilgan nuqtalarni xavfsiz yutadi.
+  app.post("/driver/locations/batch", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req, reply) => {
+    const points = z.array(locationSchema).min(1).max(500).parse(req.body);
+    const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true, canDrive: true } });
+    if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
+    const shift = await app.prisma.driverShift.findFirst({ where: { employeeId: employee.id, status: "ACTIVE" } });
+    if (!shift) return reply.code(409).send({ error: "GPS yuborish uchun faol smenani boshlang" });
+    const cutoff = Date.now() - 24 * 60 * 60 * 1_000;
+    const valid = points.map((point) => ({ ...point, capturedAt: new Date(point.capturedAt) })).filter((point) => point.capturedAt.getTime() >= cutoff && point.capturedAt.getTime() <= Date.now() + 5 * 60 * 1_000);
+    if (!valid.length) return reply.code(400).send({ error: "Yaroqli GPS nuqta mavjud emas" });
+    const result = await app.prisma.courierLocation.createMany({ data: valid.map((point) => ({ ...point, tenantId: req.session.tenantId, employeeId: employee.id, userId: req.session.userId })), skipDuplicates: true });
+    const latest = valid.reduce((current, point) => point.capturedAt > current.capturedAt ? point : current);
+    await recalculateActiveEta(employee.id, latest);
+    return reply.code(201).send({ ok: true, received: points.length, accepted: valid.length, inserted: result.count, duplicates: valid.length - result.count });
   });
 
   app.get("/analytics", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {

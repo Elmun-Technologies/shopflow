@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 
 export const trackingRoutes: FastifyPluginAsync = async (app) => {
-  app.get<{ Params: { token: string } }>("/:token", async (req, reply) => {
+  app.get<{ Params: { token: string } }>("/:token", { config: { rateLimit: { max: 90, timeWindow: "1 minute" } } }, async (req, reply) => {
     const token = z.string().min(20).max(100).parse(req.params.token);
     const delivery = await app.prisma.deliveryOrder.findFirst({
       where: { trackingToken: token, trackingExpiresAt: { gt: new Date() } },

@@ -33,6 +33,7 @@ export default function DriverPage() {
   const [queuedGps, setQueuedGps] = useState(() => readGpsQueue().length);
   const watchId = useRef<number | null>(null);
   const lastSentAt = useRef(0);
+  const flushingGps = useRef(false);
 
   const reload = useCallback(async () => {
     try {
@@ -58,14 +59,18 @@ export default function DriverPage() {
   }, []);
 
   const flushGpsQueue = useCallback(async () => {
+    if (flushingGps.current) return;
+    flushingGps.current = true;
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const pending = readGpsQueue().filter((point) => new Date(point.capturedAt).getTime() >= cutoff);
-    const failed: GpsPoint[] = [];
-    for (const point of pending) {
-      try { await api("/logistics/driver/location", { method: "POST", body: point }); }
-      catch { failed.push(point, ...pending.slice(pending.indexOf(point) + 1)); break; }
-    }
-    writeGpsQueue(failed); setQueuedGps(failed.length);
+    if (!pending.length) { writeGpsQueue([]); setQueuedGps(0); flushingGps.current = false; return; }
+    try {
+      await api("/logistics/driver/locations/batch", { method: "POST", body: pending });
+      const sent = new Set(pending.map((point) => point.capturedAt));
+      const remaining = readGpsQueue().filter((point) => !sent.has(point.capturedAt));
+      writeGpsQueue(remaining); setQueuedGps(remaining.length);
+    } catch { const current = readGpsQueue(); writeGpsQueue(current); setQueuedGps(current.length); }
+    finally { flushingGps.current = false; }
   }, []);
 
   const startGps = useCallback(() => {
