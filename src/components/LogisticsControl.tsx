@@ -12,7 +12,9 @@ type LiveCourier = {
 type Employee = { id: string; position: string; phone: string | null; canDrive: boolean; active: boolean; user: { id: string; name: string; email: string; active: boolean } };
 type Vehicle = { id: string; plateNumber: string; make: string | null; model: string | null; color: string | null; status: string; defaultDriver?: { id: string; user: { name: string; email: string } } | null };
 type TeamUser = { id: string; name: string; email: string; active: boolean };
-type LogisticsTab = "live" | "couriers" | "fleet";
+type PoolDelivery = { id: string; status: string; scheduledAt: string | null; lat: number; lng: number; order: { code: string; shippingAddress: string | null; customer: { name: string; phone: string | null } | null } };
+type DeliveryRun = { id: string; code: string; status: string; totalDistanceMeters: number | null; driver: { user: { name: string } }; vehicle: Vehicle | null; stops: Array<{ id: string; sequence: number; status: string; deliveryOrder: { order: { code: string; shippingAddress: string | null; customer: { name: string } | null } } }> };
+type LogisticsTab = "live" | "routes" | "couriers" | "fleet";
 
 type YMap = { geoObjects: { removeAll(): void; add(object: unknown): void }; setBounds(bounds: number[][], options?: object): void; destroy(): void };
 type YMapsApi = {
@@ -83,6 +85,10 @@ export default function LogisticsControl() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<TeamUser[]>([]);
+  const [pool, setPool] = useState<PoolDelivery[]>([]);
+  const [runs, setRuns] = useState<DeliveryRun[]>([]);
+  const [selectedDeliveries, setSelectedDeliveries] = useState<Set<string>>(new Set());
+  const [routeDraft, setRouteDraft] = useState({ driverId: "", vehicleId: "", startLat: "41.3111", startLng: "69.2797" });
   const [loading, setLoading] = useState(true);
   const [vehicleForm, setVehicleForm] = useState(false);
   const [courierForm, setCourierForm] = useState(false);
@@ -93,10 +99,10 @@ export default function LogisticsControl() {
   const reload = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     try {
-      const [liveRows, employeeRows, vehicleRows, userRows] = await Promise.all([
-        api<LiveCourier[]>("/logistics/live"), api<Employee[]>("/logistics/employees"), api<Vehicle[]>("/logistics/vehicles"), api<TeamUser[]>("/settings/users"),
+      const [liveRows, employeeRows, vehicleRows, userRows, poolRows, runRows] = await Promise.all([
+        api<LiveCourier[]>("/logistics/live"), api<Employee[]>("/logistics/employees"), api<Vehicle[]>("/logistics/vehicles"), api<TeamUser[]>("/settings/users"), api<PoolDelivery[]>("/logistics/dispatch/pool"), api<DeliveryRun[]>("/logistics/runs"),
       ]);
-      setLive(liveRows); setEmployees(employeeRows); setVehicles(vehicleRows); setUsers(userRows);
+      setLive(liveRows); setEmployees(employeeRows); setVehicles(vehicleRows); setUsers(userRows); setPool(poolRows); setRuns(runRows);
     } catch (error) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "Logistika ma’lumotlari yuklanmadi");
     } finally { if (!quiet) setLoading(false); }
@@ -108,6 +114,16 @@ export default function LogisticsControl() {
     const timer = window.setInterval(() => void reload(true), 15_000);
     return () => window.clearInterval(timer);
   }, [reload, tab]);
+
+  const createRoute = async () => {
+    if (!routeDraft.driverId || selectedDeliveries.size === 0) return toast.error("Haydovchi va buyurtmalarni tanlang");
+    setSaving(true);
+    try {
+      await api("/logistics/runs", { method: "POST", body: { driverId: routeDraft.driverId, vehicleId: routeDraft.vehicleId || null, deliveryOrderIds: [...selectedDeliveries], startLat: Number(routeDraft.startLat), startLng: Number(routeDraft.startLng), serviceMinutes: 10 } });
+      setSelectedDeliveries(new Set()); await reload(true); toast.success("Optimal marshrut yaratildi");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Marshrut yaratilmadi"); }
+    finally { setSaving(false); }
+  };
 
   const createCourier = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
@@ -141,7 +157,7 @@ export default function LogisticsControl() {
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex gap-1 bg-cream-100 p-1 rounded-xl border border-cream-300">
-          {(["live", "couriers", "fleet"] as LogisticsTab[]).map((value) => <button key={value} onClick={() => setTab(value)} className={`px-3 py-2 rounded-lg text-sm ${tab === value ? "bg-white text-forest-800 shadow-sm" : "text-slate-500"}`}>{value === "live" ? "Jonli xarita" : value === "couriers" ? "Kuryerlar" : "Avtopark"}</button>)}
+          {(["live", "routes", "couriers", "fleet"] as LogisticsTab[]).map((value) => <button key={value} onClick={() => setTab(value)} className={`px-3 py-2 rounded-lg text-sm ${tab === value ? "bg-white text-forest-800 shadow-sm" : "text-slate-500"}`}>{value === "live" ? "Jonli xarita" : value === "routes" ? "Marshrutlar" : value === "couriers" ? "Kuryerlar" : "Avtopark"}</button>)}
         </div>
         <button onClick={() => void reload()} className="p-2 rounded-lg border border-cream-300 text-slate-500 hover:bg-cream-50"><RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /></button>
       </div>
@@ -149,7 +165,21 @@ export default function LogisticsControl() {
       {loading ? <div className="h-64 grid place-items-center"><Loader2 className="w-7 h-7 animate-spin text-leaf-500" /></div> : tab === "live" ? <>
         <LiveMap couriers={live} />
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{live.map((courier) => <CourierCard key={courier.id} courier={courier} />)}</div>
-      </> : tab === "couriers" ? (
+      </> : tab === "routes" ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-cream-300 bg-white p-4 space-y-3">
+            <div className="flex items-center justify-between"><div><h3 className="font-semibold text-forest-800">Yangi marshrut</h3><p className="text-xs text-slate-500">Buyurtmalar avtomatik ravishda eng yaqin ketma-ketlikka joylanadi.</p></div><button disabled={saving || selectedDeliveries.size === 0 || !routeDraft.driverId} onClick={() => void createRoute()} className="px-4 py-2 rounded-xl bg-forest-700 text-white text-sm disabled:opacity-40">Marshrut yaratish ({selectedDeliveries.size})</button></div>
+            <div className="grid md:grid-cols-4 gap-2">
+              <select value={routeDraft.driverId} onChange={(e) => setRouteDraft({ ...routeDraft, driverId: e.target.value })} className="input"><option value="">Haydovchini tanlang</option>{employees.filter((e) => e.canDrive && e.active).map((e) => <option key={e.id} value={e.id}>{e.user.name}</option>)}</select>
+              <select value={routeDraft.vehicleId} onChange={(e) => setRouteDraft({ ...routeDraft, vehicleId: e.target.value })} className="input"><option value="">Mashinasiz</option>{vehicles.filter((v) => ["AVAILABLE", "IN_USE"].includes(v.status)).map((v) => <option key={v.id} value={v.id}>{v.plateNumber}</option>)}</select>
+              <input type="number" step="0.000001" value={routeDraft.startLat} onChange={(e) => setRouteDraft({ ...routeDraft, startLat: e.target.value })} className="input" placeholder="Boshlanish lat" />
+              <input type="number" step="0.000001" value={routeDraft.startLng} onChange={(e) => setRouteDraft({ ...routeDraft, startLng: e.target.value })} className="input" placeholder="Boshlanish lng" />
+            </div>
+            <div className="max-h-64 overflow-y-auto divide-y divide-cream-200 border border-cream-200 rounded-xl">{pool.length === 0 ? <p className="p-4 text-sm text-slate-500">Koordinatali, taqsimlanmagan buyurtma yo‘q</p> : pool.map((delivery) => <label key={delivery.id} className="p-3 flex items-start gap-3 cursor-pointer hover:bg-cream-50"><input type="checkbox" className="mt-1" checked={selectedDeliveries.has(delivery.id)} onChange={(e) => setSelectedDeliveries((old) => { const next = new Set(old); if (e.target.checked) next.add(delivery.id); else next.delete(delivery.id); return next; })} /><div><p className="text-sm font-medium text-forest-800">#{delivery.order.code} · {delivery.order.customer?.name ?? "—"}</p><p className="text-xs text-slate-500">{delivery.order.shippingAddress ?? `${delivery.lat}, ${delivery.lng}`}</p></div></label>)}</div>
+          </div>
+          <div className="space-y-3">{runs.map((run) => <div key={run.id} className="rounded-2xl border border-cream-300 bg-white p-4"><div className="flex items-center justify-between"><div><p className="font-semibold text-forest-800">{run.code}</p><p className="text-xs text-slate-500">{run.driver.user.name} · {run.vehicle?.plateNumber ?? "Mashinasiz"} · {run.totalDistanceMeters ? `${(run.totalDistanceMeters / 1000).toFixed(1)} km` : "—"}</p></div><span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">{run.status}</span></div><ol className="mt-3 space-y-2">{run.stops.map((stop) => <li key={stop.id} className="flex gap-3 text-sm"><span className="w-6 h-6 rounded-full bg-leaf-100 text-forest-700 grid place-items-center text-xs font-bold">{stop.sequence}</span><div><p className="text-forest-800">#{stop.deliveryOrder.order.code} · {stop.deliveryOrder.order.customer?.name ?? "—"}</p><p className="text-xs text-slate-500">{stop.deliveryOrder.order.shippingAddress ?? "Manzil yo‘q"}</p></div></li>)}</ol></div>)}</div>
+        </div>
+      ) : tab === "couriers" ? (
         <div className="space-y-3">
           <div className="flex justify-end"><button onClick={() => setCourierForm((v) => !v)} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-forest-700 text-white text-sm"><Plus className="w-4 h-4" /> Kuryer qo‘shish</button></div>
           {courierForm && <form onSubmit={createCourier} className="grid md:grid-cols-3 gap-3 rounded-2xl border border-cream-300 bg-white p-4">

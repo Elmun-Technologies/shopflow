@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { logAuditFor } from "../lib/audit.js";
+import { orderNearest, routeDistance } from "../lib/route-planner.js";
 
 const employeeSchema = z.object({
   userId: z.string(),
@@ -131,6 +132,89 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const courier = await app.prisma.employeeProfile.findFirst({ where: { id: courierId, tenantId: req.session.tenantId, active: true, canDrive: true }, include: { user: true } });
     if (!delivery || !courier) return reply.code(404).send({ error: "Yetkazish yoki kuryer topilmadi" });
     const updated = await app.prisma.deliveryOrder.update({ where: { id: delivery.id }, data: { courierId, vehicleId: vehicleId ?? null, courierName: courier.user.name, courierPhone: courier.phone, status: "ASSIGNED" } });
+    return updated;
+  });
+
+  // Dispatcher pool: koordinatasi bor va hali marshrutga kiritilmagan yetkazishlar.
+  app.get("/dispatch/pool", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req) => {
+    const rows = await app.prisma.deliveryOrder.findMany({
+      where: { tenantId: req.session.tenantId, status: { in: ["PENDING", "ASSIGNED"] }, deliveryStop: null,
+        order: { shippingLat: { not: null }, shippingLng: { not: null } } },
+      include: { order: { select: { code: true, shippingAddress: true, shippingLat: true, shippingLng: true, customer: { select: { name: true, phone: true } } } }, method: { select: { name: true } } },
+      orderBy: [{ scheduledAt: "asc" }, { createdAt: "asc" }],
+    });
+    return rows.map((row) => ({ ...row, price: Number(row.price), lat: Number(row.order.shippingLat), lng: Number(row.order.shippingLng) }));
+  });
+
+  const runSchema = z.object({
+    driverId: z.string(), vehicleId: z.string().nullable().optional(), deliveryOrderIds: z.array(z.string()).min(1).max(100),
+    startLat: z.number().min(-90).max(90), startLng: z.number().min(-180).max(180),
+    plannedStartAt: z.string().datetime().nullable().optional(), serviceMinutes: z.number().int().min(1).max(240).default(10),
+  });
+
+  // Marshrut yaratish atomik: bir delivery ikki run'ga tushmaydi (unique stop).
+  app.post("/runs", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const data = runSchema.parse(req.body);
+    const tenantId = req.session.tenantId;
+    const driver = await app.prisma.employeeProfile.findFirst({ where: { id: data.driverId, tenantId, active: true, canDrive: true }, include: { user: true } });
+    if (!driver) return reply.code(400).send({ error: "Faol haydovchi topilmadi" });
+    if (data.vehicleId) {
+      const vehicle = await app.prisma.vehicle.findFirst({ where: { id: data.vehicleId, tenantId, status: { in: ["AVAILABLE", "IN_USE"] } } });
+      if (!vehicle) return reply.code(400).send({ error: "Mashina mavjud emas" });
+    }
+    const deliveries = await app.prisma.deliveryOrder.findMany({
+      where: { id: { in: data.deliveryOrderIds }, tenantId, deliveryStop: null, order: { shippingLat: { not: null }, shippingLng: { not: null } } },
+      include: { order: { select: { shippingLat: true, shippingLng: true, shippingAddress: true } } },
+    });
+    if (deliveries.length !== new Set(data.deliveryOrderIds).size) return reply.code(409).send({ error: "Ba'zi buyurtmalar topilmadi, koordinatasiz yoki boshqa marshrutga qo'shilgan" });
+    const points = deliveries.map((d) => ({ id: d.id, lat: Number(d.order.shippingLat), lng: Number(d.order.shippingLng) }));
+    const ordered = orderNearest({ lat: data.startLat, lng: data.startLng }, points);
+    const byId = new Map(deliveries.map((d) => [d.id, d]));
+    const distance = routeDistance({ lat: data.startLat, lng: data.startLng }, ordered);
+    const code = `RUN-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${Date.now().toString(36).toUpperCase()}`;
+    const run = await app.prisma.$transaction(async (tx) => {
+      const created = await tx.deliveryRun.create({ data: {
+        tenantId, code, status: "PLANNED", driverId: driver.id, userId: driver.userId, vehicleId: data.vehicleId ?? null,
+        plannedStartAt: data.plannedStartAt ? new Date(data.plannedStartAt) : null,
+        totalDistanceMeters: distance, routeProvider: "FALLBACK_HAVERSINE",
+        routeData: { start: { lat: data.startLat, lng: data.startLng } },
+        stops: { create: ordered.map((point, index) => ({ deliveryOrderId: point.id, sequence: index + 1, lat: point.lat, lng: point.lng, address: byId.get(point.id)?.order.shippingAddress, serviceMinutes: data.serviceMinutes })) },
+      }, include: { stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { include: { customer: true } } } } } }, driver: { include: { user: true } }, vehicle: true } });
+      await tx.deliveryOrder.updateMany({ where: { id: { in: data.deliveryOrderIds }, tenantId }, data: { courierId: driver.id, vehicleId: data.vehicleId ?? null, courierName: driver.user.name, courierPhone: driver.phone, status: "ASSIGNED" } });
+      return created;
+    });
+    return reply.code(201).send(run);
+  });
+
+  app.get("/runs", async (req) => {
+    const q = z.object({ status: z.enum(["DRAFT", "PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"]).optional() }).parse(req.query);
+    return app.prisma.deliveryRun.findMany({ where: { tenantId: req.session.tenantId, ...(q.status && { status: q.status }) },
+      include: { driver: { include: { user: { select: { name: true, email: true } } } }, vehicle: true, stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, customer: { select: { name: true, phone: true } } } } } } } }, orderBy: { createdAt: "desc" }, take: 100 });
+  });
+
+  app.get("/driver/run", async (req, reply) => {
+    const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true } });
+    if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
+    return app.prisma.deliveryRun.findFirst({ where: { driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } },
+      include: { vehicle: true, stops: { orderBy: { sequence: "asc" }, include: { deliveryOrder: { include: { order: { select: { code: true, shippingAddress: true, shippingLat: true, shippingLng: true, customer: { select: { name: true, phone: true } } } } } } } }, orderBy: { createdAt: "desc" } });
+  });
+
+  app.patch<{ Params: { id: string } }>("/driver/stops/:id", async (req, reply) => {
+    const { status, notes } = z.object({ status: z.enum(["ARRIVED", "COMPLETED", "FAILED", "SKIPPED"]), notes: z.string().max(500).optional() }).parse(req.body);
+    const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true } });
+    if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
+    const stop = await app.prisma.deliveryStop.findFirst({ where: { id: req.params.id, run: { tenantId: req.session.tenantId, driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } } }, include: { run: true } });
+    if (!stop) return reply.code(404).send({ error: "Marshrut manzili topilmadi" });
+    const now = new Date();
+    const updated = await app.prisma.$transaction(async (tx) => {
+      if (stop.run.status === "PLANNED") await tx.deliveryRun.update({ where: { id: stop.runId }, data: { status: "ACTIVE", startedAt: now } });
+      const changed = await tx.deliveryStop.update({ where: { id: stop.id }, data: { status, notes, ...(status === "ARRIVED" && { arrivedAt: now }), ...(["COMPLETED", "FAILED", "SKIPPED"].includes(status) && { completedAt: now }) } });
+      const deliveryStatus = status === "COMPLETED" ? "DELIVERED" : status === "FAILED" ? "FAILED" : status === "ARRIVED" ? "IN_TRANSIT" : undefined;
+      if (deliveryStatus) await tx.deliveryOrder.update({ where: { id: stop.deliveryOrderId }, data: { status: deliveryStatus, ...(status === "COMPLETED" && { deliveredAt: now }), ...(status === "FAILED" && { failedAt: now }) } });
+      const remaining = await tx.deliveryStop.count({ where: { runId: stop.runId, status: { in: ["PENDING", "ARRIVED"] }, id: { not: stop.id } } });
+      if (remaining === 0 && ["COMPLETED", "FAILED", "SKIPPED"].includes(status)) await tx.deliveryRun.update({ where: { id: stop.runId }, data: { status: "COMPLETED", completedAt: now } });
+      return changed;
+    });
     return updated;
   });
 };
