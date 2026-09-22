@@ -333,7 +333,8 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.patch<{ Params: { id: string } }>("/driver/stops/:id", async (req, reply) => {
-    const { status, notes, verificationCode } = z.object({ status: z.enum(["ARRIVED", "COMPLETED", "FAILED", "SKIPPED"]), notes: z.string().max(500).optional(), verificationCode: z.string().regex(/^\d{6}$/).optional() }).parse(req.body);
+    const { status, notes, verificationCode, proofFileUrl } = z.object({ status: z.enum(["ARRIVED", "COMPLETED", "FAILED", "SKIPPED"]), notes: z.string().trim().max(500).optional(), verificationCode: z.string().regex(/^\d{6}$/).optional(), proofFileUrl: z.string().url().max(2_000).optional() }).parse(req.body);
+    if (status === "FAILED" && (!notes || notes.length < 3 || !proofFileUrl)) return reply.code(400).send({ error: "Yetkazilmagan sabab va tasdiqlovchi surat majburiy" });
     const employee = await app.prisma.employeeProfile.findFirst({ where: { userId: req.session.userId, tenantId: req.session.tenantId, active: true }, include: { user: { select: { name: true } } } });
     if (!employee) return reply.code(403).send({ error: "Haydovchi profili topilmadi" });
     const stop = await app.prisma.deliveryStop.findFirst({ where: { id: req.params.id, run: { tenantId: req.session.tenantId, driverId: employee.id, status: { in: ["PLANNED", "ACTIVE"] } } }, include: { run: true, deliveryOrder: true } });
@@ -350,6 +351,7 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
       const deliveryStatus = status === "COMPLETED" ? "DELIVERED" : status === "FAILED" ? "FAILED" : status === "ARRIVED" ? "IN_TRANSIT" : undefined;
       if (deliveryStatus) await tx.deliveryOrder.update({ where: { id: stop.deliveryOrderId }, data: { status: deliveryStatus, ...(status === "COMPLETED" && { deliveredAt: now, verificationCodeHash: null, verificationExpiresAt: null }), ...(status === "FAILED" && { failedAt: now }) } });
       if (status === "COMPLETED" && verificationCode) await tx.deliveryProof.create({ data: { tenantId: req.session.tenantId, deliveryOrderId: stop.deliveryOrderId, type: "OTP", note: "Mijozning 6 xonali kodi bilan tasdiqlandi", createdById: req.session.userId, createdByName: employee.user.name } });
+      if (status === "FAILED" && proofFileUrl) await tx.deliveryProof.create({ data: { tenantId: req.session.tenantId, deliveryOrderId: stop.deliveryOrderId, type: "PHOTO", fileUrl: proofFileUrl, note: `Yetkazilmadi: ${notes}`, createdById: req.session.userId, createdByName: employee.user.name } });
       const remaining = await tx.deliveryStop.count({ where: { runId: stop.runId, status: { in: ["PENDING", "ARRIVED"] }, id: { not: stop.id } } });
       if (remaining === 0 && ["COMPLETED", "FAILED", "SKIPPED"].includes(status)) await tx.deliveryRun.update({ where: { id: stop.runId }, data: { status: "COMPLETED", completedAt: now } });
       return changed;
