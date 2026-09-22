@@ -58,6 +58,7 @@ model Tenant {
   deliveryZones   DeliveryZone[]
   deliveryMethods DeliveryMethod[]
   deliveryOrders  DeliveryOrder[]
+  deliveryProofs  DeliveryProof[]
   apiKeys         ApiKey[]
   notifSettings   TenantNotifSettings?
   loyaltyAccounts LoyaltyAccount[]
@@ -1524,6 +1525,8 @@ model DeliveryOrder {
   trackingCode String?
   trackingToken String? @unique
   trackingExpiresAt DateTime?
+  verificationCodeHash String?
+  verificationExpiresAt DateTime?
   courierName  String? // legacy snapshot
   courierPhone String? // legacy snapshot
   courierId    String?
@@ -1531,6 +1534,7 @@ model DeliveryOrder {
   vehicleId    String?
   vehicle      Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   deliveryStop DeliveryStop?
+  proofs       DeliveryProof[]
   notes        String?
 
   // Narx
@@ -1716,6 +1720,31 @@ model DeliveryRun {
   @@unique([tenantId, code])
   @@index([tenantId, status, plannedStartAt])
   @@index([driverId, status])
+}
+
+enum DeliveryProofType {
+  OTP
+  PHOTO
+  SIGNATURE
+  NOTE
+}
+
+model DeliveryProof {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveryOrderId String
+  deliveryOrder DeliveryOrder @relation(fields: [deliveryOrderId], references: [id], onDelete: Cascade)
+  type     DeliveryProofType
+  fileUrl  String?
+  note     String?
+  lat      Decimal? @db.Decimal(10, 7)
+  lng      Decimal? @db.Decimal(10, 7)
+  createdById String?
+  createdByName String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, deliveryOrderId, createdAt])
 }
 
 model DeliveryStop {
