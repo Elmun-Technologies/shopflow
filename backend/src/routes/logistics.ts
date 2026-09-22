@@ -5,6 +5,7 @@ import { logAuditFor } from "../lib/audit.js";
 import { distanceMeters, planConstrainedRoute } from "../lib/route-planner.js";
 import { createDeliveryCode, verifyDeliveryCode } from "../lib/delivery-verification.js";
 import { notifyCustomer } from "../lib/telegram-notify.js";
+import { allocateDeliveries } from "../lib/dispatch-planner.js";
 
 const employeeSchema = z.object({
   userId: z.string(),
@@ -245,6 +246,38 @@ export const logisticsRoutes: FastifyPluginAsync = async (app) => {
     const updated = await app.prisma.deliveryOrder.update({ where: { id: delivery.id }, data: { ...data, windowStartAt: data.windowStartAt === undefined ? undefined : data.windowStartAt ? new Date(data.windowStartAt) : null, windowEndAt: data.windowEndAt === undefined ? undefined : data.windowEndAt ? new Date(data.windowEndAt) : null } });
     await logAuditFor(app.prisma, req.session, { action: "UPDATE", resourceType: "delivery_order", resourceId: delivery.id, summary: "Yetkazish rejalashtirish parametrlari yangilandi", changes: data });
     return updated;
+  });
+
+  app.post("/dispatch/auto-plan", { preHandler: [app.requireRole("OWNER", "ADMIN", "MANAGER")] }, async (req, reply) => {
+    const data = z.object({ deliveryOrderIds: z.array(z.string()).max(500).optional(), startLat: z.number().min(-90).max(90), startLng: z.number().min(-180).max(180) }).parse(req.body);
+    const tenantId = req.session.tenantId;
+    const deliveries = await app.prisma.deliveryOrder.findMany({
+      where: { tenantId, deliveryStop: null, status: "PENDING", ...(data.deliveryOrderIds?.length && { id: { in: data.deliveryOrderIds } }), order: { shippingLat: { not: null }, shippingLng: { not: null } } },
+      include: { order: { select: { shippingLat: true, shippingLng: true } } }, take: 500,
+    });
+    if (!deliveries.length) return reply.code(400).send({ error: "Taqsimlanadigan buyurtma topilmadi" });
+    const drivers = await app.prisma.employeeProfile.findMany({
+      where: { tenantId, active: true, canDrive: true, shifts: { some: { status: "ACTIVE" } }, runs: { none: { status: { in: ["PLANNED", "ACTIVE"] } } } },
+      include: {
+        user: { select: { name: true } },
+        shifts: { where: { status: "ACTIVE" }, orderBy: { startedAt: "desc" }, take: 1, include: { vehicle: true } },
+        locations: { orderBy: { capturedAt: "desc" }, take: 1 },
+      },
+    });
+    if (!drivers.length) return reply.code(409).send({ error: "Bo'sh va faol smenadagi haydovchi topilmadi" });
+    const resources = drivers.map((driver) => {
+      const vehicle = driver.shifts[0]?.vehicle;
+      const location = driver.locations[0];
+      return { driverId: driver.id, driverName: driver.user.name, vehicleId: vehicle?.id ?? null, vehiclePlate: vehicle?.plateNumber ?? null,
+        start: location ? { lat: Number(location.lat), lng: Number(location.lng) } : { lat: data.startLat, lng: data.startLng },
+        capacityKg: vehicle?.capacityKg == null ? (vehicle ? null : 20) : Number(vehicle.capacityKg),
+        capacityM3: vehicle?.capacityM3 == null ? (vehicle ? null : 0.15) : Number(vehicle.capacityM3) };
+    });
+    const allocation = allocateDeliveries(deliveries.map((delivery) => ({ id: delivery.id, lat: Number(delivery.order.shippingLat), lng: Number(delivery.order.shippingLng), priority: delivery.priority, weightKg: delivery.weightKg == null ? null : Number(delivery.weightKg), volumeM3: delivery.volumeM3 == null ? null : Number(delivery.volumeM3), windowEndAt: delivery.windowEndAt })), resources);
+    return {
+      plans: allocation.plans.map((plan) => ({ ...plan, driverName: resources.find((resource) => resource.driverId === plan.driverId)?.driverName, vehiclePlate: resources.find((resource) => resource.driverId === plan.driverId)?.vehiclePlate })),
+      unassigned: allocation.unassigned,
+    };
   });
 
   // Dispatcher pool: koordinatasi bor va hali marshrutga kiritilmagan yetkazishlar.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Car, CircleDot, Copy, Eye, Loader2, MapPinned, Navigation, Plus, Radio, RefreshCw, Send, UserRound, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Car, CircleDot, Copy, Eye, Loader2, MapPinned, Navigation, Plus, Radio, RefreshCw, Send, Sparkles, UserRound, X } from "lucide-react";
 import { api } from "../api/client";
 import { useAppToast } from "./ui/Toast";
 
@@ -14,6 +14,7 @@ type Vehicle = { id: string; plateNumber: string; make: string | null; model: st
 type TeamUser = { id: string; name: string; email: string; active: boolean };
 type PoolDelivery = { id: string; status: string; scheduledAt: string | null; priority: number; weightKg: number | null; volumeM3: number | null; windowStartAt: string | null; windowEndAt: string | null; serviceMinutes: number; lat: number; lng: number; order: { code: string; shippingAddress: string | null; customer: { name: string; phone: string | null } | null } };
 type LogisticsAnalytics = { total: number; delivered: number; failed: number; successRate: number; averageDeliveryMinutes: number | null; couriers: Array<{ id: string; name: string; delivered: number; failed: number }> };
+type AutoDispatchPlan = { driverId: string; driverName: string; vehicleId: string | null; vehiclePlate: string | null; start: { lat: number; lng: number }; deliveryIds: string[]; totalWeightKg: number; totalVolumeM3: number; estimatedDistanceMeters: number };
 type DeliveryProof = { id: string; type: string; fileUrl: string | null; note: string | null; createdByName: string | null; createdAt: string };
 type DeliveryRun = { id: string; code: string; status: string; totalDistanceMeters: number | null; driver: { user: { name: string } }; vehicle: Vehicle | null; stops: Array<{ id: string; sequence: number; status: string; deliveryOrder: { id: string; trackingToken: string | null; order: { code: string; shippingAddress: string | null; customer: { name: string } | null } } }> };
 type LogisticsTab = "live" | "routes" | "couriers" | "fleet";
@@ -150,6 +151,24 @@ export default function LogisticsControl() {
     catch (error) { toast.error(error instanceof Error ? error.message : "Prioritet saqlanmadi"); }
   };
 
+  const autoDispatch = async () => {
+    const deliveryOrderIds = selectedDeliveries.size ? [...selectedDeliveries] : pool.map((delivery) => delivery.id);
+    if (!deliveryOrderIds.length) return;
+    if (!window.confirm(`${deliveryOrderIds.length} ta buyurtmani faol kuryerlarga avtomatik taqsimlaysizmi?`)) return;
+    setSaving(true);
+    try {
+      const result = await api<{ plans: AutoDispatchPlan[]; unassigned: Array<{ id: string; reason: string }> }>("/logistics/dispatch/auto-plan", { method: "POST", body: { deliveryOrderIds, startLat: Number(routeDraft.startLat), startLng: Number(routeDraft.startLng) } });
+      let created = 0;
+      for (const plan of result.plans) {
+        await api("/logistics/runs", { method: "POST", body: { driverId: plan.driverId, vehicleId: plan.vehicleId, deliveryOrderIds: plan.deliveryIds, startLat: plan.start.lat, startLng: plan.start.lng, serviceMinutes: 10 } });
+        created++;
+      }
+      setSelectedDeliveries(new Set()); await reload(true);
+      toast.success(`${created} ta marshrut avtomatik yaratildi${result.unassigned.length ? `, ${result.unassigned.length} ta buyurtma sig‘madi` : ""}`);
+    } catch (error) { await reload(true); toast.error(error instanceof Error ? error.message : "Avtomatik taqsimlash bajarilmadi"); }
+    finally { setSaving(false); }
+  };
+
   const createRoute = async () => {
     if (!routeDraft.driverId || selectedDeliveries.size === 0) return toast.error("Haydovchi va buyurtmalarni tanlang");
     setSaving(true);
@@ -203,7 +222,7 @@ export default function LogisticsControl() {
       </> : tab === "routes" ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-cream-300 bg-white p-4 space-y-3">
-            <div className="flex items-center justify-between"><div><h3 className="font-semibold text-forest-800">Yangi marshrut</h3><p className="text-xs text-slate-500">Buyurtmalar avtomatik ravishda eng yaqin ketma-ketlikka joylanadi.</p></div><button disabled={saving || selectedDeliveries.size === 0 || !routeDraft.driverId} onClick={() => void createRoute()} className="px-4 py-2 rounded-xl bg-forest-700 text-white text-sm disabled:opacity-40">Marshrut yaratish ({selectedDeliveries.size})</button></div>
+            <div className="flex items-center justify-between"><div><h3 className="font-semibold text-forest-800">Yangi marshrut</h3><p className="text-xs text-slate-500">Prioritet, vaqt oynasi, GPS va transport sig‘imi hisobga olinadi.</p></div><div className="flex gap-2"><button disabled={saving || pool.length === 0} onClick={() => void autoDispatch()} className="px-3 py-2 rounded-xl bg-leaf-100 text-forest-800 text-sm font-medium disabled:opacity-40 flex items-center gap-1"><Sparkles className="w-4 h-4" /> Avto taqsimlash</button><button disabled={saving || selectedDeliveries.size === 0 || !routeDraft.driverId} onClick={() => void createRoute()} className="px-4 py-2 rounded-xl bg-forest-700 text-white text-sm disabled:opacity-40">Marshrut yaratish ({selectedDeliveries.size})</button></div></div>
             <div className="grid md:grid-cols-4 gap-2">
               <select value={routeDraft.driverId} onChange={(e) => setRouteDraft({ ...routeDraft, driverId: e.target.value })} className="input"><option value="">Haydovchini tanlang</option>{employees.filter((e) => e.canDrive && e.active).map((e) => <option key={e.id} value={e.id}>{e.user.name}</option>)}</select>
               <select value={routeDraft.vehicleId} onChange={(e) => setRouteDraft({ ...routeDraft, vehicleId: e.target.value })} className="input"><option value="">Mashinasiz</option>{vehicles.filter((v) => ["AVAILABLE", "IN_USE"].includes(v.status)).map((v) => <option key={v.id} value={v.id}>{v.plateNumber}</option>)}</select>
