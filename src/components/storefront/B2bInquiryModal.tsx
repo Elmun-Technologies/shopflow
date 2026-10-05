@@ -116,14 +116,14 @@ export function B2bInquiryModal({
     opts: { placeholder?: string; type?: string; rows?: number } = {},
   ) => (
     <div>
-      <label className="text-[11px] text-slate-400 mb-1 block">{label}</label>
+      <label className="text-[11px] text-slate-600 mb-1 block">{label}</label>
       {opts.rows ? (
         <textarea
           value={form[key]}
           onChange={(e) => set({ [key]: e.target.value } as Partial<typeof form>)}
           rows={opts.rows}
           placeholder={opts.placeholder}
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-white/25 resize-none"
+          className="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-black/25 resize-none"
         />
       ) : (
         <input
@@ -131,7 +131,7 @@ export function B2bInquiryModal({
           onChange={(e) => set({ [key]: e.target.value } as Partial<typeof form>)}
           type={opts.type ?? "text"}
           placeholder={opts.placeholder}
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-white/25"
+          className="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-black/25"
         />
       )}
     </div>
@@ -139,19 +139,19 @@ export function B2bInquiryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-md bg-[#15151f] border-t sm:border border-white/10 rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto">
+      <div className="w-full sm:max-w-md bg-white border-t sm:border border-black/10 rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto">
         {doneCode ? (
           <div className="p-6 text-center">
             <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-500/15 flex items-center justify-center">
-              <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+              <CheckCircle2 className="w-7 h-7 text-emerald-600" />
             </div>
-            <h2 className="text-base font-semibold text-white mb-2">{t("b2b.success.title")}</h2>
-            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+            <h2 className="text-base font-semibold text-slate-900 mb-2">{t("b2b.success.title")}</h2>
+            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
               {t("b2b.success.text", { code: doneCode })}
             </p>
             <button
               onClick={onClose}
-              className="w-full py-3 rounded-2xl font-semibold text-white text-sm active:scale-[0.98] transition-transform"
+              className="w-full py-3 rounded-2xl font-semibold text-slate-900 text-sm active:scale-[0.98] transition-transform"
               style={{ backgroundColor: primaryColor }}
             >
               {t("b2b.success.close")}
@@ -159,12 +159,12 @@ export function B2bInquiryModal({
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 sticky top-0 bg-[#15151f]">
-              <h2 className="text-base font-semibold text-white">{t(titleKey)}</h2>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 sticky top-0 bg-white">
+              <h2 className="text-base font-semibold text-slate-900">{t(titleKey)}</h2>
               <button
                 onClick={onClose}
                 aria-label={t("b2b.success.close")}
-                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400"
+                className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -172,9 +172,9 @@ export function B2bInquiryModal({
 
             <div className="p-5 space-y-3">
               {target.productName && (
-                <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
-                  <p className="text-[11px] text-slate-400">{t("b2b.form.title.price")}</p>
-                  <p className="text-sm text-white leading-snug">{target.productName}</p>
+                <div className="rounded-xl bg-black/5 border border-black/10 px-3 py-2.5">
+                  <p className="text-[11px] text-slate-600">{t("b2b.form.title.price")}</p>
+                  <p className="text-sm text-slate-900 leading-snug">{target.productName}</p>
                 </div>
               )}
 
@@ -186,12 +186,12 @@ export function B2bInquiryModal({
               {field(t("b2b.form.quantity"), "quantity", { placeholder: t("b2b.form.quantity.ph") })}
               {field(t("b2b.form.comment"), "comment", { rows: 3 })}
 
-              {error && <p className="text-xs text-red-400">{error}</p>}
+              {error && <p className="text-xs text-red-600">{error}</p>}
 
               <button
                 onClick={submit}
                 disabled={busy}
-                className="w-full py-3.5 rounded-2xl font-semibold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                className="w-full py-3.5 rounded-2xl font-semibold text-slate-900 text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                 style={{ backgroundColor: primaryColor }}
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

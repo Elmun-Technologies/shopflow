@@ -36,7 +36,7 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
   const delivStr = formatDeliveryDate(deliveryDate(), lang);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f6f6f8" }}>
       <div
         className="flex-1 overflow-y-auto px-5"
         style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))" }}
@@ -64,10 +64,10 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
                 strokeWidth={2}
               />
             </div>
-            <h2 className="text-2xl font-bold mb-1" style={{ color: "#f4f4f8" }}>
+            <h2 className="text-2xl font-bold mb-1" style={{ color: "#171a21" }}>
               {t("success.title")}
             </h2>
-            <p className="text-sm text-center" style={{ color: "#52526a" }}>
+            <p className="text-sm text-center" style={{ color: "#94a3b8" }}>
               {t("success.subtitle")}
             </p>
           </div>
@@ -76,17 +76,17 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
           <div
             className="p-4 rounded-2xl mb-4"
             style={{
-              backgroundColor: "#16161f",
-              border: "1px solid rgba(255,255,255,0.07)",
+              backgroundColor: "#ffffff",
+              border: "1px solid rgba(17,24,39,0.07)",
             }}
           >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>{t("success.orderNumber")}</p>
-                <p className="text-lg font-bold" style={{ color: "#f4f4f8" }}>#{orderResult.code}</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#94a3b8" }}>{t("success.orderNumber")}</p>
+                <p className="text-lg font-bold" style={{ color: "#171a21" }}>#{orderResult.code}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#3a3a56" }}>{t("success.total")}</p>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "#94a3b8" }}>{t("success.total")}</p>
                 <p className="text-lg font-bold" style={{ color: primaryColor }}>
                   {formatPrice(orderResult.total, orderResult.currency, lang)}
                 </p>
@@ -94,11 +94,11 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
             </div>
             <div
               className="flex items-center gap-2 pt-3 mt-1 border-t"
-              style={{ borderColor: "rgba(255,255,255,0.06)" }}
+              style={{ borderColor: "rgba(17,24,39,0.06)" }}
             >
               <Truck className="w-4 h-4 flex-shrink-0" style={{ color: "#38bdf8" }} />
-              <span className="text-xs" style={{ color: "#94a3b8" }}>
-                {t("success.estimatedDelivery")}: <span className="font-semibold" style={{ color: "#f4f4f8" }}>{delivStr}</span>
+              <span className="text-xs" style={{ color: "#64748b" }}>
+                {t("success.estimatedDelivery")}: <span className="font-semibold" style={{ color: "#171a21" }}>{delivStr}</span>
               </span>
             </div>
           </div>
@@ -107,18 +107,18 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
           <div
             className="p-4 rounded-2xl mb-4"
             style={{
-              backgroundColor: "#16161f",
-              border: "1px solid rgba(255,255,255,0.07)",
+              backgroundColor: "#ffffff",
+              border: "1px solid rgba(17,24,39,0.07)",
             }}
           >
-            <p className="text-[10px] uppercase tracking-wider mb-4" style={{ color: "#3a3a56" }}>
+            <p className="text-[10px] uppercase tracking-wider mb-4" style={{ color: "#94a3b8" }}>
               {t("success.orderStatus")}
             </p>
             <div className="relative">
               {/* Vertical line */}
               <div
                 className="absolute left-3 top-3 bottom-3 w-px"
-                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+                style={{ backgroundColor: "rgba(17,24,39,0.06)" }}
               />
               <div className="space-y-4">
                 {STEPS.map((step, i) => {
@@ -136,24 +136,24 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
                             ? primaryColor
                             : step.active
                               ? "rgba(245,158,11,0.15)"
-                              : "#1e1e2a",
+                              : "#f2f3f6",
                           border: step.active ? "2px solid rgba(245,158,11,0.5)" : "none",
                           marginTop: 1,
                         }}
                       >
                         {step.done
                           ? <CheckCircle2 className="w-3 h-3" style={{ color: "#fff" }} />
-                          : <span className="text-[9px] font-bold" style={{ color: step.active ? "#f59e0b" : "#3a3a56" }}>{i + 1}</span>
+                          : <span className="text-[9px] font-bold" style={{ color: step.active ? "#f59e0b" : "#94a3b8" }}>{i + 1}</span>
                         }
                       </div>
                       <div className="flex-1 pb-1">
                         <p
                           className="text-sm font-medium"
-                          style={{ color: step.done || step.active ? "#f4f4f8" : "#3a3a56" }}
+                          style={{ color: step.done || step.active ? "#171a21" : "#94a3b8" }}
                         >
                           {label}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: "#52526a" }}>{desc}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#94a3b8" }}>{desc}</p>
                       </div>
                     </div>
                   );
@@ -166,12 +166,12 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
           <div
             className="flex items-start gap-3 p-4 rounded-2xl mb-6"
             style={{
-              backgroundColor: hasTelegram ? "rgba(56,189,248,0.08)" : "#16161f",
-              border: hasTelegram ? "1px solid rgba(56,189,248,0.15)" : "1px solid rgba(255,255,255,0.06)",
+              backgroundColor: hasTelegram ? "rgba(56,189,248,0.08)" : "#ffffff",
+              border: hasTelegram ? "1px solid rgba(56,189,248,0.15)" : "1px solid rgba(17,24,39,0.06)",
             }}
           >
-            <Bell className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: hasTelegram ? "#38bdf8" : "#52526a" }} />
-            <p className="text-xs leading-relaxed" style={{ color: hasTelegram ? "#bae6fd" : "#52526a" }}>
+            <Bell className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: hasTelegram ? "#38bdf8" : "#94a3b8" }} />
+            <p className="text-xs leading-relaxed" style={{ color: hasTelegram ? "#bae6fd" : "#94a3b8" }}>
               {hasTelegram
                 ? t("success.notify.tg")
                 : t("success.saveOrderNumber", { code: orderResult.code })}
@@ -192,9 +192,9 @@ function SuccessViewInner({ orderResult, primaryColor, hasTelegram, onViewOrders
               onClick={onContinueShopping}
               className="w-full py-3.5 rounded-2xl font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
               style={{
-                backgroundColor: "#16161f",
-                border: "1px solid rgba(255,255,255,0.07)",
-                color: "#94a3b8",
+                backgroundColor: "#ffffff",
+                border: "1px solid rgba(17,24,39,0.07)",
+                color: "#64748b",
               }}
             >
               {t("success.continueShopping")}

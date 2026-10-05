@@ -1,6 +1,9 @@
 // Telegram Mini App theme integratsiyasi.
-// Telegram WebApp.themeParams qiymatlarini CSS variable'lar sifatida joriy etadi
-// va brand.primaryColor'ni hamma joyda ishlatish uchun export qiladi.
+// Dizayn yo'nalishi: har doim CLEAN LIGHT (oq fon, brand rang accent) —
+// Telegram dark rejimidan qat'iy nazar, do'kon bir xil yorug' ko'rinadi.
+// CSS variable'lar (`--tg-*`) defensiv: komponentlar asosan o'z palitrasidan
+// foydalanadi, lekin hammasi bir-biriga mos bo'lishi uchun shu yerda yorug'
+// qiymatlar majburlanadi.
 
 export interface ThemeColors {
   bg: string;
@@ -14,22 +17,45 @@ export interface ThemeColors {
   isDark: boolean;
 }
 
+// Light Mini App palitra (barcha storefront komponentlari shuga mos)
+export const STORE_COLORS = {
+  pageBg: "#f6f6f8",
+  card: "#ffffff",
+  inset: "#f2f3f6",
+  track: "#eceef2",
+  text: "#171a21",
+  text2: "#64748b",
+  text3: "#94a3b8",
+  border: "rgba(17,24,39,0.08)",
+} as const;
+
 export function applyTelegramTheme(brandPrimary: string | undefined): ThemeColors {
   const twa = window.Telegram?.WebApp;
-  const tp = twa?.themeParams ?? {};
-  const colorScheme = (twa as { colorScheme?: "light" | "dark" } | undefined)?.colorScheme;
 
-  // Telegram light/dark sxemasini aniqlaymiz
-  const isDark = colorScheme === "dark" || (tp.bg_color ? isDarkHex(tp.bg_color) : true);
+  // Har doim light — dark Telegram mijozga ham oq do'kon ko'rinadi.
+  const isDark = false;
+  const bg = STORE_COLORS.pageBg;
+  const bgSecondary = STORE_COLORS.card;
+  const text = STORE_COLORS.text;
+  const textSecondary = STORE_COLORS.text2;
+  const hint = STORE_COLORS.text3;
+  const primary = brandPrimary || "#10b981";
+  const primaryText = "#ffffff";
+  const border = STORE_COLORS.border;
 
-  const bg = tp.bg_color ?? (isDark ? "#0f172a" : "#ffffff");
-  const bgSecondary = isDark ? darken(bg, 0.4) : lighten(bg, 0.02);
-  const text = tp.text_color ?? (isDark ? "#f1f5f9" : "#0f172a");
-  const textSecondary = tp.hint_color ?? (isDark ? "#94a3b8" : "#64748b");
-  const hint = tp.hint_color ?? (isDark ? "#64748b" : "#94a3b8");
-  const primary = brandPrimary || tp.button_color || "#10b981";
-  const primaryText = tp.button_text_color ?? "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  // Telegram'ning o'z header/fon rangini ham light qilamiz — do'kon va
+  // Telegram chrome bir-biriga yopishiq turadi.
+  // (Metodlar Telegram 6.1+ da; lokal tipda deklaratsiya qilinmagan bo'lishi
+  // mumkin — shuning uchun kengaytirilgan cast.)
+  try {
+    const twaChrome = twa as
+      | { setHeaderColor?: (color: string) => void; setBackgroundColor?: (color: string) => void }
+      | undefined;
+    twaChrome?.setHeaderColor?.(bg);
+    twaChrome?.setBackgroundColor?.(bg);
+  } catch {
+    /* eski Telegram versiyalari — jim o'tamiz */
+  }
 
   // CSS variable'larni html'ga joylaymiz, kerakli component'lar shu orqali oladi
   const root = document.documentElement;
@@ -45,43 +71,6 @@ export function applyTelegramTheme(brandPrimary: string | undefined): ThemeColor
   root.classList.toggle("tg-light", !isDark);
 
   return { bg, bgSecondary, text, textSecondary, hint, primary, primaryText, border, isDark };
-}
-
-function isDarkHex(hex: string): boolean {
-  const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(hex);
-  if (!m) return false;
-  const h = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  // Perceived luminance
-  const l = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return l < 0.5;
-}
-
-function clampByte(n: number): number {
-  return Math.max(0, Math.min(255, Math.round(n)));
-}
-
-function darken(hex: string, amount: number): string {
-  return shift(hex, -amount);
-}
-
-function lighten(hex: string, amount: number): string {
-  return shift(hex, amount);
-}
-
-function shift(hex: string, amount: number): string {
-  const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(hex);
-  if (!m) return hex;
-  const h = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const factor = amount < 0 ? 1 + amount : 1 - amount;
-  const target = amount < 0 ? 0 : 255;
-  const mix = (c: number) => clampByte(c * factor + target * (1 - factor));
-  return `#${mix(r).toString(16).padStart(2, "0")}${mix(g).toString(16).padStart(2, "0")}${mix(b).toString(16).padStart(2, "0")}`;
 }
 
 /** Telegram WebApp HapticFeedback wrapper — safe no-op tashqi muhitda. */

@@ -71,16 +71,17 @@ function ProductCardInner({
     <div
       className="relative flex flex-col overflow-hidden cursor-pointer"
       style={{
-        backgroundColor: "#16161f",
-        borderRadius: 20,
-        border: "1px solid rgba(255,255,255,0.07)",
+        backgroundColor: "#ffffff",
+        borderRadius: 18,
+        border: "1px solid rgba(17,24,39,0.06)",
+        boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 10px 24px -14px rgba(16,24,40,0.12)",
       }}
       onClick={onSelect}
     >
       {/* Image area */}
       <div
         className="relative overflow-hidden"
-        style={{ aspectRatio: "4/3", backgroundColor: "#1e1e2a" }}
+        style={{ aspectRatio: "4/3", backgroundColor: "#f2f3f6" }}
       >
         {imageUrl ? (
           <img
@@ -92,7 +93,7 @@ function ProductCardInner({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-10 h-10" style={{ color: "#3a3a50" }} />
+            <Package className="w-10 h-10" style={{ color: "#94a3b8" }} />
           </div>
         )}
 
@@ -106,7 +107,7 @@ function ProductCardInner({
               className="text-xs font-semibold px-3 py-1 rounded-full"
               style={{
                 backgroundColor: "rgba(255,255,255,0.12)",
-                color: "#94a3b8",
+                color: "#64748b",
                 backdropFilter: "blur(8px)",
               }}
             >
@@ -151,15 +152,16 @@ function ProductCardInner({
             width: 30,
             height: 30,
             borderRadius: "50%",
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "rgba(255,255,255,0.92)",
             backdropFilter: "blur(8px)",
-            border: isFav ? "1px solid rgba(251,113,133,0.4)" : "1px solid rgba(255,255,255,0.1)",
+            border: isFav ? "1px solid rgba(251,113,133,0.45)" : "1px solid rgba(17,24,39,0.08)",
+            boxShadow: "0 2px 8px rgba(16,24,40,0.10)",
           }}
         >
           <Heart
             className="w-3.5 h-3.5 transition-all"
             fill={isFav ? "#fb7185" : "none"}
-            stroke={isFav ? "#fb7185" : "rgba(255,255,255,0.9)"}
+            stroke={isFav ? "#fb7185" : "#64748b"}
             strokeWidth={2}
           />
         </button>
@@ -169,14 +171,14 @@ function ProductCardInner({
       <div className="flex flex-col gap-1 p-3 flex-1">
         {/* Price row */}
         <div className="flex items-baseline gap-1.5 flex-wrap">
-          <span className="text-sm font-bold" style={{ color: "#f4f4f8" }}>
+          <span className="text-sm font-bold" style={{ color: "#171a21" }}>
             {price.toLocaleString(locale)}
-            <span className="text-[10px] font-normal ml-0.5" style={{ color: "#6b6b80" }}>
+            <span className="text-[10px] font-normal ml-0.5" style={{ color: "#94a3b8" }}>
               {currencyLabel}
             </span>
           </span>
           {oldPrice != null && oldPrice > price && (
-            <span className="text-[10px] line-through" style={{ color: "#4a4a5e" }}>
+            <span className="text-[10px] line-through" style={{ color: "#94a3b8" }}>
               {oldPrice.toLocaleString(locale)}
             </span>
           )}
@@ -185,7 +187,7 @@ function ProductCardInner({
         {/* Name */}
         <p
           className="text-[11px] leading-snug line-clamp-2 flex-1"
-          style={{ color: "#8a8a9e", minHeight: 28 }}
+          style={{ color: "#64748b", minHeight: 28 }}
         >
           {name}
         </p>
@@ -198,11 +200,11 @@ function ProductCardInner({
         ) : (avgRating && avgRating > 0) ? (
           <div className="flex items-center gap-1">
             <span style={{ color: "#f59e0b", fontSize: 10 }}>★</span>
-            <span className="text-[10px] font-medium" style={{ color: "#6b6b80" }}>
+            <span className="text-[10px] font-medium" style={{ color: "#94a3b8" }}>
               {avgRating.toFixed(1)}
             </span>
             {weeklyBuyers && weeklyBuyers > 0 ? (
-              <span className="text-[10px]" style={{ color: "#4a4a5e" }}>
+              <span className="text-[10px]" style={{ color: "#94a3b8" }}>
                 · {t("pdp.orderCount", { count: weeklyBuyers })}
               </span>
             ) : null}
@@ -213,7 +215,7 @@ function ProductCardInner({
         {outOfStock ? (
           <div
             className="mt-1 w-full py-2 rounded-xl flex items-center justify-center text-xs font-medium"
-            style={{ backgroundColor: "rgba(255,255,255,0.05)", color: "#4a4a5e" }}
+            style={{ backgroundColor: "rgba(17,24,39,0.05)", color: "#94a3b8" }}
           >
             {t("pdp.sold")}
           </div>

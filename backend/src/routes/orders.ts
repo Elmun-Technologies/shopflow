@@ -32,7 +32,9 @@ function restoreStock(
   item: { productId: string; variantId: string | null; qty: number; trackStock: boolean },
   restore: boolean,
 ) {
-  if (!item.trackStock) return Promise.resolve({ count: 0 });
+  // Eslatma: caller'lar faqat trackStock=true item'larni yuboradi — shunday
+  // bo'lsa funksiya har doim PrismaPromise qaytaradi va $transaction([...])
+  // (batch forma) barcha update'larni bitta atomik tranzaksiyada bajaradi.
   const delta = restore ? item.qty : -item.qty;
   if (item.variantId) {
     return prisma.productVariant.updateMany({
@@ -264,7 +266,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       if (isTerminal(data.status) !== isTerminal(order.status)) {
         const restore = isTerminal(data.status);
         const items = await app.prisma.orderItem.findMany({
-          where: { orderId: id },
+          where: { orderId: id, trackStock: true },
           select: { productId: true, variantId: true, qty: true, trackStock: true },
         });
         if (items.length > 0) {
@@ -465,7 +467,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         if (crossing.length > 0) {
           const restore = isTerminal(toStatus);
           const items = await app.prisma.orderItem.findMany({
-            where: { orderId: { in: crossing.map((t) => t.id) } },
+            where: { orderId: { in: crossing.map((t) => t.id) }, trackStock: true },
             select: { productId: true, variantId: true, qty: true, trackStock: true },
           });
           if (items.length > 0) {

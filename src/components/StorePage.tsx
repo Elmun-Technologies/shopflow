@@ -589,7 +589,7 @@ function FlashSaleTimer({ endTime }: { endTime?: string }) {
   const sec = Math.floor((diff % 60_000) / 1000);
   const pad = (n: number) => n.toString().padStart(2, "0");
   return (
-    <div className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded-lg">
+    <div className="flex items-center gap-1 bg-black/25 px-2 py-1 rounded-lg">
       <Clock className="w-3 h-3 text-white" />
       <span className="text-[11px] text-white font-mono font-bold">{pad(h)}:{pad(m)}:{pad(sec)}</span>
     </div>
@@ -1086,19 +1086,19 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- LOADING ----
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950">
+      <div className="min-h-screen bg-slate-50">
         {/* Header skeleton */}
         <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-800 animate-pulse" />
+          <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse" />
           <div className="flex-1 space-y-1.5">
-            <div className="h-3 bg-slate-800 rounded-full w-1/2 animate-pulse" />
-            <div className="h-2.5 bg-slate-800 rounded-full w-1/3 animate-pulse" />
+            <div className="h-3 bg-slate-100 rounded-full w-1/2 animate-pulse" />
+            <div className="h-2.5 bg-slate-100 rounded-full w-1/3 animate-pulse" />
           </div>
         </div>
         {/* Category chips skeleton */}
         <div className="px-3 py-2 flex gap-2 overflow-hidden">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-7 bg-slate-800 rounded-lg animate-pulse flex-shrink-0" style={{ width: 60 + (i % 3) * 20 }} />
+            <div key={i} className="h-7 bg-slate-100 rounded-lg animate-pulse flex-shrink-0" style={{ width: 60 + (i % 3) * 20 }} />
           ))}
         </div>
         {/* Product grid skeleton */}
@@ -1112,13 +1112,13 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- ERROR ----
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-red-400" />
+            <X className="w-8 h-8 text-red-600" />
           </div>
-          <p className="text-white font-semibold mb-1">{t("store.notFound")}</p>
-          <p className="text-sm text-slate-400">{t("store.unknownError")}</p>
+          <p className="text-slate-900 font-semibold mb-1">{t("store.notFound")}</p>
+          <p className="text-sm text-slate-600">{t("store.unknownError")}</p>
         </div>
       </div>
     );
@@ -1140,7 +1140,7 @@ function StoreInner({ slug }: { slug: string }) {
     const deliveryStr = formatDeliveryDate(deliveryDate, lang);
     const hasTg = !!telegramUser?.userId;
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}>
           <div className="max-w-md mx-auto">
             {/* Hero — yashil belgi + sarlavha */}
@@ -1148,16 +1148,16 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300" style={{ backgroundColor: primaryColor + "20" }}>
                 <CheckCircle2 className="w-11 h-11" style={{ color: primaryColor }} strokeWidth={2.5} />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-1">{t("success.title")}</h2>
-              <p className="text-sm text-slate-400">{t("success.subtitle")}</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-1">{t("success.title")}</h2>
+              <p className="text-sm text-slate-600">{t("success.subtitle")}</p>
             </div>
 
             {/* Buyurtma kartochkasi */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4">
+            <div className="bg-white border border-black/10 rounded-2xl p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[11px] text-slate-500 uppercase tracking-wider">{t("success.order")}</p>
-                  <p className="text-lg font-bold text-white">#{orderResult.code}</p>
+                  <p className="text-lg font-bold text-slate-900">#{orderResult.code}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] text-slate-500 uppercase tracking-wider">{t("success.total")}</p>
@@ -1166,14 +1166,14 @@ function StoreInner({ slug }: { slug: string }) {
                   </p>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2">
-                <Truck className="w-4 h-4 text-sky-400 flex-shrink-0" />
-                <span className="text-xs text-slate-300">{t("success.estimatedDelivery")}: <span className="font-medium text-white">{deliveryStr}</span></span>
+              <div className="mt-3 pt-3 border-t border-black/10 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-sky-600 flex-shrink-0" />
+                <span className="text-xs text-slate-800">{t("success.estimatedDelivery")}: <span className="font-medium text-slate-900">{deliveryStr}</span></span>
               </div>
             </div>
 
             {/* Status taymlayni — keyingi qadamlar */}
-            <div className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 mb-4">
+            <div className="bg-white/75 border border-black/10 rounded-2xl p-4 mb-4">
               <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-3">{t("success.nextSteps")}</p>
               <div className="space-y-3">
                 {[
@@ -1187,13 +1187,13 @@ function StoreInner({ slug }: { slug: string }) {
                       s.done
                         ? "bg-emerald-500 text-white"
                         : s.active
-                          ? "bg-amber-500/20 text-amber-300 ring-2 ring-amber-500/40"
-                          : "bg-slate-800 text-slate-600"
+                          ? "bg-amber-500/20 text-amber-700 ring-2 ring-amber-500/40"
+                          : "bg-slate-100 text-slate-400"
                     }`}>
                       {s.done ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
                     </div>
                     <div className="flex-1 min-w-0 pb-0.5">
-                      <p className={`text-sm font-medium ${s.done || s.active ? "text-white" : "text-slate-500"}`}>{s.label}</p>
+                      <p className={`text-sm font-medium ${s.done || s.active ? "text-slate-900" : "text-slate-500"}`}>{s.label}</p>
                       <p className="text-[11px] text-slate-500">{s.desc}</p>
                     </div>
                   </div>
@@ -1204,15 +1204,15 @@ function StoreInner({ slug }: { slug: string }) {
             {/* Bildirishnoma haqida eslatma */}
             {hasTg ? (
               <div className="flex items-start gap-2.5 p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl mb-6">
-                <Bell className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-sky-200 leading-relaxed">
+                <Bell className="w-4 h-4 text-sky-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-sky-700 leading-relaxed">
                   {t("success.notify.tg")}
                 </p>
               </div>
             ) : (
-              <div className="flex items-start gap-2.5 p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl mb-6">
-                <Bell className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-300 leading-relaxed">
+              <div className="flex items-start gap-2.5 p-3 bg-slate-100 border border-black/10 rounded-xl mb-6">
+                <Bell className="w-4 h-4 text-slate-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-800 leading-relaxed">
                   {t("success.saveOrderNumber", { code: orderResult.code })}
                 </p>
               </div>
@@ -1248,7 +1248,7 @@ function StoreInner({ slug }: { slug: string }) {
                   setView("home");
                   setOrderResult(null);
                 }}
-                className="w-full py-3 rounded-2xl font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-all"
+                className="w-full py-3 rounded-2xl font-medium text-slate-800 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] transition-all"
               >
                 {t("success.continueShopping")}
               </button>
@@ -1262,23 +1262,23 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- CHECKOUT ----
   if (view === "checkout") {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
-          <button onClick={() => setView(isSingle ? "home" : "cart")} className="p-2 rounded-xl text-slate-400 hover:text-white">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-black/10">
+          <button onClick={() => setView(isSingle ? "home" : "cart")} className="p-2 rounded-xl text-slate-600 hover:text-slate-900">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-semibold text-white">{t("checkout.title")}</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t("checkout.title")}</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Order summary */}
-          <div className="bg-slate-900 rounded-2xl p-4">
-            <h3 className="text-xs font-medium text-slate-400 mb-3">{t("checkout.orderSummary")}</h3>
+          <div className="bg-white rounded-2xl p-4">
+            <h3 className="text-xs font-medium text-slate-600 mb-3">{t("checkout.orderSummary")}</h3>
             {cart.map((item) => (
-              <div key={cartLineKey(item.productId, item.variantId)} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
-                <span className="text-sm text-white">
+              <div key={cartLineKey(item.productId, item.variantId)} className="flex items-center justify-between py-2 border-b border-black/10 last:border-0">
+                <span className="text-sm text-slate-900">
                   {item.name}
-                  {item.variantLabel && <span className="text-slate-400"> · {item.variantLabel}</span>}
+                  {item.variantLabel && <span className="text-slate-600"> · {item.variantLabel}</span>}
                   <span className="text-slate-500"> ×{item.qty}</span>
                 </span>
                 <span className="text-sm font-medium" style={{ color: primaryColor }}>
@@ -1287,7 +1287,7 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             ))}
             <div className="flex items-center justify-between pt-3 mt-1">
-              <span className="text-sm font-semibold text-white">{t("checkout.total")}</span>
+              <span className="text-sm font-semibold text-slate-900">{t("checkout.total")}</span>
               <span className="text-base font-bold" style={{ color: primaryColor }}>
                 {formatPrice(cartTotal, data.tenant.currency, lang)}
               </span>
@@ -1295,11 +1295,11 @@ function StoreInner({ slug }: { slug: string }) {
           </div>
 
           {/* Customer form */}
-          <div className="bg-slate-900 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-medium text-slate-400 mb-1">{t("checkout.yourInfo")}</h3>
+          <div className="bg-white rounded-2xl p-4 space-y-3">
+            <h3 className="text-xs font-medium text-slate-600 mb-1">{t("checkout.yourInfo")}</h3>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.name")} *</label>
+              <label className="text-xs text-slate-600 mb-1 block">{t("checkout.name")} *</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
@@ -1307,13 +1307,13 @@ function StoreInner({ slug }: { slug: string }) {
                   placeholder={t("checkout.namePlaceholder")}
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-slate-100 border border-black/10 rounded-xl pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.phone")} *</label>
+              <label className="text-xs text-slate-600 mb-1 block">{t("checkout.phone")} *</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
@@ -1323,20 +1323,20 @@ function StoreInner({ slug }: { slug: string }) {
                   onChange={(e) => setForm((f) => ({ ...f, phone: formatUzPhone(e.target.value) }))}
                   inputMode="tel"
                   autoComplete="tel"
-                  className={`w-full bg-slate-800 border rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none ${
+                  className={`w-full bg-slate-100 border rounded-xl pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none ${
                     form.phone && !isValidUzPhone(form.phone)
                       ? "border-rose-500/40 focus:border-rose-500/60"
-                      : "border-slate-700 focus:border-emerald-500/50"
+                      : "border-black/10 focus:border-emerald-500/50"
                   }`}
                 />
               </div>
               {form.phone && !isValidUzPhone(form.phone) && (
-                <p className="text-[11px] text-rose-300 mt-1">{t("checkout.phoneInvalid")}</p>
+                <p className="text-[11px] text-rose-600 mt-1">{t("checkout.phoneInvalid")}</p>
               )}
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.addressLabel")}</label>
+              <label className="text-xs text-slate-600 mb-1 block">{t("checkout.addressLabel")}</label>
               {savedAddresses.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
                   {savedAddresses.map((a) => {
@@ -1350,7 +1350,7 @@ function StoreInner({ slug }: { slug: string }) {
                         className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors ${
                           isActive
                             ? "text-white"
-                            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            : "bg-slate-100 text-slate-800 hover:bg-slate-200"
                         }`}
                         style={isActive ? { backgroundColor: primaryColor } : {}}
                       >
@@ -1367,7 +1367,7 @@ function StoreInner({ slug }: { slug: string }) {
                   placeholder={t("checkout.address")}
                   value={form.address}
                   onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  className="w-full bg-slate-100 border border-black/10 rounded-xl pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
               {/* GPS — joriy joylashuvni olish */}
@@ -1405,13 +1405,13 @@ function StoreInner({ slug }: { slug: string }) {
                   );
                 }}
                 disabled={gpsBusy}
-                className="mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/15 disabled:opacity-50 rounded-xl text-sm text-sky-300 transition-colors"
+                className="mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/15 disabled:opacity-50 rounded-xl text-sm text-sky-600 transition-colors"
               >
                 {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="text-base leading-none">📍</span>}
                 {t("checkout.gps")}
               </button>
               {form.lat != null && form.lng != null && (
-                <p className="text-[11px] text-emerald-300 mt-1.5 flex items-center gap-1.5">
+                <p className="text-[11px] text-emerald-700 mt-1.5 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3 h-3" />
                   {t("checkout.gpsDetected")}: <span className="font-mono">{form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span>
                 </p>
@@ -1419,31 +1419,31 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
 
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">{t("checkout.note")}</label>
+              <label className="text-xs text-slate-600 mb-1 block">{t("checkout.note")}</label>
               <textarea
                 placeholder={t("checkout.notePlaceholder")}
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                className="w-full bg-slate-100 border border-black/10 rounded-xl px-3 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500/50 resize-none"
               />
             </div>
           </div>
 
           {paymentMethods.length > 0 && (
-            <div className="bg-slate-900 rounded-2xl p-4 space-y-2">
-              <h3 className="text-xs font-medium text-slate-400 mb-2">{t("checkout.paymentMethod")}</h3>
+            <div className="bg-white rounded-2xl p-4 space-y-2">
+              <h3 className="text-xs font-medium text-slate-600 mb-2">{t("checkout.paymentMethod")}</h3>
               <button
                 type="button"
                 onClick={() => setSelectedPayment("")}
                 className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors ${
                   selectedPayment === ""
                     ? "border-emerald-500/60 bg-emerald-500/10"
-                    : "border-slate-700 bg-slate-800/50"
+                    : "border-black/10 bg-slate-100"
                 }`}
               >
-                <span className="text-sm font-medium text-white">{t("checkout.cashOnDelivery")}</span>
-                {selectedPayment === "" && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                <span className="text-sm font-medium text-slate-900">{t("checkout.cashOnDelivery")}</span>
+                {selectedPayment === "" && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
               </button>
               {paymentMethods.map((m) => (
                 <button
@@ -1453,11 +1453,11 @@ function StoreInner({ slug }: { slug: string }) {
                   className={`w-full flex items-center justify-between p-3 rounded-xl border transition-colors ${
                     selectedPayment === m.code
                       ? "border-emerald-500/60 bg-emerald-500/10"
-                      : "border-slate-700 bg-slate-800/50"
+                      : "border-black/10 bg-slate-100"
                   }`}
                 >
-                  <span className="text-sm font-medium text-white">{m.name}</span>
-                  {selectedPayment === m.code && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                  <span className="text-sm font-medium text-slate-900">{m.name}</span>
+                  {selectedPayment === m.code && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                 </button>
               ))}
             </div>
@@ -1465,12 +1465,12 @@ function StoreInner({ slug }: { slug: string }) {
 
           {submitError && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-              <p className="text-sm text-red-400">{submitError}</p>
+              <p className="text-sm text-red-600">{submitError}</p>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
+        <div className="p-4 border-t border-black/10 bg-slate-50">
           <button
             onClick={handleCheckout}
             disabled={submitting || !form.name.trim() || !isValidUzPhone(form.phone)}
@@ -1488,22 +1488,22 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- CART ----
   if (view === "cart") {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-slate-800">
-          <button onClick={() => setView("home")} className="p-2 rounded-xl text-slate-400 hover:text-white">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <div className="px-4 pt-4 pb-2 flex items-center gap-3 border-b border-black/10">
+          <button onClick={() => setView("home")} className="p-2 rounded-xl text-slate-600 hover:text-slate-900">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-base font-semibold text-white">{t("cart.title")}</h2>
-          <span className="ml-1 text-xs text-slate-400">{t("cart.items", { count: cartCount })}</span>
+          <h2 className="text-base font-semibold text-slate-900">{t("cart.title")}</h2>
+          <span className="ml-1 text-xs text-slate-600">{t("cart.items", { count: cartCount })}</span>
         </div>
 
         {cart.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mb-4">
-              <ShoppingCart className="w-8 h-8 text-slate-600" />
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4">
+              <ShoppingCart className="w-8 h-8 text-slate-400" />
             </div>
-            <p className="text-white font-medium mb-1">{t("cart.empty.title")}</p>
-            <p className="text-sm text-slate-400">{t("cart.addMore")}</p>
+            <p className="text-slate-900 font-medium mb-1">{t("cart.empty.title")}</p>
+            <p className="text-sm text-slate-600">{t("cart.addMore")}</p>
             <button
               onClick={() => setView("home")}
               className="mt-4 px-6 py-2.5 rounded-2xl text-sm font-medium text-white"
@@ -1516,18 +1516,18 @@ function StoreInner({ slug }: { slug: string }) {
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.map((item) => (
-                <div key={cartLineKey(item.productId, item.variantId)} className="bg-slate-900 rounded-2xl p-3 flex items-center gap-3">
-                  <div className="w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div key={cartLineKey(item.productId, item.variantId)} className="bg-white rounded-2xl p-3 flex items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
-                      <Package className="w-7 h-7 text-slate-600" />
+                      <Package className="w-7 h-7 text-slate-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                    <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
                     {item.variantLabel && (
-                      <p className="text-[11px] text-slate-400 truncate">{item.variantLabel}</p>
+                      <p className="text-[11px] text-slate-600 truncate">{item.variantLabel}</p>
                     )}
                     <p className="text-sm font-semibold mt-0.5" style={{ color: primaryColor }}>
                       {formatPrice(item.price, data.tenant.currency, lang)}
@@ -1536,11 +1536,11 @@ function StoreInner({ slug }: { slug: string }) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => updateQty(item.productId, -1, item.variantId)}
-                      className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 active:scale-90 transition-transform"
+                      className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:scale-90 transition-transform"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
-                    <span className="text-sm font-semibold text-white w-5 text-center">{item.qty}</span>
+                    <span className="text-sm font-semibold text-slate-900 w-5 text-center">{item.qty}</span>
                     <button
                       onClick={() => updateQty(item.productId, 1, item.variantId)}
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
@@ -1555,13 +1555,13 @@ function StoreInner({ slug }: { slug: string }) {
 
             {/* Smart Cross-Sell & Upsell recommendations in Cart */}
             {data && data.products.length > 1 && (
-              <div className="px-4 py-3 bg-slate-900/60 border-t border-slate-800">
+              <div className="px-4 py-3 bg-white/75 border-t border-black/10">
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-400" />
                     {t("pdp.comboTitle")}
                   </span>
-                  <span className="text-[10px] text-amber-400 font-semibold bg-amber-400/10 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] text-amber-600 font-semibold bg-amber-400/10 px-2 py-0.5 rounded-full">
                     {t("pdp.specialPrice")}
                   </span>
                 </div>
@@ -1572,20 +1572,20 @@ function StoreInner({ slug }: { slug: string }) {
                     .map((crossProduct) => (
                       <div
                         key={crossProduct.id}
-                        className="w-36 flex-shrink-0 bg-slate-900 rounded-xl p-2 border border-slate-800 flex flex-col justify-between"
+                        className="w-36 flex-shrink-0 bg-white rounded-xl p-2 border border-black/10 flex flex-col justify-between"
                       >
-                        <div className="relative w-full aspect-square bg-slate-800 rounded-lg overflow-hidden mb-1.5">
+                        <div className="relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden mb-1.5">
                           {crossProduct.imageUrl ? (
                             <img src={crossProduct.imageUrl} alt={crossProduct.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Package className="w-6 h-6 text-slate-600" />
+                              <Package className="w-6 h-6 text-slate-400" />
                             </div>
                           )}
                         </div>
-                        <p className="text-[11px] font-medium text-white truncate mb-1">{crossProduct.name}</p>
+                        <p className="text-[11px] font-medium text-slate-900 truncate mb-1">{crossProduct.name}</p>
                         <div className="flex items-center justify-between gap-1 mt-auto">
-                          <span className="text-xs font-bold text-emerald-400">
+                          <span className="text-xs font-bold text-emerald-600">
                             {formatPrice(crossProduct.price, data.tenant.currency, lang)}
                           </span>
                           <button
@@ -1606,10 +1606,10 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             )}
 
-            <div className="p-4 border-t border-slate-800 bg-slate-950">
+            <div className="p-4 border-t border-black/10 bg-slate-50">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-slate-400">{t("cart.totalItems", { count: cartCount })}</span>
-                <span className="text-lg font-bold text-white">{formatPrice(cartTotal, data.tenant.currency, lang)}</span>
+                <span className="text-sm text-slate-600">{t("cart.totalItems", { count: cartCount })}</span>
+                <span className="text-lg font-bold text-slate-900">{formatPrice(cartTotal, data.tenant.currency, lang)}</span>
               </div>
               <button
                 onClick={() => setView("checkout")}
@@ -1751,8 +1751,8 @@ function StoreInner({ slug }: { slug: string }) {
     const reviewsEl = (
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+            <Star className="w-4 h-4 fill-amber-400 text-amber-600" />
             {t("pdp.reviews")}
             {(selectedProduct.reviewCount ?? 0) > 0 && (
               <span className="text-slate-500">({selectedProduct.reviewCount})</span>
@@ -1762,7 +1762,7 @@ function StoreInner({ slug }: { slug: string }) {
             <button
               type="button"
               onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
-              className="text-xs font-medium text-sky-400 hover:text-sky-300"
+              className="text-xs font-medium text-sky-600 hover:text-sky-600"
             >
               {t("pdp.writeReview")}
             </button>
@@ -1771,22 +1771,22 @@ function StoreInner({ slug }: { slug: string }) {
         {reviewsLoading ? (
           <div className="space-y-3">
             {[0, 1].map((i) => (
-              <div key={i} className="bg-slate-900 rounded-xl p-3 border border-slate-800 animate-pulse">
-                <div className="h-3 w-24 bg-slate-800 rounded mb-2" />
-                <div className="h-2.5 w-full bg-slate-800 rounded" />
-                <div className="h-2.5 w-2/3 bg-slate-800 rounded mt-1.5" />
+              <div key={i} className="bg-white rounded-xl p-3 border border-black/10 animate-pulse">
+                <div className="h-3 w-24 bg-slate-100 rounded mb-2" />
+                <div className="h-2.5 w-full bg-slate-100 rounded" />
+                <div className="h-2.5 w-2/3 bg-slate-100 rounded mt-1.5" />
               </div>
             ))}
           </div>
         ) : productReviews.length === 0 ? (
-          <div className="flex flex-col items-center text-center py-5 px-3 bg-slate-900/50 rounded-xl border border-slate-800">
+          <div className="flex flex-col items-center text-center py-5 px-3 bg-white/70 rounded-xl border border-black/10">
             <Star className="w-7 h-7 text-slate-700 mb-2" />
-            <p className="text-xs text-slate-400">{t("pdp.noReviews")}</p>
+            <p className="text-xs text-slate-600">{t("pdp.noReviews")}</p>
             {telegramUser?.userId && (
               <button
                 type="button"
                 onClick={() => { haptic.light(); setReviewForm((f) => ({ ...f, open: true })); }}
-                className="mt-3 px-4 py-2 rounded-xl bg-slate-800 text-sky-400 text-xs font-medium active:scale-[0.98] transition-transform"
+                className="mt-3 px-4 py-2 rounded-xl bg-slate-100 text-sky-600 text-xs font-medium active:scale-[0.98] transition-transform"
               >
                 {t("pdp.beFirst")}
               </button>
@@ -1795,22 +1795,22 @@ function StoreInner({ slug }: { slug: string }) {
         ) : (
           <div className="space-y-3">
             {productReviews.slice(0, 5).map((rv) => (
-              <div key={rv.id} className="bg-slate-900 rounded-xl p-3 border border-slate-800">
+              <div key={rv.id} className="bg-white rounded-xl p-3 border border-black/10">
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-3.5 h-3.5 ${i < rv.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"}`}
+                        className={`w-3.5 h-3.5 ${i < rv.rating ? "fill-amber-400 text-amber-600" : "text-slate-700"}`}
                       />
                     ))}
                   </div>
-                  <span className="text-xs text-slate-400 font-medium">{rv.customerName}</span>
-                  <span className="text-[10px] text-slate-600 ml-auto">
+                  <span className="text-xs text-slate-600 font-medium">{rv.customerName}</span>
+                  <span className="text-[10px] text-slate-400 ml-auto">
                     {new Date(rv.createdAt).toLocaleDateString(locale, { day: "numeric", month: "short" })}
                   </span>
                 </div>
-                <p className="text-sm text-slate-300 whitespace-pre-wrap">{rv.text}</p>
+                <p className="text-sm text-slate-800 whitespace-pre-wrap">{rv.text}</p>
               </div>
             ))}
             {productReviews.length > 5 && (
@@ -1825,7 +1825,7 @@ function StoreInner({ slug }: { slug: string }) {
     const comboEl = selectedProduct.comboAddons && selectedProduct.comboAddons.length > 0 ? (
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
             {t("pdp.comboTitle")}
           </h3>
           <span className="text-[10px] text-slate-500">
@@ -1860,42 +1860,42 @@ function StoreInner({ slug }: { slug: string }) {
                 className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-colors text-left ${
                   isSelected
                     ? "bg-emerald-500/10 border-emerald-500/40"
-                    : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    : "bg-white border-black/10 hover:border-black/10"
                 } ${isOut ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {/* Checkbox */}
                 <div
                   className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                    isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-600"
+                    isSelected ? "bg-emerald-500 border-emerald-500" : "border-black/15"
                   }`}
                 >
-                  {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  {isSelected && <CheckCircle2 className="w-3 h-3 text-slate-900" />}
                 </div>
                 {/* Image */}
                 {ap.imageUrl ? (
                   <img src={ap.imageUrl} alt={ap.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
-                    <Package className="w-5 h-5 text-slate-600" />
+                  <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-5 h-5 text-slate-400" />
                   </div>
                 )}
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white font-medium line-clamp-2">{ap.name}</div>
+                  <div className="text-xs text-slate-900 font-medium line-clamp-2">{ap.name}</div>
                   {isOut ? (
-                    <div className="text-[10px] text-rose-400 mt-0.5">{t("pdp.outOfStock")}</div>
+                    <div className="text-[10px] text-rose-600 mt-0.5">{t("pdp.outOfStock")}</div>
                   ) : (
                     <div className="flex items-baseline gap-1.5 mt-1">
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-sm font-bold text-slate-900">
                         {finalPrice.toLocaleString(locale)}
-                        <span className="text-[10px] font-normal text-slate-400 ml-0.5">
+                        <span className="text-[10px] font-normal text-slate-600 ml-0.5">
                           {data.tenant.currency === "UZS" ? t("common.sum") : data.tenant.currency}
                         </span>
                       </span>
                       {pct > 0 && (
                         <>
                           <span className="text-[10px] text-slate-500 line-through">{origPrice.toLocaleString(locale)}</span>
-                          <span className="text-[10px] font-bold text-rose-300">−{pct}%</span>
+                          <span className="text-[10px] font-bold text-rose-600">−{pct}%</span>
                         </>
                       )}
                     </div>
@@ -1910,7 +1910,7 @@ function StoreInner({ slug }: { slug: string }) {
       // Single rejimda kombo bo'limi yoqilgan, lekin mahsulotda qo'shimcha yo'q —
       // bo'lim jim yo'qolmasligi uchun ohista maslahat.
       <div className="flex items-center gap-2 text-xs text-slate-500">
-        <Plus className="w-4 h-4 text-slate-600" />
+        <Plus className="w-4 h-4 text-slate-400" />
         <span>{t("pdp.noCombo")}</span>
       </div>
     ) : null;
@@ -1931,10 +1931,10 @@ function StoreInner({ slug }: { slug: string }) {
     };
 
     return (
-      <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col animate-in fade-in duration-150">
+      <div className="fixed inset-0 bg-slate-50 z-50 flex flex-col animate-in fade-in duration-150">
         {/* Compact sticky header — scroll'da paydo bo'ladi (Uzum uslubi) */}
         <div
-          className={`absolute top-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 transition-opacity duration-200 ${
+          className={`absolute top-0 left-0 right-0 z-30 bg-white/90 backdrop-blur border-b border-black/10 transition-opacity duration-200 ${
             pdpScrolled ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           }`}
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
@@ -1943,23 +1943,23 @@ function StoreInner({ slug }: { slug: string }) {
             {!isSingle && (
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-slate-900 active:scale-90 transition-transform"
                 aria-label={t("common.close")}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <h2 className="flex-1 text-sm font-semibold text-white truncate">{selectedProduct.name}</h2>
+            <h2 className="flex-1 text-sm font-semibold text-slate-900 truncate">{selectedProduct.name}</h2>
             <button
               onClick={() => toggleFavorite(selectedProduct.id)}
               className="w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-transform"
               aria-label={isFav ? t("favorites.remove") : t("favorites.add")}
             >
-              <Heart className={`w-5 h-5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
+              <Heart className={`w-5 h-5 ${isFav ? "text-rose-600 fill-rose-400" : "text-slate-900"}`} />
             </button>
             <button
               onClick={handleShare}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-slate-900 active:scale-90 transition-transform"
               aria-label={t("common.share")}
             >
               <Share2 className="w-5 h-5" />
@@ -1977,7 +1977,7 @@ function StoreInner({ slug }: { slug: string }) {
           {isSingle ? <div /> : (
             <button
               onClick={() => setSelectedProduct(null)}
-              className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center text-white active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-full bg-slate-100 backdrop-blur flex items-center justify-center text-slate-900 active:scale-90 transition-transform"
               aria-label={t("common.close")}
             >
               <ArrowLeft className="w-5 h-5" />
@@ -1986,14 +1986,14 @@ function StoreInner({ slug }: { slug: string }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => toggleFavorite(selectedProduct.id)}
-              className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-full bg-slate-100 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
               aria-label={isFav ? t("favorites.remove") : t("favorites.add")}
             >
-              <Heart className={`w-4.5 h-4.5 ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`} />
+              <Heart className={`w-4.5 h-4.5 ${isFav ? "text-rose-600 fill-rose-400" : "text-slate-900"}`} />
             </button>
             <button
               onClick={handleShare}
-              className="w-9 h-9 rounded-full bg-slate-800/60 backdrop-blur flex items-center justify-center text-white active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-full bg-slate-100 backdrop-blur flex items-center justify-center text-slate-900 active:scale-90 transition-transform"
               aria-label={t("common.share")}
             >
               <Share2 className="w-4.5 h-4.5" />
@@ -2035,12 +2035,12 @@ function StoreInner({ slug }: { slug: string }) {
             {/* Price block — WB style. B2B'da narx yashirilgan bo'lsa
                 "so'rov bo'yicha" (karta bilan bir xil qoida). */}
             {isB2b && !b2bCfg.showPrices ? (
-              <p className="text-lg font-semibold text-slate-300 mb-2">{t("b2b.priceOnRequest")}</p>
+              <p className="text-lg font-semibold text-slate-800 mb-2">{t("b2b.priceOnRequest")}</p>
             ) : (
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-bold text-white">
+                <span className="text-3xl font-bold text-slate-900">
                   {price.toLocaleString(locale)}
-                  <span className="text-base font-normal text-slate-400 ml-1">
+                  <span className="text-base font-normal text-slate-600 ml-1">
                     {data.tenant.currency === "UZS" ? t("common.sum") : data.tenant.currency}
                   </span>
                 </span>
@@ -2052,7 +2052,7 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             )}
             {!isB2b && savings > 0 && (
-              <div className="inline-block bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-1 rounded-md mb-3">
+              <div className="inline-block bg-emerald-500/15 text-emerald-700 text-xs font-medium px-2 py-1 rounded-md mb-3">
                 {t("pdp.savings", { value: `${savings.toLocaleString(locale)} ${currencyStr}` })}
               </div>
             )}
@@ -2061,22 +2061,22 @@ function StoreInner({ slug }: { slug: string }) {
                 Narx yashirilgan (B2B) bo'lsa ko'rsatmaymiz. */}
             {(!isB2b || b2bCfg.showPrices) &&
               (selectedProduct.priceTiers?.length ?? 0) > 0 && (
-                <div className="mb-3 rounded-2xl border border-slate-800 overflow-hidden">
-                  <div className="px-3 py-2 bg-slate-900 text-[11px] text-slate-400">
+                <div className="mb-3 rounded-2xl border border-black/10 overflow-hidden">
+                  <div className="px-3 py-2 bg-white text-[11px] text-slate-600">
                     {t("tiers.pdpTitle")}
                   </div>
-                  <div className="divide-y divide-slate-800">
+                  <div className="divide-y divide-black/10">
                     {[...(selectedProduct.priceTiers ?? [])]
                       .sort((a, b) => a.minQty - b.minQty)
                       .map((tier, i) => (
                         <div key={i} className="flex items-center justify-between px-3 py-2">
-                          <span className="text-[13px] text-slate-300">
+                          <span className="text-[13px] text-slate-800">
                             {t("tiers.fromN", {
                               n: tier.minQty.toLocaleString(locale),
                               unit: selectedProduct.unit || t("tiers.pcs"),
                             })}
                           </span>
-                          <span className="text-[13px] font-semibold text-white">
+                          <span className="text-[13px] font-semibold text-slate-900">
                             {tier.price.toLocaleString(locale)} {currencyStr}
                           </span>
                         </div>
@@ -2087,8 +2087,8 @@ function StoreInner({ slug }: { slug: string }) {
 
             {/* Minimal buyurtma miqdori (MOQ) */}
             {(selectedProduct.moq ?? 0) > 0 && (
-              <div className="mb-3 inline-flex items-center gap-1.5 bg-slate-800/60 text-slate-300 text-xs px-2.5 py-1 rounded-lg">
-                <Package className="w-3.5 h-3.5 text-slate-400" />
+              <div className="mb-3 inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 text-xs px-2.5 py-1 rounded-lg">
+                <Package className="w-3.5 h-3.5 text-slate-600" />
                 {t("tiers.moqLine", {
                   n: (selectedProduct.moq ?? 0).toLocaleString(locale),
                   unit: selectedProduct.unit || t("tiers.pcs"),
@@ -2101,7 +2101,7 @@ function StoreInner({ slug }: { slug: string }) {
             {!isSingle && <div className="mb-4">{trustBadgesEl}</div>}
 
             {/* Title */}
-            <h2 className="text-lg font-semibold text-white mb-3 leading-snug">{selectedProduct.name}</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-3 leading-snug">{selectedProduct.name}</h2>
 
             {/* Variant tanlagichi — har o'q (Hajm, Rang) uchun alohida qator.
                 Eng arzon, zaxirada bor variant boshidan tanlangan bo'ladi. */}
@@ -2111,10 +2111,10 @@ function StoreInner({ slug }: { slug: string }) {
                   const axisLabel = pickLocalizedLabel(opt.name, lang);
                   return (
                     <div key={opt.id}>
-                      <p className="text-[11px] text-slate-400 mb-1.5">
+                      <p className="text-[11px] text-slate-600 mb-1.5">
                         {axisLabel}
                         {variant?.optionValues[opt.id] && (
-                          <span className="text-white ml-1">
+                          <span className="text-slate-900 ml-1">
                             {pickLocalizedLabel(opt.values.find((v) => v.id === variant.optionValues[opt.id])?.label, lang)}
                           </span>
                         )}
@@ -2142,9 +2142,10 @@ function StoreInner({ slug }: { slug: string }) {
                               }}
                               className={`px-3 py-2 rounded-xl text-sm transition-all active:scale-95 border ${
                                 selected
-                                  ? "border-white bg-slate-800 text-white font-medium"
-                                  : "border-slate-700 bg-slate-900 text-slate-300"
+                                  ? "text-slate-900 font-semibold"
+                                  : "border-black/10 bg-white text-slate-800"
                               } ${soldOut ? "opacity-40" : ""}`}
+                              style={selected ? { borderColor: primaryColor, backgroundColor: primaryColor + "14" } : undefined}
                             >
                               {pickLocalizedLabel(value.label, lang) || value.id}
                               {soldOut && <span className="ml-1 text-[10px] text-slate-500">·</span>}
@@ -2165,9 +2166,10 @@ function StoreInner({ slug }: { slug: string }) {
                         onClick={() => { haptic.light(); setSelectedVariantId(v.id); }}
                         className={`px-3 py-2 rounded-xl text-sm transition-all active:scale-95 border ${
                           variant?.id === v.id
-                            ? "border-white bg-slate-800 text-white font-medium"
-                            : "border-slate-700 bg-slate-900 text-slate-300"
+                            ? "text-slate-900 font-semibold"
+                            : "border-black/10 bg-white text-slate-800"
                         } ${v.stock <= 0 ? "opacity-40" : ""}`}
+                        style={variant?.id === v.id ? { borderColor: primaryColor, backgroundColor: primaryColor + "14" } : undefined}
                       >
                         {v.name}
                       </button>
@@ -2177,13 +2179,13 @@ function StoreInner({ slug }: { slug: string }) {
 
                 {/* Tanlangan variantning o'z xarakteristikasi */}
                 {variant && variant.attributes.length > 0 && (
-                  <div className="rounded-xl bg-slate-900 border border-slate-800 divide-y divide-slate-800">
+                  <div className="rounded-xl bg-white border border-black/10 divide-y divide-black/10">
                     {variant.attributes.map((attr, i) => (
                       <div key={i} className="flex items-start justify-between gap-3 px-3 py-2">
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-slate-600">
                           {pickLocalizedLabel(attr.label, lang)}
                         </span>
-                        <span className="text-xs text-white text-right">
+                        <span className="text-xs text-slate-900 text-right">
                           {pickLocalizedLabel(attr.value, lang)}
                         </span>
                       </div>
@@ -2214,7 +2216,7 @@ function StoreInner({ slug }: { slug: string }) {
                 <div
                   key={b.key}
                   className={`animate-in fade-in slide-in-from-bottom-1 duration-300 ${
-                    i > 0 ? "mt-5 pt-5 border-t border-slate-800" : "mt-4"
+                    i > 0 ? "mt-5 pt-5 border-t border-black/10" : "mt-4"
                   }`}
                   style={{ animationDelay: `${Math.min(i * 40, 240)}ms`, animationFillMode: "both" }}
                 >
@@ -2223,17 +2225,17 @@ function StoreInner({ slug }: { slug: string }) {
               ));
             })()}
             {isMeasured && (
-              <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
+              <div className="mt-5 rounded-2xl border border-black/10 bg-white p-4 space-y-3">
                 {selectedProduct.inputMode === "DIMENSIONS" ? (
                   <div className="grid grid-cols-3 gap-2">
-                    <label className="text-[11px] text-slate-400">{t("measurement.width")}<input type="number" min="0" step="0.01" value={measureWidth} onChange={(e) => setMeasureWidth(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-white" /></label>
-                    <label className="text-[11px] text-slate-400">{t("measurement.length")}<input type="number" min="0" step="0.01" value={measureLength} onChange={(e) => setMeasureLength(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-white" /></label>
-                    <label className="text-[11px] text-slate-400">{t("measurement.pieces")}<input type="number" min="1" step="1" value={measurePieces} onChange={(e) => setMeasurePieces(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-white" /></label>
+                    <label className="text-[11px] text-slate-600">{t("measurement.width")}<input type="number" min="0" step="0.01" value={measureWidth} onChange={(e) => setMeasureWidth(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-100 border border-black/10 px-3 py-2 text-slate-900" /></label>
+                    <label className="text-[11px] text-slate-600">{t("measurement.length")}<input type="number" min="0" step="0.01" value={measureLength} onChange={(e) => setMeasureLength(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-100 border border-black/10 px-3 py-2 text-slate-900" /></label>
+                    <label className="text-[11px] text-slate-600">{t("measurement.pieces")}<input type="number" min="1" step="1" value={measurePieces} onChange={(e) => setMeasurePieces(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-100 border border-black/10 px-3 py-2 text-slate-900" /></label>
                   </div>
                 ) : (
-                  <label className="text-xs text-slate-400">{t("measurement.quantity", { unit: selectedProduct.unit || "" })}<input type="number" min={minQty || 0} max={Number.isFinite(maxQty) ? maxQty : undefined} step={Number(selectedProduct.quantityStep) || 0.01} value={directQuantity} onChange={(e) => setDirectQuantity(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2.5 text-white" /></label>
+                  <label className="text-xs text-slate-600">{t("measurement.quantity", { unit: selectedProduct.unit || "" })}<input type="number" min={minQty || 0} max={Number.isFinite(maxQty) ? maxQty : undefined} step={Number(selectedProduct.quantityStep) || 0.01} value={directQuantity} onChange={(e) => setDirectQuantity(e.target.value)} className="mt-1 w-full rounded-xl bg-slate-100 border border-black/10 px-3 py-2.5 text-slate-900" /></label>
                 )}
-                {measuredQty > 0 && <div className="flex justify-between text-sm"><span className="text-slate-300">{t("measurement.total", { qty: measuredQty.toLocaleString(locale), unit: selectedProduct.unit || "" })}</span><strong className="text-white">{formatPrice(measuredQty * price, data.tenant.currency, lang)}</strong></div>}
+                {measuredQty > 0 && <div className="flex justify-between text-sm"><span className="text-slate-800">{t("measurement.total", { qty: measuredQty.toLocaleString(locale), unit: selectedProduct.unit || "" })}</span><strong className="text-slate-900">{formatPrice(measuredQty * price, data.tenant.currency, lang)}</strong></div>}
               </div>
             )}
           </div>
@@ -2241,7 +2243,7 @@ function StoreInner({ slug }: { slug: string }) {
 
         {/* Sticky bottom CTA */}
         <div
-          className="border-t border-slate-800 bg-slate-950 p-4"
+          className="border-t border-black/10 bg-slate-50 p-4"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           {(() => {
@@ -2264,8 +2266,8 @@ function StoreInner({ slug }: { slug: string }) {
                             : selectedProduct.name,
                         });
                       }}
-                      className="w-full py-3.5 rounded-2xl font-semibold text-white text-base active:scale-[0.98] transition-all"
-                      style={i === 0 ? { backgroundColor: primaryColor } : { backgroundColor: "rgba(255,255,255,0.08)" }}
+                      className="w-full py-3.5 rounded-2xl font-semibold text-slate-900 text-base active:scale-[0.98] transition-all"
+                      style={i === 0 ? { backgroundColor: primaryColor } : { backgroundColor: "rgba(17,24,39,0.08)" }}
                     >
                       {t(
                         kind === "price"
@@ -2325,7 +2327,7 @@ function StoreInner({ slug }: { slug: string }) {
 
             if (availableStock <= 0) {
               return (
-                <button disabled className="w-full py-4 rounded-2xl font-semibold text-slate-400 text-base bg-slate-800 cursor-not-allowed">
+                <button disabled className="w-full py-4 rounded-2xl font-semibold text-slate-600 text-base bg-slate-100 cursor-not-allowed">
                   {t("promo.endedShort")}
                 </button>
               );
@@ -2376,17 +2378,17 @@ function StoreInner({ slug }: { slug: string }) {
 
           {qty > 0 && selectedAddons.size === 0 && availableStock > 0 && (
             <div className="flex items-center gap-3">
-              <div className="flex items-center bg-slate-800 rounded-2xl">
+              <div className="flex items-center bg-slate-100 rounded-2xl">
                 <button
                   onClick={() => updateQty(selectedProduct.id, -1, hasVariants ? variant?.id ?? null : undefined)}
-                  className="w-12 h-12 flex items-center justify-center text-white active:scale-90 transition-transform"
+                  className="w-12 h-12 flex items-center justify-center text-slate-900 active:scale-90 transition-transform"
                 >
                   <Minus className="w-5 h-5" />
                 </button>
-                <span className="text-base font-bold text-white px-3 min-w-[36px] text-center">{qty}</span>
+                <span className="text-base font-bold text-slate-900 px-3 min-w-[36px] text-center">{qty}</span>
                 <button
                   onClick={() => updateQty(selectedProduct.id, 1, hasVariants ? variant?.id ?? null : undefined)}
-                  className="w-12 h-12 flex items-center justify-center text-white active:scale-90 transition-transform"
+                  className="w-12 h-12 flex items-center justify-center text-slate-900 active:scale-90 transition-transform"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -2410,14 +2412,14 @@ function StoreInner({ slug }: { slug: string }) {
             onClick={() => setTrustSheet(null)}
           >
             <div
-              className="w-full sm:max-w-sm bg-slate-900 sm:rounded-2xl rounded-t-3xl border-t sm:border border-slate-800 shadow-2xl animate-in slide-in-from-bottom duration-200"
+              className="w-full sm:max-w-sm bg-white sm:rounded-2xl rounded-t-3xl border-t sm:border border-black/10 shadow-2xl animate-in slide-in-from-bottom duration-200"
               onClick={(e) => e.stopPropagation()}
               style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
             >
               <div className="flex justify-end p-3">
                 <button
                   onClick={() => setTrustSheet(null)}
-                  className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 active:scale-90"
+                  className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90"
                   aria-label={t("common.close")}
                 >
                   <X className="w-4 h-4" />
@@ -2427,27 +2429,27 @@ function StoreInner({ slug }: { slug: string }) {
                 {trustSheet === "original" ? (
                   <>
                     <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                      <BadgeCheck className="w-9 h-9 text-emerald-400" />
+                      <BadgeCheck className="w-9 h-9 text-emerald-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">{t("pdp.trust.original.title")}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">
+                    <h3 className="text-lg font-bold text-slate-900">{t("pdp.trust.original.title")}</h3>
+                    <p className="text-sm text-slate-800 leading-relaxed">
                       {t("pdp.trust.original.text")}
                     </p>
                   </>
                 ) : (
                   <>
                     <div className="w-16 h-16 rounded-full bg-sky-500/15 flex items-center justify-center">
-                      <ShieldCheck className="w-9 h-9 text-sky-400" />
+                      <ShieldCheck className="w-9 h-9 text-sky-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">{t("pdp.trust.warranty.title")}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">
+                    <h3 className="text-lg font-bold text-slate-900">{t("pdp.trust.warranty.title")}</h3>
+                    <p className="text-sm text-slate-800 leading-relaxed">
                       {t("pdp.trust.warranty.text")}
                     </p>
                   </>
                 )}
                 <button
                   onClick={() => setTrustSheet(null)}
-                  className="mt-2 w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium text-white active:scale-[0.98] transition-transform"
+                  className="mt-2 w-full py-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-medium text-slate-900 active:scale-[0.98] transition-transform"
                 >
                   {t("common.ok")}
                 </button>
@@ -2463,15 +2465,15 @@ function StoreInner({ slug }: { slug: string }) {
             onClick={() => setReviewForm((f) => ({ ...f, open: false }))}
           >
             <div
-              className="w-full sm:max-w-sm bg-slate-900 sm:rounded-2xl rounded-t-3xl border-t sm:border border-slate-800 shadow-2xl animate-in slide-in-from-bottom duration-200"
+              className="w-full sm:max-w-sm bg-white sm:rounded-2xl rounded-t-3xl border-t sm:border border-black/10 shadow-2xl animate-in slide-in-from-bottom duration-200"
               onClick={(e) => e.stopPropagation()}
               style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
             >
-              <div className="flex justify-between items-center p-4 border-b border-slate-800">
-                <h3 className="text-base font-semibold text-white">{t("pdp.review.title")}</h3>
+              <div className="flex justify-between items-center p-4 border-b border-black/10">
+                <h3 className="text-base font-semibold text-slate-900">{t("pdp.review.title")}</h3>
                 <button
                   onClick={() => setReviewForm((f) => ({ ...f, open: false }))}
-                  className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 active:scale-90"
+                  className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 active:scale-90"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2479,7 +2481,7 @@ function StoreInner({ slug }: { slug: string }) {
               <div className="px-5 py-4 space-y-4">
                 {/* Star picker */}
                 <div>
-                  <p className="text-xs text-slate-400 mb-2">{t("pdp.review.rating")}</p>
+                  <p className="text-xs text-slate-600 mb-2">{t("pdp.review.rating")}</p>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button
@@ -2489,20 +2491,20 @@ function StoreInner({ slug }: { slug: string }) {
                         className="active:scale-90 transition-transform"
                       >
                         <Star
-                          className={`w-9 h-9 ${n <= reviewForm.rating ? "fill-amber-400 text-amber-400" : "text-slate-700"}`}
+                          className={`w-9 h-9 ${n <= reviewForm.rating ? "fill-amber-400 text-amber-600" : "text-slate-700"}`}
                         />
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 mb-2">{t("pdp.review.textLabel")}</p>
+                  <p className="text-xs text-slate-600 mb-2">{t("pdp.review.textLabel")}</p>
                   <textarea
                     value={reviewForm.text}
                     onChange={(e) => setReviewForm((f) => ({ ...f, text: e.target.value }))}
                     rows={4}
                     placeholder={t("pdp.review.placeholder")}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 resize-none"
+                    className="w-full bg-slate-100 border border-black/10 rounded-xl px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500/50 resize-none"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
                     {t("pdp.review.moderation")}
@@ -2553,12 +2555,12 @@ function StoreInner({ slug }: { slug: string }) {
   // Tenant to'ldirmagan bo'lsa umuman chizilmaydi (bo'sh blok qolmasin).
   const b2bBanner =
     isB2b && (b2bCfg.intro.trim() || b2bCfg.moqNote.trim()) ? (
-      <div className="mb-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+      <div className="mb-3 rounded-2xl border border-black/10 bg-white px-4 py-3">
         {b2bCfg.intro.trim() && (
-          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-line">{b2bCfg.intro}</p>
+          <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-line">{b2bCfg.intro}</p>
         )}
         {b2bCfg.moqNote.trim() && (
-          <p className="text-[11px] text-slate-400 mt-1.5">
+          <p className="text-[11px] text-slate-600 mt-1.5">
             <span className="text-slate-500">{t("b2b.moqLabel")}:</span> {b2bCfg.moqNote}
           </p>
         )}
@@ -2583,7 +2585,7 @@ function StoreInner({ slug }: { slug: string }) {
     return (
       <div
         key={product.id}
-        className={`bg-slate-900 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group border border-slate-800/60 ${
+        className={`bg-white rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group border border-black/10 ${
           outOfStock ? "opacity-70" : ""
         }`}
         onClick={() => setSelectedProduct(product)}
@@ -2609,21 +2611,21 @@ function StoreInner({ slug }: { slug: string }) {
           className="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full bg-black/40 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
         >
           <Heart
-            className={`w-3.5 h-3.5 transition-colors ${isFav ? "text-rose-400 fill-rose-400" : "text-white"}`}
+            className={`w-3.5 h-3.5 transition-colors ${isFav ? "text-rose-600 fill-rose-400" : "text-slate-900"}`}
             strokeWidth={2}
           />
         </button>
 
         {/* Image */}
-        <div className="aspect-square bg-slate-800 flex items-center justify-center overflow-hidden relative">
+        <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden relative">
           {product.imageUrl ? (
             <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
           ) : (
-            <Package className="w-10 h-10 text-slate-600" />
+            <Package className="w-10 h-10 text-slate-400" />
           )}
           {outOfStock && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <span className="text-white text-xs font-bold px-3 py-1 bg-slate-800/80 rounded-md border border-slate-700">
+              <span className="text-slate-900 text-xs font-bold px-3 py-1 bg-slate-200 rounded-md border border-black/10">
                 {t("pdp.outOfStock")}
               </span>
             </div>
@@ -2633,11 +2635,11 @@ function StoreInner({ slug }: { slug: string }) {
         {/* Info */}
         <div className="p-3">
           {/* Name — mahsulot identifikatori birinchi */}
-          <p className="text-xs font-medium text-white leading-snug line-clamp-2 mb-1.5">{product.name}</p>
+          <p className="text-xs font-medium text-slate-900 leading-snug line-clamp-2 mb-1.5">{product.name}</p>
 
           {/* Low stock indicator */}
           {lowStock && (
-            <p className="text-[10px] text-amber-300 mb-1.5 leading-tight">
+            <p className="text-[10px] text-amber-700 mb-1.5 leading-tight">
               {t("pdp.onlyLeft", { count: product.stock })}
             </p>
           )}
@@ -2647,14 +2649,14 @@ function StoreInner({ slug }: { slug: string }) {
               (server ham narxni yubormaydi — faqat UI yashirishi yetarli emas).
               Aks holda variantli mahsulotda "… dan" + variantlar soni. */}
           {isB2b && !b2bCfg.showPrices ? (
-            <p className="text-xs font-semibold text-slate-300 mb-2.5">{t("b2b.priceOnRequest")}</p>
+            <p className="text-xs font-semibold text-slate-800 mb-2.5">{t("b2b.priceOnRequest")}</p>
           ) : (
             <div className="flex items-baseline gap-1.5 mb-2.5">
-              <span className="text-sm font-bold text-white">
+              <span className="text-sm font-bold text-slate-900">
                 {/* Variantlar narxi turlicha bo'lsa "… dan" — marketplace uslubi */}
-                {priceFrom && <span className="text-[10px] font-normal text-slate-400 mr-0.5">{t("variants.from")}</span>}
+                {priceFrom && <span className="text-[10px] font-normal text-slate-600 mr-0.5">{t("variants.from")}</span>}
                 {price.toLocaleString(locale)}
-                <span className="text-[10px] font-normal text-slate-400 ml-0.5">{data.tenant.currency === "UZS" ? t("common.sum") : data.tenant.currency}</span>
+                <span className="text-[10px] font-normal text-slate-600 ml-0.5">{data.tenant.currency === "UZS" ? t("common.sum") : data.tenant.currency}</span>
               </span>
               {oldPrice != null && oldPrice > price && (
                 <span className="text-[10px] text-slate-500 line-through">
@@ -2680,11 +2682,11 @@ function StoreInner({ slug }: { slug: string }) {
                     haptic.light();
                     setInquiry({ kind, productId: product.id, productName: product.name });
                   }}
-                  className="w-full py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-all"
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-900 active:scale-95 transition-all"
                   style={
                     kind === b2bCfg.inquiries[0]
                       ? { backgroundColor: primaryColor }
-                      : { backgroundColor: "rgba(255,255,255,0.08)" }
+                      : { backgroundColor: "rgba(17,24,39,0.08)" }
                   }
                 >
                   {t(
@@ -2704,7 +2706,7 @@ function StoreInner({ slug }: { slug: string }) {
               if (!outOfStock) addToCart(product);
             }}
             disabled={outOfStock}
-            className="w-full py-2 rounded-xl flex items-center justify-center gap-1.5 text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+            className="w-full py-2 rounded-xl flex items-center justify-center gap-1.5 text-slate-900 text-xs font-semibold active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
             style={{
               backgroundColor: outOfStock ? "#475569" : qty > 0 ? "#10b981" : primaryColor,
             }}
@@ -2733,7 +2735,7 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- PROFILE ----
   if (view === "profile") {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-50 flex flex-col">
         <div className="flex-1 overflow-y-auto">
           <Suspense
             fallback={
@@ -2760,9 +2762,9 @@ function StoreInner({ slug }: { slug: string }) {
   // ---- PROMOTIONS ----
   if (view === "promotions") {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
-        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <h2 className="text-base font-semibold text-white flex items-center gap-2">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <div className="sticky top-0 bg-slate-50 border-b border-black/10 z-30 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
             <Tag className="w-5 h-5" style={{ color: primaryColor }} />
             {t("promo.tabTitle")}
           </h2>
@@ -2770,8 +2772,8 @@ function StoreInner({ slug }: { slug: string }) {
         <div className="flex-1 overflow-y-auto pb-24 p-3">
           {promotionProducts.length === 0 ? (
             <div className="py-16 text-center">
-              <Tag className="w-12 h-12 mx-auto text-cream-300 mb-3" />
-              <p className="text-sm text-slate-400">{t("promo.empty")}</p>
+              <Tag className="w-12 h-12 mx-auto text-slate-800 mb-3" />
+              <p className="text-sm text-slate-600">{t("promo.empty")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -2793,19 +2795,19 @@ function StoreInner({ slug }: { slug: string }) {
       data.products.filter((p) => (p as { categoryId?: string }).categoryId === catId).length;
 
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         {/* Sticky header */}
-        <div className="sticky top-0 bg-slate-950 border-b border-slate-800 z-30 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+        <div className="sticky top-0 bg-slate-50 border-b border-black/10 z-30 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
           <div className="flex items-center gap-2 mb-2">
             {!showCatGrid && (
               <button
                 onClick={() => { setSelectedCategoryId(null); setCatalogMode("categories"); setSearchQuery(""); }}
-                className="p-1.5 -ml-1.5 rounded-lg text-slate-400 active:text-white active:bg-slate-800"
+                className="p-1.5 -ml-1.5 rounded-lg text-slate-600 active:text-slate-900 active:bg-slate-100"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <h2 className="text-base font-semibold text-white flex-1">
+            <h2 className="text-base font-semibold text-slate-900 flex-1">
               {showCatGrid ? t("store.tab.catalog") : (selectedCat?.name || t("catalog.allProducts"))}
             </h2>
           </div>
@@ -2816,7 +2818,7 @@ function StoreInner({ slug }: { slug: string }) {
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); if (e.target.value) { setSelectedCategoryId(null); setCatalogMode("products"); } }}
               placeholder={t("catalog.searchPlaceholder")}
-              className="w-full bg-slate-800 rounded-xl pl-9 pr-9 py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
+              className="w-full bg-slate-100 rounded-xl pl-9 pr-9 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
             />
             {searchQuery && (
               <button onClick={() => { setSearchQuery(""); setCatalogMode("categories"); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500">
@@ -2832,18 +2834,18 @@ function StoreInner({ slug }: { slug: string }) {
             {/* Barcha mahsulotlar shortcut */}
             <button
               onClick={() => { setSelectedCategoryId(null); setCatalogMode("products"); }}
-              className="w-full flex items-center justify-between px-4 py-3.5 border-b border-slate-800 active:bg-slate-900/80 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3.5 border-b border-black/10 active:bg-white/85 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl" style={{ backgroundColor: primaryColor + "20" }}>
                   🛍️
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-white">{t("catalog.allProducts")}</p>
+                  <p className="text-sm font-medium text-slate-900">{t("catalog.allProducts")}</p>
                   <p className="text-[11px] text-slate-500">{t("catalog.productCount", { n: data.products.length })}</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-600" />
+              <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>
 
             {categories.length > 0 ? (
@@ -2856,10 +2858,10 @@ function StoreInner({ slug }: { slug: string }) {
                       <button
                         key={cat.id}
                         onClick={() => { setSelectedCategoryId(cat.id); setCatalogMode("products"); }}
-                        className="bg-slate-900 rounded-2xl p-3.5 text-left active:scale-[0.98] transition-transform border border-slate-800/60"
+                        className="bg-white rounded-2xl p-3.5 text-left active:scale-[0.98] transition-transform border border-black/10"
                       >
                         <div
-                          className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold text-white mb-2.5"
+                          className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold text-slate-900 mb-2.5"
                           style={cat.imageUrl ? {} : { backgroundColor: primaryColor + "25" }}
                         >
                           {cat.imageUrl
@@ -2867,7 +2869,7 @@ function StoreInner({ slug }: { slug: string }) {
                             : (cat.name[0]?.toUpperCase() ?? "?")
                           }
                         </div>
-                        <p className="text-sm font-medium text-white leading-tight line-clamp-2">{cat.name}</p>
+                        <p className="text-sm font-medium text-slate-900 leading-tight line-clamp-2">{cat.name}</p>
                         <p className="text-[11px] text-slate-500 mt-1">{t("catalog.productCount", { n: count })}</p>
                       </button>
                     );
@@ -2876,21 +2878,21 @@ function StoreInner({ slug }: { slug: string }) {
               </div>
             ) : (
               <div className="py-16 text-center">
-                <Package className="w-10 h-10 mx-auto text-slate-600 mb-3" />
-                <p className="text-sm text-slate-400">{t("catalog.categoriesEmpty")}</p>
+                <Package className="w-10 h-10 mx-auto text-slate-400 mb-3" />
+                <p className="text-sm text-slate-600">{t("catalog.categoriesEmpty")}</p>
               </div>
             )}
           </div>
         ) : (
           /* ── Mahsulotlar ro'yxati ── */
           <>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/50">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-black/5">
               <span className="text-[11px] text-slate-500">{t("catalog.productCount", { n: filteredProducts.length })}</span>
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="appearance-none bg-slate-800 border border-slate-700 text-xs text-white pl-3 pr-8 py-1.5 rounded-lg focus:outline-none"
+                  className="appearance-none bg-slate-100 border border-black/10 text-xs text-slate-900 pl-3 pr-8 py-1.5 rounded-lg focus:outline-none"
                 >
                   <option value="popular">{t("catalog.sort.popular")}</option>
                   <option value="price_asc">{t("catalog.sort.priceAsc")}</option>
@@ -2903,14 +2905,14 @@ function StoreInner({ slug }: { slug: string }) {
             <div className="flex-1 overflow-y-auto pb-24 p-3">
               {filteredProducts.length === 0 ? (
                 <div className="py-16 text-center">
-                  <Package className="w-12 h-12 mx-auto text-slate-600 mb-3" />
-                  <p className="text-sm text-slate-400">
+                  <Package className="w-12 h-12 mx-auto text-slate-400 mb-3" />
+                  <p className="text-sm text-slate-600">
                     {searchQuery ? t("catalog.empty.search", { q: searchQuery }) : t("catalog.empty.category")}
                   </p>
                   {searchQuery && (
                     <button
                       onClick={() => { setSearchQuery(""); setCatalogMode("categories"); }}
-                      className="mt-3 px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300"
+                      className="mt-3 px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-800"
                     >
                       {t("catalog.clearSearch")}
                     </button>
@@ -2951,7 +2953,7 @@ function StoreInner({ slug }: { slug: string }) {
       return (
         <div className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-white">{activeLabel}</h2>
+            <h2 className="text-sm font-semibold text-slate-900">{activeLabel}</h2>
             <span className="text-xs text-slate-500">{t("catalog.productCount", { n: filteredProducts.length })}</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -2959,8 +2961,8 @@ function StoreInner({ slug }: { slug: string }) {
           </div>
           {filteredProducts.length === 0 && (
             <div className="py-12 text-center">
-              <Package className="w-12 h-12 text-cream-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">{t("catalog.productsNotFound")}</p>
+              <Package className="w-12 h-12 text-slate-800 mx-auto mb-3" />
+              <p className="text-sm text-slate-600">{t("catalog.productsNotFound")}</p>
             </div>
           )}
         </div>
@@ -2998,13 +3000,13 @@ function StoreInner({ slug }: { slug: string }) {
                   className="py-2.5 px-4 rounded-xl text-center"
                   style={{ backgroundColor: (s.bgColor as string) || "#f59e0b" }}
                 >
-                  <p className="text-xs text-white font-medium">{String(s.text ?? "")}</p>
+                  <p className="text-xs text-slate-900 font-medium">{String(s.text ?? "")}</p>
                 </div>
               );
 
             case "search":
               return (
-                <div key={block.id} className="bg-slate-800 rounded-2xl px-3 py-3 flex items-center gap-2" onClick={() => setShowSearch(true)}>
+                <div key={block.id} className="bg-slate-100 rounded-2xl px-3 py-3 flex items-center gap-2" onClick={() => setShowSearch(true)}>
                   <Search className="w-4 h-4 text-slate-500" />
                   <span className="text-sm text-slate-500">{(s.placeholder as string) || t("catalog.searchPlaceholder")}</span>
                 </div>
@@ -3019,13 +3021,13 @@ function StoreInner({ slug }: { slug: string }) {
                 : Array.from({ length: count }, (_, i) => ({ id: `ph-${i}`, name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }));
               return (
                 <div key={block.id}>
-                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">{block.title}</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {catItems.map((cat) => (
                       <button
                         key={cat.id}
                         onClick={() => cats.length > 0 && setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
-                        className={`rounded-2xl p-3 text-center transition-colors ${selectedCategoryId === cat.id ? "ring-2" : "bg-slate-900"} ${cats.length === 0 ? "opacity-40 cursor-default" : ""}`}
+                        className={`rounded-2xl p-3 text-center transition-colors ${selectedCategoryId === cat.id ? "ring-2" : "bg-white"} ${cats.length === 0 ? "opacity-40 cursor-default" : ""}`}
                         style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor + "20" } : {}}
                       >
                         <div className="w-10 h-10 mx-auto rounded-full overflow-hidden flex items-center justify-center mb-1.5" style={(cat as StoreCategory).imageUrl ? {} : { backgroundColor: primaryColor + "25" }}>
@@ -3034,7 +3036,7 @@ function StoreInner({ slug }: { slug: string }) {
                             : <span className="text-base">{cat.name[0]}</span>
                           }
                         </div>
-                        <p className="text-[11px] text-white">{cat.name}</p>
+                        <p className="text-[11px] text-slate-900">{cat.name}</p>
                       </button>
                     ))}
                   </div>
@@ -3069,7 +3071,7 @@ function StoreInner({ slug }: { slug: string }) {
                 : Array.from({ length: 6 }, (_, i) => ({ id: `ph-${i}`, name: `Hikoya ${i + 1}`, slug: "", parentId: null }));
               return (
                 <div key={block.id}>
-                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">{block.title}</h3>
                   <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
                     {items.map((cat) => (
                       <button
@@ -3083,12 +3085,12 @@ function StoreInner({ slug }: { slug: string }) {
                         >
                           {(cat as StoreCategory).imageUrl
                             ? <img src={(cat as StoreCategory).imageUrl!} alt={cat.name} className="w-full h-full rounded-full object-cover" />
-                            : <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-lg font-bold text-white">
+                            : <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-lg font-bold text-slate-900">
                                 {cat.name[0]}
                               </div>
                           }
                         </div>
-                        <span className="text-[10px] text-slate-300 max-w-[64px] truncate">{cat.name}</span>
+                        <span className="text-[10px] text-slate-800 max-w-[64px] truncate">{cat.name}</span>
                       </button>
                     ))}
                   </div>
@@ -3102,20 +3104,20 @@ function StoreInner({ slug }: { slug: string }) {
                 : Array.from({ length: 5 }, (_, i) => ({ id: `ph-${i}`, name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }));
               return (
                 <div key={block.id}>
-                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">{block.title}</h3>
                   <div className="space-y-2">
                     {items.map((cat) => (
                       <button
                         key={cat.id}
                         onClick={() => categories.length > 0 && setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl ${selectedCategoryId === cat.id ? "ring-2" : "bg-slate-900"} ${categories.length === 0 ? "opacity-40 cursor-default" : ""}`}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl ${selectedCategoryId === cat.id ? "ring-2" : "bg-white"} ${categories.length === 0 ? "opacity-40 cursor-default" : ""}`}
                         style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor + "20" } : {}}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: primaryColor + "25" }}>
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold" style={{ backgroundColor: primaryColor + "14", color: primaryColor }}>
                             {cat.name[0]}
                           </div>
-                          <span className="text-sm text-white">{cat.name}</span>
+                          <span className="text-sm text-slate-900">{cat.name}</span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-500" />
                       </button>
@@ -3133,7 +3135,7 @@ function StoreInner({ slug }: { slug: string }) {
                 : Array.from({ length: count }, (_, i) => ({ id: `ph-${i}`, name: `Kategoriya ${i + 1}`, slug: "", parentId: null, createdAt: "" }));
               return (
                 <div key={block.id}>
-                  <h3 className="text-sm font-semibold text-white mb-3">{block.title}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">{block.title}</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {items.map((cat, i) => {
                       const grad = [
@@ -3153,7 +3155,7 @@ function StoreInner({ slug }: { slug: string }) {
                         >
                           <span className="text-2xl">{cat.name[0]}</span>
                           <div>
-                            <p className="text-sm font-semibold text-white">{cat.name}</p>
+                            <p className="text-sm font-semibold text-white drop-shadow-sm">{cat.name}</p>
                             <p className="text-[10px] text-white/70 mt-0.5">{t("catalog.view")}</p>
                           </div>
                         </button>
@@ -3200,9 +3202,9 @@ function StoreInner({ slug }: { slug: string }) {
               const featured = products.find((p) => p.featured) || products[0];
               if (!featured) {
                 return (
-                  <div key={block.id} className="rounded-2xl bg-slate-900 p-6 text-center">
-                    <Sun className="w-10 h-10 text-cream-300 mx-auto mb-2" />
-                    <p className="text-sm text-slate-400">{block.title}</p>
+                  <div key={block.id} className="rounded-2xl bg-white p-6 text-center">
+                    <Sun className="w-10 h-10 text-slate-800 mx-auto mb-2" />
+                    <p className="text-sm text-slate-600">{block.title}</p>
                     <p className="text-xs text-slate-500 mt-1">{t("catalog.productNotSelected")}</p>
                   </div>
                 );
@@ -3216,26 +3218,26 @@ function StoreInner({ slug }: { slug: string }) {
                 <button
                   key={block.id}
                   onClick={() => setSelectedProduct(featured)}
-                  className="w-full rounded-2xl overflow-hidden bg-slate-900 text-left"
+                  className="w-full rounded-2xl overflow-hidden bg-white text-left"
                 >
                   <div className="flex items-center gap-1.5 px-4 pt-3 pb-2">
                     <Sun className="w-3.5 h-3.5 text-yellow-400" />
                     <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: primaryColor }}>{block.title}</span>
                   </div>
                   <div className="flex gap-3 p-3 pt-0">
-                    <div className="w-28 h-28 rounded-xl bg-slate-800 flex-shrink-0 overflow-hidden">
+                    <div className="w-28 h-28 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden">
                       {featured.imageUrl ? (
                         <img src={featured.imageUrl} alt={featured.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-10 h-10 text-slate-600" />
+                          <Package className="w-10 h-10 text-slate-400" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-white line-clamp-2">{featured.name}</h4>
+                      <h4 className="text-sm font-semibold text-slate-900 line-clamp-2">{featured.name}</h4>
                       <div className="mt-1.5 flex items-baseline gap-2">
-                        <span className="text-base font-bold text-white">{formatPrice(price, data.tenant.currency, lang)}</span>
+                        <span className="text-base font-bold text-slate-900">{formatPrice(price, data.tenant.currency, lang)}</span>
                         {oldPrice && (
                           <span className="text-xs text-slate-500 line-through">{formatPrice(oldPrice, data.tenant.currency, lang)}</span>
                         )}
@@ -3247,13 +3249,13 @@ function StoreInner({ slug }: { slug: string }) {
                       )}
                       {stockBar && featured.stock > 0 && (
                         <div className="mt-2">
-                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
                               style={{ width: `${stockPct}%`, backgroundColor: stockPct < 30 ? "#ef4444" : primaryColor }}
                             />
                           </div>
-                          <p className="text-[10px] text-slate-400 mt-1">{t("pdp.lowStock", { count: featured.stock })}</p>
+                          <p className="text-[10px] text-slate-600 mt-1">{t("pdp.lowStock", { count: featured.stock })}</p>
                         </div>
                       )}
                     </div>
@@ -3288,7 +3290,7 @@ function StoreInner({ slug }: { slug: string }) {
               return (
                 <div key={block.id}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-white">{block.title}</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">{block.title}</h3>
                     {!showSkeleton && (
                       <button className="text-xs flex items-center gap-0.5" style={{ color: primaryColor }}>
                         {t("catalog.allCategories")} <ChevronRight className="w-3 h-3" />
@@ -3298,14 +3300,14 @@ function StoreInner({ slug }: { slug: string }) {
                   <div className="grid grid-cols-2 gap-3">
                     {showSkeleton
                       ? Array.from({ length: skeletonCount }, (_, i) => (
-                          <div key={i} className="bg-slate-900 rounded-2xl overflow-hidden opacity-50 border border-slate-800/60">
-                            <div className="aspect-square bg-slate-800 flex items-center justify-center">
-                              <Package className="w-10 h-10 text-cream-300" />
+                          <div key={i} className="bg-white rounded-2xl overflow-hidden opacity-50 border border-black/10">
+                            <div className="aspect-square bg-slate-100 flex items-center justify-center">
+                              <Package className="w-10 h-10 text-slate-800" />
                             </div>
                             <div className="p-3 space-y-2">
-                              <div className="h-2.5 bg-slate-800 rounded-full w-3/4" />
-                              <div className="h-2.5 bg-slate-800 rounded-full w-1/2" />
-                              <div className="h-7 bg-slate-800 rounded-xl w-full" />
+                              <div className="h-2.5 bg-slate-100 rounded-full w-3/4" />
+                              <div className="h-2.5 bg-slate-100 rounded-full w-1/2" />
+                              <div className="h-7 bg-slate-100 rounded-xl w-full" />
                             </div>
                           </div>
                         ))
@@ -3324,7 +3326,7 @@ function StoreInner({ slug }: { slug: string }) {
         {/* If category is selected or search query, show filtered products */}
         {(selectedCategoryId || searchQuery) && (
           <div>
-            <h3 className="text-sm font-semibold text-white mb-3">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">
               {selectedCategoryId
                 ? categories.find((c) => c.id === selectedCategoryId)?.name || t("catalog.allProducts")
                 : t("catalog.searchResults", { query: searchQuery })}
@@ -3335,7 +3337,7 @@ function StoreInner({ slug }: { slug: string }) {
             </div>
             {filteredProducts.length === 0 && (
               <div className="py-8 text-center">
-                <p className="text-sm text-slate-400">{t("catalog.productsNotFound")}</p>
+                <p className="text-sm text-slate-600">{t("catalog.productsNotFound")}</p>
               </div>
             )}
           </div>
@@ -3350,43 +3352,43 @@ function StoreInner({ slug }: { slug: string }) {
   if (isSingle) {
     if (singleProduct) {
       return renderProductDetail() ?? (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 text-slate-600 animate-spin" />
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
         </div>
       );
     }
     // Mahsulot tanlanmagan (empty) yoki o'chirilgan/nofaol (unavailable)
     const reason = data.singleProductId ? t("single.unavailable") : t("single.empty");
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-4">
-          <Package className="w-8 h-8 text-slate-600" />
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4">
+          <Package className="w-8 h-8 text-slate-400" />
         </div>
-        <p className="text-base font-semibold text-white mb-1">{brand.name || data.tenant.name}</p>
-        <p className="text-sm text-slate-400">{reason}</p>
+        <p className="text-base font-semibold text-slate-900 mb-1">{brand.name || data.tenant.name}</p>
+        <p className="text-sm text-slate-600">{reason}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur border-b border-slate-800/50 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-black/5 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {brand.logo ? (
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}>
               {brand.logo}
             </div>
           ) : null}
-          <span className="text-sm font-semibold text-white">{brand.name || data.tenant.name}</span>
+          <span className="text-sm font-semibold text-slate-900">{brand.name || data.tenant.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowSearch(!showSearch)} className="p-2 rounded-xl text-slate-400 hover:text-white">
+          <button onClick={() => setShowSearch(!showSearch)} className="p-2 rounded-xl text-slate-600 hover:text-slate-900">
             <Search className="w-5 h-5" />
           </button>
           <button
             onClick={() => setView("cart")}
-            className="relative p-2 rounded-xl text-white"
+            className="relative p-2 rounded-xl text-slate-900"
             style={{ backgroundColor: primaryColor + "20" }}
           >
             <ShoppingCart className="w-5 h-5" style={{ color: primaryColor }} />
@@ -3404,7 +3406,7 @@ function StoreInner({ slug }: { slug: string }) {
 
       {/* Search bar */}
       {showSearch && (
-        <div className="px-4 py-2 bg-slate-950 border-b border-slate-800">
+        <div className="px-4 py-2 bg-slate-50 border-b border-black/10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
@@ -3413,7 +3415,7 @@ function StoreInner({ slug }: { slug: string }) {
               placeholder={t("catalog.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800 rounded-2xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none"
+              className="w-full bg-slate-100 rounded-2xl pl-9 pr-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -3426,11 +3428,11 @@ function StoreInner({ slug }: { slug: string }) {
 
       {/* Category chips */}
       {categories.length > 0 && (
-        <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide border-b border-slate-800/50">
+        <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide border-b border-black/5">
           <button
             onClick={() => setSelectedCategoryId(null)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              selectedCategoryId === null ? "text-white" : "bg-slate-900 text-slate-400"
+              selectedCategoryId === null ? "text-white" : "bg-white text-slate-600 border border-black/5"
             }`}
             style={selectedCategoryId === null ? { backgroundColor: primaryColor } : {}}
           >
@@ -3441,7 +3443,7 @@ function StoreInner({ slug }: { slug: string }) {
               key={cat.id}
               onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                selectedCategoryId === cat.id ? "text-white" : "bg-slate-900 text-slate-400"
+                selectedCategoryId === cat.id ? "text-white" : "bg-white text-slate-600 border border-black/5"
               }`}
               style={selectedCategoryId === cat.id ? { backgroundColor: primaryColor } : {}}
             >
