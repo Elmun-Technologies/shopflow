@@ -65,7 +65,7 @@ export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductI
 
   if (allImages.length === 0) {
     return (
-      <div className="w-full aspect-square bg-slate-900 flex items-center justify-center overflow-hidden relative">
+      <div className="w-full aspect-square bg-[#f2f3f6] flex items-center justify-center overflow-hidden relative">
         {badges}
         <Package className="w-20 h-20 text-slate-600" />
       </div>
@@ -74,7 +74,7 @@ export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductI
 
   if (allImages.length === 1) {
     return (
-      <div className="w-full aspect-square bg-slate-900 flex items-center justify-center overflow-hidden relative">
+      <div className="w-full aspect-square bg-[#f2f3f6] flex items-center justify-center overflow-hidden relative">
         {badges}
         <img src={allImages[0]} alt={alt} className="w-full h-full object-cover" />
       </div>
@@ -82,7 +82,7 @@ export function ProductImageCarousel({ imageUrl, images, alt, badges }: ProductI
   }
 
   return (
-    <div className="w-full aspect-square bg-slate-900 overflow-hidden relative">
+    <div className="w-full aspect-square bg-[#f2f3f6] overflow-hidden relative">
       {badges}
 
       {/* Image track — native horizontal scroll-snap (silliq mobil) */}
