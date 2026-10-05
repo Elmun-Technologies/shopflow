@@ -70,16 +70,16 @@ function InputField({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: "#52526a" }}>{label}</label>
+      <label className="text-xs font-medium" style={{ color: "#94a3b8" }}>{label}</label>
       <div
         className="flex items-center gap-2 rounded-xl px-3"
         style={{
-          backgroundColor: "#1e1e2a",
-          border: error ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.07)",
+          backgroundColor: "#f2f3f6",
+          border: error ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(17,24,39,0.07)",
           height: 48,
         }}
       >
-        <span style={{ color: "#3a3a56", flexShrink: 0 }}>{icon}</span>
+        <span style={{ color: "#94a3b8", flexShrink: 0 }}>{icon}</span>
         {children}
       </div>
       {error && <p className="text-[11px]" style={{ color: "#f87171" }}>{error}</p>}
@@ -119,7 +119,7 @@ function CheckoutViewInner({
   const canSubmit = !submitting && form.name.trim().length > 0 && isValidUzPhone(form.phone);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f6f6f8" }}>
       {/* Header */}
       <div
         className="flex items-center gap-3 px-4 pb-4"
@@ -128,13 +128,13 @@ function CheckoutViewInner({
         <button
           onClick={onBack}
           className="flex items-center justify-center active:scale-90 transition-transform"
-          style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "#1e1e2a", color: "#94a3b8" }}
+          style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "#f2f3f6", color: "#64748b" }}
         >
           <ArrowLeft className="w-4.5 h-4.5" />
         </button>
         <div>
-          <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("checkout.title")}</h2>
-          <p className="text-xs" style={{ color: "#52526a" }}>{formatPrice(cartTotal, currency, lang)}</p>
+          <h2 className="text-base font-bold" style={{ color: "#171a21" }}>{t("checkout.title")}</h2>
+          <p className="text-xs" style={{ color: "#94a3b8" }}>{formatPrice(cartTotal, currency, lang)}</p>
         </div>
       </div>
 
@@ -142,17 +142,17 @@ function CheckoutViewInner({
         {/* Order summary */}
         <div
           className="rounded-2xl overflow-hidden"
-          style={{ backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
         >
           <div className="px-4 pt-3 pb-2">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#3a3a56" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#94a3b8" }}>
               {t("checkout.orderSummary")}
             </p>
             {cart.map((item) => (
-              <div key={item.productId} className="flex items-center justify-between py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <span className="text-sm" style={{ color: "#94a3b8" }}>
+              <div key={item.productId} className="flex items-center justify-between py-2 border-b" style={{ borderColor: "rgba(17,24,39,0.05)" }}>
+                <span className="text-sm" style={{ color: "#64748b" }}>
                   {item.name}
-                  <span className="ml-1 text-xs" style={{ color: "#3a3a56" }}>×{item.qty}</span>
+                  <span className="ml-1 text-xs" style={{ color: "#94a3b8" }}>×{item.qty}</span>
                 </span>
                 <span className="text-sm font-semibold" style={{ color: primaryColor }}>
                   {formatPrice(item.price * item.qty, currency, lang)}
@@ -160,7 +160,7 @@ function CheckoutViewInner({
               </div>
             ))}
             <div className="flex items-center justify-between pt-3">
-              <span className="text-sm font-semibold" style={{ color: "#f4f4f8" }}>{t("checkout.total")}</span>
+              <span className="text-sm font-semibold" style={{ color: "#171a21" }}>{t("checkout.total")}</span>
               <span className="text-base font-bold" style={{ color: primaryColor }}>
                 {formatPrice(cartTotal, currency, lang)}
               </span>
@@ -171,9 +171,9 @@ function CheckoutViewInner({
         {/* Customer info */}
         <div
           className="rounded-2xl p-4 space-y-4"
-          style={{ backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#3a3a56" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#94a3b8" }}>
             {t("checkout.yourInfo")}
           </p>
 
@@ -185,7 +185,7 @@ function CheckoutViewInner({
               value={form.name}
               onChange={(e) => onFormChange((f) => ({ ...f, name: e.target.value }))}
               className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: "#f4f4f8" }}
+              style={{ color: "#171a21" }}
             />
           </InputField>
 
@@ -203,14 +203,14 @@ function CheckoutViewInner({
               inputMode="tel"
               autoComplete="tel"
               className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: "#f4f4f8" }}
+              style={{ color: "#171a21" }}
             />
           </InputField>
 
           {/* Saved addresses chips */}
           {savedAddresses.length > 0 && (
             <div>
-              <p className="text-xs mb-2" style={{ color: "#52526a" }}>{t("checkout.savedAddresses")}</p>
+              <p className="text-xs mb-2" style={{ color: "#94a3b8" }}>{t("checkout.savedAddresses")}</p>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {savedAddresses.map((a) => {
                   const full = formatAddress(a);
@@ -222,9 +222,9 @@ function CheckoutViewInner({
                       onClick={() => onFormChange((f) => ({ ...f, address: full }))}
                       className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all"
                       style={{
-                        backgroundColor: isActive ? primaryColor + "20" : "#1e1e2a",
-                        color: isActive ? primaryColor : "#94a3b8",
-                        border: isActive ? `1px solid ${primaryColor}40` : "1px solid rgba(255,255,255,0.06)",
+                        backgroundColor: isActive ? primaryColor + "20" : "#f2f3f6",
+                        color: isActive ? primaryColor : "#64748b",
+                        border: isActive ? `1px solid ${primaryColor}40` : "1px solid rgba(17,24,39,0.06)",
                       }}
                     >
                       {a.label}
@@ -243,7 +243,7 @@ function CheckoutViewInner({
               value={form.address}
               onChange={(e) => onFormChange((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
               className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: "#f4f4f8" }}
+              style={{ color: "#171a21" }}
             />
             <button
               type="button"
@@ -272,7 +272,7 @@ function CheckoutViewInner({
 
           {/* Notes */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: "#52526a" }}>{t("checkout.note")}</label>
+            <label className="text-xs font-medium" style={{ color: "#94a3b8" }}>{t("checkout.note")}</label>
             <textarea
               placeholder={t("checkout.notePlaceholder")}
               value={form.notes}
@@ -280,9 +280,9 @@ function CheckoutViewInner({
               rows={2}
               className="w-full text-sm px-3 py-3 rounded-xl resize-none outline-none"
               style={{
-                backgroundColor: "#1e1e2a",
-                border: "1px solid rgba(255,255,255,0.07)",
-                color: "#f4f4f8",
+                backgroundColor: "#f2f3f6",
+                border: "1px solid rgba(17,24,39,0.07)",
+                color: "#171a21",
               }}
             />
           </div>
@@ -309,8 +309,8 @@ function CheckoutViewInner({
           disabled={!canSubmit}
           className="w-full py-4 rounded-2xl font-bold text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           style={{
-            backgroundColor: canSubmit ? primaryColor : "#1e1e2a",
-            color: canSubmit ? "#fff" : "#3a3a56",
+            backgroundColor: canSubmit ? primaryColor : "#f2f3f6",
+            color: canSubmit ? "#fff" : "#94a3b8",
           }}
         >
           {submitting && <Loader2 className="w-5 h-5 animate-spin" />}

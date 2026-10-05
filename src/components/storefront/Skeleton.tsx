@@ -2,7 +2,7 @@ function shimmer(w: string, h: string, radius = 12) {
   return (
     <div
       className="animate-pulse"
-      style={{ width: w, height: h, borderRadius: radius, backgroundColor: "#1e1e2a" }}
+      style={{ width: w, height: h, borderRadius: radius, backgroundColor: "#f2f3f6" }}
     />
   );
 }
@@ -11,16 +11,16 @@ export function ProductSkeleton() {
   return (
     <div
       style={{
-        backgroundColor: "#16161f",
+        backgroundColor: "#ffffff",
         borderRadius: 20,
-        border: "1px solid rgba(255,255,255,0.05)",
+        border: "1px solid rgba(17,24,39,0.05)",
         overflow: "hidden",
       }}
     >
       {/* Image placeholder 4:3 */}
       <div
         className="animate-pulse"
-        style={{ aspectRatio: "4/3", backgroundColor: "#1e1e2a" }}
+        style={{ aspectRatio: "4/3", backgroundColor: "#f2f3f6" }}
       />
       <div className="p-3 flex flex-col gap-2">
         {shimmer("60%", "13px", 8)}
@@ -49,7 +49,7 @@ export function CategoryChipsSkeleton() {
         <div
           key={i}
           className="animate-pulse flex-shrink-0 rounded-full"
-          style={{ width: 60 + (i % 3) * 24, height: 30, backgroundColor: "#1e1e2a" }}
+          style={{ width: 60 + (i % 3) * 24, height: 30, backgroundColor: "#f2f3f6" }}
         />
       ))}
     </div>

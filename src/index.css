@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Mini App doimo LIGHT: `dark:` utility'lar faqat `.dark` class'ga bog'lanadi
+   (prefers-color-scheme emas). `.dark` class'ni hech narsa qo'shmaydi, shuning
+   uchun vitrina har qanday OS mavzusida yorug' ko'rinadi. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Commerly brand ranglar — Light theme */
   --color-cream-50:  #FAFAF5;  /* Asosiy app fon */

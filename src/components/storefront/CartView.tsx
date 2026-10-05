@@ -141,7 +141,7 @@ function CartViewInner({
   // Bo'sh savat
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f6f6f8" }}>
         <div
           className="flex items-center gap-3 px-4 pb-4"
           style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
@@ -149,22 +149,22 @@ function CartViewInner({
           <button
             onClick={onBack}
             className="flex items-center justify-center active:scale-90 transition-transform"
-            style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "#1e1e2a", color: "#94a3b8" }}
+            style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "#f2f3f6", color: "#64748b" }}
           >
             <ArrowLeft className="w-4.5 h-4.5" />
           </button>
-          <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("cart.title")}</h2>
+          <h2 className="text-base font-bold" style={{ color: "#171a21" }}>{t("cart.title")}</h2>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-16">
           <div
             className="flex items-center justify-center mb-5"
-            style={{ width: 80, height: 80, borderRadius: 26, backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ width: 80, height: 80, borderRadius: 26, backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
           >
-            <ShoppingCart className="w-9 h-9" style={{ color: "#3a3a50" }} />
+            <ShoppingCart className="w-9 h-9" style={{ color: "#94a3b8" }} />
           </div>
-          <p className="text-lg font-bold mb-2" style={{ color: "#f4f4f8" }}>{t("cart.empty.title")}</p>
-          <p className="text-sm text-center mb-8 leading-relaxed" style={{ color: "#52526a" }}>
+          <p className="text-lg font-bold mb-2" style={{ color: "#171a21" }}>{t("cart.empty.title")}</p>
+          <p className="text-sm text-center mb-8 leading-relaxed" style={{ color: "#94a3b8" }}>
             {t("cart.empty.description")}
           </p>
           <button
@@ -180,16 +180,16 @@ function CartViewInner({
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f6f6f8" }}>
 
       {/* ─── Header ─── */}
       <div
         className="sticky top-0 z-20 px-4 pb-3"
         style={{
           paddingTop: "max(1rem, env(safe-area-inset-top))",
-          backgroundColor: "rgba(13,13,20,0.97)",
+          backgroundColor: "rgba(250,250,252,0.94)",
           backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: "1px solid rgba(17,24,39,0.05)",
         }}
       >
         <div className="flex items-center justify-between">
@@ -197,15 +197,15 @@ function CartViewInner({
             <button
               onClick={onBack}
               className="flex items-center justify-center active:scale-90 transition-transform"
-              style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: "#1e1e2a", color: "#94a3b8" }}
+              style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: "#f2f3f6", color: "#64748b" }}
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h2 className="text-base font-bold" style={{ color: "#f4f4f8" }}>
+              <h2 className="text-base font-bold" style={{ color: "#171a21" }}>
                 {t("cart.title")}
               </h2>
-              <p className="text-[11px]" style={{ color: "#52526a" }}>
+              <p className="text-[11px]" style={{ color: "#94a3b8" }}>
                 {t("cart.itemsCount", { count: cartCount })}
               </p>
             </div>
@@ -215,19 +215,19 @@ function CartViewInner({
           <button
             onClick={toggleAll}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl active:scale-95 transition-transform"
-            style={{ backgroundColor: "#1e1e2a" }}
+            style={{ backgroundColor: "#f2f3f6" }}
           >
             <div
               className="flex items-center justify-center"
               style={{
                 width: 18, height: 18, borderRadius: 6,
                 backgroundColor: allSelected ? primaryColor : "transparent",
-                border: allSelected ? "none" : "1.5px solid rgba(255,255,255,0.2)",
+                border: allSelected ? "none" : "1.5px solid rgba(17,24,39,0.18)",
               }}
             >
               {allSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
             </div>
-            <span className="text-[11px] font-medium" style={{ color: "#94a3b8" }}>
+            <span className="text-[11px] font-medium" style={{ color: "#64748b" }}>
               {allSelected ? t("cart.deselectAll") : t("cart.selectAll")}
             </span>
           </button>
@@ -241,15 +241,15 @@ function CartViewInner({
           <div className="px-4 pt-3 pb-1">
             <div
               className="px-4 py-3 rounded-2xl"
-              style={{ backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <Truck className="w-4 h-4" style={{ color: "#38bdf8" }} />
-                <span className="text-xs font-medium" style={{ color: "#94a3b8" }}>
+                <span className="text-xs font-medium" style={{ color: "#64748b" }}>
                   {t("cart.freeDeliveryProgress", { amount: fmt(FREE_DELIVERY_THRESHOLD - selectedSubtotal, currency, lang) })}
                 </span>
               </div>
-              <div className="relative h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#2a2a38" }}>
+              <div className="relative h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#eceef2" }}>
                 <div
                   className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
                   style={{ width: `${progressToFree}%`, backgroundColor: "#38bdf8" }}
@@ -287,10 +287,10 @@ function CartViewInner({
                 key={item.productId}
                 className="rounded-2xl overflow-hidden"
                 style={{
-                  backgroundColor: "#16161f",
+                  backgroundColor: "#ffffff",
                   border: isSelected
                     ? `1px solid ${primaryColor}30`
-                    : "1px solid rgba(255,255,255,0.06)",
+                    : "1px solid rgba(17,24,39,0.06)",
                 }}
               >
                 <div className="p-3">
@@ -306,7 +306,7 @@ function CartViewInner({
                         style={{
                           width: 20, height: 20, borderRadius: 6,
                           backgroundColor: isSelected ? primaryColor : "transparent",
-                          border: isSelected ? "none" : "1.5px solid rgba(255,255,255,0.2)",
+                          border: isSelected ? "none" : "1.5px solid rgba(17,24,39,0.18)",
                         }}
                       >
                         {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
@@ -316,7 +316,7 @@ function CartViewInner({
                     {/* Image */}
                     <div
                       className="flex-shrink-0 overflow-hidden"
-                      style={{ width: 80, height: 80, borderRadius: 14, backgroundColor: "#1e1e2a" }}
+                      style={{ width: 80, height: 80, borderRadius: 14, backgroundColor: "#f2f3f6" }}
                     >
                       {item.imageUrl ? (
                         <img
@@ -327,7 +327,7 @@ function CartViewInner({
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-7 h-7" style={{ color: "#3a3a50" }} />
+                          <Package className="w-7 h-7" style={{ color: "#94a3b8" }} />
                         </div>
                       )}
                     </div>
@@ -336,7 +336,7 @@ function CartViewInner({
                     <div className="flex-1 min-w-0">
                       <p
                         className="text-sm font-medium leading-snug line-clamp-2 mb-1.5"
-                        style={{ color: "#f4f4f8" }}
+                        style={{ color: "#171a21" }}
                       >
                         {item.name}
                       </p>
@@ -347,14 +347,14 @@ function CartViewInner({
                           {fmt(lineTotal, currency, lang)}
                         </span>
                         {oldLineTotal && oldLineTotal > lineTotal && (
-                          <span className="text-xs line-through" style={{ color: "#3a3a50" }}>
+                          <span className="text-xs line-through" style={{ color: "#94a3b8" }}>
                             {fmt(oldLineTotal, currency, lang)}
                           </span>
                         )}
                       </div>
 
                       {/* Unit price */}
-                      <p className="text-[11px] mt-0.5" style={{ color: "#52526a" }}>
+                      <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
                         {t("cart.perPiece", { price: fmt(item.price, currency, lang) })}
                       </p>
 
@@ -371,19 +371,19 @@ function CartViewInner({
                   </div>
 
                   {/* Bottom row: qty controls + delete */}
-                  <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(17,24,39,0.05)" }}>
                     {/* Qty stepper */}
                     <div
                       className="flex items-center gap-1 rounded-xl"
-                      style={{ backgroundColor: "#0d0d14", padding: "3px" }}
+                      style={{ backgroundColor: "#f6f6f8", padding: "3px" }}
                     >
                       <button
                         onClick={() => { haptic.soft(); onUpdateQty(item.productId, -1); }}
                         className="flex items-center justify-center active:scale-90 transition-transform"
                         style={{
                           width: 32, height: 32, borderRadius: 9,
-                          backgroundColor: item.qty === 1 ? "rgba(239,68,68,0.12)" : "#1e1e2a",
-                          color: item.qty === 1 ? "#f87171" : "#94a3b8",
+                          backgroundColor: item.qty === 1 ? "rgba(239,68,68,0.12)" : "#f2f3f6",
+                          color: item.qty === 1 ? "#f87171" : "#64748b",
                         }}
                         aria-label={t("cart.decrease")}
                       >
@@ -394,7 +394,7 @@ function CartViewInner({
                       </button>
                       <span
                         className="text-sm font-bold text-center"
-                        style={{ minWidth: 36, color: "#f4f4f8" }}
+                        style={{ minWidth: 36, color: "#171a21" }}
                       >
                         {t("cart.pcsQty", { qty: item.qty })}
                       </span>
@@ -410,8 +410,8 @@ function CartViewInner({
 
                     {/* Total per line */}
                     <div className="text-right">
-                      <p className="text-xs" style={{ color: "#52526a" }}>{t("cart.total")}</p>
-                      <p className="text-sm font-bold" style={{ color: "#f4f4f8" }}>
+                      <p className="text-xs" style={{ color: "#94a3b8" }}>{t("cart.total")}</p>
+                      <p className="text-sm font-bold" style={{ color: "#171a21" }}>
                         {fmt(lineTotal, currency, lang)}
                       </p>
                     </div>
@@ -430,19 +430,19 @@ function CartViewInner({
               style={{ backgroundColor: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}
             >
               <div className="flex items-center gap-2">
-                <Tag className="w-4 h-4" style={{ color: "#34d399" }} />
+                <Tag className="w-4 h-4" style={{ color: "#059669" }} />
                 <div>
-                  <p className="text-xs font-bold" style={{ color: "#34d399" }}>
+                  <p className="text-xs font-bold" style={{ color: "#059669" }}>
                     {t("cart.promoApplied", { code: promoApplied?.code ?? "" })}
                   </p>
-                  <p className="text-[11px]" style={{ color: "#52526a" }}>
+                  <p className="text-[11px]" style={{ color: "#94a3b8" }}>
                     {t("cart.youSave", { amount: fmt(promoDiscount, currency, lang) })}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => { setPromoApplied(null); haptic.light(); }}
-                style={{ color: "#52526a" }}
+                style={{ color: "#94a3b8" }}
                 aria-label={t("cart.removePromo")}
               >
                 <X className="w-4 h-4" />
@@ -451,10 +451,10 @@ function CartViewInner({
           ) : promoOpen ? (
             <div
               className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
             >
               <div className="flex items-center gap-2 p-3">
-                <Tag className="w-4 h-4 flex-shrink-0" style={{ color: "#52526a" }} />
+                <Tag className="w-4 h-4 flex-shrink-0" style={{ color: "#94a3b8" }} />
                 <input
                   autoFocus
                   type="text"
@@ -463,7 +463,7 @@ function CartViewInner({
                   onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoError(null); }}
                   onKeyDown={(e) => { if (e.key === "Enter") applyPromo(); }}
                   className="flex-1 bg-transparent text-sm font-mono outline-none"
-                  style={{ color: "#f4f4f8" }}
+                  style={{ color: "#171a21" }}
                 />
                 <button
                   onClick={applyPromo}
@@ -474,7 +474,7 @@ function CartViewInner({
                   {promoLoading && <span className="w-3 h-3 border border-white/50 border-t-white rounded-full animate-spin" />}
                   {t("cart.apply")}
                 </button>
-                <button onClick={() => { setPromoOpen(false); setPromoError(null); }} style={{ color: "#52526a" }}>
+                <button onClick={() => { setPromoOpen(false); setPromoError(null); }} style={{ color: "#94a3b8" }}>
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -486,15 +486,15 @@ function CartViewInner({
             <button
               onClick={() => { setPromoOpen(true); haptic.light(); }}
               className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl active:scale-[0.98] transition-transform"
-              style={{ backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
             >
               <div className="flex items-center gap-2.5">
-                <Tag className="w-4 h-4" style={{ color: "#52526a" }} />
-                <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+                <Tag className="w-4 h-4" style={{ color: "#94a3b8" }} />
+                <span className="text-sm font-medium" style={{ color: "#64748b" }}>
                   {t("cart.havePromo")}
                 </span>
               </div>
-              <ChevronRight className="w-4 h-4" style={{ color: "#3a3a50" }} />
+              <ChevronRight className="w-4 h-4" style={{ color: "#94a3b8" }} />
             </button>
           )}
         </div>
@@ -503,28 +503,28 @@ function CartViewInner({
         <div className="px-4 pb-6">
           <div
             className="rounded-2xl overflow-hidden"
-            style={{ backgroundColor: "#16161f", border: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ backgroundColor: "#ffffff", border: "1px solid rgba(17,24,39,0.06)" }}
           >
-            <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#3a3a50" }}>
+            <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(17,24,39,0.05)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#94a3b8" }}>
                 {t("cart.summary")}
               </p>
             </div>
 
             <div className="px-4 py-3 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#52526a" }}>
+                <span className="text-sm" style={{ color: "#94a3b8" }}>
                   {t("cart.productsCount", { count: selectedCount })}
                 </span>
-                <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+                <span className="text-sm font-medium" style={{ color: "#64748b" }}>
                   {fmt(selectedSubtotal, currency, lang)}
                 </span>
               </div>
 
               {savingsTotal > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.discount")}</span>
-                  <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
+                  <span className="text-sm" style={{ color: "#94a3b8" }}>{t("cart.discount")}</span>
+                  <span className="text-sm font-semibold" style={{ color: "#059669" }}>
                     -{fmt(savingsTotal, currency, lang)}
                   </span>
                 </div>
@@ -532,19 +532,19 @@ function CartViewInner({
 
               {promoDiscount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.promoLabel", { code: promoApplied?.code ?? "" })}</span>
-                  <span className="text-sm font-semibold" style={{ color: "#34d399" }}>
+                  <span className="text-sm" style={{ color: "#94a3b8" }}>{t("cart.promoLabel", { code: promoApplied?.code ?? "" })}</span>
+                  <span className="text-sm font-semibold" style={{ color: "#059669" }}>
                     -{fmt(promoDiscount, currency, lang)}
                   </span>
                 </div>
               )}
 
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#52526a" }}>{t("cart.shipping")}</span>
+                <span className="text-sm" style={{ color: "#94a3b8" }}>{t("cart.shipping")}</span>
                 {isFreeDelivery ? (
-                  <span className="text-sm font-semibold" style={{ color: "#34d399" }}>{t("cart.free")}</span>
+                  <span className="text-sm font-semibold" style={{ color: "#059669" }}>{t("cart.free")}</span>
                 ) : (
-                  <span className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+                  <span className="text-sm font-medium" style={{ color: "#64748b" }}>
                     {fmt(deliveryCost, currency, lang)}
                   </span>
                 )}
@@ -552,9 +552,9 @@ function CartViewInner({
 
               <div
                 className="flex items-center justify-between pt-2.5 mt-1"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ borderTop: "1px solid rgba(17,24,39,0.06)" }}
               >
-                <span className="text-base font-bold" style={{ color: "#f4f4f8" }}>{t("cart.grandTotal")}</span>
+                <span className="text-base font-bold" style={{ color: "#171a21" }}>{t("cart.grandTotal")}</span>
                 <span className="text-xl font-bold" style={{ color: primaryColor }}>
                   {fmt(grandTotal, currency, lang)}
                 </span>
@@ -565,8 +565,8 @@ function CartViewInner({
                   className="flex items-center gap-2 px-3 py-2 rounded-xl"
                   style={{ backgroundColor: "rgba(52,211,153,0.08)" }}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#34d399" }} />
-                  <span className="text-xs" style={{ color: "#34d399" }}>
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#059669" }} />
+                  <span className="text-xs" style={{ color: "#059669" }}>
                     {t("cart.youSaved", { amount: fmt(savingsTotal + promoDiscount, currency, lang) })}
                   </span>
                 </div>
@@ -581,16 +581,16 @@ function CartViewInner({
         className="px-4 pt-3"
         style={{
           paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-          backgroundColor: "rgba(13,13,20,0.97)",
+          backgroundColor: "rgba(250,250,252,0.94)",
           backdropFilter: "blur(12px)",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
+          borderTop: "1px solid rgba(17,24,39,0.05)",
         }}
       >
         {selectedCount === 0 ? (
           <button
             disabled
             className="w-full py-4 rounded-2xl font-bold text-base text-center"
-            style={{ backgroundColor: "#1e1e2a", color: "#3a3a50" }}
+            style={{ backgroundColor: "#f2f3f6", color: "#94a3b8" }}
           >
             {t("cart.selectProducts")}
           </button>

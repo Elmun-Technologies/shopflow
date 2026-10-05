@@ -160,7 +160,7 @@ export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: Popu
             {active.ctaText && active.ctaUrl && (
               <button
                 onClick={handleCta}
-                className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white rounded-lg px-3 py-1.5 transition-colors"
+                style={{ color: primaryColor }} className="text-xs font-semibold bg-white rounded-lg px-3 py-1.5 transition-colors"
               >
                 {active.ctaText}
               </button>
@@ -181,28 +181,28 @@ export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: Popu
       onClick={handleClose}
     >
       <div
-        className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+        className="bg-white border border-black/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
         {active.imageUrl && (
-          <div className="w-full aspect-[16/9] bg-slate-800">
+          <div className="w-full aspect-[16/9] bg-slate-100">
             <img src={active.imageUrl} alt="" className="w-full h-full object-cover" />
           </div>
         )}
         <div className="p-5">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-lg font-bold text-white leading-tight">{active.title}</h3>
+            <h3 className="text-lg font-bold text-slate-900 leading-tight">{active.title}</h3>
             <button
               onClick={handleClose}
               aria-label={t("common.close")}
-              className="p-1 -mr-1 text-slate-400 hover:text-white transition-colors flex-shrink-0"
+              className="p-1 -mr-1 text-slate-600 hover:text-slate-900 transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{active.body}</p>
+          <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{active.body}</p>
           {active.ctaText && active.ctaUrl && (
             <button
               onClick={handleCta}
@@ -214,7 +214,7 @@ export function PopupHost({ storeSlug, apiBase, primaryColor, onCtaClick }: Popu
           )}
           <button
             onClick={handleClose}
-            className="w-full mt-2 py-2 text-xs text-slate-500 hover:text-slate-300"
+            className="w-full mt-2 py-2 text-xs text-slate-500 hover:text-slate-800"
           >
             {t("popup.later")}
           </button>

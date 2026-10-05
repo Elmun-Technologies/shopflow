@@ -39,7 +39,7 @@ export function BottomNav({
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
         style={{
           height: 90,
-          background: "linear-gradient(to top, #0d0d14 60%, transparent)",
+          background: "linear-gradient(to top, #f6f6f8 60%, transparent)",
         }}
       />
 
@@ -48,8 +48,9 @@ export function BottomNav({
         <div
           className="flex items-center justify-around rounded-2xl"
           style={{
-            backgroundColor: "#1a1a26",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.92)",
+            border: "1px solid rgba(17,24,39,0.06)",
+            boxShadow: "0 -1px 2px rgba(16,24,40,0.02), 0 12px 32px -12px rgba(16,24,40,0.18)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
           }}
@@ -84,7 +85,7 @@ export function BottomNav({
                     className="transition-all"
                     style={{
                       width: 20, height: 20,
-                      color: isActive ? accent : "#52526a",
+                      color: isActive ? accent : "#94a3b8",
                       strokeWidth: isActive ? 2.5 : 2,
                       transform: isActive ? "scale(1.08)" : "scale(1)",
                     }}
@@ -103,7 +104,7 @@ export function BottomNav({
                 <span
                   className="text-[9px] leading-none z-10 transition-all"
                   style={{
-                    color: isActive ? accent : "#52526a",
+                    color: isActive ? accent : "#94a3b8",
                     fontWeight: isActive ? 600 : 500,
                   }}
                 >
